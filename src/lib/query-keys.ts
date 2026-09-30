@@ -36,6 +36,8 @@ export const queryKeys = {
   walletHistory: (userId: number | null | undefined) => ['wallet-history', userId] as const,
   /** 상점 공개 카탈로그 (GET /items) — 사용자 무관. `owned` 플래그는 인벤토리로 덮는다. */
   items: ['items'] as const,
+  /** 집 커버 카탈로그 (GET /houses/cover-images) — 사용자 무관. */
+  houseCovers: ['house-covers'] as const,
   /** 내 인벤토리 (GET /me/items, itemId↔userItemId) — 뽑기·구매·AI 가구가 갱신한다. */
   myItems: {
     all: ['me', 'items'] as const,

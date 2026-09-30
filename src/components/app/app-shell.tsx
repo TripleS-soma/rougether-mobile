@@ -198,6 +198,9 @@ export function AppShell({
     sheets: attendanceSheets,
   } = useAttendanceSurface({ setWallet, setScreen });
 
+  // 뽑기 카탈로그는 뽑기 화면에 처음 들어갈 때 받는다 (성능 장부 N3) — 한 번 켜면 유지.
+  const gachaWanted = useRef(false);
+  if (screen === 'gacha') gachaWanted.current = true;
   // Gacha machines + draw (spend + dupe→diamond handled server-side; wallet synced
   // from the draw response).
   const {
@@ -206,7 +209,7 @@ export function AppShell({
     error: gachasError,
     retry: retryGachas,
     draw: drawGachaMachine,
-  } = useGacha(setWallet);
+  } = useGacha(setWallet, { enabled: gachaWanted.current });
 
   const starterFlow = missions.step?.id === 'first-draw' && !missionSkipEnabled;
   const starterGacha = useStarterGacha(starterFlow);
