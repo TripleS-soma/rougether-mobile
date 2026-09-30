@@ -38,6 +38,7 @@ import {
   saveOnboarding,
 } from '@/lib/onboarding-store';
 import { markAppReady } from '@/lib/app-ready';
+import { prefetchMyRoom } from '@/lib/my-room-prefetch';
 import {
   loadOnboardingHouseStep,
   type OnboardingHouseStep,
@@ -92,13 +93,28 @@ export function AppRoot() {
     void (async () => {
       // Local cache + server state + masters in one round; the server may be
       // unreachable (offline) — every remote call degrades to the local cache.
-      const [saved, remote, goals, chars, starter, houseStepSaved] = await Promise.all([
+      const [saved, starter, houseStepSaved] = await Promise.all([
         loadOnboarding(userId),
+        loadStarterRoutineProgress(userId),
+        loadOnboardingHouseStep(userId),
+      ]);
+      if (!active) return;
+      // 온보딩을 마친 기기(이 계정의 로컬 기록, 남은 첫 루틴·집 단계 없음)는 셸로 바로 갈
+      // 가능성이 높다 — 게이트 확인과 **동시에** 나의 방 첫 데이터를 띄워 왕복 하나를
+      // 줄인다 (성능 장부 N1). 결국 온보딩으로 가면 선행 결과는 신선도가 지나 버려진다.
+      if (
+        userId != null &&
+        saved != null &&
+        !saved.legacy &&
+        starter?.status !== 'pending' &&
+        houseStepSaved !== 'pending'
+      ) {
+        prefetchMyRoom(userId);
+      }
+      const [remote, goals, chars] = await Promise.all([
         fetchOnboarding().catch(() => null),
         fetchGoals().catch(() => [] as GoalItem[]),
         fetchCharacters().catch(() => [] as CharacterItem[]),
-        loadStarterRoutineProgress(userId),
-        loadOnboardingHouseStep(userId),
       ]);
       if (!active) return;
       setCharacters(chars);

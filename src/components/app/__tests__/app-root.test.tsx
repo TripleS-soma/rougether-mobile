@@ -95,6 +95,34 @@ describe('AppRoot', () => {
     await waitFor(() => expect(getByText('오늘의 할 일')).toBeTruthy());
   });
 
+  it('온보딩을 마친 기기는 게이트 확인과 동시에 나의 방 데이터를 받는다 (성능 장부 N1)', async () => {
+    await AsyncStorage.setItem('rougether.auth.userId', '4');
+    await AsyncStorage.setItem(`${KEY}.4`, JSON.stringify({ characterId: 'cat', goals: [] }));
+    const events: string[] = [];
+    let releaseOnboarding: () => void = () => {};
+    const onboardingGate = new Promise<void>((r) => {
+      releaseOnboarding = r;
+    });
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const path = url.replace(/^.*\/api\/v1/, '').split('?')[0];
+      events.push(`start ${path}`);
+      if (path === '/onboarding') {
+        await onboardingGate;
+        events.push('end /onboarding');
+      }
+      return emptyRes(url, init);
+    }) as unknown as typeof fetch;
+
+    const { getByText } = await renderApp();
+    // 게이트(/onboarding)가 아직 안 끝났는데 나의 방 요청이 이미 나가 있다.
+    await waitFor(() => expect(events).toContain('start /today'));
+    expect(events).not.toContain('end /onboarding');
+    releaseOnboarding();
+    await waitFor(() => expect(getByText('오늘의 할 일')).toBeTruthy());
+    // 셸은 선행 결과를 넘겨받아 /today를 다시 받지 않는다.
+    expect(events.filter((e) => e === 'start /today')).toHaveLength(1);
+  });
+
   it('skips onboarding when the server says completed (no local cache)', async () => {
     global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
       if (url.endsWith('/onboarding'))
