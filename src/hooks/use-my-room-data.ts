@@ -193,10 +193,15 @@ export function useMyRoomData() {
       try {
         const numId = toServerItemId(id);
         let rewardAmount: number | undefined;
+        let rewardCurrency: 'COIN' | 'DIAMOND' | undefined;
         let contribution: HouseMissionContributeResponse | null | undefined;
         if (item?.kind === 'todo') {
           if (wasDone) await uncompleteTodo(numId);
-          else rewardAmount = (await completeTodo(numId)).rewardAmount;
+          else {
+            const done = await completeTodo(numId);
+            rewardAmount = done.rewardAmount;
+            rewardCurrency = done.rewardCurrencyType;
+          }
         } else {
           // 루틴 완료·취소는 **스트릭을 바꾼다.** 서버가 갱신된 값을 응답에
           // 실어주므로 클라이언트가 다시 셀 필요가 없다 — 예전엔 그 값을 버려서
@@ -208,6 +213,7 @@ export function useMyRoomData() {
           } else {
             const log = await completeRoutine(numId, date);
             rewardAmount = log.rewardAmount;
+            rewardCurrency = log.rewardCurrencyType;
             // 오늘(KST) 완료면 서버가 연동 미션에 자동 기여한 결과가 실려온다.
             contribution = log.houseMissionContribution;
             if (typeof log.streak?.currentCount === 'number') setStreak(log.streak.currentCount);
@@ -226,7 +232,12 @@ export function useMyRoomData() {
         if (wasDone) await refreshWallet();
         else if (rewardAmount && rewardAmount > 0) {
           const earned = rewardAmount;
-          setWallet((w) => ({ ...w, coin: w.coin + earned }));
+          // 보상 통화는 지금 COIN뿐이지만(spec) 응답이 다른 통화를 말하면 그쪽에 더한다.
+          setWallet((w) =>
+            rewardCurrency === 'DIAMOND'
+              ? { ...w, diamond: w.diamond + earned }
+              : { ...w, coin: w.coin + earned },
+          );
         }
         return wasDone
           ? null

@@ -583,3 +583,69 @@ describe('AppShell — 루트 뒤로가기 더블 백 종료 (#522)', () => {
     exitSpy.mockRestore();
   });
 });
+
+// 완료 후 재조회 분기 (성능 장부 N2) — 방 성장·캐릭터는 지급 코인을 따르므로 보상 0 완료는
+// 달력만 다시 받는다. 보상이 있으면 방·캐릭터도.
+describe('AppShell — 완료 후 재조회 (성능 장부 N2)', () => {
+  const json = (body: unknown) => ({
+    ok: true,
+    status: 200,
+    text: async () => JSON.stringify(body),
+  });
+  let calls: { url: string; method: string }[] = [];
+  let reward = 0;
+  const worldFetch = async (url: string, init?: RequestInit) => {
+    const method = init?.method ?? 'GET';
+    calls.push({ url, method });
+    if (url.includes('/auth/')) return json({ accessToken: 't', refreshToken: 'r' });
+    if (method === 'POST' && url.includes('/routines/44/logs'))
+      return json({ rewardAmount: reward, rewardCurrencyType: 'COIN' });
+    if (url.includes('/categories')) return json({ items: [{ id: 20, name: '건강' }] });
+    if (url.endsWith('/routines'))
+      return json({ items: [{ id: 44, title: '스트레칭', categoryId: 20, repeatType: 'DAILY' }] });
+    if (url.endsWith('/today')) return json({ categories: [], summary: {}, streak: {} });
+    if (url.endsWith('/me')) return json({ userId: 4, nickname: '준서' });
+    return json({ items: [] });
+  };
+  beforeEach(() => {
+    calls = [];
+    global.fetch = jest.fn(worldFetch) as unknown as typeof fetch;
+  });
+
+  const completeAndCollect = async () => {
+    const { getByLabelText } = await renderWithProviders(<AppShell />);
+    await waitFor(() => expect(calls.some((c) => c.url.includes('/rooms/me'))).toBe(true));
+    await fireEvent.press(getByLabelText('스트레칭'));
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'POST' && c.url.includes('/routines/44/logs'))).toBe(
+        true,
+      ),
+    );
+    const at = calls.findIndex((c) => c.method === 'POST' && c.url.includes('/routines/44/logs'));
+    // 무효화가 붙인 재조회까지 기다린다(달력은 어느 경우든 다시 받는다).
+    await waitFor(() =>
+      expect(calls.slice(at).some((c) => c.url.includes('/calendar'))).toBe(true),
+    );
+    return calls.slice(at + 1).filter((c) => c.method === 'GET');
+  };
+
+  it('보상 0 완료 — 방·캐릭터·지갑은 다시 받지 않는다', async () => {
+    reward = 0;
+    const after = await completeAndCollect();
+    expect(after.some((c) => c.url.includes('/rooms/me'))).toBe(false);
+    expect(after.some((c) => c.url.includes('/me/characters'))).toBe(false);
+    expect(after.some((c) => c.url.includes('/wallets'))).toBe(false);
+  });
+
+  it('보상 있는 완료 — 방은 다시 받고, 지갑은 응답으로 반영해 받지 않는다', async () => {
+    reward = 10;
+    const after = await completeAndCollect();
+    const at = calls.findIndex((c) => c.method === 'POST' && c.url.includes('/routines/44/logs'));
+    await waitFor(() =>
+      expect(
+        calls.slice(at + 1).some((c) => c.method === 'GET' && c.url.includes('/rooms/me')),
+      ).toBe(true),
+    );
+    expect(after.some((c) => c.url.includes('/wallets'))).toBe(false);
+  });
+});
