@@ -428,10 +428,11 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     onCoinArrive,
   } = useRewardFly(streakDays);
   // 거미줄 청소 (#830) — 보상이 실제로 지급됐을 때만 코인이 난다.
-  const handleCleanCobweb = async (at: { x: number; y: number }) => {
+  // 참조 고정 — 인라인이면 roomScene으로 들어가 토글마다 Room memo가 깨진다(성능 장부 R8).
+  const handleCleanCobweb = useStableCallback(async (at: { x: number; y: number }) => {
     const earned = await onCleanCobweb?.();
     if (earned && earned > 0) showReward(earned, at);
-  };
+  });
   const { show: toast } = useToast();
 
   // 셸이 안 주면(테스트·Dev 갤러리) KST로 — 셸 경로(use-calendar-view)와 같은 기준.

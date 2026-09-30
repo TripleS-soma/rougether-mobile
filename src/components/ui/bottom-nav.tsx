@@ -1,4 +1,4 @@
-import { type FC, useEffect, useRef, useState } from 'react';
+import { type FC, memo, useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type SvgProps } from 'react-native-svg';
@@ -119,7 +119,7 @@ function TabIcon({
  * 높이가 없으므로 밑을 지나는 스크롤 화면이 `useBottomNavInset()`만큼 하단
  * 패딩을 가져야 한다. 면의 재질(글래스/반투명/불투명)은 GlassSurface가 고른다.
  */
-export function BottomNav({ active, onChange, badges }: BottomNavProps) {
+function BottomNavBase({ active, onChange, badges }: BottomNavProps) {
   const t = useTokens();
   const tr = useT();
   // 가장 긴 라벨은 언어마다 다르다 (#893) — 영어는 'Calendar'가 가장 길다.
@@ -322,3 +322,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
   },
 });
+
+/** 셸이 렌더될 때마다 같이 그려지지 않게 (성능 장부 R9) — 셸은 콜백 참조를 고정해 넘긴다. */
+export const BottomNav = memo(BottomNavBase);

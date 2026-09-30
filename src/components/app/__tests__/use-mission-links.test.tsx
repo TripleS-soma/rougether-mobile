@@ -123,3 +123,50 @@ describe('연동 루틴 자동 정리 (#338 → #979)', () => {
     expect(deleteRoutine).not.toHaveBeenCalled();
   });
 });
+
+describe('houseLinkedRoutines 참조 유지 (성능 장부 R7)', () => {
+  const base = (completions: Record<string, string[]>, routines: Routine[]) =>
+    ({
+      houses: [{ houseId: 6, name: 'TripleS', missions: [mission(1, 'ACTIVE')] } as House],
+      currentHouse: { houseId: 6, name: 'TripleS', missions: [mission(1, 'ACTIVE')] } as House,
+      routines,
+      completions,
+      categories: [CATEGORY],
+      myRoomLoading: false,
+      housesLoading: false,
+      contributedMissionIds: new Set<number>(),
+      ensureCategory: jest.fn(),
+      addRoutineWithMission: jest.fn(),
+      linkCategoryHouse: jest.fn(),
+      linkRoutineMission: jest.fn(),
+      deleteRoutine: jest.fn(async () => true),
+      deleteCategoryCascade: jest.fn(),
+      toggleCompletion: jest.fn(),
+      leaveHouse: jest.fn(),
+      deleteMission: jest.fn(),
+      applyMissionContribution: jest.fn(),
+    }) as unknown as Parameters<typeof useMissionLinks>[0];
+
+  it('연동과 무관한 완료가 바뀌면 같은 배열, 연동 루틴의 오늘 완료가 바뀌면 새 배열', async () => {
+    const routines = [routine('linked', 1), routine('plain')];
+    const view = await renderHook(
+      (props: Parameters<typeof useMissionLinks>[0]) => useMissionLinks(props),
+      {
+        initialProps: base({}, routines),
+      },
+    );
+    const first = view.result.current.houseLinkedRoutines;
+    expect(first).toEqual([{ missionId: 1, completedToday: false }]);
+
+    await view.rerender(base({ plain: ['2000-01-01'] }, routines));
+    expect(view.result.current.houseLinkedRoutines).toBe(first);
+
+    const today = view.result.current.houseLinkedRoutines;
+    const { todayIso } = jest.requireActual('@/utils/datetime') as { todayIso: () => string };
+    await view.rerender(base({ linked: [todayIso()] }, routines));
+    expect(view.result.current.houseLinkedRoutines).not.toBe(today);
+    expect(view.result.current.houseLinkedRoutines).toEqual([
+      { missionId: 1, completedToday: true },
+    ]);
+  });
+});

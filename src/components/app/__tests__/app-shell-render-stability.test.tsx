@@ -142,6 +142,17 @@ describe('memo 경계 (#539)', () => {
     };
     expect(settings.SettingsScreen.$$typeof).toBe(MEMO_TYPE);
   });
+
+  it('셸이 매 렌더 그리는 하단 바·스피커 시트·미션 시트도 memo다 (성능 장부 R9)', () => {
+    for (const [path, name] of [
+      ['@/components/ui/bottom-nav', 'BottomNav'],
+      ['@/components/room/speaker-sheet', 'SpeakerSheet'],
+      ['@/components/screens/sheets/mission-sheet', 'MissionSheet'],
+    ] as const) {
+      const mod = jest.requireActual(path) as Record<string, { $$typeof: symbol }>;
+      expect(mod[name].$$typeof).toBe(MEMO_TYPE);
+    }
+  });
 });
 
 /**
