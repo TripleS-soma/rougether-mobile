@@ -15,7 +15,11 @@ const NO_GACHAS: GachaMachine[] = [];
 const selectGachas = (list: GachaResponse[]) =>
   getCategoryGachas(list.filter((gacha) => gacha.active !== false).map(toGachaMachine));
 
-export function useGacha(onWallet: (wallet: Wallet) => void) {
+/**
+ * `enabled` — 뽑기 화면에 처음 들어갈 때 켠다 (성능 장부 N3). 예전엔 앱 시작마다 카탈로그를
+ * 받았다. 뽑기(draw)는 enabled와 무관하게 동작한다.
+ */
+export function useGacha(onWallet: (wallet: Wallet) => void, { enabled = true } = {}) {
   const qc = useQueryClient();
   const walletRef = useLatestRef(onWallet);
   // A synchronous lock also covers two taps before React renders isPending.
@@ -24,6 +28,7 @@ export function useGacha(onWallet: (wallet: Wallet) => void) {
     queryKey: queryKeys.gachas,
     queryFn: fetchGachas,
     select: selectGachas,
+    enabled,
   });
   const { mutateAsync } = useMutation({
     mutationFn: ({ gachaId, count }: { gachaId: number; count: GachaDrawCount }) =>

@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type Dispatch,
   type SetStateAction,
@@ -60,6 +61,13 @@ type FriendVisit = ReturnType<typeof useFriendVisit>;
  * 친구 방문(use-friend-visit)은 이 훅보다 먼저 서야 해서(집 스위처 인덱스를
  * 양쪽이 소비) 셸에 남고, 파생값·함수만 파라미터로 받는다.
  */
+/** 커버 카탈로그를 쓰는 화면 — 집(헤더 커버)·멤버 관리(수정)·집 만들기. */
+const HOUSE_COVER_SCREENS: ReadonlySet<Screen> = new Set<Screen>([
+  'house',
+  'houseMembers',
+  'createHouse',
+]);
+
 export function useHousePages({
   nav,
   data,
@@ -98,6 +106,7 @@ export function useHousePages({
     | 'searchError'
     | 'retry'
     | 'retrySearch'
+    | 'ensureSearch'
     | 'refreshHouses'
     | 'pendingJoinRequests'
     | 'cancelJoinRequest'
@@ -175,6 +184,7 @@ export function useHousePages({
     searchError,
     retry: retryHouses,
     retrySearch,
+    ensureSearch,
     refreshHouses,
     pendingJoinRequests,
     cancelJoinRequest,
@@ -300,7 +310,13 @@ export function useHousePages({
   }, [screen, currentHouse, catalogue, shopLoading, loadRoomPreviews]);
 
   // Selectable house-cover catalog (집 생성·집 정보 수정).
-  const { covers: houseCovers } = useHouseCovers();
+  // 집 탐색 목록·커버 카탈로그는 그 화면에 처음 들어갈 때 받는다 (성능 장부 N3).
+  useEffect(() => {
+    if (screen === 'houseSearch') ensureSearch();
+  }, [screen, ensureSearch]);
+  const coversWanted = useRef(false);
+  if (HOUSE_COVER_SCREENS.has(screen)) coversWanted.current = true;
+  const { covers: houseCovers } = useHouseCovers(coversWanted.current);
 
   // --- memo 화면(HouseScreen)으로 가는 콜백/파생 prop (#539) ---
   // 인라인 화살표·렌더마다 새로 만드는 객체는 memo 경계를 무효화한다. 매 렌더
