@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -140,73 +140,29 @@ export function HouseChatScreen({
   }).current;
   const viewability = useRef({ itemVisiblePercentThreshold: 50 }).current;
 
+  // 행은 memo — 새 메시지·읽음 변화마다 목록 전체를 다시 그리지 않게(성능 장부 M8). 뷰 모델은
+  // 갱신마다 새 객체라 원시값만 넘겨 얕은 비교가 먹게 한다.
   const renderItem: ListRenderItem<ChatMessageView> = useCallback(
     ({ item, index }) => {
       const mine = myUserId != null && item.senderUserId === myUserId;
       // 뒤집힌 목록에서 index+1이 바로 위(이전) 메시지 — 같은 사람이 이어 말하면 이름 생략.
       const prev = data[index + 1];
       const showName = !mine && prev?.senderUserId !== item.senderUserId;
-      const time = timeLabel(item.createdAt);
-      const meta =
-        item.status === 'pending' ? (
-          <Text style={[Typography.supporting, { color: t.textMuted }]}>
-            {tr('house.chat.sending')}
-          </Text>
-        ) : item.status === 'failed' ? (
-          <Pressable
-            onPress={() => item.clientMessageId && onRetrySend?.(item.clientMessageId)}
-            accessibilityRole="button"
-            accessibilityLabel={tr('house.chat.retryA11y')}
-            hitSlop={Spacing.two}>
-            <Text style={[Typography.supporting, emph('semibold'), { color: t.dangerText }]}>
-              {tr('house.chat.failed')}
-            </Text>
-          </Pressable>
-        ) : (
-          <View style={[styles.meta, mine ? styles.metaMine : null]}>
-            {item.unreadCount > 0 ? (
-              <Text
-                style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}
-                accessibilityLabel={tr('house.chat.unreadA11y', { n: item.unreadCount })}>
-                {item.unreadCount}
-              </Text>
-            ) : null}
-            {time ? (
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>{time}</Text>
-            ) : null}
-          </View>
-        );
       return (
-        <View style={[styles.row, mine ? styles.rowMine : styles.rowOther]}>
-          {showName ? (
-            <Text
-              style={[Typography.supporting, emph('semibold'), { color: t.textMuted }]}
-              numberOfLines={1}>
-              {item.senderNickname || tr('house.chat.unknownSender')}
-            </Text>
-          ) : null}
-          <View style={[styles.line, mine ? styles.lineMine : null]}>
-            <View
-              style={[
-                styles.bubble,
-                mine
-                  ? { backgroundColor: t.primary }
-                  : { backgroundColor: t.surface, borderColor: t.border },
-                mine ? null : styles.bubbleOther,
-                item.status === 'pending' ? styles.pending : null,
-              ]}>
-              <Text
-                style={[Typography.body, emph('normal'), { color: mine ? t.onPrimary : t.text }]}
-                selectable>
-                {item.content}
-              </Text>
-            </View>
-            {meta}
-          </View>
-        </View>
+        <ChatRow
+          mine={mine}
+          showName={showName}
+          content={item.content}
+          senderNickname={item.senderNickname}
+          createdAt={item.createdAt}
+          unreadCount={item.unreadCount}
+          status={item.status}
+          clientMessageId={item.clientMessageId}
+          onRetrySend={onRetrySend}
+        />
       );
     },
-    [data, myUserId, t, Typography, emph, tr, onRetrySend],
+    [data, myUserId, onRetrySend],
   );
 
   const body = loading ? (
@@ -307,6 +263,92 @@ export function HouseChatScreen({
 /** 입력칸이 여러 줄로 늘어나도 목록을 다 먹지 않는 높이 — 본문 약 5줄. */
 const INPUT_MAX_HEIGHT = 132;
 const SEND_SIZE = 44;
+
+type ChatRowProps = {
+  mine: boolean;
+  showName: boolean;
+  content: string;
+  senderNickname?: string;
+  createdAt?: string;
+  unreadCount: number;
+  status: ChatMessageView['status'];
+  clientMessageId?: string;
+  onRetrySend?: (clientMessageId: string) => void;
+};
+
+const ChatRow = memo(function ChatRow({
+  mine,
+  showName,
+  content,
+  senderNickname,
+  createdAt,
+  unreadCount,
+  status,
+  clientMessageId,
+  onRetrySend,
+}: ChatRowProps) {
+  const t = useTokens();
+  const tr = useT();
+  const Typography = useTypography();
+  const emph = useFontEmphasis();
+  const time = timeLabel(createdAt);
+  const meta =
+    status === 'pending' ? (
+      <Text style={[Typography.supporting, { color: t.textMuted }]}>
+        {tr('house.chat.sending')}
+      </Text>
+    ) : status === 'failed' ? (
+      <Pressable
+        onPress={() => clientMessageId && onRetrySend?.(clientMessageId)}
+        accessibilityRole="button"
+        accessibilityLabel={tr('house.chat.retryA11y')}
+        hitSlop={Spacing.two}>
+        <Text style={[Typography.supporting, emph('semibold'), { color: t.dangerText }]}>
+          {tr('house.chat.failed')}
+        </Text>
+      </Pressable>
+    ) : (
+      <View style={[styles.meta, mine ? styles.metaMine : null]}>
+        {unreadCount > 0 ? (
+          <Text
+            style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}
+            accessibilityLabel={tr('house.chat.unreadA11y', { n: unreadCount })}>
+            {unreadCount}
+          </Text>
+        ) : null}
+        {time ? <Text style={[Typography.supporting, { color: t.textMuted }]}>{time}</Text> : null}
+      </View>
+    );
+  return (
+    <View style={[styles.row, mine ? styles.rowMine : styles.rowOther]}>
+      {showName ? (
+        <Text
+          style={[Typography.supporting, emph('semibold'), { color: t.textMuted }]}
+          numberOfLines={1}>
+          {senderNickname || tr('house.chat.unknownSender')}
+        </Text>
+      ) : null}
+      <View style={[styles.line, mine ? styles.lineMine : null]}>
+        <View
+          style={[
+            styles.bubble,
+            mine
+              ? { backgroundColor: t.primary }
+              : { backgroundColor: t.surface, borderColor: t.border },
+            mine ? null : styles.bubbleOther,
+            status === 'pending' ? styles.pending : null,
+          ]}>
+          <Text
+            style={[Typography.body, emph('normal'), { color: mine ? t.onPrimary : t.text }]}
+            selectable>
+            {content}
+          </Text>
+        </View>
+        {meta}
+      </View>
+    </View>
+  );
+});
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
