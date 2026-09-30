@@ -6,11 +6,11 @@
  * The friend's slots resolve against the shop catalogue by assetKey — their
  * userItemIds belong to their inventory, which we don't hold.
  */
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
 
 import {
   fetchHouseMemberDay,
-  fetchHouseMemberRoom,
   fetchHouseMemberRoutineCompletions,
   cleanHouseMemberCobweb,
   ApiError,
@@ -29,6 +29,8 @@ import type { CharacterId } from '@/constants/characters';
 import type { Routine, RoutineCategoryMeta } from '@/constants/routines';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
 import { ErrorCode } from '@/api/error-codes';
+import { fetchMemberRoom } from '@/hooks/use-member-room-previews';
+import { queryKeys } from '@/lib/query-keys';
 import type { RoomCobweb } from '@/components/room/room';
 import { shiftIso, todayIso } from '@/utils/datetime';
 
@@ -85,6 +87,7 @@ const emptyRoom = (): FriendRoom => ({
 });
 
 export function useFriendRoom() {
+  const qc = useQueryClient();
   const [friendRoom, setFriendRoom] = useState<FriendRoom>(emptyRoom);
   // Visits can be rapid (back → next friend); only the latest load may land.
   const seqRef = useRef(0);
@@ -118,7 +121,8 @@ export function useFriendRoom() {
       setFriendRoom({ ...emptyRoom(), loading: true });
       // Each endpoint fails soft so one outage doesn't blank the others' data.
       const [room, day, completions] = await Promise.all([
-        fetchHouseMemberRoom(houseId, membershipId).catch(() => null),
+        // 집 좌석 미리보기가 방금 받은 같은 방이면 그 응답을 쓴다 (성능 장부 N5).
+        fetchMemberRoom(qc, houseId, membershipId).catch(() => null),
         fetchHouseMemberDay(houseId, membershipId).catch(() => null),
         fetchHouseMemberRoutineCompletions(houseId, membershipId, {
           from: shiftIso(today, -(INITIAL_COMPLETION_DAYS - 1)),
@@ -170,7 +174,7 @@ export function useFriendRoom() {
         loading: false,
       });
     },
-    [],
+    [qc],
   );
 
   /**
@@ -225,18 +229,20 @@ export function useFriendRoom() {
     async (houseId: number, membershipId: number): Promise<number | null> => {
       try {
         const res = await cleanHouseMemberCobweb(houseId, membershipId);
+        qc.removeQueries({ queryKey: queryKeys.memberRoom.one(houseId, membershipId) });
         setFriendRoom((prev) => ({ ...prev, cobweb: null }));
         return res.rewardAmount ?? 0;
       } catch (err) {
         // 남이 먼저 치웠다 — 실패가 아니라 이미 깨끗해진 것. 보상은 없다.
         if (err instanceof ApiError && err.code === ErrorCode.ROOM_COBWEB_NOT_ACTIVE) {
+          qc.removeQueries({ queryKey: queryKeys.memberRoom.one(houseId, membershipId) });
           setFriendRoom((prev) => ({ ...prev, cobweb: null }));
           return null;
         }
         throw err;
       }
     },
-    [],
+    [qc],
   );
 
   return {

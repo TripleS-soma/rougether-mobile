@@ -36,6 +36,15 @@ export const queryKeys = {
   walletHistory: (userId: number | null | undefined) => ['wallet-history', userId] as const,
   /** 상점 공개 카탈로그 (GET /items) — 사용자 무관. `owned` 플래그는 인벤토리로 덮는다. */
   items: ['items'] as const,
+  /**
+   * 집 구성원 방 (GET /houses/{id}/members/{mid}/room) — 좌석 미리보기와 친구 방 방문이
+   * 같은 응답을 나눠 쓴다(성능 장부 N5). 사용자 캐시는 로그아웃 시 통째로 비워진다.
+   */
+  memberRoom: {
+    all: ['house-member-room'] as const,
+    one: (houseId: number, membershipId: number) =>
+      ['house-member-room', houseId, membershipId] as const,
+  },
   /** 집 커버 카탈로그 (GET /houses/cover-images) — 사용자 무관. */
   houseCovers: ['house-covers'] as const,
   /** 내 인벤토리 (GET /me/items, itemId↔userItemId) — 뽑기·구매·AI 가구가 갱신한다. */
