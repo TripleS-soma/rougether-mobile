@@ -2,9 +2,10 @@ import { Redirect } from 'expo-router';
 
 /**
  * /dev — component gallery route. Dev/test harness only: production builds
- * redirect home (the route stays reachable via deep link otherwise), and the
- * inline require lets Metro drop the gallery + registry from the prod bundle
- * (__DEV__ is inlined at build time, so the branch below is dead code there).
+ * redirect home (the route stays reachable via deep link otherwise). The
+ * inline require alone does NOT drop the gallery from the prod bundle (Metro
+ * collects the dependency first) — metro.config.js resolves `@/dev/*` to an
+ * empty module outside dev builds.
  */
 export default function DevGalleryRoute() {
   if (!__DEV__) return <Redirect href="/" />;

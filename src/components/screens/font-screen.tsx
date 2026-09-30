@@ -17,6 +17,7 @@ import {
 import { useActionBarInset, useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { BrandThemePreview, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useWebFontPreviews } from '@/hooks/use-web-fonts';
 import { useT } from '@/i18n';
 
 /** 글자 스와치에 쓸 견본 — 받침·둥근 획이 다 들어가 얼굴 차이가 잘 드러난다. */
@@ -47,6 +48,8 @@ export function FontScreen({
   onBack,
 }: FontScreenProps) {
   const t = useTokens();
+  // 웹은 선택한 폰트만 받아 두므로(B4) 스와치용 제목 얼굴을 여기서 받는다. 네이티브는 no-op.
+  useWebFontPreviews();
   const tr = useT();
   const Typography = useTypography();
   const column = useResponsiveColumn();

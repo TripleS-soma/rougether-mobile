@@ -12,7 +12,8 @@ import {
   View,
 } from 'react-native';
 
-import appIcon from '@/assets/images/icon.png';
+// 1024px 원본(icon.png, 885KB)은 네이티브 지문 입력이라 그대로 두고, 화면용 336px 사본을 쓴다.
+import appIcon from '@/assets/images/login-app-icon.webp';
 import { LoginConflictDialog } from '@/components/screens/login/login-conflict-dialog';
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
