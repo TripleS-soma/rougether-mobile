@@ -220,7 +220,14 @@ export function useMyRoomData() {
         if (!wasDone && !rewardAmount && date === todayIso())
           toast(i18n.t('routineTodo.toast.coinCapReached'));
         if (!wasDone) track('routine_complete', { kind: item?.kind ?? 'routine' });
-        await refreshWallet();
+        // 지갑 (성능 장부 N2) — 완료는 응답의 지급액(COIN)만큼 더하면 서버와 같다(spec
+        // routine-todo api.md: 지급·차감은 한 트랜잭션, 보상 0이면 지갑 불변). 취소는
+        // 회수액이 응답에 없어 다시 받는다.
+        if (wasDone) await refreshWallet();
+        else if (rewardAmount && rewardAmount > 0) {
+          const earned = rewardAmount;
+          setWallet((w) => ({ ...w, coin: w.coin + earned }));
+        }
         return wasDone
           ? null
           : { rewardAmount: rewardAmount ?? 0, houseMissionContribution: contribution };
