@@ -271,10 +271,51 @@ describe('TabPager (#563)', () => {
       });
     });
     await ui.rerender(<Harness index={1} onIndexChange={onIndexChange} />);
+    // 전환(0→1)이 끊기지 않았다 — 출발·도착 페이지가 아직 보인다.
     expect(ui.getByText('나의 방 페이지')).toBeTruthy();
-    expect(ui.getByText('설정 페이지')).toBeTruthy();
+    expect(ui.getByText('집 페이지')).toBeTruthy();
+    // 범위 밖 페이지는 올리지 않는다 (성능 장부 M1).
+    expect(ui.queryByText('설정 페이지')).toBeNull();
     expect(timing).toHaveBeenCalledTimes(1);
     expect(onIndexChange).not.toHaveBeenCalled();
+  });
+
+  it('탭으로 두 칸 이동하면 지나가는 페이지까지만 올린다 (성능 장부 M1)', async () => {
+    jest.spyOn(Reanimated, 'withTiming').mockImplementation((target) => target);
+    const ui = await renderPager(0);
+    await ui.rerender(<Harness index={2} onIndexChange={jest.fn()} />);
+    // jest의 useAnimatedStyle은 렌더 때만 다시 계산한다 — 효과가 연 범위를 보려면 한 번 더.
+    await ui.rerender(<Harness index={2} onIndexChange={jest.fn()} />);
+    expect(ui.getByText('나의 방 페이지')).toBeTruthy();
+    expect(ui.getByText('집 페이지')).toBeTruthy();
+    expect(ui.getByText('설정 페이지')).toBeTruthy();
+  });
+
+  it('전환 도중 다시 탭해도 지나가던 페이지를 닫지 않는다 (성능 장부 M1 리뷰)', async () => {
+    // 애니메이션을 끝내지 않는다 — 0→2 전환이 진행 중인 채로 1을 누른다.
+    jest.spyOn(Reanimated, 'withTiming').mockImplementation(() => 0);
+    const ui = await renderPager(0);
+    await ui.rerender(<Harness index={2} onIndexChange={jest.fn()} />);
+    await ui.rerender(<Harness index={1} onIndexChange={jest.fn()} />);
+    await ui.rerender(<Harness index={1} onIndexChange={jest.fn()} />);
+    // 화면은 아직 0번 위치다 — 0번이 빈칸이 되면 안 된다.
+    expect(ui.getByText('나의 방 페이지')).toBeTruthy();
+    expect(ui.getByText('집 페이지')).toBeTruthy();
+  });
+
+  it('첫 페이지에서 스와이프를 시작하면 바로 옆 페이지만 올린다 (성능 장부 M1)', async () => {
+    jest.spyOn(Reanimated, 'withTiming').mockImplementation((target) => target);
+    const ui = await renderPager(0);
+    await act(async () => {
+      fireGestureHandler(getByGestureTestId('tab-pager-pan'), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE },
+        { state: State.ACTIVE, translationX: -40 },
+      ]);
+    });
+    await ui.rerender(<Harness index={0} onIndexChange={jest.fn()} />);
+    expect(ui.getByText('집 페이지')).toBeTruthy();
+    expect(ui.queryByText('설정 페이지')).toBeNull();
   });
 
   it('활성 페이지만 보이고 비활성 이웃은 그리지 않는다', async () => {

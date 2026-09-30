@@ -63,7 +63,7 @@ import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furnitur
 import { usePagerLock } from '@/components/app/use-pager-lock';
 import { tutorialCoachStep } from '@/components/app/use-tutorial-coach';
 import { calendarToday } from '@/utils/calendar-progress';
-import { CoachMarkOverlay, useCoachTargets } from '@/components/ui/coach-mark';
+import { CoachMarkOverlay } from '@/components/ui/coach-mark';
 import { useTabScroll } from '@/components/app/use-tab-scroll';
 import { MinigameActiveContext, useMinigameSurface } from '@/components/app/use-minigame-surface';
 
@@ -152,7 +152,6 @@ export function AppShell({
   const completeMission = missions.complete;
   // 튜토리얼 코치마크 (#1324) — 미션 진행 중 (현재 미션, 현재 화면)에 맞는 대상을 짚고
   // 나머지를 잠근다. 완료 시트(Modal)가 떠 있는 동안은 그 시트가 유일한 조작이라 접는다.
-  const coachTargets = useCoachTargets();
   const [coachFrame, setCoachFrame] = useState({ w: 0, h: 0 });
 
   // Routines / todos / categories / completion / wallet come from the API.
@@ -912,7 +911,6 @@ export function AppShell({
           hardLock
           steps={coachSteps}
           index={0}
-          targets={coachTargets}
           frame={coachFrame}
           caption={tr('app.shell.missionCaption', {
             index: missions.stepIndex + 1,

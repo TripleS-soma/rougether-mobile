@@ -3,12 +3,15 @@ import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, StyleSheet } from 'react-native';
 import { SPEAKER_IMAGE } from '@/resources/speaker';
 import { NATIVE_DRIVER } from '@/utils/animation';
+import { usePageActive } from '@/hooks/use-page-active';
 import { useT } from '@/i18n';
 
 export function SpeakerSprite({ playing = false }: { playing?: boolean }) {
   const tr = useT();
   const pulse = useRef(new Animated.Value(0)).current;
   const [reduced, setReduced] = useState(true);
+  // 숨은 탭에서는 멈춘다 (성능 장부 M7) — 음악은 계속 나오고 연출만 쉰다.
+  const pageActive = usePageActive();
   useEffect(() => {
     let alive = true;
     void AccessibilityInfo.isReduceMotionEnabled().then((value) => {
@@ -21,7 +24,7 @@ export function SpeakerSprite({ playing = false }: { playing?: boolean }) {
     };
   }, []);
   useEffect(() => {
-    if (!playing || reduced) {
+    if (!playing || reduced || !pageActive) {
       pulse.setValue(0);
       return;
     }
@@ -46,7 +49,7 @@ export function SpeakerSprite({ playing = false }: { playing?: boolean }) {
       loop.stop();
       pulse.setValue(0);
     };
-  }, [playing, reduced, pulse]);
+  }, [playing, reduced, pageActive, pulse]);
   return (
     <Animated.View
       testID="speaker-sprite"

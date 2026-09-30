@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { PagerGestureContext } from '@/components/ui/pager-scroll-view';
+import { PageActiveContext } from '@/hooks/use-page-active';
 import { SWIPE_CLAIM_DX, SWIPE_FAIL_DY } from '@/utils/gesture';
 
 /** 페이지 스냅 판정 — 폭 대비 이 비율을 넘게 끌면 넘어간다. */
@@ -82,7 +83,11 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
   const swiping = useRef(useSharedValue(false)).current;
   // 드래그·정착 중에만 이웃 페이지를 보인다 — 평시엔 display:none으로 숨겨
   // 오프스크린 페이지가 그려지지 않고, 테스트 쿼리에도 잡히지 않는다.
-  const revealAll = useRef(useSharedValue(false)).current;
+  // 보일 범위만 연다 (성능 장부 M1) — 예전엔 전환마다 5개 페이지를 전부 display:flex로
+  // 올려 집(방 N개)·달력까지 첫 프레임에 레이아웃했다. 스와이프는 양옆 하나씩, 탭 이동은
+  // 출발~도착 사이만. lo > hi면 닫힘.
+  const revealLo = useRef(useSharedValue(1)).current;
+  const revealHi = useRef(useSharedValue(0)).current;
   // 제스처 정착으로 이미 tx가 목표에 가 있는 인덱스 — prop 반영 시 중복
   // 애니메이션을 건너뛴다.
   const settledRef = useRef(index);
@@ -111,15 +116,25 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
       return;
     }
     settledRef.current = index;
-    revealAll.value = true;
+    // 지금 화면 위치(진행 중인 전환 도중일 수 있다)부터 목표까지 연다 — 목표만 보면 도중 재탭에서
+    // 지나가던 페이지가 닫혀 빈칸이 보인다. 이미 열린 범위는 넓히기만 한다.
+    const at = -tx.value / width;
+    const open = revealLo.value <= revealHi.value;
+    const lo = Math.min(Math.floor(at), index);
+    const hi = Math.max(Math.ceil(at), index);
+    revealLo.value = open ? Math.min(revealLo.value, lo) : lo;
+    revealHi.value = open ? Math.max(revealHi.value, hi) : hi;
     tx.value = withTiming(
       -index * width,
       { duration: SETTLE_MS, easing: Easing.out(Easing.cubic) },
       (finished) => {
-        if (finished) revealAll.value = false;
+        if (finished) {
+          revealLo.value = 1;
+          revealHi.value = 0;
+        }
       },
     );
-  }, [index, width, tx, revealAll, swiping]);
+  }, [index, width, tx, revealLo, revealHi, swiping]);
 
   commitRef.current = (target: number) => {
     settledRef.current = target;
@@ -183,7 +198,13 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
             'worklet';
             swiping.value = true;
             start.value = tx.value;
-            revealAll.value = true;
+            // 정착 애니메이션 도중에 잡을 수도 있다 — 현재 위치 양옆 한 칸씩, 열린 범위는 넓히기만.
+            const at = widthSV.value > 0 ? -tx.value / widthSV.value : indexSV.value;
+            const lo = Math.floor(at) - 1;
+            const hi = Math.ceil(at) + 1;
+            const open = revealLo.value <= revealHi.value;
+            revealLo.value = open ? Math.min(revealLo.value, lo) : lo;
+            revealHi.value = open ? Math.max(revealHi.value, hi) : hi;
           })
           .onUpdate((e) => {
             'worklet';
@@ -203,7 +224,10 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
               -target * widthSV.value,
               { duration: SETTLE_MS, easing: Easing.out(Easing.cubic) },
               (finished) => {
-                if (finished) revealAll.value = false;
+                if (finished) {
+                  revealLo.value = 1;
+                  revealHi.value = 0;
+                }
               },
             );
             if (success) runOnJS(commit)(target);
@@ -230,7 +254,8 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
       touchStart,
       swiping,
       tx,
-      revealAll,
+      revealLo,
+      revealHi,
     ],
   );
 
@@ -250,7 +275,13 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
             testID="tab-pager-row"
             style={[styles.row, { width: width * count || undefined }, rowStyle]}>
             {pages.map((child, i) => (
-              <Page key={i} index={i} width={width} active={i === index} revealAll={revealAll}>
+              <Page
+                key={i}
+                index={i}
+                width={width}
+                active={i === index}
+                revealLo={revealLo}
+                revealHi={revealHi}>
                 {child}
               </Page>
             ))}
@@ -265,13 +296,15 @@ function Page({
   index,
   width,
   active,
-  revealAll,
+  revealLo,
+  revealHi,
   children,
 }: {
   index: number;
   width: number;
   active: boolean;
-  revealAll: SharedValue<boolean>;
+  revealLo: SharedValue<number>;
+  revealHi: SharedValue<number>;
   children: ReactNode;
 }) {
   // 비활성 페이지는 드래그/정착 중에만 그린다 — display는 UI 스레드에서만
@@ -280,11 +313,11 @@ function Page({
   // 플렉스 행이었을 때는 숨긴 페이지가 레이아웃에서 빠지며 나머지가 앞으로
   // 밀려, 정착 후 빈 슬롯(검은 화면)이 보였다.
   const style = useAnimatedStyle(() => ({
-    display: active || revealAll.value ? 'flex' : 'none',
+    display: active || (index >= revealLo.value && index <= revealHi.value) ? 'flex' : 'none',
   }));
   return (
     <Animated.View style={[styles.page, { left: index * width, width: width || undefined }, style]}>
-      {children}
+      <PageActiveContext.Provider value={active}>{children}</PageActiveContext.Provider>
     </Animated.View>
   );
 }

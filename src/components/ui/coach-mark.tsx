@@ -25,8 +25,12 @@ import { useT } from '@/i18n';
 /** 화면(윈도) 좌표계의 대상 사각형. */
 export type TargetRect = { x: number; y: number; w: number; h: number };
 
-type TargetStore = {
-  rects: Record<string, TargetRect>;
+/**
+ * 등록·재측정 함수(참조 고정)와 좌표 맵을 **다른 컨텍스트**로 둔다 (성능 장부 R2) — 한
+ * 컨텍스트였을 때는 대상 하나가 1px만 움직여도 모든 CoachTarget과(등록 함수만 쓰는데도)
+ * 셸 전체(오버레이용으로 구독)가 다시 그려졌다. 이제 좌표는 오버레이만 구독한다.
+ */
+type TargetActions = {
   setRect: (key: string, rect: TargetRect) => void;
   /** 대상별 재측정 함수 등록 — 해제 함수를 돌려준다. */
   registerMeasure: (key: string, measure: () => void) => () => void;
@@ -34,7 +38,8 @@ type TargetStore = {
   remeasureAll: () => void;
 };
 
-const CoachTargetContext = createContext<TargetStore | null>(null);
+const CoachTargetContext = createContext<TargetActions | null>(null);
+const CoachRectsContext = createContext<Record<string, TargetRect> | null>(null);
 
 /**
  * 코치마크 대상 좌표 저장소 (#351). 앱 셸 최상단에 한 번 감싸고,
@@ -68,11 +73,15 @@ export function CoachTargetProvider({ children }: { children: ReactNode }) {
   const remeasureAll = useCallback(() => {
     measuresRef.current.forEach((measure) => measure());
   }, []);
-  const value = useMemo(
-    () => ({ rects, setRect, registerMeasure, remeasureAll }),
-    [rects, setRect, registerMeasure, remeasureAll],
+  const actions = useMemo(
+    () => ({ setRect, registerMeasure, remeasureAll }),
+    [setRect, registerMeasure, remeasureAll],
   );
-  return <CoachTargetContext.Provider value={value}>{children}</CoachTargetContext.Provider>;
+  return (
+    <CoachTargetContext.Provider value={actions}>
+      <CoachRectsContext.Provider value={rects}>{children}</CoachRectsContext.Provider>
+    </CoachTargetContext.Provider>
+  );
 }
 
 /**
@@ -81,8 +90,7 @@ export function CoachTargetProvider({ children }: { children: ReactNode }) {
  */
 /** 등록된 대상 좌표 — 오버레이를 그리는 쪽이 읽는다. 프로바이더 밖이면 빈 맵. */
 export function useCoachTargets(): Record<string, TargetRect> {
-  const store = useContext(CoachTargetContext);
-  return store?.rects ?? EMPTY_RECTS;
+  return useContext(CoachRectsContext) ?? EMPTY_RECTS;
 }
 const EMPTY_RECTS: Record<string, TargetRect> = {};
 
@@ -134,7 +142,8 @@ export type CoachMarkOverlayProps = {
   index: number;
   onNext?: () => void;
   onSkip?: () => void;
-  targets: Record<string, TargetRect>;
+  /** 대상 좌표 — 생략하면 CoachTargetProvider 저장소에서 읽는다. */
+  targets?: Record<string, TargetRect>;
   /** 셸 프레임 크기(onLayout) — 말풍선 배치·구멍 클램프용. */
   frame: { w: number; h: number };
   /**
@@ -188,11 +197,14 @@ export function CoachMarkOverlay({
   index,
   onNext,
   onSkip,
-  targets,
+  targets: targetsProp,
   frame,
   hardLock = false,
   caption,
 }: CoachMarkOverlayProps) {
+  // 좌표를 안 넘기면 저장소에서 직접 읽는다 — 셸이 구독하지 않아도 되게(R2).
+  const storeTargets = useCoachTargets();
+  const targets = targetsProp ?? storeTargets;
   const t = useTokens();
   const tr = useT();
   const Typography = useTypography();

@@ -159,3 +159,18 @@ describe('CoachMarkOverlay (#351)', () => {
     }
   });
 });
+
+describe('좌표 저장소 분리 (성능 장부 R2)', () => {
+  it('targets를 생략하면 저장소 좌표로 그린다', async () => {
+    const ui = await render(
+      <CoachTargetProvider>
+        <CoachMarkOverlay
+          steps={[{ target: 'none', title: '제목', body: '본문' }]}
+          index={0}
+          frame={{ w: 390, h: 800 }}
+        />
+      </CoachTargetProvider>,
+    );
+    expect(ui.getByText('제목')).toBeTruthy();
+  });
+});
