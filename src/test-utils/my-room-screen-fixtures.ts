@@ -41,6 +41,21 @@ export const YESTERDAY = isoShift(-1);
 export const TOMORROW = isoShift(1);
 
 /**
+ * 오늘과 **같은 달·같은 주(일요일 시작)**인 이웃 날 — 월 격자와 접힌 주간 줄 양쪽에 셀이
+ * 있어야 누를 수 있다. 내일을 우선하고, 월말이면 어제. 2026-09-30(KST) CI: 내일(10/1)이
+ * 9월 격자에 없어 달력 주간 테스트가 깨졌다. 월말이 일요일이면(어제는 지난주) 둘 다 안 돼
+ * 내일을 돌린다 — 그날은 격자 밖이라 드물게 다시 깨질 수 있다.
+ */
+export const NEIGHBOR_DAY = (() => {
+  const sameMonth = (d: string) => d.slice(0, 7) === TODAY.slice(0, 7);
+  const [y, m, d] = TODAY.split('-').map(Number);
+  const isSunday = new Date(Date.UTC(y, m - 1, d, 12)).getUTCDay() === 0;
+  if (sameMonth(TOMORROW)) return TOMORROW;
+  if (!isSunday && sameMonth(YESTERDAY)) return YESTERDAY;
+  return TOMORROW;
+})();
+
+/**
  * 달력 셀의 접근성 라벨 매처 — 셀 라벨은 `날짜[, 공휴일][, 오늘][, 진행]`이라 날짜만으로 정확
  * 일치하면 공휴일·오늘에 걸린 날은 못 찾는다(2026-09-23 CI: 내일이 추석 연휴라 실패).
  * 날짜로 시작하는 라벨을 잡는다.
