@@ -6,6 +6,7 @@ import { ApiError } from '@/api/http';
 import {
   bindSessionCacheReset,
   createQueryClient,
+  QUERY_STALE_POLICY,
   shouldReportQueryError,
 } from '@/lib/query-client';
 
@@ -71,5 +72,28 @@ describe('조회·변경 실패 보고 (#1376)', () => {
       })
       .catch(() => {});
     expect(captureException).not.toHaveBeenCalled();
+  });
+});
+
+describe('키별 신선도 (성능 장부 N4)', () => {
+  const staleOf = (key: readonly unknown[]) => createQueryClient().getQueryDefaults(key).staleTime;
+
+  it('카탈로그는 1시간, 추천은 10분', () => {
+    expect(staleOf(['items'])).toBe(60 * 60_000);
+    expect(staleOf(['gachas', 'categories'])).toBe(60 * 60_000);
+    expect(staleOf(['minigames', 'catalog', 3])).toBe(60 * 60_000);
+    expect(staleOf(['recommendations'])).toBe(10 * 60_000);
+  });
+
+  it('내 데이터는 기본 30초 그대로 — 카탈로그 키와 앞부분이 달라 섞이지 않는다', () => {
+    expect(staleOf(['me', 'items', 7])).toBeUndefined();
+    expect(staleOf(['rooms', 'me', 7])).toBeUndefined();
+    expect(staleOf(['minigames', 7, 'leaderboard', 'runner'])).toBeUndefined();
+    expect(createQueryClient().getDefaultOptions().queries?.staleTime).toBe(30_000);
+  });
+
+  it('정책 키는 전부 배열이고 중복이 없다', () => {
+    const keys = QUERY_STALE_POLICY.map((p) => JSON.stringify(p.key));
+    expect(new Set(keys).size).toBe(keys.length);
   });
 });
