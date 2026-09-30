@@ -29,10 +29,6 @@ import {
   deleteRoutine as apiDeleteRoutine,
   deleteTodo,
   fetchCategories,
-  fetchMe,
-  fetchRoutines,
-  fetchToday,
-  fetchTodos,
   fetchWallets,
   skipRoutineOccurrence,
   uncompleteRoutine,
@@ -42,6 +38,7 @@ import {
   updateRoutine as apiUpdateRoutine,
   updateTodo,
 } from '@/api';
+import { getSessionUserId } from '@/api/auth';
 import {
   toAppCategory,
   toAppRoutine,
@@ -69,6 +66,7 @@ import { loadRoutineSkips, saveRoutineSkips, type RoutineSkips } from '@/lib/rou
 import { identifyUser, track } from '@/lib/analytics';
 import { setErrorUser } from '@/lib/error-reporting';
 import { useCalendarData } from '@/hooks/use-calendar-data';
+import { fetchMyRoomBootData, takeMyRoomPrefetch } from '@/lib/my-room-prefetch';
 import { i18n } from '@/i18n';
 
 /** 완료 토글 결과 — 코인 보상액과 서버 자동 미션 기여 결과 (#578). */
@@ -99,15 +97,12 @@ export function useMyRoomData() {
   const userIdRef = useRef<number | undefined>(undefined);
 
   const reload = useCallback(async () => {
-    const [cats, rts, tds, today, wals, me] = await Promise.all([
-      // includeDeleted → deleted categories still resolve for past records.
-      fetchCategories(true),
-      fetchRoutines(),
-      fetchTodos(),
-      fetchToday(),
-      fetchWallets(),
-      fetchMe(),
-    ]);
+    // 앱 루트가 게이트 확인과 동시에 띄워 둔 첫 요청이 있으면 넘겨받는다 (성능 장부 N1).
+    // 선행 요청이 실패하면 평소처럼 새로 받는다.
+    const prefetched = takeMyRoomPrefetch(getSessionUserId());
+    const [cats, rts, tds, today, wals, me] = prefetched
+      ? await prefetched.catch(() => fetchMyRoomBootData())
+      : await fetchMyRoomBootData();
     const appCatsAll = cats.map((c, i) => toAppCategory(c, i));
     const appCats = appCatsAll.filter((c) => !c.deleted);
     userIdRef.current = me.userId ?? undefined;
