@@ -6,7 +6,6 @@
  */
 import { useCallback, useRef, useState } from 'react';
 
-import { fetchHouseMemberRoom } from '@/api';
 import {
   characterIdFromCode,
   fromFriendRoomSlots,
@@ -16,6 +15,7 @@ import {
 import type { House, MemberRoomPreview, RoomCell } from '@/components/screens/house/types';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
+import { fetchMemberRoomShared, invalidateMemberRoom } from '@/lib/member-room-cache';
 
 /**
  * Re-derive my tiles' character from the live worn character (#282). The
@@ -81,7 +81,8 @@ export function useMemberRoomPreviews() {
       await Promise.all(
         membershipIds.map(async (membershipId) => {
           try {
-            const room = await fetchHouseMemberRoom(houseId, membershipId);
+            // 친구 방 방문과 같은 응답을 나눠 쓴다 (성능 장부 N5).
+            const room = await fetchMemberRoomShared(houseId, membershipId);
             // 표면(벽지·바닥·배경)만 슬롯에서 읽는다 — 서버가 거기 저장한다.
             const surfaces = fromFriendRoomSlots(room.slots ?? [], catalogue);
             const preview: MemberRoomPreview = {
@@ -131,6 +132,8 @@ export function useMemberRoomPreviews() {
    */
   const invalidate = useCallback(() => {
     loadedHouseRef.current = null;
+    // 공유 응답 캐시도 — 안 버리면 다음 진입이 30초 안의 옛 방을 다시 쓴다.
+    invalidateMemberRoom();
   }, []);
 
   return { previews, load, clearCobweb, invalidate };

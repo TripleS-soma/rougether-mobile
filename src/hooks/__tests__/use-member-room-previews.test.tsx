@@ -8,6 +8,7 @@ import {
 } from '@/hooks/use-member-room-previews';
 import type { House, MemberRoomPreview } from '@/components/screens/house-screen';
 import { jsonRes as res } from '@/test-utils/fetch';
+import { invalidateMemberRoom } from '@/lib/member-room-cache';
 
 const CATALOGUE: ShopCatalogue = {
   furniture: [
@@ -20,6 +21,8 @@ const CATALOGUE: ShopCatalogue = {
 };
 
 const realFetch = global.fetch;
+// 구성원 방 공유 캐시(성능 장부 N5)는 모듈 수준이라 테스트마다 비운다 — 같은 id끼리 응답이 샌다.
+beforeEach(() => invalidateMemberRoom());
 afterEach(() => {
   global.fetch = realFetch;
 });
