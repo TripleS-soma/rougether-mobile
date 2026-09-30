@@ -115,10 +115,15 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
       if (widthChanged) tx.value = -index * width;
       return;
     }
-    const from = settledRef.current;
     settledRef.current = index;
-    revealLo.value = Math.min(from, index);
-    revealHi.value = Math.max(from, index);
+    // 지금 화면 위치(진행 중인 전환 도중일 수 있다)부터 목표까지 연다 — 목표만 보면 도중 재탭에서
+    // 지나가던 페이지가 닫혀 빈칸이 보인다. 이미 열린 범위는 넓히기만 한다.
+    const at = -tx.value / width;
+    const open = revealLo.value <= revealHi.value;
+    const lo = Math.min(Math.floor(at), index);
+    const hi = Math.max(Math.ceil(at), index);
+    revealLo.value = open ? Math.min(revealLo.value, lo) : lo;
+    revealHi.value = open ? Math.max(revealHi.value, hi) : hi;
     tx.value = withTiming(
       -index * width,
       { duration: SETTLE_MS, easing: Easing.out(Easing.cubic) },
@@ -193,8 +198,13 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
             'worklet';
             swiping.value = true;
             start.value = tx.value;
-            revealLo.value = indexSV.value - 1;
-            revealHi.value = indexSV.value + 1;
+            // 정착 애니메이션 도중에 잡을 수도 있다 — 현재 위치 양옆 한 칸씩, 열린 범위는 넓히기만.
+            const at = widthSV.value > 0 ? -tx.value / widthSV.value : indexSV.value;
+            const lo = Math.floor(at) - 1;
+            const hi = Math.ceil(at) + 1;
+            const open = revealLo.value <= revealHi.value;
+            revealLo.value = open ? Math.min(revealLo.value, lo) : lo;
+            revealHi.value = open ? Math.max(revealHi.value, hi) : hi;
           })
           .onUpdate((e) => {
             'worklet';

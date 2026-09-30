@@ -291,6 +291,18 @@ describe('TabPager (#563)', () => {
     expect(ui.getByText('설정 페이지')).toBeTruthy();
   });
 
+  it('전환 도중 다시 탭해도 지나가던 페이지를 닫지 않는다 (성능 장부 M1 리뷰)', async () => {
+    // 애니메이션을 끝내지 않는다 — 0→2 전환이 진행 중인 채로 1을 누른다.
+    jest.spyOn(Reanimated, 'withTiming').mockImplementation(() => 0);
+    const ui = await renderPager(0);
+    await ui.rerender(<Harness index={2} onIndexChange={jest.fn()} />);
+    await ui.rerender(<Harness index={1} onIndexChange={jest.fn()} />);
+    await ui.rerender(<Harness index={1} onIndexChange={jest.fn()} />);
+    // 화면은 아직 0번 위치다 — 0번이 빈칸이 되면 안 된다.
+    expect(ui.getByText('나의 방 페이지')).toBeTruthy();
+    expect(ui.getByText('집 페이지')).toBeTruthy();
+  });
+
   it('첫 페이지에서 스와이프를 시작하면 바로 옆 페이지만 올린다 (성능 장부 M1)', async () => {
     jest.spyOn(Reanimated, 'withTiming').mockImplementation((target) => target);
     const ui = await renderPager(0);
