@@ -174,7 +174,8 @@ export function useMyRoomPages({
   const toggleWithCharacterReward = useCallback(
     async (...args: Parameters<MissionLinks['toggleWithMissionGuard']>) => {
       const result = await toggleWithMissionGuard(...args);
-      if (result) await refreshCharacters();
+      // 캐릭터 레벨은 방 성장(= 지급 코인)을 따른다 — 보상 0 완료는 바뀐 게 없다 (성능 장부 N2).
+      if (result && result.rewardAmount > 0) await refreshCharacters();
       // result는 완료 성공일 때만 있다 — 취소·실패·미션 가드는 null. "오늘"은 완료 날짜와
       // 같은 KST 서버 날짜로 비교한다(#1295 리뷰 — 기기 시간대 기준이면 해외·자정 경계에서 어긋남).
       if (result && args[1] === calendarToday()) onCompletedTodayRef.current?.();
@@ -208,6 +209,7 @@ export function useMyRoomPages({
     selectedDate: calendarSelectedDate,
     setSelectedDate: setCalendarSelectedDate,
     refresh: refreshCalendar,
+    refreshDays: refreshCalendarDays,
   } = calendar;
   // 달력 탭 날짜 탭 → 주간 보기 (#1327). 선택은 MyRoomScreen이 이미 바꿨다.
   const openCalendarWeek = useCallback(
@@ -387,13 +389,17 @@ export function useMyRoomPages({
   }, [reloadMyRoom, refreshCalendar, refreshCharacters]);
   const toggleAndRefreshGrowth = useCallback<NonNullable<MyRoomScreenProps['onToggleCompletion']>>(
     async (...args) => {
+      let result: Awaited<ReturnType<typeof toggleWithCharacterReward>> = null;
       try {
-        return await toggleWithCharacterReward(...args);
+        result = await toggleWithCharacterReward(...args);
+        return result;
       } finally {
-        await refreshCalendar();
+        // 방 성장은 지급 코인만큼 바뀐다 — 보상 0 완료면 달력만. 취소·실패(null)는
+        // 회수액을 몰라 둘 다 (성능 장부 N2).
+        await (result && result.rewardAmount === 0 ? refreshCalendarDays() : refreshCalendar());
       }
     },
-    [toggleWithCharacterReward, refreshCalendar],
+    [toggleWithCharacterReward, refreshCalendar, refreshCalendarDays],
   );
   // 지난·완료 할 일 등 안 보이는 항목까지 포함한 카테고리별 점유 수 (#505).
   const categoryInUseCounts = useMemo(

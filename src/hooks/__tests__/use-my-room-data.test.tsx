@@ -853,3 +853,56 @@ describe('useMyRoomData — 루틴 몫 옮기기 (#189)', () => {
     }
   });
 });
+
+describe('useMyRoomData — 완료 후 지갑 (성능 장부 N2)', () => {
+  it('보상 있는 완료는 응답만큼 더하고 다시 받지 않는다, 보상 0은 그대로, 취소는 다시 받는다', async () => {
+    const todayIso = calendarToday();
+    let reward = 10;
+    let walletCoin = 100;
+    const walletGets: number[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      if (url.includes('/wallets')) {
+        walletGets.push(walletCoin);
+        return res({ items: [{ currencyType: 'COIN', balance: walletCoin }] });
+      }
+      if (url.includes('/categories')) return res({ items: [{ id: 1, name: '건강' }] });
+      if (url.endsWith('/routines'))
+        return res({ items: [{ id: 9, title: '운동', categoryId: 1, repeatType: 'DAILY' }] });
+      if (method === 'POST' && url.includes('/routines/9/logs'))
+        return res({ rewardAmount: reward });
+      if (method === 'DELETE') return res({});
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1 });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    const routine = result.current.routines[0];
+    const initialGets = walletGets.length;
+    expect(result.current.wallet.coin).toBe(100);
+
+    await act(async () => {
+      await result.current.toggleCompletion(routine.id, todayIso);
+    });
+    expect(result.current.wallet.coin).toBe(110);
+    expect(walletGets.length).toBe(initialGets);
+
+    // 취소 — 서버가 회수한 뒤의 잔액을 다시 받는다.
+    walletCoin = 100;
+    await act(async () => {
+      await result.current.toggleCompletion(routine.id, todayIso);
+    });
+    expect(walletGets.length).toBe(initialGets + 1);
+    expect(result.current.wallet.coin).toBe(100);
+
+    // 보상 0 완료 — 지갑 불변, 요청 없음.
+    reward = 0;
+    await act(async () => {
+      await result.current.toggleCompletion(routine.id, todayIso);
+    });
+    expect(walletGets.length).toBe(initialGets + 1);
+    expect(result.current.wallet.coin).toBe(100);
+  });
+});

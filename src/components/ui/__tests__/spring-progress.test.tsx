@@ -1,4 +1,5 @@
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 
@@ -40,5 +41,22 @@ describe('SpringProgressBar (#696)', () => {
       />,
     );
     expect(named.getByLabelText('오늘 루틴 진행')).toBeTruthy();
+  });
+
+  it('채움은 트랙 폭을 안 뒤에 보이고, width가 아니라 translateX로 움직인다 (성능 장부 M6)', async () => {
+    const ui = await render(
+      <SpringProgressBar progress={0.5} color="#8A6E4B" trackColor="#EFE7DA" />,
+    );
+    const track = ui.getByRole('progressbar');
+    const fillStyle = () => {
+      const node = track.children[0] as unknown as { props: { style: unknown } };
+      return StyleSheet.flatten(node.props.style as never) as Record<string, unknown>;
+    };
+    expect(fillStyle().opacity).toBe(0);
+    await fireEvent(track, 'layout', { nativeEvent: { layout: { width: 200, height: 10 } } });
+    const style = fillStyle();
+    expect(style.opacity).toBe(1);
+    expect(style.width).toBe('100%');
+    expect(Array.isArray(style.transform)).toBe(true);
   });
 });
