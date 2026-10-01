@@ -231,17 +231,34 @@ function MultiArtwork({
   const [active, setActive] = useState(false);
   const color = rarityColor(entry.badgeLabel);
   useLayoutEffect(() => {
+    // 바뀐 값만 쓴다 (성능 장부 M4) — 시계는 영상 30Hz로 틱하는데 카드가 실제로 움직이는 건
+    // 자기 박자 뒤 1초 남짓이다. 등장 전·자리 잡은 뒤에도 카드 10장 × 값 7개를 매 틱 다시 써서
+    // 초당 약 2,100건의 JS 드라이버 갱신이 영상 디코딩과 겹쳤다.
+    const last: (number | boolean)[] = [];
+    const put = (i: number, value: number, target: Animated.Value) => {
+      if (last[i] === value) return;
+      last[i] = value;
+      target.setValue(value);
+    };
     const listener = clock.addListener(({ value }) => {
       const frame = getMultiRevealArtFrame(entry.tier, entry.index, value);
-      opacity.setValue(frame.opacity);
-      scale.setValue(frame.scale);
-      rotation.setValue(frame.rotation);
-      translateX.setValue((centerX - slot.left - size / 2) * frame.centerWeight);
-      translateY.setValue((centerY - slot.top - size / 2) * frame.centerWeight + frame.lift);
-      accentOpacity.setValue(frame.accentOpacity);
-      accentScale.setValue(frame.accentScale);
-      setVisible(frame.visible);
-      setActive(frame.visible && frame.centerWeight > 0);
+      put(0, frame.opacity, opacity);
+      put(1, frame.scale, scale);
+      put(2, frame.rotation, rotation);
+      put(3, (centerX - slot.left - size / 2) * frame.centerWeight, translateX);
+      put(4, (centerY - slot.top - size / 2) * frame.centerWeight + frame.lift, translateY);
+      put(5, frame.accentOpacity, accentOpacity);
+      put(6, frame.accentScale, accentScale);
+      // 같은 값이면 React가 건너뛰지만 업데이트 예약 자체를 줄인다.
+      if (last[7] !== frame.visible) {
+        last[7] = frame.visible;
+        setVisible(frame.visible);
+      }
+      const nextActive = frame.visible && frame.centerWeight > 0;
+      if (last[8] !== nextActive) {
+        last[8] = nextActive;
+        setActive(nextActive);
+      }
     });
     return () => clock.removeListener(listener);
   }, [
