@@ -15,11 +15,14 @@ function track<Id extends string>(id: Id, source: number) {
     },
   };
 }
+// 교차 혼합한 루프 PCM을 AAC 128kbps(m4a, afconvert)로 담는다 (성능 장부 B1) — WAV 36MB → 3.4MB.
+// m4a의 인코더 지연(priming) 정보로 디코더가 앞뒤 여백을 잘라 샘플 단위로 원본과 같은 길이가
+// 된다(ffmpeg 디코드 실측: 샘플 수 일치·정렬 0). 이음새는 실기기에서 들어 확인할 것.
 export const SPEAKER_TRACKS = [
-  track('fire', require('@/assets/audio/speaker/fire-loop.wav')),
-  track('rain', require('@/assets/audio/speaker/rain-loop.wav')),
-  track('forest', require('@/assets/audio/speaker/forest-loop.wav')),
-  track('piano', require('@/assets/audio/speaker/piano-loop.wav')),
+  track('fire', require('@/assets/audio/speaker/fire-loop.m4a')),
+  track('rain', require('@/assets/audio/speaker/rain-loop.m4a')),
+  track('forest', require('@/assets/audio/speaker/forest-loop.m4a')),
+  track('piano', require('@/assets/audio/speaker/piano-loop.m4a')),
 ] as const;
 export type SpeakerTrackId = (typeof SPEAKER_TRACKS)[number]['id'];
 export const isSpeakerTrackId = (value: unknown): value is SpeakerTrackId =>
