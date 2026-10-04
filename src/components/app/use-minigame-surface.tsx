@@ -49,7 +49,7 @@ function ActiveMinigame({
   practice: boolean;
   finished: boolean;
   onFinish: (replay: MinigameReplay) => void;
-  onExit?: () => void;
+  onExit: () => void;
 }) {
   const activeSessionId = useContext(MinigameActiveContext);
   const active = activeSessionId === sessionId && !finished;

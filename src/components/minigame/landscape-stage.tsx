@@ -36,7 +36,8 @@ export function LandscapeStage({
   visible: boolean;
   /** 게임판 가로/세로 비율. */
   aspect: number;
-  onExit?: () => void;
+  /** 판 그만두기 — ✕ 버튼과 안드로이드 뒤로가기. 없으면 Modal에서 빠져나갈 길이 없어 필수. */
+  onExit: () => void;
   children: ReactNode;
 }) {
   const t = useTokens();
@@ -59,18 +60,26 @@ export function LandscapeStage({
       <View style={[styles.backdrop, { backgroundColor: t.screen }]}>
         <View
           testID="landscape-stage"
-          style={[styles.stage, { width: long, height: short, transform: [{ rotate: '90deg' }] }]}>
+          style={[
+            styles.stage,
+            {
+              width: long,
+              height: short,
+              // 긴 변이 창 폭보다 넓다 — 중앙 정렬 오버플로에 기대지 않고 중심을 직접 맞춘 뒤 돌린다.
+              left: (width - long) / 2,
+              top: (height - short) / 2,
+              transform: [{ rotate: '90deg' }],
+            },
+          ]}>
           <View style={{ width: frameWidth }}>{children}</View>
-          {onExit ? (
-            <Pressable
-              onPress={onExit}
-              accessibilityRole="button"
-              accessibilityLabel={tr('roomShop.minigame.play.exitA11y')}
-              hitSlop={Spacing.two}
-              style={[styles.exit, { backgroundColor: t.surface }]}>
-              <Icon name="close" size={20} color={t.textMuted} />
-            </Pressable>
-          ) : null}
+          <Pressable
+            onPress={onExit}
+            accessibilityRole="button"
+            accessibilityLabel={tr('roomShop.minigame.play.exitA11y')}
+            hitSlop={Spacing.two}
+            style={[styles.exit, { backgroundColor: t.surface }]}>
+            <Icon name="close" size={20} color={t.textMuted} />
+          </Pressable>
         </View>
       </View>
     </Modal>
@@ -78,8 +87,8 @@ export function LandscapeStage({
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  stage: { alignItems: 'center', justifyContent: 'center' },
+  backdrop: { flex: 1 },
+  stage: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   exit: {
     position: 'absolute',
     left: Spacing.one,
