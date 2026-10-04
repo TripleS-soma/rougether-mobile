@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useMissionLinks } from '@/components/app/use-mission-links';
 import type { House, HouseMission } from '@/components/screens/house-screen';
@@ -6,6 +6,10 @@ import type { Routine, RoutineCategoryMeta } from '@/constants/routines';
 
 const mockToast = jest.fn();
 jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ show: mockToast }) }));
+jest.mock('@/api/auth', () => ({
+  ...jest.requireActual('@/api/auth'),
+  getSessionUserId: () => 7,
+}));
 
 const mission = (id: number, status: HouseMission['status'], achieved = false): HouseMission => ({
   id,
@@ -46,8 +50,6 @@ const setup = (opts: { missions: HouseMission[]; routines: Routine[] }) => {
       contributedMissionIds: new Set<number>(),
       ensureCategory: jest.fn(),
       addRoutineWithMission: jest.fn(),
-      linkCategoryHouse: jest.fn(),
-      linkRoutineMission: jest.fn(),
       deleteRoutine,
       deleteCategoryCascade: jest.fn(),
       toggleCompletion: jest.fn(),
@@ -137,8 +139,6 @@ describe('houseLinkedRoutines 참조 유지 (성능 장부 R7)', () => {
       contributedMissionIds: new Set<number>(),
       ensureCategory: jest.fn(),
       addRoutineWithMission: jest.fn(),
-      linkCategoryHouse: jest.fn(),
-      linkRoutineMission: jest.fn(),
       deleteRoutine: jest.fn(async () => true),
       deleteCategoryCascade: jest.fn(),
       toggleCompletion: jest.fn(),
@@ -168,5 +168,93 @@ describe('houseLinkedRoutines 참조 유지 (성능 장부 R7)', () => {
     expect(view.result.current.houseLinkedRoutines).toEqual([
       { missionId: 1, completedToday: true },
     ]);
+  });
+});
+
+describe('연동 해제 (루틴↔미션, 카테고리↔집)', () => {
+  type Args = Parameters<typeof useMissionLinks>[0];
+
+  const harness = async (over: Partial<Args> & { missions: HouseMission[] }) => {
+    const unlinkRoutineMission = jest.fn(async () => true);
+    const unlinkCategoryHouse = jest.fn(async () => true);
+    const houses: House[] = [{ houseId: 6, name: 'TripleS', missions: over.missions } as House];
+    const { missions: _m, ...rest } = over;
+    const view = await renderHook(() =>
+      useMissionLinks({
+        houses,
+        currentHouse: houses[0],
+        routines: [],
+        completions: {},
+        categories: [CATEGORY],
+        myRoomLoading: false,
+        housesLoading: false,
+        contributedMissionIds: new Set<number>(),
+        ensureCategory: jest.fn(),
+        addRoutineWithMission: jest.fn(),
+        unlinkRoutineMission,
+        unlinkCategoryHouse,
+        deleteRoutine: jest.fn(async () => true),
+        deleteCategoryCascade: jest.fn(),
+        toggleCompletion: jest.fn(),
+        leaveHouse: jest.fn(),
+        deleteMission: jest.fn(),
+        applyMissionContribution: jest.fn(),
+        ...rest,
+      } as unknown as Args),
+    );
+    return {
+      view,
+      unlinkRoutineMission,
+      unlinkCategoryHouse,
+    };
+  };
+
+  it('미션의 내 연동 루틴을 지우지 않고 연동만 해제한다', async () => {
+    const deleteRoutine = jest.fn(async () => true);
+    const h = await harness({
+      missions: [mission(1, 'ACTIVE')],
+      routines: [routine('r1', 1), routine('r2')],
+      deleteRoutine,
+    });
+    await act(async () => {
+      await h.view.result.current.unlinkMissionRoutine(1);
+    });
+    expect(h.unlinkRoutineMission).toHaveBeenCalledWith('r1');
+    expect(h.unlinkRoutineMission).toHaveBeenCalledTimes(1);
+    expect(deleteRoutine).not.toHaveBeenCalled();
+    expect(mockToast).toHaveBeenCalledWith('미션 연동을 해제했어요. 루틴은 그대로 남아요');
+  });
+
+  it('해제가 실패하면 성공 토스트가 없다 (실패 토스트는 데이터 훅 몫)', async () => {
+    const h = await harness({ missions: [mission(1, 'ACTIVE')], routines: [routine('r1', 1)] });
+    h.unlinkRoutineMission.mockResolvedValueOnce(false);
+    await act(async () => {
+      await h.view.result.current.unlinkMissionRoutine(1);
+    });
+    expect(mockToast).not.toHaveBeenCalled();
+  });
+
+  it('카테고리의 집 연동을 해제한다', async () => {
+    const h = await harness({ missions: [mission(1, 'ACTIVE')] });
+    await act(async () => {
+      await h.view.result.current.unlinkHouseCategory('c-house');
+    });
+    expect(h.unlinkCategoryHouse).toHaveBeenCalledWith('c-house');
+    expect(mockToast).toHaveBeenCalledWith('집 연동을 해제했어요. 카테고리와 루틴은 그대로 남아요');
+    expect(h.view.result.current.houseNameById).toEqual({ 6: 'TripleS' });
+  });
+
+  it('이름이 같아도 부팅 때 다시 연동하지 않는다 — 이름 매칭 승격(#578)은 2026-10-04에 없앴다', async () => {
+    const unlinkedCat = { ...CATEGORY, houseId: undefined };
+    const h = await harness({
+      missions: [mission(1, 'ACTIVE')],
+      categories: [unlinkedCat],
+      routines: [{ ...routine('r1'), title: '미션 1' } as Routine],
+    });
+    await new Promise((r) => setTimeout(r, 30));
+    // 승격용 연동 함수 자체가 훅 계약에서 빠졌다 — 어떤 해제·연동 호출도 없다.
+    expect(h.unlinkCategoryHouse).not.toHaveBeenCalled();
+    expect(h.unlinkRoutineMission).not.toHaveBeenCalled();
+    expect(Object.keys(h.view.result.current)).not.toContain('linkCategoryHouse');
   });
 });

@@ -1,4 +1,5 @@
-import { updateRoutine } from '@/api/routines';
+import { unlinkCategoryHouse } from '@/api/categories';
+import { unlinkRoutineMission, updateRoutine } from '@/api/routines';
 
 const realFetch = global.fetch;
 afterEach(() => {
@@ -16,8 +17,7 @@ const ok = { ok: true, status: 200, text: async () => '{}' };
  * 읽는다. 타입이 `number | null`이라 컴파일은 통과하고 요청도 200으로 성공하므로,
  * 해제 의도로 이 경로를 쓰면 **아무 일도 안 일어나고 실패도 안 난다.**
  *
- * 이 테스트는 그 오해를 막는 기록이다 — 앱에 해제를 쓰는 화면이 생기면
- * 전용 엔드포인트 클라이언트를 그때 추가한다.
+ * 이 테스트는 그 오해를 막는 기록이다 — 해제는 아래 전용 클라이언트로만 보낸다.
  */
 describe('연동 해제 계약 (#907)', () => {
   it('수정(PUT)은 해제 경로가 아니다 — null을 보내도 그냥 루틴 수정이다', async () => {
@@ -28,5 +28,23 @@ describe('연동 해제 계약 (#907)', () => {
     expect(url).toContain('/routines/12');
     expect(url).not.toContain('house-mission-link');
     expect(init.method).toBe('PUT');
+  });
+
+  it('루틴 미션 연동 해제는 DELETE /routines/{id}/house-mission-link', async () => {
+    const spy = jest.fn(async () => ({ ok: true, status: 204, text: async () => '' }));
+    global.fetch = spy as unknown as typeof fetch;
+    await unlinkRoutineMission(12);
+    const [url, init] = spy.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toMatch(/\/api\/v1\/routines\/12\/house-mission-link$/);
+    expect(init.method).toBe('DELETE');
+  });
+
+  it('카테고리 집 연동 해제는 DELETE /categories/{id}/house-link', async () => {
+    const spy = jest.fn(async () => ({ ok: true, status: 204, text: async () => '' }));
+    global.fetch = spy as unknown as typeof fetch;
+    await unlinkCategoryHouse(7);
+    const [url, init] = spy.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toMatch(/\/api\/v1\/categories\/7\/house-link$/);
+    expect(init.method).toBe('DELETE');
   });
 });

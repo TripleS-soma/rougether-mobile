@@ -432,8 +432,8 @@ describe('AppShell — 연동 루틴 스윕', () => {
   });
 });
 
-// --- 이름 매칭 연동분 1회성 승격 (#578) — 서버 백필이 없어 클라가 심는다. ---
-describe('AppShell — 링크 id 승격 마이그레이션', () => {
+// --- 이름 매칭 연동 승격(#578)은 2026-10-04에 없앴다 — 사용자가 해제한 연동이 다음 실행에 되살아났다. ---
+describe('AppShell — 이름 매칭 자동 연동 없음', () => {
   const json = (body: unknown) => ({
     ok: true,
     status: 200,
@@ -444,7 +444,7 @@ describe('AppShell — 링크 id 승격 마이그레이션', () => {
   beforeEach(() => {
     calls = [];
     // 구식 세계: 이름은 맞물리는데(카테고리명 == 집 이름, 루틴명 == 미션명)
-    // 링크 id가 없다 — 부팅 승격이 PUT으로 id를 심어야 한다.
+    // 링크 id가 없다 — 그래도 부팅 때 연동하지 않는다.
     global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
       const method = init?.method ?? 'GET';
       calls.push({ url, method, body: init?.body as string | undefined });
@@ -489,21 +489,12 @@ describe('AppShell — 링크 id 승격 마이그레이션', () => {
     }) as unknown as typeof fetch;
   });
 
-  it('이름 일치·id 없음 카테고리와 루틴에 링크 id를 PUT으로 심는다', async () => {
+  it('이름이 같아도 부팅 때 카테고리·루틴에 링크를 심지 않는다', async () => {
     await renderWithProviders(<AppShell />);
-
-    // 카테고리 승격 — houseId가 실린 PUT.
-    await waitFor(() => {
-      const put = calls.find((c) => c.method === 'PUT' && c.url.includes('/categories/20'));
-      expect(JSON.parse(put?.body ?? '{}').houseId).toBe(2);
-    });
-    // 루틴 승격 — ACTIVE 미션(6)의 id가 실린 PUT (EXPIRED 8은 제외).
-    await waitFor(() => {
-      const put = calls.find((c) => c.method === 'PUT' && c.url.includes('/routines/44'));
-      expect(JSON.parse(put?.body ?? '{}').houseMissionId).toBe(6);
-    });
-    // 승격은 삭제(스윕 오발)를 유발하지 않는다.
-    expect(calls.some((c) => c.method === 'DELETE')).toBe(false);
+    await waitFor(() => expect(calls.some((c) => c.url.includes('/houses/2/missions'))).toBe(true));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(calls.some((c) => c.method === 'PUT' && c.url.includes('/categories/20'))).toBe(false);
+    expect(calls.some((c) => c.method === 'PUT' && c.url.includes('/routines/44'))).toBe(false);
   });
 });
 

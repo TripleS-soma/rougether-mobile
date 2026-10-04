@@ -28,6 +28,13 @@ export type CategoryManageScreenProps = {
   onDelete?: (id: string, mode: CategoryDeleteMode) => void;
   /** Persist a new category order (ids top→bottom; long-press a row to move). */
   onReorder?: (orderedIds: string[]) => void;
+  /** 집 연동 배지에 쓸 집 이름(houseId → 이름) — 내가 속한 집만 안다. */
+  houseNames?: Record<number, string>;
+  /**
+   * 집 연동 해제 — 카테고리·루틴·할 일은 남는다. 주어지면 연동된 카테고리 행의
+   * 연동 배지를 눌러 해제할 수 있다.
+   */
+  onUnlinkHouse?: (id: string) => void;
   onBack?: () => void;
 };
 
@@ -43,6 +50,8 @@ export function CategoryManageScreen({
   onUpdate,
   onDelete,
   onReorder,
+  houseNames = {},
+  onUnlinkHouse,
   onBack,
 }: CategoryManageScreenProps) {
   const t = useTokens();
@@ -57,6 +66,11 @@ export function CategoryManageScreen({
   const [pendingDelete, setPendingDelete] = useState<RoutineCategoryMeta | null>(null);
   // Delete tapped on a category that still has routines — warning only.
   const [blockedDelete, setBlockedDelete] = useState<RoutineCategoryMeta | null>(null);
+  const [pendingUnlink, setPendingUnlink] = useState<RoutineCategoryMeta | null>(null);
+  const houseLabel = (c: RoutineCategoryMeta) =>
+    c.houseId != null && houseNames[c.houseId]
+      ? tr('routineTodo.categoryManage.houseLinked', { house: houseNames[c.houseId] })
+      : tr('routineTodo.categoryManage.houseLinkedUnknown');
   // Long-pressed row in move mode: its edit/delete buttons become ▲▼.
   const [movingId, setMovingId] = useState<string | null>(null);
 
@@ -138,6 +152,36 @@ export function CategoryManageScreen({
                           ? tr('routineTodo.categoryManage.moving')
                           : tr(visibilityLabelKey(c.visibility))}
                       </Text>
+                      {/* 집 연동 배지 — 미션 화면의 연동 배지(#890)처럼 눌러서 해제한다. */}
+                      {c.houseId != null && !moving ? (
+                        onUnlinkHouse ? (
+                          <Pressable
+                            onPress={() => setPendingUnlink(c)}
+                            accessibilityRole="button"
+                            accessibilityLabel={tr('routineTodo.categoryManage.unlinkHouseA11y', {
+                              name: c.name,
+                            })}
+                            hitSlop={8}
+                            style={styles.houseBadge}>
+                            <Icon name="house" size={12} color={t.primaryText} />
+                            <Text
+                              style={[Typography.supporting, { color: t.primaryText }]}
+                              numberOfLines={1}>
+                              {houseLabel(c)}
+                            </Text>
+                            <Icon name="close" size={12} color={t.primaryText} />
+                          </Pressable>
+                        ) : (
+                          <View style={styles.houseBadge}>
+                            <Icon name="house" size={12} color={t.textMuted} />
+                            <Text
+                              style={[Typography.supporting, { color: t.textMuted }]}
+                              numberOfLines={1}>
+                              {houseLabel(c)}
+                            </Text>
+                          </View>
+                        )
+                      ) : null}
                     </View>
                     {moving ? (
                       <>
@@ -253,6 +297,22 @@ export function CategoryManageScreen({
         />
       ) : null}
 
+      {pendingUnlink ? (
+        <ConfirmDialog
+          visible
+          title={tr('routineTodo.categoryManage.unlinkHouseTitle')}
+          body={tr('routineTodo.categoryManage.unlinkHouseBody', { name: pendingUnlink.name })}
+          confirmLabel={tr('routineTodo.categoryManage.unlinkHouseConfirm')}
+          confirmAccessibilityLabel={tr('routineTodo.categoryManage.unlinkHouseConfirmA11y')}
+          cancelAccessibilityLabel={tr('routineTodo.categoryManage.unlinkHouseCancelA11y')}
+          onConfirm={() => {
+            onUnlinkHouse?.(pendingUnlink.id);
+            setPendingUnlink(null);
+          }}
+          onCancel={() => setPendingUnlink(null)}
+        />
+      ) : null}
+
       {pendingDelete ? (
         <View style={styles.confirmOverlay}>
           <Pressable style={styles.backdrop} onPress={() => setPendingDelete(null)} />
@@ -360,6 +420,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   moveGlyph: { fontSize: 16 },
+  houseBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: Spacing.one,
+    marginTop: Spacing.half,
+  },
   rowBtn: {
     width: 36,
     height: 36,

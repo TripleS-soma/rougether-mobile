@@ -202,6 +202,13 @@
         "a11y": "미션 삭제 확인",
         "cancelA11y": "미션 삭제 취소"
       },
+      "linkChoice": {
+        "title": "연동 루틴 정리",
+        "body": "'{{title}}' 미션과 연동된 내 루틴을 어떻게 할까요?\n연동만 해제하면 루틴은 그대로 남고, 이미 반영된 미션 기여도 그대로 남아요.",
+        "unlink": "연동만 해제",
+        "unlinkA11y": "미션 연동만 해제",
+        "delete": "루틴 삭제"
+      },
       "unlinkConfirm": {
         "title": "연동 루틴 삭제",
         "body": "'{{title}}' 루틴을 내 루틴에서 삭제할까요?\n지금까지의 기여 기록은 남아요. 미션 자체는 그대로예요.",
@@ -379,6 +386,8 @@
     "missionLinks": {
       "linkedDeleted": "연동된 루틴도 함께 삭제했어요",
       "routineDeleted": "연동 루틴을 삭제했어요",
+      "routineUnlinked": "미션 연동을 해제했어요. 루틴은 그대로 남아요",
+      "categoryUnlinked": "집 연동을 해제했어요. 카테고리와 루틴은 그대로 남아요",
       "categoryDeleted": "연동된 카테고리와 루틴도 함께 삭제했어요",
       "cleanedEnded": "끝난 미션의 연동 루틴을 정리했어요",
       "cleanedGone": "사라진 미션의 연동 루틴을 정리했어요",

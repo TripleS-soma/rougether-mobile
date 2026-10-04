@@ -35,6 +35,15 @@ export function deleteRoutine(id: number) {
   return apiDelete<void>(`/routines/${id}`);
 }
 
+/**
+ * DELETE /routines/{id}/house-mission-link — 단체미션 연동 해제(멱등, 204).
+ * PUT의 `houseMissionId: null`은 "기존 유지"라 해제는 이 경로뿐이다. 루틴은
+ * 남고, 이미 반영된 자동 기여는 회수되지 않는다.
+ */
+export function unlinkRoutineMission(id: number) {
+  return apiDelete<void>(`/routines/${id}/house-mission-link`);
+}
+
 /** POST /routines/{id}/logs — mark the routine completed on a date ("YYYY-MM-DD"). */
 export function completeRoutine(id: number, routineDate: string) {
   return apiPost<RoutineLogResponse>(`/routines/${id}/logs`, { routineDate }).then((result) => {
