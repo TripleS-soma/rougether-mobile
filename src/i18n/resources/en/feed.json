@@ -28,8 +28,8 @@
       "deleteCommentTitle": "Delete this comment?",
       "deleteCommentBody": "Deleted comments can't be restored.",
       "edit": "Edit",
-      "editA11y": "Edit post text",
-      "editTitle": "Edit text",
+      "editA11y": "Edit post",
+      "editTitle": "Edit post",
       "editPlaceholder": "Write something (optional)",
       "save": "Save",
       "deletePost": "Delete",
@@ -38,8 +38,11 @@
       "deletePostBody": "Its photos and comments will be removed for good.",
       "loadError": "Couldn't load the post.",
       "notFound": "This post was deleted or isn't available.",
-      "editBoardLocked": "{{board}} board · The board can't be changed",
-      "editPlaceholderRequired": "Write something"
+      "editPlaceholderRequired": "Write something",
+      "editNeedPhoto": "Only posts with photos can move to the Verification board.",
+      "editToFreeHint": "Moving to the Free board removes the linked routine.",
+      "editKeepRoutine": "If you don't pick another one, the linked routine stays.",
+      "editCurrentRoutine": "Linked routine"
     },
     "compose": {
       "title": "New post",
@@ -61,7 +64,8 @@
       "needContent": "Write something or add a photo.",
       "contentPlaceholderRequired": "What's on your mind?",
       "boardHintFree": "Text alone is fine. You can attach up to 10 photos.",
-      "boardHintVerification": "Add at least one photo of your routine or room."
+      "boardHintVerification": "Needs a routine you completed in the last 7 days and at least 1 photo.",
+      "needRoutine": "Pick a routine to verify."
     },
     "toast": {
       "posted": "Your post is up.",
@@ -80,7 +84,9 @@
       "FEED_REQUEST_CONFLICT": "This was already handled. Please refresh.",
       "FEED_UPLOAD_LIMIT": "Too many unposted photos. Please try again later.",
       "FEED_STORAGE_UNAVAILABLE": "Photo storage is having trouble. Please try again later.",
-      "generic": "Something went wrong. Please try again later."
+      "generic": "Something went wrong. Please try again later.",
+      "FEED_ROUTINE_COMPLETION_REQUIRED": "Pick a routine to verify.",
+      "FEED_ROUTINE_COMPLETION_INVALID": "We couldn't confirm that routine completion. Pick a routine you completed in the last 7 days."
     },
     "emptyFree": "No free board posts yet.\nStart a conversation!",
     "emptyMine": "You haven't posted yet.\nShare a routine or a moment from your day!",
@@ -90,6 +96,19 @@
       "verification": "Proof",
       "tabA11y": "{{label}} board",
       "mine": "Mine"
+    },
+    "routine": {
+      "badge": "{{title}} · done {{date}}",
+      "badgeA11y": "Verified routine: {{title}}, done {{date}}",
+      "shortDate": "{{month}}/{{day}}",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "pickerTitle": "Routine to verify",
+      "pickerHint": "Pick one routine you completed in the last 7 days.",
+      "optionA11y": "{{title}}, done {{date}}",
+      "empty": "No routines completed in the last 7 days",
+      "emptyHint": "Complete a routine first, or post on the Free board instead.",
+      "loadError": "Couldn't load your completed routines."
     }
   }
 }

@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 
 import type { ReportReason } from '@/api/types';
-import { FEED_BOARD_LABEL_KEY } from '@/components/feed/feed-board';
+import { FEED_BOARD_TYPES, FeedBoardTabs } from '@/components/feed/feed-board';
 import {
   FeedActionRow,
   FeedAuthorRow,
@@ -21,13 +21,22 @@ import {
   feedAuthorName,
   feedTimeLabel,
 } from '@/components/feed/feed-parts';
+import { FeedRoutineBadge, FeedRoutinePicker } from '@/components/feed/feed-routine';
 import { FeedPhoto, feedImageAspect } from '@/components/feed/feed-photo';
-import { feedContentRequired } from '@/components/screens/feed/board-rules';
+import {
+  feedCanBeVerification,
+  feedContentRequired,
+  feedEditBlocker,
+  feedPostEditRequest,
+} from '@/components/screens/feed/board-rules';
 import type {
   FeedBoardType,
   FeedComment,
+  FeedCompletionPicker,
   FeedImageLoader,
   FeedPost,
+  FeedPostEdit,
+  FeedRoutineCompletion,
 } from '@/components/screens/feed/types';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -48,6 +57,7 @@ import { useT } from '@/i18n';
 const NO_COMMENTS: FeedComment[] = [];
 const SEND_SIZE = 40;
 const MENU_ICON_SIZE = 40;
+const VERIFICATION_ONLY: readonly FeedBoardType[] = ['VERIFICATION'];
 
 /** 남의 글·댓글 더보기 메뉴의 대상 (#1428). */
 type ModerationTarget =
@@ -73,8 +83,16 @@ export type FeedPostScreenProps = {
   onToggleLike?: (postId: number) => void;
   /** 내 글 삭제(확인 다이얼로그 뒤). */
   onDeletePost?: (postId: number) => void;
-  /** 내 글 본문 수정 — true면 편집 창을 닫는다. */
-  onEditPost?: (postId: number, content: string) => Promise<boolean> | boolean;
+  /**
+   * 내 글 수정 — 본문과, 바뀐 경우 게시판·연결 루틴(서버 #430). true면 편집 창을 닫는다.
+   */
+  onEditPost?: (postId: number, edit: FeedPostEdit) => Promise<boolean> | boolean;
+  /** 수정 창이 열리고 닫힐 때 — 셸이 루틴 고르기 목록을 그동안만 받는다. */
+  onEditOpenChange?: (open: boolean) => void;
+  /** 인증게시판으로 옮기거나 루틴을 바꿀 때의 최근 7일 완료 루틴 목록. */
+  routinePicker?: FeedCompletionPicker;
+  /** KST 오늘 — 루틴 고르기의 오늘·어제 묶음 제목용(테스트·갤러리). */
+  today?: string;
   /**
    * 남의 글 신고 (#1428) — true를 돌려주면 신고 시트를 닫는다. 없으면 메뉴에 신고가 없다.
    * 결과 안내(토스트)는 셸 몫.
@@ -136,66 +154,131 @@ function PhotoPager({ post, loadImage }: { post: FeedPost; loadImage?: FeedImage
 }
 
 /**
- * 본문 수정 창 — 사진·게시판은 바꿀 수 없고 본문만. 게시판은 읽기 전용으로 보여 준다
- * (서버 #428: 등록 후 변경 불가). 사진 없는 자유글은 본문을 비울 수 없다.
+ * 내 글 수정 창 — 본문과 게시판(자유↔인증, 서버 #430). 사진은 바꿀 수 없어서 사진 없는 글은
+ * 인증으로 옮길 수 없다. 인증으로 옮기면 최근 7일 완료 루틴을 골라야 저장되고, 인증으로 남는
+ * 글은 루틴을 바꿔도 되고 그대로 둬도 된다. 자유로 옮기면 연결이 풀린다. 사진 없는 자유글은
+ * 본문을 비울 수 없다.
  */
 function EditPostDialog({
   visible,
-  initial,
-  board,
-  contentRequired,
+  post,
+  routinePicker,
+  today,
   onCancel,
   onSave,
 }: {
   visible: boolean;
-  initial: string;
-  board: FeedBoardType;
-  contentRequired: boolean;
+  post: FeedPost;
+  routinePicker?: FeedCompletionPicker;
+  today?: string;
   onCancel: () => void;
-  onSave: (content: string) => void;
+  onSave: (edit: FeedPostEdit) => void;
 }) {
   const t = useTokens();
   const Typography = useTypography();
   const tr = useT();
-  const [draft, setDraft] = useState(initial);
-  const canSave = !contentRequired || draft.trim().length > 0;
+  const [content, setContent] = useState(post.content);
+  const [board, setBoard] = useState<FeedBoardType>(post.boardType);
+  const [routine, setRoutine] = useState<FeedRoutineCompletion | null>(null);
+  const reset = () => {
+    setContent(post.content);
+    setBoard(post.boardType);
+    setRoutine(null);
+  };
+  const draft = { board, routine, content };
+  const blocker = feedEditBlocker(post, draft);
+  const canSave = blocker === null;
+  const contentRequired = feedContentRequired(board, post.images.length);
+  const photoless = !feedCanBeVerification(post.images.length);
+  const stayingVerification = post.boardType === 'VERIFICATION' && board === 'VERIFICATION';
+  const boardHint =
+    board === 'FREE'
+      ? photoless
+        ? tr('feed.post.editNeedPhoto')
+        : post.boardType === 'VERIFICATION'
+          ? tr('feed.post.editToFreeHint')
+          : null
+      : null;
   return (
     <Modal
       transparent
       visible={visible}
       animationType="fade"
       onRequestClose={onCancel}
-      onShow={() => setDraft(initial)}
+      onShow={reset}
       aria-label={tr('feed.post.editTitle')}>
       <KeyboardAvoidingView
         style={[styles.backdrop, { backgroundColor: Overlay.dim }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={[styles.dialog, { backgroundColor: t.screen }]}>
           <Text style={[Typography.h3, { color: t.text }]}>{tr('feed.post.editTitle')}</Text>
-          <Text style={[Typography.supporting, { color: t.textMuted }]} testID="feed-edit-board">
-            {tr('feed.post.editBoardLocked', { board: tr(FEED_BOARD_LABEL_KEY[board]) })}
-          </Text>
-          <TextInput
-            value={draft}
-            onChangeText={(v) => setDraft(v.slice(0, FEED_MAX_CONTENT))}
-            multiline
-            maxLength={FEED_MAX_CONTENT}
-            placeholder={
-              contentRequired
-                ? tr('feed.post.editPlaceholderRequired')
-                : tr('feed.post.editPlaceholder')
-            }
-            placeholderTextColor={t.textMuted}
-            accessibilityLabel={tr('feed.post.editTitle')}
-            style={[
-              Typography.body,
-              styles.editInput,
-              { backgroundColor: t.surfaceMuted, color: t.text },
-            ]}
-          />
-          <Text style={[Typography.supporting, styles.counter, { color: t.textMuted }]}>
-            {tr('feed.compose.counter', { count: draft.length, max: FEED_MAX_CONTENT })}
-          </Text>
+          <ScrollView
+            style={styles.dialogScroll}
+            contentContainerStyle={styles.dialogBody}
+            keyboardShouldPersistTaps="handled">
+            <View style={styles.boardRow} testID="feed-edit-board">
+              <FeedBoardTabs
+                options={FEED_BOARD_TYPES}
+                value={board}
+                onChange={setBoard}
+                disabledOptions={photoless ? VERIFICATION_ONLY : undefined}
+                testID="feed-edit-board-tabs"
+              />
+              {boardHint ? (
+                <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
+                  {boardHint}
+                </Text>
+              ) : null}
+            </View>
+            {board === 'VERIFICATION' ? (
+              <View style={styles.routineSection}>
+                {stayingVerification && post.routine ? (
+                  <View style={styles.currentRoutine}>
+                    <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                      {tr('feed.post.editCurrentRoutine')}
+                    </Text>
+                    <FeedRoutineBadge routine={post.routine} />
+                  </View>
+                ) : null}
+                <FeedRoutinePicker
+                  picker={routinePicker}
+                  value={routine}
+                  onChange={setRoutine}
+                  today={today}
+                />
+                {stayingVerification ? (
+                  <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                    {tr('feed.post.editKeepRoutine')}
+                  </Text>
+                ) : blocker === 'needRoutine' ? (
+                  <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                    {tr('feed.compose.needRoutine')}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+            <TextInput
+              value={content}
+              onChangeText={(v) => setContent(v.slice(0, FEED_MAX_CONTENT))}
+              multiline
+              maxLength={FEED_MAX_CONTENT}
+              placeholder={
+                contentRequired
+                  ? tr('feed.post.editPlaceholderRequired')
+                  : tr('feed.post.editPlaceholder')
+              }
+              placeholderTextColor={t.textMuted}
+              accessibilityLabel={tr('feed.compose.contentLabel')}
+              style={[
+                Typography.body,
+                styles.editInput,
+                { backgroundColor: t.surfaceMuted, color: t.text },
+              ]}
+            />
+            <Text style={[Typography.supporting, styles.counter, { color: t.textMuted }]}>
+              {tr('feed.compose.counter', { count: content.length, max: FEED_MAX_CONTENT })}
+            </Text>
+          </ScrollView>
           <View style={styles.dialogBtns}>
             <Pressable
               onPress={onCancel}
@@ -204,7 +287,7 @@ function EditPostDialog({
               <Text style={[Typography.label, { color: t.text }]}>{tr('common.cancel')}</Text>
             </Pressable>
             <Pressable
-              onPress={() => onSave(draft)}
+              onPress={() => onSave(feedPostEditRequest(post, draft))}
               disabled={!canSave}
               accessibilityRole="button"
               accessibilityState={{ disabled: !canSave }}
@@ -241,6 +324,9 @@ export function FeedPostScreen({
   onToggleLike,
   onDeletePost,
   onEditPost,
+  onEditOpenChange,
+  routinePicker,
+  today,
   onReportPost,
   onReportComment,
   onBlockUser,
@@ -261,6 +347,10 @@ export function FeedPostScreen({
   const [confirmPost, setConfirmPost] = useState(false);
   const [confirmComment, setConfirmComment] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
+  const setEditOpen = (open: boolean) => {
+    setEditing(open);
+    onEditOpenChange?.(open);
+  };
   // 신고·차단 (#1428) — 더보기 메뉴 → 신고 시트 / 차단 확인.
   const [menuTarget, setMenuTarget] = useState<ModerationTarget | null>(null);
   const [reportTarget, setReportTarget] = useState<ModerationTarget | null>(null);
@@ -307,7 +397,7 @@ export function FeedPostScreen({
           <View style={styles.headerActions}>
             {onEditPost ? (
               <Pressable
-                onPress={() => setEditing(true)}
+                onPress={() => setEditOpen(true)}
                 accessibilityRole="button"
                 accessibilityLabel={tr('feed.post.editA11y')}
                 style={[styles.headerBtn, { backgroundColor: t.surfaceMuted }]}>
@@ -370,6 +460,9 @@ export function FeedPostScreen({
         board={post.boardType}
         now={now}
       />
+      {post.boardType === 'VERIFICATION' && post.routine ? (
+        <FeedRoutineBadge routine={post.routine} />
+      ) : null}
       {post.images.length > 0 ? <PhotoPager post={post} loadImage={loadImage} /> : null}
       {post.content ? (
         <Text selectable style={[Typography.body, { color: t.text }]}>
@@ -600,13 +693,13 @@ export function FeedPostScreen({
       {onEditPost ? (
         <EditPostDialog
           visible={editing}
-          initial={post.content}
-          board={post.boardType}
-          contentRequired={feedContentRequired(post.boardType, post.images.length)}
-          onCancel={() => setEditing(false)}
-          onSave={(content) => {
-            void Promise.resolve(onEditPost(post.postId, content)).then((ok) => {
-              if (ok) setEditing(false);
+          post={post}
+          routinePicker={routinePicker}
+          today={today}
+          onCancel={() => setEditOpen(false)}
+          onSave={(edit) => {
+            void Promise.resolve(onEditPost(post.postId, edit)).then((ok) => {
+              if (ok) setEditOpen(false);
             });
           }}
         />
@@ -724,9 +817,25 @@ const styles = StyleSheet.create({
     padding: Spacing.four,
   },
   dialog: {
+    maxHeight: '90%',
     borderRadius: Radius.xl,
     padding: Spacing.four,
     gap: Spacing.three,
+  },
+  dialogScroll: {
+    flexGrow: 0,
+  },
+  dialogBody: {
+    gap: Spacing.three,
+  },
+  boardRow: {
+    gap: Spacing.one,
+  },
+  routineSection: {
+    gap: Spacing.two,
+  },
+  currentRoutine: {
+    gap: Spacing.one,
   },
   editInput: {
     minHeight: 120,

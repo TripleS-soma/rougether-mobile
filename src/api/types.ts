@@ -1360,9 +1360,27 @@ export type FeedImageResponse = {
 
 /**
  * 게시판 종류 (서버 #428, spec feed/api.md) — `FREE` 자유게시판(사진 0–10장, 사진이 없으면
- * 본문 필수) · `VERIFICATION` 인증게시판(사진 1–10장). 등록 후 바꿀 수 없다.
+ * 본문 필수) · `VERIFICATION` 인증게시판(사진 1–10장 + 루틴 완료 연결, 서버 #430). 수정에서
+ * 바꿀 수 있다(서버 #430).
  */
 export type FeedBoardType = 'FREE' | 'VERIFICATION';
+
+/**
+ * 인증글이 연결한 루틴 완료 (서버 #430, spec feed/api.md "루틴 완료 연결") — `title`은 연결
+ * 시점 스냅샷, `date`는 KST 달력 날짜.
+ */
+export type FeedRoutineResponse = {
+  routineId?: number;
+  title?: string | null;
+  date?: string;
+};
+
+/** 인증글에 연결할 루틴 완료 하나 — 요청 body의 `routineCompletion`. */
+export type FeedRoutineCompletionRequest = {
+  routineId: number;
+  /** KST 오늘과 이전 6일 중 그 루틴을 COMPLETED한 날(`YYYY-MM-DD`). */
+  date: string;
+};
 
 export type FeedPostResponse = {
   postId?: number;
@@ -1370,6 +1388,11 @@ export type FeedPostResponse = {
   /** 기존 글은 서버가 `VERIFICATION`으로 돌려준다. */
   boardType?: FeedBoardType;
   content?: string | null;
+  /**
+   * 연결 루틴 (서버 #430) — 자유글·연결 없는 옛 인증글은 null. **#430 배포 전 서버는 필드
+   * 자체가 없다** — 어댑터가 null로 본다.
+   */
+  routine?: FeedRoutineResponse | null;
   images?: FeedImageResponse[];
   likeCount?: number;
   commentCount?: number;
@@ -1395,10 +1418,18 @@ export type FeedCreateRequest = {
   content?: string;
   /** 자유게시판은 빈 배열 가능, 인증게시판은 1–10장. */
   imageIds: number[];
+  /** 인증게시판 필수·자유게시판 금지 (서버 #430). */
+  routineCompletion?: FeedRoutineCompletionRequest;
 };
 
+/**
+ * PATCH /feed/posts/{id} (서버 #430) — 전부 선택, **생략 = 유지**. 인증으로 바꾸려면 사진이
+ * 있는 글 + `routineCompletion`, 자유로 바꾸면 연결이 풀린다(자유 결과에 연결을 보내면 400).
+ */
 export type FeedUpdateRequest = {
-  content: string;
+  content?: string;
+  boardType?: FeedBoardType;
+  routineCompletion?: FeedRoutineCompletionRequest;
 };
 
 export type FeedCommentRequest = {

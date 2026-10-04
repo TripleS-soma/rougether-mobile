@@ -2,12 +2,19 @@
  * Feed adapters (#1409) — 서버 응답의 옵셔널 필드를 화면 모델로 굳힌다. id가 없는 항목은
  * 버린다(표시·캐시 키로 쓸 수 없다).
  */
-import type { FeedAuthor, FeedComment, FeedImage, FeedPost } from '@/components/screens/feed/types';
+import type {
+  FeedAuthor,
+  FeedComment,
+  FeedImage,
+  FeedPost,
+  FeedPostRoutine,
+} from '@/components/screens/feed/types';
 import type {
   FeedAuthorResponse,
   FeedCommentResponse,
   FeedImageResponse,
   FeedPostResponse,
+  FeedRoutineResponse,
 } from '@/api/types';
 
 function toFeedAuthor(res: FeedAuthorResponse | undefined): FeedAuthor {
@@ -23,6 +30,15 @@ function toFeedImage(res: FeedImageResponse): FeedImage | null {
   return { imageId: res.imageId, width: res.width ?? 0, height: res.height ?? 0 };
 }
 
+/**
+ * 연결 루틴 (서버 #430) — 필드가 없거나(#430 배포 전 서버) null이거나 id·날짜가 빠졌으면
+ * null(배지 없음).
+ */
+function toFeedPostRoutine(res: FeedRoutineResponse | null | undefined): FeedPostRoutine | null {
+  if (!res || res.routineId == null || !res.date) return null;
+  return { routineId: res.routineId, title: res.title ?? '', date: res.date };
+}
+
 export function toFeedPost(res: FeedPostResponse): FeedPost | null {
   if (res.postId == null) return null;
   return {
@@ -31,6 +47,7 @@ export function toFeedPost(res: FeedPostResponse): FeedPost | null {
     // 생략·모르는 값은 서버 기본값(기존 글 = 인증게시판)으로.
     boardType: res.boardType === 'FREE' ? 'FREE' : 'VERIFICATION',
     content: res.content ?? '',
+    routine: toFeedPostRoutine(res.routine),
     images: (res.images ?? []).map(toFeedImage).filter((i): i is FeedImage => i !== null),
     likeCount: Math.max(0, res.likeCount ?? 0),
     commentCount: Math.max(0, res.commentCount ?? 0),

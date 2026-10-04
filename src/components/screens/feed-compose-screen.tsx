@@ -11,8 +11,14 @@ import {
 } from 'react-native';
 
 import { FEED_BOARD_TYPES, FeedBoardTabs } from '@/components/feed/feed-board';
+import { FeedRoutinePicker } from '@/components/feed/feed-routine';
 import { feedComposeBlocker } from '@/components/screens/feed/board-rules';
-import type { FeedBoardType, FeedDraftImage } from '@/components/screens/feed/types';
+import type {
+  FeedBoardType,
+  FeedCompletionPicker,
+  FeedDraftImage,
+  FeedRoutineCompletion,
+} from '@/components/screens/feed/types';
 import { Icon } from '@/components/ui/icon';
 import { Loading } from '@/components/ui/loading';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -31,6 +37,13 @@ export type FeedComposeScreenProps = {
   /** 올릴 게시판 (서버 #428) — 기본 자유(`FEED_DEFAULT_BOARD`). */
   board?: FeedBoardType;
   onChangeBoard?: (board: FeedBoardType) => void;
+  /** 인증게시판에 연결할 루틴 완료 (서버 #430) — 인증게시판은 고르기 전엔 올릴 수 없다. */
+  routine?: FeedRoutineCompletion | null;
+  onChangeRoutine?: (routine: FeedRoutineCompletion) => void;
+  /** 최근 7일 완료 루틴 목록 — 셸이 `useRecentRoutineCompletions`로 넘긴다. */
+  routinePicker?: FeedCompletionPicker;
+  /** KST 오늘 — 고르기의 오늘·어제 묶음 제목용(테스트·갤러리). */
+  today?: string;
   images?: FeedDraftImage[];
   content?: string;
   onChangeContent?: (content: string) => void;
@@ -46,11 +59,16 @@ export type FeedComposeScreenProps = {
 /**
  * 피드 게시물 작성 (#1409) — 위에서 게시판(자유/인증, 서버 #428)을 고르고, 사진(고르는 즉시
  * 올리며 장마다 진행 상태)과 본문 2,000자. 자유는 사진 0–10장이되 사진이 없으면 본문 필수,
- * 인증은 사진 1–10장 필수. 고른 사진이 전부 올라가야 [올리기]가 켜진다. 순서 바꾸기는 없다.
+ * 인증은 사진 1–10장 + 최근 7일 안에 완료한 루틴 하나(서버 #430) 필수. 고른 사진이 전부
+ * 올라가야 [올리기]가 켜진다. 순서 바꾸기는 없다.
  */
 export function FeedComposeScreen({
   board = FEED_DEFAULT_BOARD,
   onChangeBoard,
+  routine = null,
+  onChangeRoutine,
+  routinePicker,
+  today,
   images = NO_IMAGES,
   content = '',
   onChangeContent,
@@ -68,7 +86,7 @@ export function FeedComposeScreen({
   const headerInset = useHeaderContentInset();
   const androidKeyboard = useAndroidKeyboardHeight(Platform.OS === 'android');
 
-  const blocker = feedComposeBlocker(board, images, content);
+  const blocker = feedComposeBlocker(board, images, content, routine);
   const canSubmit = blocker === null && !submitting && !!onSubmit;
   const canAdd = images.length < FEED_MAX_IMAGES && !submitting;
   // 실패한 장은 썸네일의 [다시]가 안내한다 — 아래 문구는 나머지 사유만.
@@ -120,6 +138,15 @@ export function FeedComposeScreen({
                 : tr('feed.compose.boardHintVerification')}
             </Text>
           </View>
+          {board === 'VERIFICATION' ? (
+            <FeedRoutinePicker
+              picker={routinePicker}
+              value={routine}
+              onChange={onChangeRoutine}
+              disabled={submitting}
+              today={today}
+            />
+          ) : null}
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.thumbs}>
               {canAdd ? (

@@ -17,7 +17,8 @@ import {
   unlikeFeedPost,
   updateFeedPost,
 } from '@/api/feed';
-import type { FeedBoardFilter, FeedPost } from '@/components/screens/feed/types';
+import type { FeedUpdateRequest } from '@/api/types';
+import type { FeedBoardFilter, FeedPost, FeedPostEdit } from '@/components/screens/feed/types';
 import { FEED_PAGE_SIZE } from '@/constants/feed';
 import {
   type FeedCursor,
@@ -64,8 +65,8 @@ export function useFeedActions({ onError }: { onError?: FeedErrorHandler } = {})
   });
   const { mutateAsync: deleteAsync } = useMutation({ mutationFn: deleteFeedPost });
   const { mutateAsync: updateAsync } = useMutation({
-    mutationFn: ({ postId, content }: { postId: number; content: string }) =>
-      updateFeedPost(postId, content),
+    mutationFn: ({ postId, body }: { postId: number; body: FeedUpdateRequest }) =>
+      updateFeedPost(postId, body),
   });
 
   // 같은 글의 좋아요 요청이 겹치지 않게 — 서버는 멱등이지만 낙관 반영이 꼬인다.
@@ -121,18 +122,28 @@ export function useFeedActions({ onError }: { onError?: FeedErrorHandler } = {})
   );
 
   /**
-   * 내 게시물 본문 수정 — 응답으로 목록·상세를 맞춘다. 빈 본문은 사진이 있는 글만 서버가
-   * 받는다(사진 없는 자유글은 화면이 저장을 막는다).
+   * 내 게시물 수정 — 본문과, 바뀐 경우 게시판·연결 루틴(서버 #430). 응답으로 목록·상세를
+   * 맞춘다. 빈 본문은 사진이 있는 글만 서버가 받는다(사진 없는 자유글은 화면이 저장을 막는다).
+   * 게시판이 바뀌면 게시판별 목록에서 글이 옮겨 가야 하므로 목록을 다시 받는다.
    */
   const editPost = useCallback(
-    async (postId: number, content: string): Promise<boolean> => {
+    async (postId: number, edit: FeedPostEdit): Promise<boolean> => {
+      const body: FeedUpdateRequest = { content: edit.content.trim() };
+      if (edit.boardType) body.boardType = edit.boardType;
+      if (edit.routineCompletion) body.routineCompletion = edit.routineCompletion;
       try {
-        const updated = await updateAsync({ postId, content: content.trim() });
+        const updated = await updateAsync({ postId, body });
+        const before = findFeedPost(qc, userId, postId);
         patchFeedPost(qc, userId, postId, (p) => ({
           ...p,
           content: updated.content,
+          boardType: updated.boardType,
+          routine: updated.routine,
           updatedAt: updated.updatedAt,
         }));
+        if (before && before.boardType !== updated.boardType) {
+          void qc.invalidateQueries({ queryKey: queryKeys.feed.lists(userId) });
+        }
         return true;
       } catch (err) {
         if (isFeedPostGone(err)) removeFeedPost(qc, userId, postId);

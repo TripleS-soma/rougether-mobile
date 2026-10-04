@@ -1,7 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { getSessionUserId } from '@/api/auth';
-import { fetchFeedPosts, likeFeedPost, unlikeFeedPost } from '@/api/feed';
+import { fetchFeedPosts, likeFeedPost, unlikeFeedPost, updateFeedPost } from '@/api/feed';
+import { ApiError } from '@/api/http';
 import { useFeed } from '@/hooks/use-feed';
 import { DEMO_FEED_POSTS } from '@/mocks/fixtures';
 import { queryWrapper } from '@/test-utils/query-wrapper';
@@ -130,5 +131,85 @@ describe('useFeed (#1409)', () => {
     await act(async () => {});
     expect(result.current.posts).toEqual([]);
     expect(fetchFeedPosts).not.toHaveBeenCalled();
+  });
+
+  describe('수정에서 게시판 전환 (서버 #430)', () => {
+    const MY_FREE = DEMO_FEED_POSTS[1];
+
+    it('자유 → 인증은 boardType·routineCompletion을 보내고, 응답으로 캐시를 고친 뒤 목록을 다시 받는다', async () => {
+      const routine = { routineId: 15, title: '아침 스트레칭', date: '2026-10-03' };
+      const updated = { ...MY_FREE, boardType: 'VERIFICATION' as const, routine };
+      jest.mocked(updateFeedPost).mockReset().mockResolvedValue(updated);
+      const { result } = await renderHook(() => useFeed(), { wrapper: queryWrapper() });
+      await waitFor(() => expect(result.current.posts).toHaveLength(3));
+      const fetchesBefore = jest.mocked(fetchFeedPosts).mock.calls.length;
+      // 재조회는 서버가 바뀐 글을 돌려준다.
+      jest
+        .mocked(fetchFeedPosts)
+        .mockResolvedValue(page([DEMO_FEED_POSTS[0], updated, DEMO_FEED_POSTS[2]]));
+
+      let ok = false;
+      await act(async () => {
+        ok = await result.current.editPost(2, {
+          content: '  본문 ',
+          boardType: 'VERIFICATION',
+          routineCompletion: { routineId: 15, date: '2026-10-03' },
+        });
+      });
+      expect(ok).toBe(true);
+      expect(updateFeedPost).toHaveBeenCalledWith(2, {
+        content: '본문',
+        boardType: 'VERIFICATION',
+        routineCompletion: { routineId: 15, date: '2026-10-03' },
+      });
+      await waitFor(() =>
+        expect(result.current.posts[1]).toMatchObject({ boardType: 'VERIFICATION', routine }),
+      );
+      await waitFor(() =>
+        expect(jest.mocked(fetchFeedPosts).mock.calls.length).toBeGreaterThan(fetchesBefore),
+      );
+    });
+
+    it('본문만 고치면 content만 보낸다', async () => {
+      jest
+        .mocked(updateFeedPost)
+        .mockReset()
+        .mockResolvedValue({ ...MY_FREE, content: '새 글' });
+      const { result } = await renderHook(() => useFeed(), { wrapper: queryWrapper() });
+      await waitFor(() => expect(result.current.posts).toHaveLength(3));
+      await act(async () => {
+        await result.current.editPost(2, { content: '새 글' });
+      });
+      expect(updateFeedPost).toHaveBeenCalledWith(2, { content: '새 글' });
+    });
+
+    it('루틴 검증 실패는 전용 문구로 안내한다', async () => {
+      jest
+        .mocked(updateFeedPost)
+        .mockReset()
+        .mockRejectedValue(
+          new ApiError(
+            400,
+            'PATCH',
+            '/feed/posts/2',
+            JSON.stringify({ code: 'FEED_ROUTINE_COMPLETION_INVALID' }),
+          ),
+        );
+      const onError = jest.fn();
+      const { result } = await renderHook(() => useFeed({ onError }), {
+        wrapper: queryWrapper(),
+      });
+      await waitFor(() => expect(result.current.posts).toHaveLength(3));
+      await act(async () => {
+        await result.current.editPost(2, {
+          content: '',
+          boardType: 'VERIFICATION',
+          routineCompletion: { routineId: 15, date: '2026-09-01' },
+        });
+      });
+      expect(onError).toHaveBeenCalledWith(
+        '그 루틴의 완료 기록을 확인하지 못했어요. 최근 7일 안에 완료한 루틴을 다시 골라 주세요.',
+      );
+    });
   });
 });

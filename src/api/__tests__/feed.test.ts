@@ -1,5 +1,5 @@
 import { API_BASE } from '@/api/config';
-import { createFeedPost, fetchFeedPost, fetchFeedPosts } from '@/api/feed';
+import { createFeedPost, fetchFeedPost, fetchFeedPosts, updateFeedPost } from '@/api/feed';
 
 const realFetch = global.fetch;
 
@@ -71,5 +71,59 @@ describe('피드 게시판 API (서버 #428)', () => {
     await expect(fetchFeedPost(40)).resolves.toMatchObject({ boardType: 'VERIFICATION' });
     mockResponse({ ...textPost, boardType: 'UNKNOWN' });
     await expect(fetchFeedPost(40)).resolves.toMatchObject({ boardType: 'VERIFICATION' });
+  });
+});
+
+describe('인증글 루틴 완료 연결 (서버 #430)', () => {
+  const verified = {
+    ...textPost,
+    boardType: 'VERIFICATION',
+    images: [{ imageId: 21, width: 1200, height: 1600 }],
+    routine: { routineId: 15, title: '아침 스트레칭', date: '2026-10-04' },
+  };
+
+  it('응답의 routine을 배지 모델로 옮긴다', async () => {
+    mockResponse(verified);
+    await expect(fetchFeedPost(40)).resolves.toMatchObject({
+      routine: { routineId: 15, title: '아침 스트레칭', date: '2026-10-04' },
+    });
+  });
+
+  it('routine 필드가 없거나(#430 배포 전) null·불완전하면 null', async () => {
+    const legacy: Partial<typeof verified> = { ...verified };
+    delete legacy.routine;
+    mockResponse(legacy);
+    await expect(fetchFeedPost(40)).resolves.toMatchObject({ routine: null });
+    mockResponse({ ...verified, routine: null });
+    await expect(fetchFeedPost(40)).resolves.toMatchObject({ routine: null });
+    mockResponse({ ...verified, routine: { title: '아침 스트레칭', date: '2026-10-04' } });
+    await expect(fetchFeedPost(40)).resolves.toMatchObject({ routine: null });
+  });
+
+  it('인증글 등록은 routineCompletion을 함께 보낸다', async () => {
+    const fetchMock = mockResponse(verified, 201);
+    const body = {
+      clientPostId: '481e86b3-09bd-46ab-82fd-d834a1f3e7fc',
+      boardType: 'VERIFICATION' as const,
+      imageIds: [21],
+      routineCompletion: { routineId: 15, date: '2026-10-04' },
+    };
+    await createFeedPost(body);
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${API_BASE}/feed/posts`,
+      expect.objectContaining({ method: 'POST', body: JSON.stringify(body) }),
+    );
+  });
+
+  it('수정은 받은 필드만 PATCH로 보낸다', async () => {
+    const fetchMock = mockResponse({ ...verified, boardType: 'FREE', routine: null });
+    await updateFeedPost(40, { content: '본문', boardType: 'FREE' });
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${API_BASE}/feed/posts/40`,
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ content: '본문', boardType: 'FREE' }),
+      }),
+    );
   });
 });

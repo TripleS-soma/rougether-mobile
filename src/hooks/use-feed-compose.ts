@@ -10,6 +10,10 @@
  * 게시판(서버 #428): 자유는 사진 0–10장(사진이 없으면 본문 필수), 인증은 사진 1–10장. 서버는
  * boardType 생략을 인증으로 받지만 **항상 명시해서** 보낸다. 같은 id로 게시판만 바꿔 보내도
  * 409라 게시판도 내용 서명에 넣는다.
+ *
+ * 루틴 완료 연결(서버 #430): 인증게시판은 `routineCompletion` 필수, 자유게시판은 보내면 400
+ * 이라 **인증일 때만** 싣는다. 고른 루틴은 게시판을 자유로 바꿔도 기억해 두고(다시 인증으로
+ * 오면 그대로), 연결 루틴이 다르면 같은 id도 409라 서명에 넣는다.
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -17,7 +21,12 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { getSessionUserId } from '@/api/auth';
 import { createFeedPost, deleteFeedImage, type FeedUploadFile, uploadFeedImage } from '@/api/feed';
 import { feedComposeBlocker } from '@/components/screens/feed/board-rules';
-import type { FeedBoardType, FeedDraftImage, FeedPost } from '@/components/screens/feed/types';
+import type {
+  FeedBoardType,
+  FeedDraftImage,
+  FeedPost,
+  FeedRoutineCompletion,
+} from '@/components/screens/feed/types';
 import {
   FEED_DEFAULT_BOARD,
   FEED_IMAGE_TYPES,
@@ -49,6 +58,7 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
   const [images, setImages] = useState<FeedDraftImage[]>(NO_IMAGES);
   const [content, setContentState] = useState('');
   const [board, setBoard] = useState<FeedBoardType>(FEED_DEFAULT_BOARD);
+  const [routine, setRoutine] = useState<FeedRoutineCompletion | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const { mutateAsync: uploadAsync } = useMutation({ mutationFn: uploadFeedImage });
@@ -141,13 +151,14 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
     setImages(NO_IMAGES);
     setContentState('');
     setBoard(FEED_DEFAULT_BOARD);
+    setRoutine(null);
   }, [imagesRef]);
 
   /** 게시 — 성공하면 새 글, 아니면 null(안내는 onError). */
   const submit = useCallback(async (): Promise<FeedPost | null> => {
     if (submittingRef.current) return null;
     const current = imagesRef.current;
-    const blocker = feedComposeBlocker(board, current, content);
+    const blocker = feedComposeBlocker(board, current, content, routine);
     if (blocker) {
       // 실패한 장은 썸네일이 [다시]를 보이므로 안내는 업로드 대기와 같은 문구로.
       const key = blocker === 'uploadFailed' ? 'waitUpload' : blocker;
@@ -156,7 +167,8 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
     }
     const imageIds = current.map((img) => img.imageId as number);
     const text = content.trim();
-    const signature = JSON.stringify([board, text, imageIds]);
+    const routineCompletion = board === 'VERIFICATION' && routine ? routine : undefined;
+    const signature = JSON.stringify([board, text, imageIds, routineCompletion ?? null]);
     if (attempt.current?.signature !== signature) {
       attempt.current = { id: newFeedClientId(), signature };
     }
@@ -168,6 +180,7 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
         boardType: board,
         content: text || undefined,
         imageIds,
+        ...(routineCompletion ? { routineCompletion } : {}),
       });
       track('feed_post_create', {
         image_count: imageIds.length,
@@ -179,6 +192,7 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
       setImages(NO_IMAGES);
       setContentState('');
       setBoard(FEED_DEFAULT_BOARD);
+      setRoutine(null);
       // `lists` 접두 — 통합 피드와 게시판별 목록을 한꺼번에.
       await qc.invalidateQueries({ queryKey: queryKeys.feed.lists(userId) });
       return post;
@@ -189,21 +203,23 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
       submittingRef.current = false;
       setSubmitting(false);
     }
-  }, [board, content, createAsync, imagesRef, onErrorRef, qc, userId]);
+  }, [board, content, routine, createAsync, imagesRef, onErrorRef, qc, userId]);
 
   const uploading = images.some((img) => img.status === 'uploading');
-  const canSubmit = !submitting && feedComposeBlocker(board, images, content) === null;
+  const canSubmit = !submitting && feedComposeBlocker(board, images, content, routine) === null;
 
   return useMemo(
     () => ({
       images,
       content,
       board,
+      routine,
       submitting,
       uploading,
       canSubmit,
       setContent,
       setBoard,
+      setRoutine,
       addImages,
       retryImage,
       removeImage,
@@ -214,11 +230,13 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
       images,
       content,
       board,
+      routine,
       submitting,
       uploading,
       canSubmit,
       setContent,
       setBoard,
+      setRoutine,
       addImages,
       retryImage,
       removeImage,

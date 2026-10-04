@@ -2,6 +2,7 @@ import { fireEvent, render } from '@testing-library/react-native';
 
 import { FeedComposeScreen } from '@/components/screens/feed-compose-screen';
 import type { FeedDraftImage } from '@/components/screens/feed/types';
+import { DEMO_FEED_COMPLETIONS, DEMO_FEED_TODAY } from '@/mocks/fixtures';
 
 const done = (key: string, imageId: number): FeedDraftImage => ({
   key,
@@ -94,5 +95,73 @@ describe('FeedComposeScreen (#1409)', () => {
     const { getByLabelText } = await render(<FeedComposeScreen onChangeBoard={onChangeBoard} />);
     await fireEvent.press(getByLabelText('인증 게시판'));
     expect(onChangeBoard).toHaveBeenCalledWith('VERIFICATION');
+  });
+
+  describe('인증할 루틴 고르기 (서버 #430)', () => {
+    const picker = { groups: DEMO_FEED_COMPLETIONS, loading: false, error: false };
+
+    it('사진이 있어도 루틴을 고르기 전엔 올리기가 꺼져 있고 안내가 보인다', async () => {
+      const onChangeRoutine = jest.fn();
+      const ui = await render(
+        <FeedComposeScreen
+          board="VERIFICATION"
+          images={[done('a', 1)]}
+          routinePicker={picker}
+          onChangeRoutine={onChangeRoutine}
+          today={DEMO_FEED_TODAY}
+          onSubmit={() => {}}
+        />,
+      );
+      expect(ui.getByLabelText('올리기').props.accessibilityState).toMatchObject({
+        disabled: true,
+      });
+      expect(ui.getByText('인증할 루틴을 골라 주세요.')).toBeTruthy();
+      await fireEvent.press(ui.getByLabelText('물 2L 마시기, 10/4 완료'));
+      expect(onChangeRoutine).toHaveBeenCalledWith({ routineId: 16, date: '2026-10-04' });
+
+      await ui.rerender(
+        <FeedComposeScreen
+          board="VERIFICATION"
+          images={[done('a', 1)]}
+          routinePicker={picker}
+          routine={{ routineId: 16, date: '2026-10-04' }}
+          today={DEMO_FEED_TODAY}
+          onSubmit={() => {}}
+        />,
+      );
+      expect(ui.getByLabelText('올리기').props.accessibilityState).toMatchObject({
+        disabled: false,
+      });
+      expect(ui.getByLabelText('물 2L 마시기, 10/4 완료').props.accessibilityState).toMatchObject({
+        checked: true,
+      });
+    });
+
+    it('날짜별로 오늘·어제·M/D로 묶는다', async () => {
+      const ui = await render(
+        <FeedComposeScreen board="VERIFICATION" routinePicker={picker} today={DEMO_FEED_TODAY} />,
+      );
+      expect(ui.getByText('오늘')).toBeTruthy();
+      expect(ui.getByText('어제')).toBeTruthy();
+      expect(ui.getByText('10/1')).toBeTruthy();
+      // 같은 루틴이라도 날짜가 다르면 따로 고른다.
+      expect(ui.getByLabelText('아침 스트레칭, 10/4 완료')).toBeTruthy();
+      expect(ui.getByLabelText('아침 스트레칭, 10/3 완료')).toBeTruthy();
+    });
+
+    it('최근 7일 완료가 없으면 빈 안내', async () => {
+      const ui = await render(
+        <FeedComposeScreen
+          board="VERIFICATION"
+          routinePicker={{ groups: [], loading: false, error: false }}
+        />,
+      );
+      expect(ui.getByText('최근 7일 동안 완료한 루틴이 없어요')).toBeTruthy();
+    });
+
+    it('자유게시판에선 루틴 고르기를 그리지 않는다', async () => {
+      const ui = await render(<FeedComposeScreen board="FREE" routinePicker={picker} />);
+      expect(ui.queryByTestId('feed-routine-picker')).toBeNull();
+    });
   });
 });

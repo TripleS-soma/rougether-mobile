@@ -39,7 +39,12 @@ import { FeedScreen } from '@/components/screens/feed-screen';
 import { FeedPostScreen } from '@/components/screens/feed-post-screen';
 import { BlockedUsersScreen } from '@/components/screens/blocked-users-screen';
 import { FeedComposeScreen } from '@/components/screens/feed-compose-screen';
-import type { FeedBoardFilter, FeedBoardType } from '@/components/screens/feed/types';
+import type {
+  FeedBoardFilter,
+  FeedBoardType,
+  FeedRoutineCompletion,
+} from '@/components/screens/feed/types';
+import { FeedRoutinePicker } from '@/components/feed/feed-routine';
 import { MarketAssetScreen } from '@/components/screens/market-asset-screen';
 import { MarketOrdersScreen } from '@/components/screens/market-orders-screen';
 import { MarketList } from '@/components/screens/market/market-list';
@@ -113,9 +118,11 @@ import { policyUrl } from '@/constants/policy';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 import {
   DEMO_FEED_COMMENTS,
+  DEMO_FEED_COMPLETIONS,
   DEMO_FEED_DRAFT,
   DEMO_FEED_POSTS,
   DEMO_FEED_TEXT_POST,
+  DEMO_FEED_TODAY,
   DEMO_MARKET_ASSET,
   DEMO_MARKET_ASSETS,
   DEMO_MARKET_ORDERS,
@@ -187,18 +194,44 @@ function FeedScreenDemo() {
   );
 }
 
-/** 피드 작성 게시판 선택 데모 (서버 #428) — 자유는 글만으로도, 인증은 사진이 있어야 켜진다. */
+/**
+ * 피드 작성 게시판 선택 데모 (서버 #428·#430) — 자유는 글만으로도, 인증은 사진과 최근 7일
+ * 완료 루틴이 있어야 켜진다.
+ */
 function FeedComposeDemo() {
   const [board, setBoard] = useState<FeedBoardType>('FREE');
   const [content, setContent] = useState('');
+  const [routine, setRoutine] = useState<FeedRoutineCompletion | null>(null);
   return (
     <FeedComposeScreen
       board={board}
       onChangeBoard={setBoard}
+      routine={routine}
+      onChangeRoutine={setRoutine}
+      routinePicker={FEED_DEMO_PICKER}
+      today={DEMO_FEED_TODAY}
       content={content}
       onChangeContent={setContent}
       onSubmit={() => {}}
     />
+  );
+}
+
+const FEED_DEMO_PICKER = { groups: DEMO_FEED_COMPLETIONS, loading: false, error: false };
+
+/** 인증할 루틴 고르기 데모 (#1456) — 오늘·어제·M/D 묶음, 하나만 고른다. */
+function FeedRoutinePickerDemo() {
+  const [routine, setRoutine] = useState<FeedRoutineCompletion | null>(null);
+  return (
+    <View style={{ alignSelf: 'stretch', gap: 24 }}>
+      <FeedRoutinePicker
+        picker={FEED_DEMO_PICKER}
+        value={routine}
+        onChange={setRoutine}
+        today={DEMO_FEED_TODAY}
+      />
+      <FeedRoutinePicker picker={{ groups: [], loading: false, error: false }} value={null} />
+    </View>
   );
 }
 
@@ -1258,7 +1291,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'FeedPostScreen',
     description:
-      '피드 게시물 상세 (#1409): 사진 가로 넘김, 본문, 좋아요, 오래된 순 댓글 + 입력칸. 내 댓글에만 삭제. 로컬 픽스처.',
+      '피드 게시물 상세 (#1409): 사진 가로 넘김, "✓ 루틴 · M/D 완료" 배지(서버 #430), 본문, 좋아요, 오래된 순 댓글 + 입력칸. 내 댓글에만 삭제. 로컬 픽스처.',
     render: () => (
       <View style={{ height: 720, alignSelf: 'stretch' }}>
         <FeedPostScreen
@@ -1277,7 +1310,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'FeedPostScreen · 자유게시판 글',
     description:
-      '사진 없는 자유게시판 글 상세 (서버 #428): 사진 자리 없이 작성자·자유 배지·본문. 내 글이면 수정 창에서 게시판은 읽기 전용, 본문은 비울 수 없다. 로컬 픽스처.',
+      '사진 없는 자유게시판 글 상세 (서버 #428): 사진 자리 없이 작성자·자유 배지·본문. 내 글이면 수정 창에서 인증게시판은 잠겨 있고(사진 없음, 서버 #430) 본문은 비울 수 없다. 로컬 픽스처.',
     render: () => (
       <View style={{ height: 560, alignSelf: 'stretch' }}>
         <FeedPostScreen
@@ -1365,9 +1398,32 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'FeedPostScreen · 내 사진 글 수정(게시판 전환)',
+    description:
+      '내 사진 있는 자유글 (서버 #430): 수정 창에서 인증으로 옮기면 최근 7일 완료 루틴을 골라야 저장된다. 로컬 픽스처.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <FeedPostScreen
+          post={DEMO_FEED_POSTS[1]}
+          comments={[]}
+          onEditPost={() => true}
+          onDeletePost={() => {}}
+          routinePicker={FEED_DEMO_PICKER}
+          today={DEMO_FEED_TODAY}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'FeedRoutinePicker',
+    description:
+      '인증할 루틴 고르기 (#1456, 서버 #430): 최근 7일 완료 루틴을 오늘·어제·M/D로 묶어 하나만 고른다. 아래는 빈 상태.',
+    render: () => <FeedRoutinePickerDemo />,
+  },
+  {
     name: 'FeedComposeScreen · 자유게시판',
     description:
-      '피드 작성의 게시판 선택 (서버 #428): 자유는 사진 없이 본문만으로 올리기가 켜지고, 인증으로 바꾸면 사진 1장 이상이 필요하다는 안내. 로컬 상태만.',
+      '피드 작성의 게시판 선택 (서버 #428·#430): 자유는 사진 없이 본문만으로 올리기가 켜지고, 인증으로 바꾸면 최근 7일 완료 루틴 고르기와 사진 1장 이상이 필요하다는 안내. 로컬 상태만.',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <FeedComposeDemo />
