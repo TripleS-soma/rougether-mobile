@@ -41,7 +41,7 @@ class FakeSocket {
   close() {
     this.closed = true;
   }
-  server(frame: { type: string; room: ChatRoomResponse }) {
+  server(frame: { type: string; room?: ChatRoomResponse; message?: ChatMessageResponse }) {
     this.onmessage?.({ data: JSON.stringify(frame) });
   }
 }
@@ -103,7 +103,36 @@ describe('useHouseChat (#1408)', () => {
       type: 'SUBSCRIBE',
       roomId: ROOM_ID,
       accessToken: 'token-1',
+      includeMessages: true,
     });
+  });
+
+  it('본문을 소켓으로 받으면 바로 보이고, 뒤따르는 ROOM_UPDATED에 HTTP를 다시 부르지 않는다 (서버 #429)', async () => {
+    const { result, socket } = await setup();
+    mockFetch.mockClear();
+    await act(async () => {
+      socket.server({ type: 'MESSAGE_CREATED', message: msg(4) });
+      socket.server({ type: 'ROOM_UPDATED', room: room(4) });
+    });
+    await waitFor(() =>
+      expect(result.current.messages.map((m) => m.sequence)).toEqual([1, 2, 3, 4]),
+    );
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('본문 순서에 틈이 있으면 커서를 건너뛰지 않고 after로 틈을 채운다 (서버 #429)', async () => {
+    const { result, socket } = await setup();
+    mockFetch.mockClear();
+    mockFetch.mockResolvedValue({ items: [msg(4)], hasNext: false, room: room(5) });
+    await act(async () => {
+      // 4가 오기 전에 5가 먼저 — 커서는 3에 머물고 복구가 4를 받아 온다.
+      socket.server({ type: 'MESSAGE_CREATED', message: msg(5) });
+      socket.server({ type: 'ROOM_UPDATED', room: room(5) });
+    });
+    await waitFor(() =>
+      expect(result.current.messages.map((m) => m.sequence)).toEqual([1, 2, 3, 4, 5]),
+    );
+    expect(mockFetch).toHaveBeenCalledWith(ROOM_ID, { after: 3, size: 100 });
   });
 
   it('ROOM_UPDATED가 연속 커서보다 앞서면 after로 한 번만 받아 온다', async () => {

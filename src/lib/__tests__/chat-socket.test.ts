@@ -51,6 +51,7 @@ describe('chat-socket (#1408)', () => {
       type: 'SUBSCRIBE',
       roomId: 5,
       accessToken: 'token-1',
+      includeMessages: true,
     });
     ws.onmessage?.({
       data: JSON.stringify({ type: 'READY', room: { roomId: 5, lastSequence: 3 } }),
@@ -60,6 +61,19 @@ describe('chat-socket (#1408)', () => {
       [{ roomId: 5, lastSequence: 3 }, true],
       [{ roomId: 5, lastSequence: 4 }, false],
     ]);
+    socket.close();
+  });
+
+  it('MESSAGE_CREATED의 본문을 넘긴다 — 방 상태 콜백과 섞지 않는다 (서버 #429)', () => {
+    const onRoom = jest.fn();
+    const onMessage = jest.fn();
+    const socket = connectChatSocket(5, { onRoom, onMessage });
+    const ws = FakeSocket.instances[0];
+    ws.onopen?.();
+    const message = { messageId: 121, roomId: 5, sequence: 32, content: '안녕' };
+    ws.onmessage?.({ data: JSON.stringify({ type: 'MESSAGE_CREATED', message }) });
+    expect(onMessage).toHaveBeenCalledWith(message);
+    expect(onRoom).not.toHaveBeenCalled();
     socket.close();
   });
 
