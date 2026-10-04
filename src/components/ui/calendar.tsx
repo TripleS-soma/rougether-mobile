@@ -532,7 +532,9 @@ function CalendarBase({
                                 {
                                   color: disabled
                                     ? t.textDisabled
-                                    : isSelected
+                                    : // 이웃 달 날짜를 누른 직후 뷰가 넘어가기 전 한 프레임은
+                                      // 선택 원이 숨어 있다 — 흰 글자가 배경에 묻히지 않게.
+                                      isSelected && (selectedInView || progressByDate)
                                       ? t.onPrimary
                                       : otherMonth
                                         ? t.textMuted
