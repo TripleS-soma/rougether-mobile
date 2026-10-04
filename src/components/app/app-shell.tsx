@@ -17,11 +17,15 @@ import { useStoreReview } from '@/hooks/use-store-review';
 import { useScreenTransition } from '@/components/app/use-screen-transition';
 import { useFriendVisit } from '@/components/app/use-friend-visit';
 import { useHousePages } from '@/components/app/use-house-pages';
+import { useFeedPages } from '@/components/app/use-feed-pages';
+import { useMarketPages } from '@/components/app/use-market-pages';
 import { useMissionLinks } from '@/components/app/use-mission-links';
 import { useMyRoomPages } from '@/components/app/use-my-room-pages';
 import { useSettingsSurface } from '@/components/app/use-settings-surface';
 import { GachaScreen } from '@/components/screens/gacha-screen';
 import { HouseScreen } from '@/components/screens/house-screen';
+import { FeedScreen } from '@/components/screens/feed-screen';
+import { FEED_ENABLED } from '@/constants/feed';
 import { isScheduledOn, MyRoomScreen } from '@/components/screens/my-room-screen';
 import {
   type DecorTab,
@@ -32,7 +36,7 @@ import { useLatestRef, useStableCallback } from '@/hooks/use-stable-value';
 import { MyPageScreen } from '@/components/screens/my-page-screen';
 import { FurnitureStudio } from '@/components/app/furniture-studio';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
-import { BottomNav } from '@/components/ui/bottom-nav';
+import { BottomNav, type NavTab } from '@/components/ui/bottom-nav';
 import { MissionBanner } from '@/components/ui/mission-banner';
 import { NotificationBanner } from '@/components/ui/notification-banner';
 import { DEFAULT_CHARACTER_ID, type CharacterId } from '@/constants/characters';
@@ -59,7 +63,7 @@ import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furnitur
 import { usePagerLock } from '@/components/app/use-pager-lock';
 import { tutorialCoachStep } from '@/components/app/use-tutorial-coach';
 import { calendarToday } from '@/utils/calendar-progress';
-import { CoachMarkOverlay, useCoachTargets } from '@/components/ui/coach-mark';
+import { CoachMarkOverlay } from '@/components/ui/coach-mark';
 import { useTabScroll } from '@/components/app/use-tab-scroll';
 import { MinigameActiveContext, useMinigameSurface } from '@/components/app/use-minigame-surface';
 
@@ -148,7 +152,6 @@ export function AppShell({
   const completeMission = missions.complete;
   // 튜토리얼 코치마크 (#1324) — 미션 진행 중 (현재 미션, 현재 화면)에 맞는 대상을 짚고
   // 나머지를 잠근다. 완료 시트(Modal)가 떠 있는 동안은 그 시트가 유일한 조작이라 접는다.
-  const coachTargets = useCoachTargets();
   const [coachFrame, setCoachFrame] = useState({ w: 0, h: 0 });
 
   // Routines / todos / categories / completion / wallet come from the API.
@@ -171,8 +174,8 @@ export function AppShell({
     addRoutine,
     deleteRoutine,
     ensureCategory,
-    linkRoutineMission,
-    linkCategoryHouse,
+    unlinkRoutineMission,
+    unlinkCategoryHouse,
     deleteCategoryCascade,
   } = myRoomData;
 
@@ -194,6 +197,9 @@ export function AppShell({
     sheets: attendanceSheets,
   } = useAttendanceSurface({ setWallet, setScreen });
 
+  // 뽑기 카탈로그는 뽑기 화면에 처음 들어갈 때 받는다 (성능 장부 N3) — 한 번 켜면 유지.
+  const gachaWanted = useRef(false);
+  if (screen === 'gacha') gachaWanted.current = true;
   // Gacha machines + draw (spend + dupe→diamond handled server-side; wallet synced
   // from the draw response).
   const {
@@ -202,7 +208,7 @@ export function AppShell({
     error: gachasError,
     retry: retryGachas,
     draw: drawGachaMachine,
-  } = useGacha(setWallet);
+  } = useGacha(setWallet, { enabled: gachaWanted.current });
 
   const starterFlow = missions.step?.id === 'first-draw' && !missionSkipEnabled;
   const starterGacha = useStarterGacha(starterFlow);
@@ -329,9 +335,11 @@ export function AppShell({
       track('decor_open', { from: fromGachaRef.current ? 'gacha' : 'direct' });
     }
     if (screen !== 'decor') {
-      setNewDecorItemIds([]);
+      // 이미 비어 있으면 같은 참조를 돌려 셸 렌더를 한 번 더 일으키지 않는다(성능 장부 R1).
+      setNewDecorItemIds((prev) => (prev.length > 0 ? [] : prev));
       // 다음에 꾸미기를 직접 열면 기본 탭이어야 한다 — 뽑기에서 온 게 아니다.
-      setDecorInitialTab(undefined);
+      // 거래소 상세·내 주문(#1427)은 꾸미기로 돌아오는 서브화면이라 연 탭을 기억한다.
+      if (screen !== 'marketAsset' && screen !== 'marketOrders') setDecorInitialTab(undefined);
     }
   }, [screen]);
 
@@ -343,6 +351,9 @@ export function AppShell({
     contributedMissionIdList,
     deleteMissionWithLinked,
     removeMissionRoutine,
+    unlinkMissionRoutine,
+    unlinkHouseCategory,
+    houseNameById,
     leaveHouseWithLinked,
     toggleWithMissionGuard,
   } = useMissionLinks({
@@ -356,8 +367,8 @@ export function AppShell({
     contributedMissionIds,
     ensureCategory,
     addRoutineWithMission,
-    linkCategoryHouse,
-    linkRoutineMission,
+    unlinkRoutineMission,
+    unlinkCategoryHouse,
     deleteRoutine,
     deleteCategoryCascade,
     toggleCompletion,
@@ -465,7 +476,13 @@ export function AppShell({
     nav: { screen, setScreen, addReturnScreen, setAddReturnScreen },
     data: myRoomData,
     nickname,
-    missionLinks: { toggleWithMissionGuard, houseCategoryIds, addRoutineWithMission },
+    missionLinks: {
+      toggleWithMissionGuard,
+      houseCategoryIds,
+      addRoutineWithMission,
+      unlinkHouseCategory,
+      houseNameById,
+    },
     // 그날 첫 완료 → 튜토리얼 '루틴 완료' 미션(#1324) + 출석 시트 자동 출석 (#1294).
     onCompletedToday: completedTodayHandler,
     character: { wornCharacterId, wornCharacterFrames, ownedCharacters, wearCharacter },
@@ -564,6 +581,7 @@ export function AppShell({
       leaveHouseWithLinked,
       deleteMissionWithLinked,
       removeMissionRoutine,
+      unlinkMissionRoutine,
       addMissionRoutine,
       houseLinkedRoutines,
       contributedMissionIdList,
@@ -580,6 +598,20 @@ export function AppShell({
     wornCharacterId,
     onPagerLockChange: handleHousePagerLock,
     roomPreviewStore: memberRoomPreviews,
+  });
+
+  // 피드 페이지 배선 (#1409) — 피드 탭과 서브화면 2종(상세·작성). FEED_ENABLED가 꺼져
+  // 있으면 요청도 화면도 없다.
+  const feedPages = useFeedPages({ nav: { screen, setScreen } });
+
+  // 가구 거래소 배선 (#1427) — 꾸미기의 거래소 탭·판매 중 줄, 상세·내 주문 서브화면, 스튜디오
+  // 발행. MARKET_ENABLED가 꺼져 있으면 요청도 화면도 없다.
+  const openDecorMarketTab = useCallback(() => setDecorInitialTab('market'), []);
+  const marketPages = useMarketPages({
+    nav: { screen, setScreen },
+    coinBalance: wallet.coin,
+    onWalletChanged: myRoomData.refreshWallet,
+    onLeaveDecorFromMarketTab: openDecorMarketTab,
   });
 
   // 코치마크 단계 (#1324) — housePages.noHouses를 읽으므로 그 아래에서 계산.
@@ -642,6 +674,8 @@ export function AppShell({
           <PhoneColumn>
             <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
           </PhoneColumn>
+          {/* 피드 (#1409) — 집과 내 정보 사이. 꺼져 있으면 페이지 자체가 없다(NAV_ORDER와 같이). */}
+          {FEED_ENABLED ? <FeedScreen {...feedPages.tabProps} {...tabScroll.feed} /> : null}
           <MyPageScreen {...settingsSurface.myPageProps} {...tabScroll.myPage} />
         </TabPager>
       ) : null}
@@ -671,6 +705,7 @@ export function AppShell({
             }
             return refreshed;
           }}
+          onIssue={marketPages.onIssue}
         />
       ) : null}
       {screen === 'decor' ? (
@@ -717,6 +752,9 @@ export function AppShell({
             void retryShop();
           }}
           onBack={() => setScreen('myRoom')}
+          renderMarket={marketPages.renderMarket}
+          sellingCount={marketPages.sellingCount}
+          onOpenSelling={marketPages.onOpenSelling}
         />
       ) : null}
 
@@ -761,11 +799,29 @@ export function AppShell({
       {/* 집 서브화면 2종 (#692 6단계) — use-house-pages가 그린다. */}
       {housePages.subScreen}
 
+      {/* 피드 서브화면 2종 (#1409) — use-feed-pages가 그린다. */}
+      {feedPages.subScreen}
+
+      {/* 거래소 서브화면 2종 (#1427) — use-market-pages가 그린다. */}
+      {marketPages.subScreen}
+
       {/* 내 정보 서브화면 9종(설정 포함, #692 → #1088) — use-settings-surface가 그린다. */}
       {settingsSurface.subScreen}
     </>
   );
   const layers = useScreenTransition({ screen, addReturnScreen, node: screenNode });
+
+  // 셸 자식에 넘기는 콜백은 참조를 고정한다 — 인라인이면 셸이 렌더될 때마다
+  // 하단 바·미션 시트가 같이 다시 그려진다(성능 장부 R9).
+  const changeTab = useStableCallback((tab: NavTab) =>
+    // 집이 없으면 집 탭은 빈 상태 대신 집 탐색으로 직행 (#571).
+    setScreen(tab === 'house' && housePages.noHouses ? 'houseSearch' : SCREEN_FOR_TAB[tab]),
+  );
+  const goToNextMission = useStableCallback(() => {
+    const id = missions.step?.id;
+    missions.dismissCompleted();
+    if (id) openMissionScreen(id);
+  });
 
   return (
     <View
@@ -809,10 +865,7 @@ export function AppShell({
           active={activeTab}
           // 미출석 점은 방 메뉴 버튼에서 내 정보 탭으로 (#1089).
           badges={attendancePending ? MY_PAGE_BADGE : undefined}
-          onChange={(tab) =>
-            // 집이 없으면 집 탭은 빈 상태 대신 집 탐색으로 직행 (#571).
-            setScreen(tab === 'house' && housePages.noHouses ? 'houseSearch' : SCREEN_FOR_TAB[tab])
-          }
+          onChange={changeTab}
         />
       ) : null}
 
@@ -852,11 +905,7 @@ export function AppShell({
         totalSteps={missions.totalSteps}
         nextLabel={missions.step?.label ?? null}
         nextHint={missions.step?.hint ?? null}
-        onGo={() => {
-          const id = missions.step?.id;
-          missions.dismissCompleted();
-          if (id) openMissionScreen(id);
-        }}
+        onGo={goToNextMission}
         onClose={missions.dismissCompleted}
       />
 
@@ -872,7 +921,6 @@ export function AppShell({
           hardLock
           steps={coachSteps}
           index={0}
-          targets={coachTargets}
           frame={coachFrame}
           caption={tr('app.shell.missionCaption', {
             index: missions.stepIndex + 1,

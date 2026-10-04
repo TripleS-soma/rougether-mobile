@@ -19,6 +19,7 @@ import { GachaPhonePreview } from '@/dev/gacha-phone-preview';
 import { GachaStorybookPreview } from '@/dev/gacha-preview';
 import { HouseScreen, type House } from '@/components/screens/house-screen';
 import { HouseMissionsScreen } from '@/components/screens/house-missions-screen';
+import { HouseChatScreen } from '@/components/screens/house-chat-screen';
 import { HouseMembersScreen } from '@/components/screens/house-members-screen';
 import { manageableMembers } from '@/components/screens/house/members';
 import { HelpScreen } from '@/components/screens/help-screen';
@@ -34,6 +35,20 @@ import { InvitePasteSheet } from '@/components/screens/sheets/invite-paste-sheet
 import { parseInviteText } from '@/lib/invite-code';
 import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
+import { FeedScreen } from '@/components/screens/feed-screen';
+import { FeedPostScreen } from '@/components/screens/feed-post-screen';
+import { BlockedUsersScreen } from '@/components/screens/blocked-users-screen';
+import { FeedComposeScreen } from '@/components/screens/feed-compose-screen';
+import type {
+  FeedBoardFilter,
+  FeedBoardType,
+  FeedRoutineCompletion,
+} from '@/components/screens/feed/types';
+import { FeedRoutinePicker } from '@/components/feed/feed-routine';
+import { MarketAssetScreen } from '@/components/screens/market-asset-screen';
+import { MarketOrdersScreen } from '@/components/screens/market-orders-screen';
+import { MarketList } from '@/components/screens/market/market-list';
+import { MarketIssueSheet } from '@/components/screens/market/market-issue-sheet';
 import { AnnouncementSection } from '@/components/notifications/announcement-section';
 import {
   NotificationTabs,
@@ -72,7 +87,7 @@ import { CATEGORY_ICON_GEOMETRY, CategoryIcon } from '@/components/ui/category-i
 import { Button } from '@/components/ui/button';
 import { FurnitureStudioScreen } from '@/components/screens/furniture-studio-screen';
 import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
-import { ActivityStrip } from '@/components/screens/house/activity-strip';
+import { FriendWeekStrip } from '@/components/screens/house/friend-week-strip';
 import { shiftIso, todayIso } from '@/utils/datetime';
 import { Calendar } from '@/components/ui/calendar';
 import { RecommendationSection } from '@/components/screens/my-room/recommendation-section';
@@ -89,6 +104,7 @@ import { CurrencyGuide } from '@/components/ui/currency-guide';
 import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-sheet';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ReportSheet } from '@/components/ui/report-sheet';
 import { SheetHandle } from '@/components/ui/sheet-handle';
 import { MissionBanner } from '@/components/ui/mission-banner';
 import { NotificationBanner } from '@/components/ui/notification-banner';
@@ -100,7 +116,19 @@ import { ToastProvider, useToast } from '@/components/ui/toast';
 import { WheelPicker } from '@/components/ui/wheel-picker';
 import { policyUrl } from '@/constants/policy';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
-import { RECOMMENDED_HOUSES } from '@/mocks/fixtures';
+import {
+  DEMO_FEED_COMMENTS,
+  DEMO_FEED_COMPLETIONS,
+  DEMO_FEED_DRAFT,
+  DEMO_FEED_POSTS,
+  DEMO_FEED_TEXT_POST,
+  DEMO_FEED_TODAY,
+  DEMO_MARKET_ASSET,
+  DEMO_MARKET_ASSETS,
+  DEMO_MARKET_ORDERS,
+  DEMO_MARKET_TRADES,
+  RECOMMENDED_HOUSES,
+} from '@/mocks/fixtures';
 import { RoomRenderReference } from '@/dev/room-render-reference';
 import { TokenSwatches } from '@/dev/token-swatches';
 import { TypeScalePreview } from '@/dev/type-scale-preview';
@@ -146,6 +174,63 @@ function InviteArrivalSheetDemo() {
         onAccept={() => setOpen(false)}
         onLater={() => setOpen(false)}
       />
+    </View>
+  );
+}
+
+/** 피드 게시판 필터 데모 (서버 #428) — 전체/자유/인증을 눌러 로컬 픽스처를 거른다. */
+function FeedScreenDemo() {
+  const [board, setBoard] = useState<FeedBoardFilter>('ALL');
+  const all = [DEMO_FEED_TEXT_POST, ...DEMO_FEED_POSTS];
+  const posts = board === 'ALL' ? all : all.filter((p) => p.boardType === board);
+  return (
+    <FeedScreen
+      posts={posts}
+      board={board}
+      onChangeBoard={setBoard}
+      onCompose={() => {}}
+      onToggleLike={() => {}}
+    />
+  );
+}
+
+/**
+ * 피드 작성 게시판 선택 데모 (서버 #428·#430) — 자유는 글만으로도, 인증은 사진과 최근 7일
+ * 완료 루틴이 있어야 켜진다.
+ */
+function FeedComposeDemo() {
+  const [board, setBoard] = useState<FeedBoardType>('FREE');
+  const [content, setContent] = useState('');
+  const [routine, setRoutine] = useState<FeedRoutineCompletion | null>(null);
+  return (
+    <FeedComposeScreen
+      board={board}
+      onChangeBoard={setBoard}
+      routine={routine}
+      onChangeRoutine={setRoutine}
+      routinePicker={FEED_DEMO_PICKER}
+      today={DEMO_FEED_TODAY}
+      content={content}
+      onChangeContent={setContent}
+      onSubmit={() => {}}
+    />
+  );
+}
+
+const FEED_DEMO_PICKER = { groups: DEMO_FEED_COMPLETIONS, loading: false, error: false };
+
+/** 인증할 루틴 고르기 데모 (#1456) — 오늘·어제·M/D 묶음, 하나만 고른다. */
+function FeedRoutinePickerDemo() {
+  const [routine, setRoutine] = useState<FeedRoutineCompletion | null>(null);
+  return (
+    <View style={{ alignSelf: 'stretch', gap: 24 }}>
+      <FeedRoutinePicker
+        picker={FEED_DEMO_PICKER}
+        value={routine}
+        onChange={setRoutine}
+        today={DEMO_FEED_TODAY}
+      />
+      <FeedRoutinePicker picker={{ groups: [], loading: false, error: false }} value={null} />
     </View>
   );
 }
@@ -412,23 +497,22 @@ function CharacterPickerSheetDemo() {
   );
 }
 
-/** 최근 활동 스트립 데모 (#860) — 탭해서 상세 펼침을 확인한다. */
-function ActivityStripDemo() {
-  const [open, setOpen] = useState(false);
+/** 친구 방 주간 날짜 줄 데모 (#1423) — 날짜를 누르거나 주를 넘겨 본다. */
+function FriendWeekStripDemo() {
   const today = todayIso();
+  const [selected, setSelected] = useState(today);
   return (
     <View style={{ alignSelf: 'stretch' }}>
-      <ActivityStrip
+      <FriendWeekStrip
+        selected={selected}
         today={today}
-        expanded={open}
-        onToggle={() => setOpen((v) => !v)}
-        days={[
-          { date: today, label: '오늘', titles: ['아침 기상', '물 1L 마시기'] },
-          { date: shiftIso(today, -1), label: '어제', titles: ['독서 30분'] },
-          { date: shiftIso(today, -2), label: '이틀 전', titles: ['아침 기상'] },
-          { date: shiftIso(today, -5), label: '닷새 전', titles: ['영양제 챙겨먹기'] },
-          { date: shiftIso(today, -9), label: '9일 전', titles: ['아침 기상', '독서 30분'] },
-        ]}
+        onSelect={setSelected}
+        doneCounts={{
+          [today]: 2,
+          [shiftIso(today, -1)]: 1,
+          [shiftIso(today, -3)]: 3,
+          [shiftIso(today, -8)]: 1,
+        }}
       />
     </View>
   );
@@ -932,6 +1016,30 @@ export const galleryEntries: GalleryEntry[] = [
     },
   },
   {
+    name: 'HouseChatScreen',
+    description:
+      '집 → 채팅 (#1408): 내 말풍선(오른쪽)·다른 구성원(왼쪽·닉네임), 안 읽은 수, 보내는 중·실패 상태. 픽스처라 서버에 쓰지 않는다.',
+    render: () => (
+      <View style={{ height: 700, alignSelf: 'stretch' }}>
+        <HouseChatScreen
+          houseName="데모 하우스"
+          myUserId={1}
+          messages={[
+            { key: 's1', sequence: 1, senderUserId: 2, senderNickname: '이웃', content: '오늘 루틴 다들 했어요?', createdAt: '2026-09-21T12:58:00Z', unreadCount: 0, status: 'sent' }, // prettier-ignore
+            { key: 's2', sequence: 2, senderUserId: 2, senderNickname: '이웃', content: '저는 아침 스트레칭 완료!', createdAt: '2026-09-21T12:59:00Z', unreadCount: 0, status: 'sent' }, // prettier-ignore
+            { key: 's3', sequence: 3, senderUserId: 1, senderNickname: '나', content: '저도 방금 끝냈어요 🙌', createdAt: '2026-09-21T13:00:00Z', unreadCount: 2, status: 'sent' }, // prettier-ignore
+            { key: 'cA', clientMessageId: 'A', senderUserId: 1, content: '내일도 같이 해요', unreadCount: 0, status: 'pending' }, // prettier-ignore
+            { key: 'cB', clientMessageId: 'B', senderUserId: 1, content: '전송 실패 예시', unreadCount: 0, status: 'failed' }, // prettier-ignore
+          ]}
+          onSend={() => {}}
+          onRetrySend={() => {}}
+          onVisible={() => {}}
+          onBack={() => {}}
+        />
+      </View>
+    ),
+  },
+  {
     name: 'HouseMembersScreen',
     description:
       '집 → 구성원 관리 (#753에서 셸 화면으로 승격): 초대코드, 방장 도구, 강퇴(더미 집이라 로컬 강퇴 플로우).',
@@ -1171,6 +1279,158 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'FeedScreen',
+    description:
+      '공개 피드 탭 (#1409, FEED_ENABLED로 숨김): 위에 [전체 | 자유 | 인증] 게시판 필터(서버 #428), 카드(작성자·게시판 배지·첫 사진+장수·본문 3줄, 사진 없는 자유글은 8줄·좋아요/댓글), 떠 있는 + 작성 버튼. 로컬 픽스처 — 서버 요청·쓰기 없음, 사진은 자리표시.',
+    render: () => (
+      <View style={{ height: 720, alignSelf: 'stretch' }}>
+        <FeedScreenDemo />
+      </View>
+    ),
+  },
+  {
+    name: 'FeedPostScreen',
+    description:
+      '피드 게시물 상세 (#1409): 사진 가로 넘김, "✓ 루틴 · M/D 완료" 배지(서버 #430), 본문, 좋아요, 오래된 순 댓글 + 입력칸. 내 댓글에만 삭제. 로컬 픽스처.',
+    render: () => (
+      <View style={{ height: 720, alignSelf: 'stretch' }}>
+        <FeedPostScreen
+          post={DEMO_FEED_POSTS[0]}
+          comments={DEMO_FEED_COMMENTS}
+          onAddComment={() => true}
+          onDeleteComment={() => {}}
+          onToggleLike={() => {}}
+          onReportPost={() => true}
+          onReportComment={() => true}
+          onBlockUser={() => {}}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'FeedPostScreen · 자유게시판 글',
+    description:
+      '사진 없는 자유게시판 글 상세 (서버 #428): 사진 자리 없이 작성자·자유 배지·본문. 내 글이면 수정 창에서 인증게시판은 잠겨 있고(사진 없음, 서버 #430) 본문은 비울 수 없다. 로컬 픽스처.',
+    render: () => (
+      <View style={{ height: 560, alignSelf: 'stretch' }}>
+        <FeedPostScreen
+          post={{ ...DEMO_FEED_TEXT_POST, mine: true }}
+          comments={[]}
+          onAddComment={() => true}
+          onToggleLike={() => {}}
+          onEditPost={() => true}
+          onDeletePost={() => {}}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'BlockedUsersScreen',
+    description:
+      '설정 > 차단한 사용자 (#1428, MODERATION_ENABLED로 숨김): 최근 차단순 목록, 차단 해제는 확인 다이얼로그 뒤. 로컬 픽스처 — 서버 요청 없음.',
+    render: () => (
+      <View style={{ height: 560, alignSelf: 'stretch' }}>
+        <BlockedUsersScreen
+          users={[
+            {
+              userId: 8,
+              nickname: '이웃',
+              profileImageKey: null,
+              blockedAt: '2026-09-29T03:00:00Z',
+            },
+            { userId: 9, nickname: null, profileImageKey: null, blockedAt: '2026-09-28T03:00:00Z' },
+          ]}
+          onUnblock={() => {}}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'MarketList',
+    description:
+      '가구 거래소 목록 (#1427, MARKET_ENABLED로 숨김) — 꾸미기의 거래소 탭 안 카드 격자: 그림·이름·제작자(탈퇴 시 탈퇴한 회원)·최저 판매가/판매 대기 없음·최근 거래가, 내 주문·새로고침. 로컬 픽스처.',
+    render: () => <MarketList assets={DEMO_MARKET_ASSETS} hasNext />,
+  },
+  {
+    name: 'MarketAssetScreen',
+    description:
+      '거래소 가구 상세 (#1427): 그림·제작자·발행 수·최저 판매가·최근 거래가, 구매하기/판매하기/발행 재고 판매(보유·제작자 여부로), 호가 위 3단계, 최근 거래, 신고하기(onReport 있을 때만). 버튼을 누르면 주문 시트(가격 1~1,000·예상 수령액). 로컬 픽스처.',
+    render: () => (
+      <View style={{ height: 720, alignSelf: 'stretch' }}>
+        <MarketAssetScreen
+          asset={{ ...DEMO_MARKET_ASSET, owned: true, isCreator: true }}
+          trades={DEMO_MARKET_TRADES}
+          coinBalance={120}
+          onPlaceOrder={() => true}
+          onReport={() => true}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'MarketOrdersScreen',
+    description:
+      '거래소 내 주문 (#1427): 대기 중/완료 탭, 행(그림·이름·구매/판매·가격·체결 수량·상태·만료까지), 대기 중은 확인 후 취소. 로컬 픽스처.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <MarketOrdersScreen orders={DEMO_MARKET_ORDERS} onCancel={() => {}} />
+      </View>
+    ),
+  },
+  {
+    name: 'MarketIssueSheet',
+    description:
+      '거래소에 올리기 (#1427) — AI 가구 스튜디오의 발행 시트: 발행 수량 1~10, 추가 발행·재검수 불가 안내.',
+    render: () => <MarketIssueSheetDemo />,
+  },
+  {
+    name: 'FeedComposeScreen',
+    description:
+      '피드 작성 (#1409): 사진 타일(올리는 중·완료·실패 다시), 본문 2,000자 카운터. 전부 올라가야 올리기가 켜진다. 로컬 픽스처.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <FeedComposeScreen
+          board="VERIFICATION"
+          images={DEMO_FEED_DRAFT}
+          content="오늘의 루틴 인증"
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'FeedPostScreen · 내 사진 글 수정(게시판 전환)',
+    description:
+      '내 사진 있는 자유글 (서버 #430): 수정 창에서 인증으로 옮기면 최근 7일 완료 루틴을 골라야 저장된다. 로컬 픽스처.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <FeedPostScreen
+          post={DEMO_FEED_POSTS[1]}
+          comments={[]}
+          onEditPost={() => true}
+          onDeletePost={() => {}}
+          routinePicker={FEED_DEMO_PICKER}
+          today={DEMO_FEED_TODAY}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'FeedRoutinePicker',
+    description:
+      '인증할 루틴 고르기 (#1456, 서버 #430): 최근 7일 완료 루틴을 오늘·어제·M/D로 묶어 하나만 고른다. 아래는 빈 상태.',
+    render: () => <FeedRoutinePickerDemo />,
+  },
+  {
+    name: 'FeedComposeScreen · 자유게시판',
+    description:
+      '피드 작성의 게시판 선택 (서버 #428·#430): 자유는 사진 없이 본문만으로 올리기가 켜지고, 인증으로 바꾸면 최근 7일 완료 루틴 고르기와 사진 1장 이상이 필요하다는 안내. 로컬 상태만.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <FeedComposeDemo />
+      </View>
+    ),
+  },
+  {
     name: 'NotificationTabs',
     description:
       '알림 화면 [내 알림 | 새 소식] 세그먼트 (#1320): 선택 상태와 안 읽음 점. 본 탭은 점이 꺼진다.',
@@ -1354,9 +1614,9 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => <HouseCoverPickerDemo />,
   },
   {
-    name: 'ActivityStrip',
-    description: '친구 방 최근 활동 — 14칸 점 스트립, 탭하면 날짜별 상세 (#860).',
-    render: () => <ActivityStripDemo />,
+    name: 'FriendWeekStrip',
+    description: '친구 방 주간 날짜 줄 — 날짜별 완료 점, 누르면 그날 목록 (#1423).',
+    render: () => <FriendWeekStripDemo />,
   },
   {
     name: 'AttendanceSheet',
@@ -1569,6 +1829,12 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'UI · ReportSheet',
+    description:
+      '콘텐츠 신고 시트 (#1428) — 사유 7종 라디오, 선택 설명 500자, 사유를 골라야 신고하기가 켜진다. 버튼으로 열어보기.',
+    render: () => <ReportSheetDemo />,
+  },
+  {
     name: 'UI · ConfirmDialog',
     description: '백드롭+카드 확인 다이얼로그 (#557) — 버튼으로 열어보기.',
     render: () => <ConfirmDialogDemo />,
@@ -1704,6 +1970,21 @@ function MissionSheetDemo() {
   );
 }
 
+function ReportSheetDemo() {
+  const [visible, setVisible] = useState(false);
+  return (
+    <View style={{ alignSelf: 'stretch' }}>
+      <Button label="신고 시트 열기" variant="danger" onPress={() => setVisible(true)} />
+      <ReportSheet
+        visible={visible}
+        targetLabel="게시물"
+        onSubmit={() => setVisible(false)}
+        onClose={() => setVisible(false)}
+      />
+    </View>
+  );
+}
+
 function ConfirmDialogDemo() {
   const [visible, setVisible] = useState(false);
   return (
@@ -1717,6 +1998,21 @@ function ConfirmDialogDemo() {
         destructive
         onConfirm={() => setVisible(false)}
         onCancel={() => setVisible(false)}
+      />
+    </View>
+  );
+}
+
+/** 발행 시트 열기 버튼 (#1427). */
+function MarketIssueSheetDemo() {
+  const [visible, setVisible] = useState(false);
+  return (
+    <View style={{ alignSelf: 'stretch', minHeight: 120 }}>
+      <Button label="거래소에 올리기" onPress={() => setVisible(true)} />
+      <MarketIssueSheet
+        visible={visible}
+        onSubmit={() => setVisible(false)}
+        onClose={() => setVisible(false)}
       />
     </View>
   );

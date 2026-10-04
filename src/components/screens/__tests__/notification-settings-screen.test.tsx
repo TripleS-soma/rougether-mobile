@@ -32,7 +32,7 @@ describe('NotificationSettingsScreen', () => {
     const onToggle = jest.fn();
     const { getByLabelText } = await render(
       <NotificationSettingsScreen
-        settings={{ all: false, reminder: true, house: true }}
+        settings={{ all: false, reminder: true, house: true, feed: true }}
         onToggle={onToggle}
       />,
     );

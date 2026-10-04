@@ -210,6 +210,7 @@ export function useHouses() {
     searchLoading,
     searchError,
     retrySearch,
+    ensureSearch,
     joinHouse,
     previewHouse,
   } = useHouseSearch();
@@ -492,6 +493,7 @@ export function useHouses() {
       /** Re-run the failed initial load (에러 상태의 다시 시도, #549). */
       retry: loadMyHouses,
       retrySearch,
+      ensureSearch,
       refreshHouses: reloadMyHouses,
       applyMyNickname,
       pendingJoinRequests,
@@ -529,6 +531,7 @@ export function useHouses() {
       searchError,
       loadMyHouses,
       retrySearch,
+      ensureSearch,
       reloadMyHouses,
       applyMyNickname,
       pendingJoinRequests,

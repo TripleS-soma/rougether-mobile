@@ -113,3 +113,20 @@ it('keeps practice out of loading and offers it alongside a successfully loaded 
   await fireEvent.press(ui.getByLabelText('고양이 합치기 연습하기 · 랭킹 미기록'));
   expect(practice).toHaveBeenCalledWith('cat-merge');
 });
+
+it('카드에 내 최고 기록을 보여주고, 기록이 없으면 첫 기록 안내, 모르면 아무것도 안 그린다 (#1425)', async () => {
+  const stairs = { ...GAME, gameCode: 'cat-stairs', name: '고양이 계단' };
+  const merge = { ...GAME, gameCode: 'cat-merge', name: '고양이 합치기' };
+  const ui = await render(
+    <MinigamesScreen
+      games={[GAME, stairs, merge]}
+      bests={{
+        'room-runner': { score: 1234, rank: 3, totalPlayers: 17 },
+        'cat-stairs': null,
+      }}
+    />,
+  );
+  expect(ui.getByText('내 최고 1,234 · 3위 / 17명')).toBeTruthy();
+  expect(ui.getByText('아직 기록이 없어요. 첫 기록을 남겨 보세요!')).toBeTruthy();
+  expect(ui.queryByTestId('minigame-best-cat-merge')).toBeNull();
+});

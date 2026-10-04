@@ -1,4 +1,5 @@
 import type { NavTab } from '@/components/ui/bottom-nav';
+import { FEED_ENABLED } from '@/constants/feed';
 
 /**
  * 셸 내비게이션 상수 (#692) — 화면 목록·탭/백 매핑·엣지 백 파라미터.
@@ -20,6 +21,7 @@ export type Screen =
   | 'house'
   | 'houseMembers'
   | 'houseMissions'
+  | 'houseChat'
   | 'friendRoom'
   | 'houseSearch'
   | 'createHouse'
@@ -34,9 +36,18 @@ export type Screen =
   | 'bugReport'
   | 'notifications'
   | 'sound'
+  // 차단한 사용자 (#1428) — 설정의 서브화면, MODERATION_ENABLED일 때만 도달한다.
+  | 'blockedUsers'
   | 'help'
   | 'inviteFriends'
-  | 'weeklyReport';
+  | 'weeklyReport'
+  // 공개 SNS 피드 (#1409) — FEED_ENABLED일 때만 도달한다.
+  | 'feed'
+  | 'feedPost'
+  | 'feedCompose'
+  // 가구 거래소 (#1427) — MARKET_ENABLED일 때만 도달한다(꾸미기의 거래소 탭·스튜디오 발행).
+  | 'marketAsset'
+  | 'marketOrders';
 
 /** Which bottom-nav tab is active for each screen, or null to hide the nav. */
 export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
@@ -57,6 +68,8 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   house: 'house',
   houseMembers: null,
   houseMissions: null,
+  // 집 채팅 (#1408) — 입력줄이 바닥에 붙으므로 하단 탭을 숨긴다.
+  houseChat: null,
   friendRoom: null,
   houseSearch: null,
   createHouse: null,
@@ -73,20 +86,37 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   bugReport: null,
   notifications: null,
   sound: null,
+  blockedUsers: null,
   help: null,
   inviteFriends: null,
   weeklyReport: null,
+  // 피드 탭 (#1409) — 상세·작성은 하단 탭 없는 서브화면.
+  feed: 'feed',
+  feedPost: null,
+  feedCompose: null,
+  // 거래소 상세·내 주문 (#1427) — 꾸미기에서 미는 서브화면. 하단 탭 없음.
+  marketAsset: null,
+  marketOrders: null,
 };
 
 export const SCREEN_FOR_TAB: Record<NavTab, Screen> = {
   myRoom: 'myRoom',
   calendar: 'calendar',
   house: 'house',
+  feed: 'feed',
   myPage: 'myPage',
 };
 
-/** 하단 탭의 페이지 순서 (#563) — 페이저 인덱스 ↔ 탭 매핑. */
-export const NAV_ORDER: NavTab[] = ['myRoom', 'calendar', 'house', 'myPage'];
+/**
+ * 하단 탭의 페이지 순서 (#563) — 페이저 인덱스 ↔ 탭 매핑. 피드(#1409)는 집과 내 정보
+ * 사이이고, FEED_ENABLED가 꺼져 있으면 빠진다(탭·페이저 페이지 모두).
+ */
+export function navOrder(feedEnabled: boolean): NavTab[] {
+  return feedEnabled
+    ? ['myRoom', 'calendar', 'house', 'feed', 'myPage']
+    : ['myRoom', 'calendar', 'house', 'myPage'];
+}
+export const NAV_ORDER: NavTab[] = navOrder(FEED_ENABLED);
 
 /**
  * Where the Android hardware back button lands from each screen. `null` on
@@ -109,6 +139,7 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   house: 'myRoom',
   houseMembers: 'house',
   houseMissions: 'house',
+  houseChat: 'house',
   friendRoom: 'house',
   houseSearch: 'house',
   createHouse: 'houseSearch',
@@ -124,10 +155,17 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   bugReport: 'myPage',
   notifications: 'settings',
   sound: 'settings',
+  blockedUsers: 'settings',
   help: 'myPage',
   inviteFriends: 'myPage',
   // 내 정보에서도, 새 회고 배너에서도 열린다 — 실제 목적지는 addReturnScreen (#1056).
   weeklyReport: 'myPage',
+  feed: 'myRoom',
+  feedPost: 'feed',
+  feedCompose: 'feed',
+  // 거래소는 꾸미기(상점)의 탭 — 상세·내 주문 모두 꾸미기로 돌아간다 (#1427).
+  marketAsset: 'decor',
+  marketOrders: 'decor',
 };
 
 /** 더블 백 종료 허용 창 (#522) — 토스트 표시와 체감이 맞는 2초. */
@@ -166,6 +204,8 @@ export const FULL_SWIPE_BACK_EXCLUDED: ReadonlySet<Screen> = new Set<Screen>([
   'addRoutine',
   // calendarWeek: 좌우 스와이프로 주 이동 (#1327) — 왼쪽 가장자리만 뒤로.
   'calendarWeek',
+  // feedPost: 사진 여러 장을 좌우로 넘긴다 (#1409).
+  'feedPost',
 ]);
 /**
  * 슬라이드 없이 즉시 바뀌는 전환 (#1327) — 주간 보기는 달력 탭과 **같은 자리에 같은

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { NavTab } from '@/components/ui/bottom-nav';
+import { NAV_ORDER } from '@/components/app/navigation';
 import { i18n } from '@/i18n';
 
 /** 설정 > 시작 화면 (#1139) — 앱을 열 때 처음 보일 하단 탭. 기기 보관. */
@@ -13,12 +14,9 @@ const startTabOption = (id: NavTab) => ({
     return i18n.t(`nav.${id}`);
   },
 });
-export const START_TAB_OPTIONS: { id: NavTab; readonly name: string }[] = [
-  startTabOption('myRoom'),
-  startTabOption('calendar'),
-  startTabOption('house'),
-  startTabOption('myPage'),
-];
+// 하단 탭과 같은 순서·같은 집합 — 피드(#1409)는 FEED_ENABLED일 때만 NAV_ORDER에 있다.
+export const START_TAB_OPTIONS: { id: NavTab; readonly name: string }[] =
+  NAV_ORDER.map(startTabOption);
 
 export function isNavTab(value: unknown): value is NavTab {
   return START_TAB_OPTIONS.some((o) => o.id === value);

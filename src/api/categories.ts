@@ -23,6 +23,15 @@ export function updateCategory(id: number, body: CategoryUpdateRequest) {
   return apiPut<CategoryResponse>(`/categories/${id}`, body);
 }
 
+/**
+ * DELETE /categories/{id}/house-link — 집 연동 해제(멱등, 204). PUT의
+ * `houseId: null`은 "기존 유지"라 해제는 이 경로뿐이다. 카테고리와 소속
+ * 루틴·투두는 그대로 남는다.
+ */
+export function unlinkCategoryHouse(id: number) {
+  return apiDelete<void>(`/categories/${id}/house-link`);
+}
+
 /** 카테고리 삭제 모드 (#517) — 서버 필수 쿼리. */
 export type CategoryDeleteMode = 'UNASSIGN' | 'PURGE';
 

@@ -202,6 +202,13 @@
         "a11y": "미션 삭제 확인",
         "cancelA11y": "미션 삭제 취소"
       },
+      "linkChoice": {
+        "title": "연동 루틴 정리",
+        "body": "'{{title}}' 미션과 연동된 내 루틴을 어떻게 할까요?\n연동만 해제하면 루틴은 그대로 남고, 이미 반영된 미션 기여도 그대로 남아요.",
+        "unlink": "연동만 해제",
+        "unlinkA11y": "미션 연동만 해제",
+        "delete": "루틴 삭제"
+      },
       "unlinkConfirm": {
         "title": "연동 루틴 삭제",
         "body": "'{{title}}' 루틴을 내 루틴에서 삭제할까요?\n지금까지의 기여 기록은 남아요. 미션 자체는 그대로예요.",
@@ -379,6 +386,8 @@
     "missionLinks": {
       "linkedDeleted": "연동된 루틴도 함께 삭제했어요",
       "routineDeleted": "연동 루틴을 삭제했어요",
+      "routineUnlinked": "미션 연동을 해제했어요. 루틴은 그대로 남아요",
+      "categoryUnlinked": "집 연동을 해제했어요. 카테고리와 루틴은 그대로 남아요",
       "categoryDeleted": "연동된 카테고리와 루틴도 함께 삭제했어요",
       "cleanedEnded": "끝난 미션의 연동 루틴을 정리했어요",
       "cleanedGone": "사라진 미션의 연동 루틴을 정리했어요",
@@ -454,6 +463,31 @@
       "snowy-cabin": "눈꽃 통나무집",
       "herb-greenhouse": "허브 온실집",
       "clockwork-cottage": "태엽 시계집"
+    },
+    "chat": {
+      "title": "집 채팅",
+      "rail": "채팅",
+      "railA11y": "집 채팅",
+      "railA11yUnread": "집 채팅, 안 읽은 메시지 {{n}}개",
+      "placeholder": "메시지 보내기",
+      "inputA11y": "메시지 입력",
+      "send": "보내기",
+      "sending": "보내는 중",
+      "failed": "전송 실패 · 다시 보내기",
+      "retryA11y": "다시 보내기",
+      "unreadA11y": "안 읽은 사람 {{n}}명",
+      "unknownSender": "알 수 없음",
+      "empty": "아직 대화가 없어요. 먼저 인사를 건네 보세요!",
+      "loadFailed": "채팅을 불러오지 못했어요",
+      "retry": "다시 시도",
+      "banned": "사용할 수 없는 단어가 들어 있어요",
+      "forbidden": "이 집의 채팅에 참여할 수 없어요",
+      "invalid": "메시지를 보낼 수 없어요. 내용을 확인해 주세요."
+    },
+    "friendWeek": {
+      "range": "{{sm}}월 {{sd}}일 – {{em}}월 {{ed}}일",
+      "done": "{{n}}개 완료",
+      "none": "완료 없음"
     }
   }
 }

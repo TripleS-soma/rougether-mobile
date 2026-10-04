@@ -4,6 +4,7 @@ import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 
 import { GameRecovery } from '@/components/minigame/game-recovery';
 import { useGameRecovery } from '@/components/minigame/use-game-recovery';
+import { parseGameFx, playGameFx } from '@/features/minigame/game-fx';
 import { isCurrentGameFinish } from '@/features/minigame/message-envelope';
 
 import { Radius } from '@/constants/theme';
@@ -73,6 +74,12 @@ export function StairsGame({
   const handleMessage = useCallback(
     (event: WebViewMessageEvent) => {
       if (!isCurrentChannel(channelId)) return;
+      // 손맛 (#1425) — 표시용 신호라 게임 상태와 무관하게 먼저 처리한다.
+      const fx = parseGameFx(event.nativeEvent.data, channelId);
+      if (fx) {
+        playGameFx(fx);
+        return;
+      }
       const message = parseStairsMessage(event.nativeEvent.data, channelId);
       if (!message) {
         if (isCurrentGameFinish(event.nativeEvent.data, channelId)) fail('finish');

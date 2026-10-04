@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Animated, StyleSheet } from 'react-native';
+import { usePageActive } from '@/hooks/use-page-active';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 import { Radius } from '@/constants/theme';
 import { NATIVE_DRIVER } from '@/utils/animation';
@@ -7,7 +8,10 @@ import { NATIVE_DRIVER } from '@/utils/animation';
 /** 접속 점 — 은은한 숨쉬기 펄스 (#450). house-screen.tsx에서 분리 (#693). */
 export function OnlineDot({ color }: { color: string }) {
   const pulse = useAnimatedValue(0);
+  // 숨은 탭에서는 펄스를 멈춘다 (성능 장부 M7).
+  const pageActive = usePageActive();
   useEffect(() => {
+    if (!pageActive) return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: NATIVE_DRIVER }),
@@ -16,7 +20,7 @@ export function OnlineDot({ color }: { color: string }) {
     );
     loop.start();
     return () => loop.stop();
-  }, [pulse]);
+  }, [pulse, pageActive]);
   return (
     <Animated.View
       testID="online-dot"

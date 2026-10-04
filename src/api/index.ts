@@ -38,11 +38,15 @@ export {
 export * from './bug-reports';
 export * from './calendar-import';
 export * from './categories';
+export * from './chat';
 export * from './events';
+export * from './feed';
 export * from './houses';
+export * from './market';
 export * from './masters';
 export * from './onboarding';
 export * from './me';
+export * from './moderation';
 export * from './notifications';
 export * from './recommendations';
 export * from './reports';

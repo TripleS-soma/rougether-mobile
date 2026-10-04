@@ -27,6 +27,10 @@ export function useCalendarView(reloadToday: () => Promise<void>) {
       qc.invalidateQueries({ queryKey: queryKeys.myRoom.byUser(userId) }),
     ]);
   }, [qc, userId]);
+  /** 달력만 — 방 성장이 안 바뀐 변경(보상 0 완료)용 (성능 장부 N2). */
+  const refreshDays = useCallback(async () => {
+    await qc.invalidateQueries({ queryKey: queryKeys.calendar.all(userId) });
+  }, [qc, userId]);
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     const check = () => {
@@ -73,5 +77,6 @@ export function useCalendarView(reloadToday: () => Promise<void>) {
     retryMonth,
     retryDay,
     refresh,
+    refreshDays,
   };
 }

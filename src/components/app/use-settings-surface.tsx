@@ -7,6 +7,7 @@ import { Platform, Linking } from 'react-native';
 import { type Screen } from '@/components/app/navigation';
 import { useInviteArrival } from '@/components/app/use-invite-arrival';
 import { SettingsScreen } from '@/components/screens/settings-screen';
+import { BlockedUsersScreen } from '@/components/screens/blocked-users-screen';
 import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { HelpScreen } from '@/components/screens/help-screen';
 import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
@@ -29,10 +30,12 @@ import { useToast } from '@/components/ui/toast';
 import { FONT_OPTIONS, THEME_OPTIONS, type BrandFontId, type ThemeId } from '@/constants/theme';
 import { useCalendarImport } from '@/hooks/use-calendar-import';
 import type { CharacterId } from '@/constants/characters';
+import { MODERATION_ENABLED } from '@/constants/moderation';
 import { SUPPORT_EMAIL } from '@/constants/policy';
 import { useAuth } from '@/hooks/use-auth';
 import { previewDiagnostics, useBugReports } from '@/hooks/use-bug-reports';
 import { type InviteVia, useInvites } from '@/hooks/use-invites';
+import { useBlockedUsers, useModeration } from '@/hooks/use-moderation';
 import { useNotificationSettings } from '@/hooks/use-notification-settings';
 import { useBrandTheme } from '@/hooks/use-tokens';
 import { useStartTab } from '@/hooks/use-start-tab';
@@ -269,6 +272,18 @@ export function useSettingsSurface({
   // 캘린더 연동 (#844 → 내 정보 행 #1097) — 화면에서 권한을 요청하므로 여는 것만 한다.
   const openCalendarImport = useCallback(() => setScreen('calendarImport'), [setScreen]);
   const openHelp = useCallback(() => setScreen('help'), [setScreen]);
+  // 차단한 사용자 (#1428) — 화면에 있는 동안만 받는다. 해제는 피드·목록을 함께 새로 받는다.
+  const openBlockedUsers = useCallback(() => setScreen('blockedUsers'), [setScreen]);
+  const blockedUsers = useBlockedUsers({
+    enabled: MODERATION_ENABLED && screen === 'blockedUsers',
+  });
+  const { unblock } = useModeration({ onError: (message) => toast(message, 'error') });
+  const handleUnblock = useCallback(
+    async (userId: number) => {
+      if (await unblock(userId)) toast(tr('member.moderation.toast.unblocked'), 'success');
+    },
+    [unblock, toast, tr],
+  );
   // 친구 초대 (#518) — 진입 시점에 내 코드를 로드(없으면 서버가 발급).
   const openInviteFriends = useCallback(() => {
     setScreen('inviteFriends');
@@ -334,6 +349,7 @@ export function useSettingsSurface({
     onOpenLanguage: LANGUAGE_PICKER_ENABLED ? openLanguage : undefined,
     onOpenNotifications: openNotificationSettings,
     onOpenSound: openSound,
+    onOpenBlockedUsers: MODERATION_ENABLED ? openBlockedUsers : undefined,
     onOpenTerms: openTerms,
     onOpenPrivacy: openPrivacy,
     onReplayOnboarding,
@@ -428,6 +444,18 @@ export function useSettingsSurface({
           setSoundSettings(next);
           persistDeviceSettings(next);
         }}
+        onBack={backToSettings}
+      />
+    ) : screen === 'blockedUsers' ? (
+      <BlockedUsersScreen
+        users={blockedUsers.users}
+        loading={blockedUsers.loading}
+        loadError={blockedUsers.error}
+        onRetry={blockedUsers.refresh}
+        hasNext={blockedUsers.hasNext}
+        loadingMore={blockedUsers.loadingMore}
+        onLoadMore={blockedUsers.loadMore}
+        onUnblock={(userId) => void handleUnblock(userId)}
         onBack={backToSettings}
       />
     ) : screen === 'bugReport' ? (

@@ -136,4 +136,46 @@ describe('CategoryManageScreen', () => {
     await fireEvent.press(getByLabelText('뒤로가기'));
     expect(onBack).toHaveBeenCalled();
   });
+
+  describe('집 연동 해제', () => {
+    const linked = { ...ROUTINE_CATEGORIES[0], id: 'c1', name: '우리집', houseId: 6 };
+    const plain = { ...ROUTINE_CATEGORIES[1], id: 'c2', name: '운동' };
+
+    it('연동된 카테고리에만 배지가 뜨고, 확인을 거쳐 해제한다', async () => {
+      const onUnlinkHouse = jest.fn();
+      const { getByText, getByLabelText, queryByLabelText } = await render(
+        <CategoryManageScreen
+          categories={[linked, plain]}
+          houseNames={{ 6: 'TripleS' }}
+          onUnlinkHouse={onUnlinkHouse}
+        />,
+      );
+      expect(getByText("'TripleS' 집 연동")).toBeTruthy();
+      expect(queryByLabelText('운동 집 연동 해제')).toBeNull();
+
+      await fireEvent.press(getByLabelText('우리집 집 연동 해제'));
+      expect(getByText(/카테고리와 안의 루틴·할 일은 그대로 남아요/)).toBeTruthy();
+      expect(onUnlinkHouse).not.toHaveBeenCalled();
+      await fireEvent.press(getByLabelText('집 연동 해제 확인'));
+      expect(onUnlinkHouse).toHaveBeenCalledWith('c1');
+    });
+
+    it('취소하면 해제하지 않는다', async () => {
+      const onUnlinkHouse = jest.fn();
+      const { getByLabelText } = await render(
+        <CategoryManageScreen categories={[linked]} onUnlinkHouse={onUnlinkHouse} />,
+      );
+      await fireEvent.press(getByLabelText('우리집 집 연동 해제'));
+      await fireEvent.press(getByLabelText('집 연동 해제 취소'));
+      expect(onUnlinkHouse).not.toHaveBeenCalled();
+    });
+
+    it('해제 핸들러가 없으면 배지는 표시만 한다 — 이름 모르는 집은 일반 문구', async () => {
+      const { getByText, queryByLabelText } = await render(
+        <CategoryManageScreen categories={[linked]} />,
+      );
+      expect(getByText('집 연동')).toBeTruthy();
+      expect(queryByLabelText('우리집 집 연동 해제')).toBeNull();
+    });
+  });
 });

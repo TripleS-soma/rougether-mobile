@@ -12,7 +12,9 @@ import { Keyboard } from 'react-native';
  *
  * 화면 단위에서도 같다 (#1326): 엣지투엣지에서는 창이 안 줄어들어 `padding`/`height`
  * 모두 무력하므로, 이 높이만큼 아래 여백을 직접 주는 게 유일하게 맞는 처방이다.
- * 하단 safe-area 인셋을 이 값에 더하지 말 것 — 키보드가 이미 그 위에 올라온다.
+ * 이 값은 `ime − 시스템 바`다(ReactRootView). 엣지투엣지에선 키보드가 내비바 자리까지
+ * 덮으므로, 하단 safe-area 인셋 여백은 **유지한 채** 이 값을 더해야 한다 — 인셋을 이 값으로
+ * 바꿔치기하면 내비바 높이만큼 입력칸이 가려진다(2026-10-04 집 채팅, #1453).
  */
 export function useAndroidKeyboardHeight(enabled: boolean): number {
   const [height, setHeight] = useState(() =>

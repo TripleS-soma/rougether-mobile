@@ -239,7 +239,10 @@ const RUNNER_BROWSER_SOURCE = String.raw`function runRunner(config) {
     state = engine.step(pendingJump);
     pendingJump = false;
     distance += state.speed;
-    if (state.ended) finish();
+    if (state.ended) {
+      if (state.endReason !== 'limit') post('fx', { kind: 'over' });
+      finish();
+    }
   }
   function begin() {
     if (!hostActive || destroyed || mode !== 'ready') return;
@@ -259,7 +262,10 @@ const RUNNER_BROWSER_SOURCE = String.raw`function runRunner(config) {
   function jump() {
     if (mode === 'ready') { begin(); return; }
     if (mode === 'paused') { resume(); return; }
-    if (mode === 'playing' && hostActive && state.playerY === 0) pendingJump = true;
+    if (mode === 'playing' && hostActive && state.playerY === 0 && !pendingJump) {
+      pendingJump = true;
+      post('fx', { kind: 'jump' });
+    }
   }
   function onPointer(event) {
     event.preventDefault(); jump();

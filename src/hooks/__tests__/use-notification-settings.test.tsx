@@ -21,13 +21,23 @@ describe('useNotificationSettings', () => {
     await act(async () => {
       await result.current.load();
     });
-    expect(result.current.settings).toEqual({ all: true, reminder: true, house: false });
+    expect(result.current.settings).toEqual({
+      all: true,
+      reminder: true,
+      house: false,
+      feed: true,
+    });
 
     await act(async () => {
       result.current.toggle('reminder', false);
     });
     await waitFor(() =>
-      expect(result.current.settings).toEqual({ all: true, reminder: false, house: true }),
+      expect(result.current.settings).toEqual({
+        all: true,
+        reminder: false,
+        house: true,
+        feed: true,
+      }),
     );
     const patch = calls.find((c) => c.method === 'PATCH');
     expect(patch?.url).toContain('/users/me/notification-settings');
@@ -48,14 +58,19 @@ describe('useNotificationSettings', () => {
     });
     expect(result.current.loadError).toBe(true);
     // 실패 시엔 기본값 유지.
-    expect(result.current.settings).toEqual({ all: true, reminder: true, house: true });
+    expect(result.current.settings).toEqual({ all: true, reminder: true, house: true, feed: true });
 
     broken = false;
     await act(async () => {
       await result.current.load();
     });
     expect(result.current.loadError).toBe(false);
-    expect(result.current.settings).toEqual({ all: true, reminder: false, house: true });
+    expect(result.current.settings).toEqual({
+      all: true,
+      reminder: false,
+      house: true,
+      feed: true,
+    });
   });
 
   it('rolls back the optimistic toggle and reports when the PATCH fails', async () => {

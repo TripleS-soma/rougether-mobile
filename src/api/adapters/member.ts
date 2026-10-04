@@ -112,7 +112,12 @@ export function toBugReportEntry(b: BugReportResponse): BugReportEntry {
  * 으로 본다.
  */
 export function toNotificationSettings(res: NotificationSettingResponse): NotificationSettings {
-  return { all: res.all ?? true, reminder: res.reminder ?? true, house: res.house ?? true };
+  return {
+    all: res.all ?? true,
+    reminder: res.reminder ?? true,
+    house: res.house ?? true,
+    feed: res.feed ?? true,
+  };
 }
 
 /**

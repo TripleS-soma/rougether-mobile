@@ -37,6 +37,10 @@ const ICONS = {
   star: 'star',
   leave: 'exit-outline',
   heart: 'heart',
+  // 피드 (#1409)
+  'heart-outline': 'heart-outline',
+  comment: 'chatbubble-outline',
+  image: 'image-outline',
   // 방 꾸미기 선택 툴바 (#333)
   flip: 'swap-horizontal',
   'rotate-ccw': 'arrow-undo-outline',
@@ -53,9 +57,15 @@ const ICONS = {
   sound: 'volume-high-outline',
   help: 'help-circle-outline',
   bug: 'bug-outline',
+  // 신고·차단 (#1428).
+  flag: 'flag-outline',
+  block: 'ban-outline',
   palette: 'color-palette-outline',
   moon: 'moon-outline',
   refresh: 'refresh-outline',
+  // 집 채팅 (#1408)
+  chat: 'chatbubbles-outline',
+  send: 'send',
   // Bottom-nav
   myRoom: 'home',
   house: 'business',

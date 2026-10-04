@@ -225,3 +225,33 @@ describe('Room', () => {
     expect(slot.aspectRatio).toBe(1);
   });
 });
+
+describe('Room 디코딩 해상도 (성능 장부 M2)', () => {
+  // 렌더 트리의 이미지 노드가 받은 allowDownscaling 값 — 방의 배경·벽지·바닥·가구.
+  type JsonNode = { props?: Record<string, unknown>; children?: (JsonNode | string)[] | null };
+  const downscaleFlags = (ui: Awaited<ReturnType<typeof render>>) => {
+    const out: boolean[] = [];
+    const walk = (node: JsonNode | string | null | undefined) => {
+      if (!node || typeof node === 'string') return;
+      if (typeof node.props?.allowDownscaling === 'boolean') out.push(node.props.allowDownscaling);
+      node.children?.forEach(walk);
+    };
+    const tree = ui.toJSON() as JsonNode | JsonNode[] | null;
+    (Array.isArray(tree) ? tree : [tree]).forEach(walk);
+    return out;
+  };
+
+  it('fill은 기본으로 원본 해상도(종전과 같음)', async () => {
+    const ui = await render(<Room fill />);
+    const flags = downscaleFlags(ui);
+    expect(flags.length).toBeGreaterThan(0);
+    expect(flags.every((v) => v === false)).toBe(true);
+  });
+
+  it('fill이어도 sharp={false}면 줄여서 푼다 — 집 좌석의 평상시', async () => {
+    const ui = await render(<Room fill sharp={false} />);
+    const flags = downscaleFlags(ui);
+    expect(flags.length).toBeGreaterThan(0);
+    expect(flags.every((v) => v === true)).toBe(true);
+  });
+});

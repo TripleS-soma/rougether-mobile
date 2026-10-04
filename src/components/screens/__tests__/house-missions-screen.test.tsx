@@ -73,6 +73,60 @@ describe('HouseMissionsScreen', () => {
     expect(onRemoveMissionRoutine).toHaveBeenCalledWith(expect.objectContaining({ id: 11 }));
   });
 
+  /** 연동만 끊는 길 — 루틴은 남고 이미 반영된 기여도 남는다. */
+  it('해제 핸들러가 있으면 배지 다이얼로그가 [연동만 해제 | 루틴 삭제]를 고르게 한다', async () => {
+    const onRemoveMissionRoutine = jest.fn();
+    const onUnlinkMissionRoutine = jest.fn();
+    const { getByLabelText, getByText } = await render(
+      <HouseMissionsScreen
+        house={MEMBER_HOUSE}
+        missions={MEMBER_HOUSE.missions ?? []}
+        isOwner={false}
+        linkedRoutines={[{ missionId: 11, completedToday: false }]}
+        onRemoveMissionRoutine={onRemoveMissionRoutine}
+        onUnlinkMissionRoutine={onUnlinkMissionRoutine}
+      />,
+    );
+    await fireEvent.press(getByLabelText('주간 루틴 지키기 연동 루틴 정리'));
+    expect(getByText(/이미 반영된 미션 기여도 그대로 남아요/)).toBeTruthy();
+    expect(getByLabelText('연동 루틴 삭제 확인')).toBeTruthy();
+    await fireEvent.press(getByLabelText('미션 연동만 해제'));
+    expect(onUnlinkMissionRoutine).toHaveBeenCalledWith(expect.objectContaining({ id: 11 }));
+    expect(onRemoveMissionRoutine).not.toHaveBeenCalled();
+  });
+
+  it('선택 다이얼로그에서 루틴 삭제를 고르면 예전처럼 삭제한다', async () => {
+    const onRemoveMissionRoutine = jest.fn();
+    const onUnlinkMissionRoutine = jest.fn();
+    const { getByLabelText } = await render(
+      <HouseMissionsScreen
+        house={MEMBER_HOUSE}
+        missions={MEMBER_HOUSE.missions ?? []}
+        isOwner={false}
+        linkedRoutines={[{ missionId: 11, completedToday: false }]}
+        onRemoveMissionRoutine={onRemoveMissionRoutine}
+        onUnlinkMissionRoutine={onUnlinkMissionRoutine}
+      />,
+    );
+    await fireEvent.press(getByLabelText('주간 루틴 지키기 연동 루틴 정리'));
+    await fireEvent.press(getByLabelText('연동 루틴 삭제 확인'));
+    expect(onRemoveMissionRoutine).toHaveBeenCalledWith(expect.objectContaining({ id: 11 }));
+    expect(onUnlinkMissionRoutine).not.toHaveBeenCalled();
+  });
+
+  it('연동 루틴이 없으면 해제 핸들러가 있어도 배지가 눌리지 않는다', async () => {
+    const { queryByLabelText } = await render(
+      <HouseMissionsScreen
+        house={MEMBER_HOUSE}
+        missions={MEMBER_HOUSE.missions ?? []}
+        isOwner={false}
+        linkedRoutines={[]}
+        onUnlinkMissionRoutine={jest.fn()}
+      />,
+    );
+    expect(queryByLabelText('주간 루틴 지키기 연동 루틴 정리')).toBeNull();
+  });
+
   /** 연동 루틴이 없으면 정리할 것도 없다 — 배지는 그냥 라벨이다. */
   it('연동 루틴이 없으면 배지가 눌리지 않는다 (#890)', async () => {
     const { queryByLabelText } = await render(

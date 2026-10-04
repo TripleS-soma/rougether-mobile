@@ -760,11 +760,15 @@ export type NotificationItem = {
     | 'HOUSE_MEMBER_LEFT'
     | 'HOUSE_JOIN_REQUEST_REJECTED'
     | 'HOUSE_JOIN_REQUEST_ACCEPTED'
-    | 'ROOM_COBWEB_CLEANED';
+    | 'ROOM_COBWEB_CLEANED'
+    // 피드 댓글 (#1409) — refId = 게시물 ID.
+    | 'FEED_COMMENT';
   title?: string;
   body?: string;
   isRead?: boolean;
   createdAt?: string;
+  /** 알림 대상 ID — FEED_COMMENT는 게시물 ID (#1409). */
+  refId?: number;
 };
 
 export type NotificationListResponse = {
@@ -777,12 +781,15 @@ export type NotificationSettingResponse = {
   all?: boolean;
   reminder?: boolean;
   house?: boolean;
+  /** 피드 댓글 푸시 (#1409) — 기본 true. */
+  feed?: boolean;
 };
 
 export type NotificationSettingUpdateRequest = {
   all?: boolean;
   reminder?: boolean;
   house?: boolean;
+  feed?: boolean;
 };
 
 export type OnboardingCharacterRequest = {
@@ -827,6 +834,51 @@ export type OnboardingHouseResponse = {
 export type HouseAutoJoinResponse = {
   houseId?: number;
   enabled?: boolean;
+};
+
+/**
+ * 집 채팅 (#1408, 서버 채팅 도메인) — `POST /houses/{id}/chat-room`, `/chat/rooms/{roomId}/…`.
+ * 손으로 추가(#1412). 스펙: rougether-spec domains/chat/api.md.
+ */
+export type ChatReader = {
+  userId?: number;
+  membershipId?: number;
+  /** 이 순서까지 읽음 — 0부터, 낮아지지 않는다. */
+  lastReadSequence?: number;
+};
+
+export type ChatRoomResponse = {
+  roomId?: number;
+  roomType?: 'HOUSE';
+  houseId?: number;
+  /** 방의 마지막 메시지 순서 — 방별 1부터. 메시지가 없으면 0. */
+  lastSequence?: number;
+  /** 현재 읽음 집계 대상(봇·탈퇴 제외 ACTIVE 구성원). */
+  readers?: ChatReader[];
+};
+
+export type ChatMessageResponse = {
+  messageId?: number;
+  roomId?: number;
+  sequence?: number;
+  clientMessageId?: string;
+  senderUserId?: number;
+  /** 탈퇴한 발신자는 비어 온다. */
+  senderNickname?: string;
+  senderProfileImageKey?: string;
+  content?: string;
+  createdAt?: string;
+  unreadCount?: number;
+};
+
+export type ChatSendRequest = { clientMessageId: string; content: string };
+
+/** `GET /chat/rooms/{roomId}/messages` — 커서 페이지 + 최신 방 상태. */
+export type ChatMessagePage = {
+  items?: ChatMessageResponse[];
+  nextCursor?: number;
+  hasNext?: boolean;
+  room?: ChatRoomResponse;
 };
 
 export type OnboardingSummary = {
@@ -1287,4 +1339,224 @@ export type WeeklyStatsResponse = {
   byWeekday?: WeekdayStatResponse[];
   byRoutine?: RoutineStatResponse[];
   streak?: StreakResponse;
+};
+
+// --- 공개 SNS 피드 (#1409) — 타입 재생성이 깨져 있어(#1412) 운영 /v3/api-docs를 보고 손으로 옮겼다.
+
+export type FeedAuthorResponse = {
+  userId?: number;
+  nickname?: string | null;
+  profileImageKey?: string | null;
+};
+
+export type FeedImageResponse = {
+  imageId?: number;
+  /** 비공개 객체 식별자 — **CDN 주소로 조합하지 않는다**. 표시는 GET /feed/images/{imageId}. */
+  storageKey?: string;
+  width?: number;
+  height?: number;
+  contentType?: string;
+};
+
+/**
+ * 게시판 종류 (서버 #428, spec feed/api.md) — `FREE` 자유게시판(사진 0–10장, 사진이 없으면
+ * 본문 필수) · `VERIFICATION` 인증게시판(사진 1–10장 + 루틴 완료 연결, 서버 #430). 수정에서
+ * 바꿀 수 있다(서버 #430).
+ */
+export type FeedBoardType = 'FREE' | 'VERIFICATION';
+
+/**
+ * 인증글이 연결한 루틴 완료 (서버 #430, spec feed/api.md "루틴 완료 연결") — `title`은 연결
+ * 시점 스냅샷, `date`는 KST 달력 날짜.
+ */
+export type FeedRoutineResponse = {
+  routineId?: number;
+  title?: string | null;
+  date?: string;
+};
+
+/** 인증글에 연결할 루틴 완료 하나 — 요청 body의 `routineCompletion`. */
+export type FeedRoutineCompletionRequest = {
+  routineId: number;
+  /** KST 오늘과 이전 6일 중 그 루틴을 COMPLETED한 날(`YYYY-MM-DD`). */
+  date: string;
+};
+
+export type FeedPostResponse = {
+  postId?: number;
+  author?: FeedAuthorResponse;
+  /** 기존 글은 서버가 `VERIFICATION`으로 돌려준다. */
+  boardType?: FeedBoardType;
+  content?: string | null;
+  /**
+   * 연결 루틴 (서버 #430) — 자유글·연결 없는 옛 인증글은 null. **#430 배포 전 서버는 필드
+   * 자체가 없다** — 어댑터가 null로 본다.
+   */
+  routine?: FeedRoutineResponse | null;
+  images?: FeedImageResponse[];
+  likeCount?: number;
+  commentCount?: number;
+  likedByMe?: boolean;
+  mine?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type FeedCommentResponse = {
+  commentId?: number;
+  postId?: number;
+  author?: FeedAuthorResponse;
+  content?: string;
+  mine?: boolean;
+  createdAt?: string;
+};
+
+export type FeedCreateRequest = {
+  clientPostId: string;
+  /** 서버는 생략 시 `VERIFICATION`으로 받지만, 앱은 항상 명시해서 보낸다. */
+  boardType: FeedBoardType;
+  content?: string;
+  /** 자유게시판은 빈 배열 가능, 인증게시판은 1–10장. */
+  imageIds: number[];
+  /** 인증게시판 필수·자유게시판 금지 (서버 #430). */
+  routineCompletion?: FeedRoutineCompletionRequest;
+};
+
+/**
+ * PATCH /feed/posts/{id} (서버 #430) — 전부 선택, **생략 = 유지**. 인증으로 바꾸려면 사진이
+ * 있는 글 + `routineCompletion`, 자유로 바꾸면 연결이 풀린다(자유 결과에 연결을 보내면 400).
+ */
+export type FeedUpdateRequest = {
+  content?: string;
+  boardType?: FeedBoardType;
+  routineCompletion?: FeedRoutineCompletionRequest;
+};
+
+export type FeedCommentRequest = {
+  clientCommentId: string;
+  content: string;
+};
+
+// --- 신고·차단 (#1428, 서버 #399 / spec domains/feed/api.md "신고·차단") — 서버 미배포라 계약을 보고 손으로 옮겼다(#1412).
+
+/** 신고 사유 — 서버 enum `ContentReportReason`과 같은 순서. */
+export type ReportReason =
+  'SPAM' | 'ABUSE' | 'SEXUAL' | 'VIOLENCE' | 'PERSONAL_INFO' | 'COPYRIGHT' | 'OTHER';
+
+/** POST …/reports 본문. `detail`은 선택·최대 500자(서버가 앞뒤 공백을 떼고 빈 값은 null). */
+export type ContentReportRequest = {
+  reason: ReportReason;
+  detail?: string;
+};
+
+/** RECEIVED(검토 대기) · ACTIONED(숨김 조치) · DISMISSED(조치 없음 종료). */
+export type ContentReportStatus = 'RECEIVED' | 'ACTIONED' | 'DISMISSED';
+
+/** 201 Report — 같은 대상 재신고도 처음 신고를 201로 돌려준다(멱등). */
+export type ContentReportResponse = {
+  reportId?: number;
+  status?: ContentReportStatus;
+};
+
+/** GET /me/blocks 항목. */
+export type BlockedUserResponse = {
+  userId?: number;
+  nickname?: string | null;
+  profileImageKey?: string | null;
+  /** 차단 시각(ISO-8601 UTC). */
+  blockedAt?: string;
+};
+
+// --- 가구 거래소 (#1427) — 타입 재생성이 깨져 있어(#1412) 운영 /v3/api-docs를 보고 손으로 옮겼다.
+
+export type MarketSide = 'BUY' | 'SELL';
+export type MarketSource = 'INVENTORY' | 'ISSUANCE';
+export type MarketAssetStatus = 'ACTIVE' | 'SUSPENDED';
+export type MarketOrderStatus = 'OPEN' | 'FILLED' | 'CANCELLED' | 'EXPIRED';
+export type MarketCommandStatus = 'PENDING' | 'APPLIED' | 'REJECTED';
+
+export type AssetCard = {
+  assetId?: number;
+  itemId?: number;
+  name?: string;
+  assetKey?: string;
+  creatorNickname?: string | null;
+  totalSupply?: number;
+  bestAskPrice?: number | null;
+  askQuantity?: number;
+  lastTradePrice?: number | null;
+  status?: MarketAssetStatus;
+};
+
+export type PriceLevel = {
+  price?: number;
+  quantity?: number;
+};
+
+export type MarketAssetResponse = {
+  assetId?: number;
+  itemId?: number;
+  name?: string;
+  assetKey?: string;
+  creatorNickname?: string | null;
+  isCreator?: boolean;
+  totalSupply?: number;
+  unissuedQuantity?: number;
+  status?: MarketAssetStatus;
+  lastTradePrice?: number | null;
+  owned?: boolean;
+  asks?: PriceLevel[];
+  bids?: PriceLevel[];
+};
+
+export type TradeItem = {
+  tradeId?: number;
+  price?: number;
+  quantity?: number;
+  tradedAt?: string;
+};
+
+export type MarketAssetIssueRequest = {
+  userItemId: number;
+  totalSupply: number;
+};
+
+export type PlaceOrderRequest = {
+  requestId: string;
+  assetId: number;
+  side: MarketSide;
+  price: number;
+  quantity: number;
+  source?: MarketSource | null;
+};
+
+export type CancelOrderRequest = {
+  requestId: string;
+};
+
+export type MarketCommandAcceptedResponse = {
+  commandId?: number;
+  status?: MarketCommandStatus;
+};
+
+export type MarketOrderResponse = {
+  orderId?: number;
+  assetId?: number;
+  name?: string;
+  assetKey?: string;
+  side?: MarketSide;
+  source?: MarketSource | null;
+  price?: number;
+  quantity?: number;
+  filledQuantity?: number;
+  status?: MarketOrderStatus;
+  expiresAt?: string;
+  createdAt?: string;
+};
+
+export type MarketCommandResponse = {
+  commandId?: number;
+  status?: MarketCommandStatus;
+  rejectCode?: string | null;
+  order?: MarketOrderResponse | null;
 };

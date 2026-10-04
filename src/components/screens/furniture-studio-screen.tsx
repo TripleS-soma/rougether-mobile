@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import type {
@@ -7,6 +8,7 @@ import type {
   FurniturePhoto,
 } from '@/api/furniture-generation';
 import { isFurnitureJobActive } from '@/api/furniture-generation';
+import { MarketIssueSheet } from '@/components/screens/market/market-issue-sheet';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -30,6 +32,11 @@ export type FurnitureStudioScreenProps = {
   onAttendance?: () => void;
   onGoToRoom?: () => void;
   onBack?: () => void;
+  /**
+   * 거래소에 올리기 (#1427) — 넘겼을 때만 완성된 가구에 버튼이 생긴다(셸은 MARKET_ENABLED일 때만
+   * 넘긴다). 성공하면 true — 시트를 닫는다(상세로의 이동은 호출부 몫).
+   */
+  onIssue?: (userItemId: number, totalSupply: number) => Promise<boolean> | boolean | void;
 };
 
 export function FurnitureStudioScreen({
@@ -45,6 +52,7 @@ export function FurnitureStudioScreen({
   onAttendance,
   onGoToRoom,
   onBack,
+  onIssue,
 }: FurnitureStudioScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -54,6 +62,19 @@ export function FurnitureStudioScreen({
   const screenStyle = useScreenStyle([]);
   const active = jobs.find(isFurnitureJobActive);
   const ready = !loading && !submitting && !active && (balance?.available ?? 0) > 0;
+  // 거래소 발행 시트 — 고른 가구의 userItemId.
+  const [issuing, setIssuing] = useState<number | null>(null);
+  const [issueBusy, setIssueBusy] = useState(false);
+  const submitIssue = async (totalSupply: number) => {
+    if (issuing == null || issueBusy) return;
+    setIssueBusy(true);
+    try {
+      const ok = await Promise.resolve(onIssue?.(issuing, totalSupply));
+      if (ok !== false) setIssuing(null);
+    } finally {
+      setIssueBusy(false);
+    }
+  };
   return (
     <View style={[styles.screen, screenStyle]}>
       <ScreenHeader title={tr('roomShop.studio.title')} onBack={onBack} />
@@ -174,11 +195,21 @@ export function FurnitureStudioScreen({
                 )}
               </Text>
               {job.status === 'SUCCEEDED' || job.userItemId ? (
-                <Button
-                  label={tr('roomShop.studio.placeInRoom')}
-                  onPress={onGoToRoom}
-                  variant="secondary"
-                />
+                <>
+                  <Button
+                    label={tr('roomShop.studio.placeInRoom')}
+                    onPress={onGoToRoom}
+                    variant="secondary"
+                  />
+                  {onIssue && job.userItemId != null ? (
+                    <Button
+                      label={tr('market.issue.cta')}
+                      leftIcon="shop"
+                      onPress={() => setIssuing(job.userItemId)}
+                      variant="secondary"
+                    />
+                  ) : null}
+                </>
               ) : (
                 <Text style={[Typography.body, { color: t.textMuted }]}>
                   {tr('roomShop.studio.retryHint')}
@@ -187,6 +218,14 @@ export function FurnitureStudioScreen({
             </View>
           ))}
       </ScrollView>
+      {onIssue ? (
+        <MarketIssueSheet
+          visible={issuing != null}
+          submitting={issueBusy}
+          onSubmit={(n) => void submitIssue(n)}
+          onClose={() => setIssuing(null)}
+        />
+      ) : null}
     </View>
   );
 }

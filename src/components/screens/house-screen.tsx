@@ -140,6 +140,10 @@ export type HouseScreenProps = RoomCatalogProps &
     onLeaveHouse?: (houseId: number) => void;
     /** 공동 미션 화면 열기 (#875) — 요약 줄 탭. 없으면 요약 줄을 그리지 않는다. */
     onOpenMissions?: () => void;
+    /** 집 채팅 열기 (#1408) — 없으면(houseId 없는 집·데모) 레일에 '채팅'을 그리지 않는다. */
+    onOpenChat?: () => void;
+    /** 레일 '채팅'의 안 읽은 메시지 수 — 0이면 배지 없음. */
+    chatUnread?: number;
     /** 현재 집 미션에 연동된 내 루틴 (#578) — 연동/기여함 라벨 판정. */
     linkedRoutines?: { missionId: number; completedToday?: boolean }[];
     /** Mission ids contributed this session (기여 직후 즉시 반영용 보조 신호). */
@@ -202,6 +206,8 @@ export const HouseScreen = memo(function HouseScreen({
   onKickMember,
   onLeaveHouse,
   onOpenMissions,
+  onOpenChat,
+  chatUnread = 0,
   linkedRoutines = [],
   contributedMissionIds = [],
   onUpdateHouse,
@@ -1098,6 +1104,21 @@ export const HouseScreen = memo(function HouseScreen({
               Typography={Typography}
             />
           </CoachTarget>
+        ) : null}
+        {onOpenChat ? (
+          <RailButton
+            icon={<Icon name="chat" size={20} color={t.text} />}
+            label={tr('house.chat.rail')}
+            onPress={onOpenChat}
+            accessibilityLabel={
+              chatUnread > 0
+                ? tr('house.chat.railA11yUnread', { n: chatUnread })
+                : tr('house.chat.railA11y')
+            }
+            count={chatUnread}
+            t={t}
+            Typography={Typography}
+          />
         ) : null}
         <CoachTarget id="house-search">
           <RailButton

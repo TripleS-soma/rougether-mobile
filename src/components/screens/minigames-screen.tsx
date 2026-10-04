@@ -1,6 +1,7 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import type { Minigame } from '@/api/minigames';
+import type { MinigameBest } from '@/hooks/use-minigames';
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { MinigameLayout } from '@/components/screens/minigame-layout';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,10 @@ import { useT } from '@/i18n';
 export type MinigamesScreenProps = {
   games?: Minigame[];
   practiceGames?: Minigame[];
+  /**
+   * 게임별 내 최고 기록 (#1425). 키가 없으면 아직 모름(아무것도 안 그림), null이면 기록 없음.
+   */
+  bests?: Record<string, MinigameBest>;
   loading?: boolean;
   error?: boolean;
   onRetry?: () => void;
@@ -26,6 +31,7 @@ export type MinigamesScreenProps = {
 export function MinigamesScreen({
   games = [],
   practiceGames = [],
+  bests,
   loading,
   error,
   onRetry,
@@ -58,6 +64,22 @@ export function MinigamesScreen({
           </View>
           <View style={styles.sceneCopy}>
             <Text style={[Typography.h3, { color: t.text }]}>{game.name}</Text>
+            {!practice && bests && game.gameCode in bests ? (
+              <Text
+                testID={`minigame-best-${game.gameCode}`}
+                style={[
+                  Typography.supporting,
+                  { color: bests[game.gameCode] ? t.primaryText : t.textMuted },
+                ]}>
+                {bests[game.gameCode]
+                  ? tr('roomShop.minigame.best', {
+                      score: bests[game.gameCode]!.score.toLocaleString(),
+                      rank: bests[game.gameCode]!.rank,
+                      total: bests[game.gameCode]!.totalPlayers,
+                    })
+                  : tr('roomShop.minigame.noBest')}
+              </Text>
+            ) : null}
           </View>
         </View>
         {practice ? (

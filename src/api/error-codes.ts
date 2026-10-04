@@ -70,4 +70,83 @@ export const ErrorCode = {
   ATTENDANCE_EVENT_NOT_FOUND: 'ATTENDANCE_EVENT_NOT_FOUND',
   /** 409 — 이미 가져온 캘린더 일정 (#844). 지운 조합도 재등록되지 않는다. */
   TODO_EXTERNAL_DUPLICATE: 'TODO_EXTERNAL_DUPLICATE',
+  // --- 공개 SNS 피드 (#1409, spec domains/feed/api.md "오류") ---
+  /** 400 — 본문/사진 수(게시판별)/사진 없는 자유글의 빈 본문/중복 사진/커서/목록 크기/게시판 값 오류. */
+  FEED_INPUT_INVALID: 'FEED_INPUT_INVALID',
+  /** 400 — 본문·댓글 금칙어. */
+  FEED_CONTENT_BANNED: 'FEED_CONTENT_BANNED',
+  /** 400 — JPEG/PNG 아님, 용량·화소 제한, 손상 이미지. */
+  FEED_IMAGE_INVALID: 'FEED_IMAGE_INVALID',
+  /** 403 — 다른 사람의 글·댓글·미게시 사진 변경. */
+  FEED_FORBIDDEN: 'FEED_FORBIDDEN',
+  /** 404 — 없거나 삭제·탈퇴로 숨긴 글. */
+  FEED_POST_NOT_FOUND: 'FEED_POST_NOT_FOUND',
+  /** 404 — 해당 글의 댓글이 없음. */
+  FEED_COMMENT_NOT_FOUND: 'FEED_COMMENT_NOT_FOUND',
+  /** 404 — 없음·만료·삭제·탈퇴·타인의 미게시 사진. */
+  FEED_IMAGE_NOT_FOUND: 'FEED_IMAGE_NOT_FOUND',
+  /** 409 — 재시도 UUID를 다른 요청(본문·사진·게시판 종류)/삭제 결과에 재사용. */
+  FEED_REQUEST_CONFLICT: 'FEED_REQUEST_CONFLICT',
+  /** 409 — 사진이 본인 소유/완료/미사용/유효 상태가 아님. */
+  FEED_IMAGE_UNAVAILABLE: 'FEED_IMAGE_UNAVAILABLE',
+  /** 429 — 미사용 업로드 30개 상한. 취소·만료 정리 후 재시도. */
+  FEED_UPLOAD_LIMIT: 'FEED_UPLOAD_LIMIT',
+  /** 503 — 사진 저장소 일시 오류. */
+  FEED_STORAGE_UNAVAILABLE: 'FEED_STORAGE_UNAVAILABLE',
+  /** 404 — 채팅방 없음 (#1408). */
+  CHAT_ROOM_NOT_FOUND: 'CHAT_ROOM_NOT_FOUND',
+  /** 403 — 비구성원·탈퇴/강퇴·삭제된 집 등 채팅 접근 불가 (#1408). */
+  CHAT_FORBIDDEN: 'CHAT_FORBIDDEN',
+  /** 400 — 커서·읽음 위치·본문 오류 (#1408). */
+  CHAT_INPUT_INVALID: 'CHAT_INPUT_INVALID',
+  /** 400 — 금칙어 포함 (#1408). 어떤 단어인지는 응답에 없다. */
+  CHAT_CONTENT_BANNED: 'CHAT_CONTENT_BANNED',
+  /** 409 — 같은 clientMessageId로 다른 본문을 보냄 (#1408). */
+  CHAT_MESSAGE_CONFLICT: 'CHAT_MESSAGE_CONFLICT',
+  // --- 신고·차단 (#1428, spec domains/feed/api.md "신고·차단") ---
+  /** 400 — 내 글·댓글·가구를 신고. */
+  REPORT_SELF_TARGET: 'REPORT_SELF_TARGET',
+  /** 400 — 나 자신을 차단(해제 포함). */
+  BLOCK_SELF: 'BLOCK_SELF',
+  /** 404 — 차단 대상이 없거나 탈퇴·봇 계정. */
+  USER_NOT_FOUND: 'USER_NOT_FOUND',
+  // --- 가구 거래소 (#1427, spec domains/market/api.md "주요 오류") ---
+  /** 404 — 없는 종목. */
+  MARKET_ASSET_NOT_FOUND: 'MARKET_ASSET_NOT_FOUND',
+  /** 409 — 운영상 거래 정지된 종목(주문 접수·엔진 거절 둘 다). */
+  MARKET_ASSET_SUSPENDED: 'MARKET_ASSET_SUSPENDED',
+  /** 409 — 매수 에스크로에 쓸 코인 부족. */
+  MARKET_INSUFFICIENT_COIN: 'MARKET_INSUFFICIENT_COIN',
+  /** 409 — 이미 보유 중이거나(판매 등록 포함) 구매 대기 중 — 같은 가구는 1개만. */
+  MARKET_ALREADY_HOLDING: 'MARKET_ALREADY_HOLDING',
+  /** 409 — 같은 가구에 내 반대 방향 주문이 있음. */
+  MARKET_OWN_ORDER_CONFLICT: 'MARKET_OWN_ORDER_CONFLICT',
+  /** 403 — 판매·발행할 보유분이 없음. */
+  MARKET_ITEM_NOT_OWNED: 'MARKET_ITEM_NOT_OWNED',
+  /** 403 — 발행·발행 재고 판매인데 제작자가 아님. */
+  MARKET_NOT_CREATOR: 'MARKET_NOT_CREATOR',
+  /** 409 — 남은 발행 재고보다 많이 판매. */
+  MARKET_INSUFFICIENT_SUPPLY: 'MARKET_INSUFFICIENT_SUPPLY',
+  /** 409 — 같은 requestId에 다른 내용(가격 수정 등). */
+  MARKET_REQUEST_CONFLICT: 'MARKET_REQUEST_CONFLICT',
+  /** 404 — 본인 주문이 아니거나 없음(취소). */
+  MARKET_ORDER_NOT_FOUND: 'MARKET_ORDER_NOT_FOUND',
+  /** 409 — 이미 체결·취소·만료된 주문(취소, 엔진 거절). */
+  MARKET_ORDER_NOT_OPEN: 'MARKET_ORDER_NOT_OPEN',
+  /** 404 — 없거나 본인 접수가 아님(접수 결과 조회). */
+  MARKET_COMMAND_NOT_FOUND: 'MARKET_COMMAND_NOT_FOUND',
+  /** 엔진 거절 — 내 주문끼리 맞물림. 맡긴 것은 돌려받았다. */
+  MARKET_SELF_TRADE: 'MARKET_SELF_TRADE',
+  /** 엔진 거절 — 처리 반복 실패. 맡긴 것은 돌려받았다. */
+  MARKET_ENGINE_ERROR: 'MARKET_ENGINE_ERROR',
+  /** 엔진 거절 — 처리 실패 후 환불까지 실패(드묾). 운영자 수동 대사 → 고객센터 안내. */
+  MARKET_ENGINE_ERROR_UNREFUNDED: 'MARKET_ENGINE_ERROR_UNREFUNDED',
+  /** 409 — 거래할 수 없는 아이템(photo_furniture 아님) 발행. */
+  MARKET_ITEM_NOT_TRADABLE: 'MARKET_ITEM_NOT_TRADABLE',
+  /** 409 — 이미 상장된 가구(가구당 1회). */
+  MARKET_ASSET_ALREADY_LISTED: 'MARKET_ASSET_ALREADY_LISTED',
+  /** 409 — 가구 생성·재검수 작업이 진행 중이라 발행 불가. */
+  MARKET_ITEM_REVIEW_IN_PROGRESS: 'MARKET_ITEM_REVIEW_IN_PROGRESS',
+  /** 409 — 거래소에 상장된 가구는 피드백 재검수를 받을 수 없다. */
+  FURNITURE_MARKET_LISTED: 'FURNITURE_MARKET_LISTED',
 } as const;

@@ -2,7 +2,7 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
-import { calendarHeading, TODAY, TOMORROW } from '@/test-utils/my-room-screen-fixtures';
+import { calendarHeading, NEIGHBOR_DAY, TODAY } from '@/test-utils/my-room-screen-fixtures';
 
 const dateLabel = (date: string) => new RegExp(`^${date}(?:,|$)`);
 
@@ -16,19 +16,19 @@ describe('MyRoomScreen — 달력 월/주 모드 (#1327)', () => {
         view="calendar"
         onOpenDay={onOpenDay}
         onSelectedDateChange={onSelectedDateChange}
-        selectedDate={TOMORROW}
+        selectedDate={NEIGHBOR_DAY}
       />,
     );
-    expect(ui.queryByRole('header', { name: calendarHeading(TOMORROW) })).toBeNull();
+    expect(ui.queryByRole('header', { name: calendarHeading(NEIGHBOR_DAY) })).toBeNull();
     expect(ui.queryByLabelText('선택한 날에 추가')).toBeNull();
     expect(ui.queryByText('주간 보기')).toBeNull();
     // '오늘로'는 선택만 — 주간 보기를 열지 않는다.
     await fireEvent.press(ui.getByLabelText('오늘로'));
     expect(onSelectedDateChange).toHaveBeenLastCalledWith(TODAY);
     expect(onOpenDay).not.toHaveBeenCalled();
-    await fireEvent.press(ui.getByLabelText(dateLabel(TOMORROW)));
-    expect(onSelectedDateChange).toHaveBeenLastCalledWith(TOMORROW);
-    expect(onOpenDay).toHaveBeenCalledWith(TOMORROW);
+    await fireEvent.press(ui.getByLabelText(dateLabel(NEIGHBOR_DAY)));
+    expect(onSelectedDateChange).toHaveBeenLastCalledWith(NEIGHBOR_DAY);
+    expect(onOpenDay).toHaveBeenCalledWith(NEIGHBOR_DAY);
   });
 
   it('onOpenDay가 없으면 종전처럼 목록이 아래에 남는다', async () => {
@@ -55,9 +55,9 @@ describe('MyRoomScreen — 달력 월/주 모드 (#1327)', () => {
       expect(ui.getByRole('header', { name: calendarHeading(TODAY) })).toBeTruthy();
       expect(ui.getByLabelText('선택한 날에 추가')).toBeTruthy();
       // 주 모드의 날짜 탭은 선택만 — 또 열지 않는다.
-      await fireEvent.press(ui.getByLabelText(dateLabel(TOMORROW)));
+      await fireEvent.press(ui.getByLabelText(dateLabel(NEIGHBOR_DAY)));
       expect(onOpenDay).not.toHaveBeenCalled();
-      expect(ui.getByRole('header', { name: calendarHeading(TOMORROW) })).toBeTruthy();
+      expect(ui.getByRole('header', { name: calendarHeading(NEIGHBOR_DAY) })).toBeTruthy();
 
       await fireEvent.press(ui.getByLabelText('뒤로 가기'));
       // 펼침이 끝나기 전엔 닫지 않는다.

@@ -46,7 +46,7 @@ export function useFriendVisit({
     name: i18n.t('app.friendVisit.friend'),
   }));
   // The visited friend's live room + today's routines (loads on visit, #149).
-  const { friendRoom, load: loadFriendRoom, cleanCobweb } = useFriendRoom();
+  const { friendRoom, load: loadFriendRoom, cleanCobweb, selectDate } = useFriendRoom();
   // Guestbook for the friend room being visited (loads on visit).
   const {
     entries: guestbookEntries,
@@ -159,7 +159,14 @@ export function useFriendVisit({
         }}
         routines={friendRoom.routines}
         categories={friendRoom.categories}
-        recentActivity={friendRoom.recentActivity}
+        selectedDate={friendRoom.selectedDate}
+        onSelectDate={(date) => {
+          track('friend_room_date');
+          void selectDate(date);
+        }}
+        doneCounts={friendRoom.doneCounts}
+        dayLoading={friendRoom.dayLoading}
+        dayError={friendRoom.dayError}
         loading={friendRoom.loading}
         loadError={friendRoom.error}
         onRetry={retryFriendRoomVisit}

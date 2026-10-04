@@ -3,6 +3,8 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import type { ShopCatalogue } from '@/api/adapters';
 import { useFriendRoom } from '@/hooks/use-friend-room';
 import { jsonRes as res } from '@/test-utils/fetch';
+import { createTestQueryClient, queryWrapper } from '@/test-utils/query-wrapper';
+import { useMemberRoomPreviews } from '@/hooks/use-member-room-previews';
 
 const CATALOGUE: ShopCatalogue = {
   furniture: [
@@ -56,7 +58,7 @@ describe('useFriendRoom', () => {
       });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useFriendRoom());
+    const { result } = await renderHook(() => useFriendRoom(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load(11, 42, CATALOGUE);
     });
@@ -64,7 +66,9 @@ describe('useFriendRoom', () => {
 
     expect(urls.some((u) => u.endsWith('/houses/11/members/42/room'))).toBe(true);
     expect(urls.some((u) => u.endsWith('/houses/11/members/42/day'))).toBe(true);
-    expect(urls.some((u) => u.endsWith('/houses/11/members/42/routine-completions'))).toBe(true);
+    expect(urls.some((u) => /\/houses\/11\/members\/42\/routine-completions\?from=/.test(u))).toBe(
+      true,
+    );
 
     const { friendRoom } = result.current;
     expect(friendRoom.characterId).toBe('otter');
@@ -82,11 +86,9 @@ describe('useFriendRoom', () => {
     expect(friendRoom.routines).toHaveLength(2);
     expect(friendRoom.routines[0]).toMatchObject({ id: '3', completed: true });
     expect(friendRoom.routines[1]).toMatchObject({ id: 'todo-9', completed: false });
-    // Completion history grouped per day (server order preserved, date desc).
-    expect(friendRoom.recentActivity).toEqual([
-      { date: '2026-07-08', label: '7월 8일', titles: ['아침 기상'] },
-      { date: '2026-07-07', label: '7월 7일', titles: ['아침 기상', '독서 30분'] },
-    ]);
+    // 완료 기록은 날짜별 개수로 — 주간 날짜 줄의 점 (#1423).
+    expect(friendRoom.doneCounts).toEqual({ '2026-07-08': 1, '2026-07-07': 2 });
+    expect(friendRoom.dayLoading).toBe(false);
   });
 
   it('drops the frames when the character code has no app-side match', async () => {
@@ -105,7 +107,7 @@ describe('useFriendRoom', () => {
       return res({});
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useFriendRoom());
+    const { result } = await renderHook(() => useFriendRoom(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load(11, 42, CATALOGUE);
     });
@@ -135,7 +137,7 @@ describe('useFriendRoom', () => {
     }) as unknown as typeof fetch;
 
     const masterFrames = { cat: ['characters/pose-a.webp', 'characters/pose-b.webp'] };
-    const { result } = await renderHook(() => useFriendRoom());
+    const { result } = await renderHook(() => useFriendRoom(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load(11, 42, CATALOGUE, masterFrames);
     });
@@ -161,7 +163,7 @@ describe('useFriendRoom', () => {
       return res({});
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useFriendRoom());
+    const { result } = await renderHook(() => useFriendRoom(), { wrapper: queryWrapper() });
     await act(async () => {
       // 마스터를 못 받은 상태(빈 맵) — 폴백이 살아 있어야 한다.
       await result.current.load(11, 42, CATALOGUE, {});
@@ -173,7 +175,7 @@ describe('useFriendRoom', () => {
     ]);
   });
 
-  it('hides the activity section (undefined) when the history endpoint fails', async () => {
+  it('hides the dots (undefined) when the history endpoint fails', async () => {
     global.fetch = jest.fn(async (url: string) => {
       if (url.includes('/routine-completions')) {
         return { ok: false, status: 500, text: async () => '{}' };
@@ -181,13 +183,13 @@ describe('useFriendRoom', () => {
       return res({});
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useFriendRoom());
+    const { result } = await renderHook(() => useFriendRoom(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load(11, 42, CATALOGUE);
     });
     await waitFor(() => expect(result.current.friendRoom.loading).toBe(false));
 
-    expect(result.current.friendRoom.recentActivity).toBeUndefined();
+    expect(result.current.friendRoom.doneCounts).toBeUndefined();
   });
 
   // 방문 실패는 빈 방으로 위장하지 않는다 (#549).
@@ -199,7 +201,7 @@ describe('useFriendRoom', () => {
       return res({});
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useFriendRoom());
+    const { result } = await renderHook(() => useFriendRoom(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load(11, 42, CATALOGUE);
     });
@@ -216,7 +218,7 @@ describe('useFriendRoom', () => {
 
   it('resets to the empty state when the ids are missing (demo houses)', async () => {
     global.fetch = jest.fn() as unknown as typeof fetch;
-    const { result } = await renderHook(() => useFriendRoom());
+    const { result } = await renderHook(() => useFriendRoom(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load(undefined, undefined, CATALOGUE);
     });
@@ -243,7 +245,7 @@ describe('useFriendRoom — 구성원 방 거미줄 청소 (#831)', () => {
   };
 
   const loaded = async () => {
-    const { result } = await renderHook(() => useFriendRoom());
+    const { result } = await renderHook(() => useFriendRoom(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load(1, 2, CATALOGUE);
     });
@@ -284,5 +286,101 @@ describe('useFriendRoom — 구성원 방 거미줄 청소 (#831)', () => {
 
     await expect(result.current.cleanCobweb(1, 2)).rejects.toBeTruthy();
     expect(result.current.friendRoom.cobweb).not.toBeNull();
+  });
+
+  it('selectDate는 그날 day만 다시 받고, 늦게 온 이전 선택은 버린다 (#1423)', async () => {
+    const dayUrls: string[] = [];
+    let slow: ((v: unknown) => void) | null = null;
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/day')) {
+        dayUrls.push(url);
+        if (url.includes('date=2026-07-01')) {
+          await new Promise((r) => {
+            slow = r;
+          });
+          return res({
+            routines: [{ id: 1, originRoutineId: 1, title: '늦은 응답', completed: true }],
+          });
+        }
+        if (url.includes('date=2026-07-02')) {
+          return res({
+            routines: [{ id: 2, originRoutineId: 2, title: '독서 30분', completed: false }],
+          });
+        }
+      }
+      return res({});
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useFriendRoom(), { wrapper: queryWrapper() });
+    await act(async () => {
+      await result.current.load(11, 42, CATALOGUE);
+    });
+    let first: Promise<void> = Promise.resolve();
+    await act(async () => {
+      first = result.current.selectDate('2026-07-01');
+    });
+    expect(result.current.friendRoom.selectedDate).toBe('2026-07-01');
+    expect(result.current.friendRoom.dayLoading).toBe(true);
+    await act(async () => {
+      await result.current.selectDate('2026-07-02');
+    });
+    await act(async () => {
+      (slow as unknown as (v: unknown) => void)?.(null);
+      await first;
+    });
+    expect(result.current.friendRoom.selectedDate).toBe('2026-07-02');
+    expect(result.current.friendRoom.routines.map((r) => r.title)).toEqual(['독서 30분']);
+    expect(result.current.friendRoom.dayLoading).toBe(false);
+    expect(dayUrls.some((u) => u.endsWith('/houses/11/members/42/day?date=2026-07-02'))).toBe(true);
+  });
+});
+
+describe('구성원 방 응답 공유 (성능 장부 N5)', () => {
+  const roomCalls = () =>
+    (global.fetch as jest.Mock).mock.calls.filter(([u]) => /\/members\/42\/room$/.test(String(u)))
+      .length;
+  const world = () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/members/42/room')) return res({ slots: [], placements: [] });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+  };
+
+  it('좌석 미리보기 직후 친구 방에 들어가면 방을 다시 받지 않는다', async () => {
+    world();
+    const client = createTestQueryClient();
+    const wrapper = queryWrapper(client);
+    const previews = await renderHook(() => useMemberRoomPreviews(), { wrapper });
+    const friend = await renderHook(() => useFriendRoom(), { wrapper });
+    await act(async () => {
+      await previews.result.current.load(11, [42], { furniture: [], wallpapers: [], floors: [], backgrounds: [], ownedIds: [] }); // prettier-ignore
+    });
+    expect(roomCalls()).toBe(1);
+    await act(async () => {
+      await friend.result.current.load(11, 42);
+    });
+    expect(roomCalls()).toBe(1);
+  });
+
+  it('거미줄을 치우면 다음 방문은 방을 다시 받는다', async () => {
+    world();
+    const client = createTestQueryClient();
+    const wrapper = queryWrapper(client);
+    const friend = await renderHook(() => useFriendRoom(), { wrapper });
+    await act(async () => {
+      await friend.result.current.load(11, 42);
+    });
+    (global.fetch as jest.Mock).mockImplementation(async (url: string) =>
+      url.includes('/cobweb')
+        ? res({ rewardAmount: 3 })
+        : res({ slots: [], placements: [], items: [] }),
+    );
+    await act(async () => {
+      await friend.result.current.cleanCobweb(11, 42);
+    });
+    await act(async () => {
+      await friend.result.current.load(11, 42);
+    });
+    expect(roomCalls()).toBe(2);
   });
 });

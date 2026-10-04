@@ -25,7 +25,6 @@ import {
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { NavMenuPopover } from '@/components/app/nav-menu-popover';
-import { FlyingCoin } from '@/components/ui/flying-coin';
 import {
   canQuickAddCategory,
   groupCalendarClientRoutines,
@@ -51,7 +50,12 @@ import {
 } from '@/hooks/use-stable-value';
 import { CategoryDragHandle } from '@/components/screens/my-room/category-drag-handle';
 import { RoutineRow } from '@/components/screens/my-room/routine-row';
-import { useRewardFly } from '@/components/screens/my-room/use-reward-fly';
+import {
+  RewardOverlay,
+  type RewardOverlayHandle,
+} from '@/components/screens/my-room/reward-overlay';
+import type { FlyOrigin } from '@/components/screens/my-room/use-reward-fly';
+import { MountOnce } from '@/components/screens/my-room/mount-once';
 import { useRoomImageSave } from '@/components/screens/my-room/use-room-image-save';
 import { useWidgetRoomCapture } from '@/components/screens/my-room/use-widget-room-capture';
 import { Room, type RoomSceneProps } from '@/components/room/room';
@@ -415,23 +419,19 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const insets = useContext(SafeAreaInsetsContext) ?? ZERO_INSETS;
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
 
-  // 보상 알약·코인 플라이·스트릭 펄스 (#440 → #1055) — my-room/use-reward-fly.
-  const {
-    rootRef,
-    rewardPillRef,
-    rewardPulse,
-    streakPulse,
-    flyingCoins,
-    reward,
-    showReward,
-    measureRewardPill,
-    onCoinArrive,
-  } = useRewardFly(streakDays);
+  // 보상 알약·코인 플라이·스트릭 펄스 (#440 → #1055) — 상태는 RewardOverlay 층에 있다
+  // (성능 장부 R4: 보상이 뜰 때 화면 전체가 다시 그려지지 않게). 화면은 핸들로 부르기만 한다.
+  const rootRef = useRef<View>(null);
+  const rewardRef = useRef<RewardOverlayHandle>(null);
+  const showReward = useStableCallback((coins: number, from: FlyOrigin | null) =>
+    rewardRef.current?.show(coins, from),
+  );
   // 거미줄 청소 (#830) — 보상이 실제로 지급됐을 때만 코인이 난다.
-  const handleCleanCobweb = async (at: { x: number; y: number }) => {
+  // 참조 고정 — 인라인이면 roomScene으로 들어가 토글마다 Room memo가 깨진다(성능 장부 R8).
+  const handleCleanCobweb = useStableCallback(async (at: { x: number; y: number }) => {
     const earned = await onCleanCobweb?.();
     if (earned && earned > 0) showReward(earned, at);
-  };
+  });
   const { show: toast } = useToast();
 
   // 셸이 안 주면(테스트·Dev 갤러리) KST로 — 셸 경로(use-calendar-view)와 같은 기준.
@@ -1648,170 +1648,157 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         </View>
       ) : null}
 
-      {/* 보상 알약 (#1055) — 완료 보상이 확인된 순간에만 크롬 아래 가운데에 떠서
-          스트릭·코인 증분을 보여주고 사라진다. 코인 플라이의 목적지. */}
-      {reward ? (
-        <View
-          pointerEvents="none"
-          style={[
-            styles.rewardWrap,
-            { top: insets.top + Spacing.two + CHROME_ROW_HEIGHT + Spacing.three },
-          ]}>
-          <Animated.View
-            ref={rewardPillRef}
-            onLayout={measureRewardPill}
-            style={{ transform: [{ scale: rewardPulse }] }}>
-            <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.rewardPill}>
-              {/* A 0-day streak is nothing to celebrate — show the flame only
-                  once a streak exists. */}
-              {streakDays > 0 ? (
-                <Animated.View style={[styles.streak, { transform: [{ scale: streakPulse }] }]}>
-                  <Icon name="flame" size={14} color={t.warningText} />
-                  <Text style={[Typography.label, { color: t.warningText }]}>
-                    {tr('routineTodo.myRoom.streakDays', { days: streakDays })}
-                  </Text>
-                </Animated.View>
-              ) : null}
-              <View style={styles.streak}>
-                <Icon name="coin" size={14} color={t.warning} />
-                <Text style={[Typography.label, { color: t.text }]}>+{reward.coins}</Text>
-              </View>
-            </GlassSurface>
-          </Animated.View>
-        </View>
-      ) : null}
-
-      <CategoryFormSheet
-        visible={editingCategory !== null}
-        editing={editingCategory}
-        onUpdate={onUpdateCategory}
-        onClose={() => setEditingCategory(null)}
+      <RewardOverlay
+        ref={rewardRef}
+        rootRef={rootRef}
+        streakDays={streakDays}
+        top={insets.top + Spacing.two + CHROME_ROW_HEIGHT + Spacing.three}
       />
 
-      <RoutineMenuSheet
-        item={menuRoutine}
-        done={menuDone}
-        onClose={() => setMenuOpenId(null)}
-        onRename={(r) => setRenameId(r.id)}
-        onEdit={(r) => onEditRoutine?.(r)}
-        onDelete={(r) => onDeleteRoutine?.(r.id)}
-        onToggleComplete={(r) => {
-          // 서버 백업 날짜에서 연 메뉴는 달력 체크박스와 같은 규칙으로
-          // 토글한다 (미래 차단 토스트, 과거 실토글) (#323).
-          if (menuCalItem) handleCalendarItemPress(menuCalItem);
-          else handleToggle(r, menuDate);
-        }}
-        onEditTime={(r) => setTimeId(r.id)}
-        onChangeDate={(r) => {
-          setDateEditFrom(menuDate);
-          setDateEditId(r.id);
-        }}
-      />
+      <MountOnce when={editingCategory !== null}>
+        <CategoryFormSheet
+          visible={editingCategory !== null}
+          editing={editingCategory}
+          onUpdate={onUpdateCategory}
+          onClose={() => setEditingCategory(null)}
+        />
+      </MountOnce>
+
+      <MountOnce when={menuRoutine != null}>
+        <RoutineMenuSheet
+          item={menuRoutine}
+          done={menuDone}
+          onClose={() => setMenuOpenId(null)}
+          onRename={(r) => setRenameId(r.id)}
+          onEdit={(r) => onEditRoutine?.(r)}
+          onDelete={(r) => onDeleteRoutine?.(r.id)}
+          onToggleComplete={(r) => {
+            // 서버 백업 날짜에서 연 메뉴는 달력 체크박스와 같은 규칙으로
+            // 토글한다 (미래 차단 토스트, 과거 실토글) (#323).
+            if (menuCalItem) handleCalendarItemPress(menuCalItem);
+            else handleToggle(r, menuDate);
+          }}
+          onEditTime={(r) => setTimeId(r.id)}
+          onChangeDate={(r) => {
+            setDateEditFrom(menuDate);
+            setDateEditId(r.id);
+          }}
+        />
+      </MountOnce>
 
       {/* 날짜 바꾸기: calendar bottom sheet — the pick stays a draft until 확인. */}
-      <TodoDateDialog
-        visible={todoDateOpen}
-        value={newTodoDate}
-        onSelect={(date) => {
-          setNewTodoDate(date);
-          setTodoDateOpen(false);
-          // 제목 입력으로 포커스를 되돌려 blur 커밋이 계속 동작하게.
-          setTimeout(() => todoInputRef.current?.focus(), 60);
-        }}
-        onClose={() => setTodoDateOpen(false)}
-      />
+      <MountOnce when={todoDateOpen}>
+        <TodoDateDialog
+          visible={todoDateOpen}
+          value={newTodoDate}
+          onSelect={(date) => {
+            setNewTodoDate(date);
+            setTodoDateOpen(false);
+            // 제목 입력으로 포커스를 되돌려 blur 커밋이 계속 동작하게.
+            setTimeout(() => todoInputRef.current?.focus(), 60);
+          }}
+          onClose={() => setTodoDateOpen(false)}
+        />
+      </MountOnce>
 
-      <DateEditSheet
-        item={dateEditItem}
-        fromDate={dateEditFrom}
-        onClose={() => setDateEditId(null)}
-        onUpdateTodoDueDate={onUpdateTodoDueDate}
-        onMoveRoutineOccurrence={onMoveRoutineOccurrence}
-      />
+      <MountOnce when={dateEditItem != null}>
+        <DateEditSheet
+          item={dateEditItem}
+          fromDate={dateEditFrom}
+          onClose={() => setDateEditId(null)}
+          onUpdateTodoDueDate={onUpdateTodoDueDate}
+          onMoveRoutineOccurrence={onMoveRoutineOccurrence}
+        />
+      </MountOnce>
 
-      <RenameDialog
-        item={renameItem}
-        onClose={() => setRenameId(null)}
-        onRename={onRenameRoutine}
-      />
+      <MountOnce when={renameItem != null}>
+        <RenameDialog
+          item={renameItem}
+          onClose={() => setRenameId(null)}
+          onRename={onRenameRoutine}
+        />
+      </MountOnce>
 
-      <RoutineTodoComposeSheet
-        visible={compose !== null}
-        initialDate={compose?.date ?? today}
-        initialKind={compose?.kind ?? 'routine'}
-        initialCategory={compose?.category ?? ''}
-        today={today}
-        categories={categories.filter((category) => canQuickAdd(category.id))}
-        onSubmit={async (draft) => {
-          let result: boolean | void;
-          if (draft.kind === 'routine') {
-            if (!onCreateRoutine) return false;
-            result = await onCreateRoutine(draft.routine);
-          } else {
-            if (!onQuickAddRoutine) return false;
-            result = draft.time
-              ? await onQuickAddRoutine(draft.category, draft.title, draft.date, draft.time)
-              : await onQuickAddRoutine(draft.category, draft.title, draft.date);
-          }
-          if (result !== false) {
-            if (tab === 'calendar') {
-              pickDate(draft.date);
-              if (calendarFilter !== 'all' && calendarFilter !== draft.kind)
-                setCalendarFilter(draft.kind);
+      <MountOnce when={compose !== null}>
+        <RoutineTodoComposeSheet
+          visible={compose !== null}
+          initialDate={compose?.date ?? today}
+          initialKind={compose?.kind ?? 'routine'}
+          initialCategory={compose?.category ?? ''}
+          today={today}
+          categories={categories.filter((category) => canQuickAdd(category.id))}
+          onSubmit={async (draft) => {
+            let result: boolean | void;
+            if (draft.kind === 'routine') {
+              if (!onCreateRoutine) return false;
+              result = await onCreateRoutine(draft.routine);
+            } else {
+              if (!onQuickAddRoutine) return false;
+              result = draft.time
+                ? await onQuickAddRoutine(draft.category, draft.title, draft.date, draft.time)
+                : await onQuickAddRoutine(draft.category, draft.title, draft.date);
             }
-            if (draft.date !== today)
-              toast(
-                tr('routineTodo.myRoom.addedOnDate', {
-                  date: monthDayLabel(localDate(draft.date)),
-                  kind: tr(`routineTodo.kind.${draft.kind}`),
-                }),
-              );
-          }
-          return result;
-        }}
-        onClose={() => setCompose(null)}
-      />
+            if (result !== false) {
+              if (tab === 'calendar') {
+                pickDate(draft.date);
+                if (calendarFilter !== 'all' && calendarFilter !== draft.kind)
+                  setCalendarFilter(draft.kind);
+              }
+              if (draft.date !== today)
+                toast(
+                  tr('routineTodo.myRoom.addedOnDate', {
+                    date: monthDayLabel(localDate(draft.date)),
+                    kind: tr(`routineTodo.kind.${draft.kind}`),
+                  }),
+                );
+            }
+            return result;
+          }}
+          onClose={() => setCompose(null)}
+        />
+      </MountOnce>
 
       {/* Header hamburger popover: quick links to the management screens. */}
-      <NavMenuPopover
-        visible={navMenuOpen}
-        top={navMenuTop}
-        bottom={navMenuBottom}
-        right={navMenuRight}
-        onClose={() => setNavMenuOpen(false)}
-        // 출석 이벤트·재화 내역은 내 정보 바로가기로 (#1055 → #1089) — 메뉴는 방 작업만.
-        onOpenCharacterPicker={
-          ownedCharacters && onSelectCharacter ? () => setCharacterSheetOpen(true) : undefined
-        }
-        onEditRoom={onEdit}
-        // 웹은 view-shot이 없어 항목을 숨긴다 — 눌러서 '지원 안 함' 토스트를 보이는 것보다 낫다.
-        onSaveRoomImage={Platform.OS === 'web' ? undefined : () => void onSaveRoomImage()}
-        onOpenCategoryManager={() => onManageCategories?.()}
-        // Routine management remains separate from the quick composer.
-        onManageRoutines={onManageRoutines ?? onAddRoutine}
-      />
+      <MountOnce when={navMenuOpen}>
+        <NavMenuPopover
+          visible={navMenuOpen}
+          top={navMenuTop}
+          bottom={navMenuBottom}
+          right={navMenuRight}
+          onClose={() => setNavMenuOpen(false)}
+          // 출석 이벤트·재화 내역은 내 정보 바로가기로 (#1055 → #1089) — 메뉴는 방 작업만.
+          onOpenCharacterPicker={
+            ownedCharacters && onSelectCharacter ? () => setCharacterSheetOpen(true) : undefined
+          }
+          onEditRoom={onEdit}
+          // 웹은 view-shot이 없어 항목을 숨긴다 — 눌러서 '지원 안 함' 토스트를 보이는 것보다 낫다.
+          onSaveRoomImage={Platform.OS === 'web' ? undefined : () => void onSaveRoomImage()}
+          onOpenCategoryManager={() => onManageCategories?.()}
+          // Routine management remains separate from the quick composer.
+          onManageRoutines={onManageRoutines ?? onAddRoutine}
+        />
+      </MountOnce>
 
-      <CharacterPickerSheet
-        visible={characterSheetOpen}
-        characters={ownedCharacters ?? []}
-        onSelect={(serverId) => onSelectCharacter?.(serverId)}
-        onClose={() => setCharacterSheetOpen(false)}
-      />
+      <MountOnce when={characterSheetOpen}>
+        <CharacterPickerSheet
+          visible={characterSheetOpen}
+          characters={ownedCharacters ?? []}
+          onSelect={(serverId) => onSelectCharacter?.(serverId)}
+          onClose={() => setCharacterSheetOpen(false)}
+        />
+      </MountOnce>
 
-      <TimePickerSheet
-        visible={timeRoutine !== null}
-        initialEnabled={timeRoutine?.alarmEnabled ?? false}
-        initialTime={timeRoutine?.time ?? '07:00'}
-        onSave={(enabled, time) => {
-          if (timeId) onUpdateRoutineTime?.(timeId, enabled, time);
-        }}
-        onClose={() => setTimeId(null)}
-      />
-
-      {/* 완료 보상 코인 플라이 오버레이 (#440) — 탭 지점 → 지갑 필. */}
-      {flyingCoins.map((c) => (
-        <FlyingCoin key={c.id} {...c} onDone={() => onCoinArrive(c.id)} />
-      ))}
+      <MountOnce when={timeRoutine !== null}>
+        <TimePickerSheet
+          visible={timeRoutine !== null}
+          initialEnabled={timeRoutine?.alarmEnabled ?? false}
+          initialTime={timeRoutine?.time ?? '07:00'}
+          onSave={(enabled, time) => {
+            if (timeId) onUpdateRoutineTime?.(timeId, enabled, time);
+          }}
+          onClose={() => setTimeId(null)}
+        />
+      </MountOnce>
     </View>
   );
 });
@@ -1874,11 +1861,6 @@ const styles = StyleSheet.create({
   },
   calEmpty: {
     paddingVertical: Spacing.three,
-  },
-  streak: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.half,
   },
   menuDot: {
     position: 'absolute',
@@ -1968,21 +1950,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.one,
-    borderRadius: Radius.pill,
-  },
-  rewardWrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 20,
-  },
-  rewardPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
     borderRadius: Radius.pill,
   },
   // 떠 있는 원형 버튼의 면 (#1050) — 위치·크기는 버튼이, 모양·배경은 면이.

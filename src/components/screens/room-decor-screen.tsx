@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -64,8 +64,14 @@ import { useT } from '@/i18n';
 type PickerTarget = 'wallpaper' | 'floor' | 'background' | 'all';
 
 // RoomCatalogProps: 아이템·표면 카탈로그 (로컬 기본; floors/backgrounds는 API 전용, #691).
-/** 카탈로그 그리드의 종류 탭 — 한 번에 한 그리드만 보여준다 (#488). */
-export type DecorTab = 'furniture' | 'decor' | 'wallpaper' | 'floor' | 'background';
+/**
+ * 카탈로그 그리드의 종류 탭 — 한 번에 한 그리드만 보여준다 (#488). 'market'은 가구 거래소
+ * (#1427) — `renderMarket`을 넘겼을 때만 탭이 생긴다.
+ */
+export type DecorTab = 'furniture' | 'decor' | 'wallpaper' | 'floor' | 'background' | 'market';
+
+/** 저장 안 한 편집이 있으면 확인을 거쳐 `go`를 실행하는 이탈 함수 (#1427). */
+export type DecorLeave = (go: () => void) => void;
 
 /**
  * 소품 = 서버 categoryCode 'decor'(장식)와 'floor'(러그); 가구 = 나머지
@@ -168,6 +174,19 @@ export type RoomDecorScreenProps = RoomCatalogProps & {
    * 쓰는 씨앗값이라, 이후 사용자가 탭을 바꾸면 그 선택이 이긴다.
    */
   initialTab?: DecorTab;
+  /**
+   * 가구 거래소 탭 내용 (#1427) — 넘겼을 때만 "거래소" 탭이 생긴다(셸은 MARKET_ENABLED일 때만).
+   * 탭 안에서 다른 화면으로 나갈 때는 받은 `leave`로 감싼다 — 저장 안 한 배치가 있으면
+   * "변경사항을 저장할까요?"를 먼저 묻는다.
+   */
+  renderMarket?: (leave: DecorLeave) => ReactNode;
+  /**
+   * 판매 중인 내 가구 수 (#1427) — 서버가 판매 주문에 맡긴 가구를 인벤토리(`/me/items`)에서
+   * 숨겨 격자에 나올 자리가 없으므로, 가구 탭 위에 "판매 중인 가구 N개" 줄로 알린다.
+   */
+  sellingCount?: number;
+  /** 판매 중 줄의 "내 주문 보기" — `renderMarket`의 이탈과 같은 확인을 거친다. */
+  onOpenSelling?: () => void;
 };
 
 /**
@@ -209,6 +228,9 @@ export function RoomDecorScreen({
   onBack,
   onBuy,
   onApply,
+  renderMarket,
+  sellingCount = 0,
+  onOpenSelling,
 }: RoomDecorScreenProps) {
   const t = useTokens();
   const column = useResponsiveColumn();
@@ -269,6 +291,22 @@ export function RoomDecorScreen({
   );
   const dirty = currentSnap !== initialSnapRef.current;
   const [confirmLeave, setConfirmLeave] = useState(false);
+  // 뒤로가기가 아닌 이탈(거래소 상세·내 주문, #1427)의 목적지 — 없으면 onBack.
+  const leaveTargetRef = useRef<(() => void) | null>(null);
+  const leave = () => {
+    const go = leaveTargetRef.current;
+    leaveTargetRef.current = null;
+    if (go) go();
+    else onBack?.();
+  };
+  const guardedLeave: DecorLeave = (go) => {
+    if (dirty) {
+      leaveTargetRef.current = go;
+      setConfirmLeave(true);
+    } else {
+      go();
+    }
+  };
 
   // --- 프리뷰 (#501): 미보유인데 배치/적용돼 있는 아이템. 별도 상태 없이
   // owned와의 차집합으로 유도한다 — 구매 성공으로 ownedIds가 갱신되면 그
@@ -327,7 +365,7 @@ export function RoomDecorScreen({
     if (result === 'conflict') return setConflictOpen(true);
     if (result === 'fail') return; // 실패 토스트는 훅이 띄운다.
     initialSnapRef.current = snap(v.items, v.wallpaperId, v.floorId, v.backgroundId);
-    if (thenBack) onBack?.();
+    if (thenBack) leave();
   };
   /** 프리뷰 정리가 끝난 값으로 저장을 이어간다. */
   const proceedApply = (thenBack: boolean, v: ApplyValues) => {
@@ -380,6 +418,7 @@ export function RoomDecorScreen({
     }
   };
   const handleBack = () => {
+    leaveTargetRef.current = null;
     if (dirty) setConfirmLeave(true);
     else onBack?.();
   };
@@ -394,9 +433,11 @@ export function RoomDecorScreen({
       }
       if (confirmLeave) {
         setConfirmLeave(false);
+        leaveTargetRef.current = null;
         return true;
       }
       if (dirty) {
+        leaveTargetRef.current = null;
         setConfirmLeave(true);
         return true;
       }
@@ -551,10 +592,14 @@ export function RoomDecorScreen({
   // 전체보기 탭 — 표면류(surfaceSlotType: 벽지/바닥/배경)에 더해, positioned
   // 아이템은 categoryCode(가구/소품)로 한 번 더 나눈다 (#488). 한 번에 한
   // 그리드만 — 통짜 세로 나열은 스크롤이 너무 길다.
-  const [allTab, setAllTab] = useState<DecorTab>(initialTab);
+  // 거래소 탭은 renderMarket이 있을 때만 — 없는데 씨앗이 'market'이면 가구 탭으로.
+  const [allTab, setAllTab] = useState<DecorTab>(
+    initialTab === 'market' && !renderMarket ? 'furniture' : initialTab,
+  );
   const furnitureTabItems = useMemo(() => furniture.filter((i) => !isDecorItem(i)), [furniture]);
   const decorTabItems = useMemo(() => furniture.filter(isDecorItem), [furniture]);
   const isSurfacePicker = picker === 'wallpaper' || picker === 'floor' || picker === 'background';
+  const marketTabOpen = picker === 'all' && allTab === 'market';
   // 방금 뽑은 아이템(#630)이 맨 앞, 그다음 보유 순 — 뽑기에서 넘어온 사용자가
   // 찾을 필요 없게 한다.
   const highlightSet = useMemo(() => new Set(highlightItemIds ?? []), [highlightItemIds]);
@@ -781,6 +826,7 @@ export function RoomDecorScreen({
                     'wallpaper' as const,
                     ...(floors.length > 0 ? ['floor' as const] : []),
                     ...(backgrounds.length > 0 ? ['background' as const] : []),
+                    ...(renderMarket ? ['market' as const] : []),
                   ] as const
                 ).map((key) => {
                   const label = tr(`roomShop.decor.tab.${key}`);
@@ -858,16 +904,45 @@ export function RoomDecorScreen({
             ) : null}
           </View>
 
-          <View style={styles.filterRow}>
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              {tr('roomShop.decor.ownedOnly')}
-            </Text>
-            <ToggleSwitch
-              value={ownedOnly}
-              onToggle={() => setOwnedOnly((v) => !v)}
-              accessibilityLabel={tr('roomShop.decor.ownedOnly')}
-            />
-          </View>
+          {marketTabOpen ? null : (
+            <View style={styles.filterRow}>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                {tr('roomShop.decor.ownedOnly')}
+              </Text>
+              <ToggleSwitch
+                value={ownedOnly}
+                onToggle={() => setOwnedOnly((v) => !v)}
+                accessibilityLabel={tr('roomShop.decor.ownedOnly')}
+              />
+            </View>
+          )}
+
+          {/* 판매 중인 내 가구 (#1427) — 서버가 인벤토리에서 숨겨 격자에 자리가 없다. */}
+          {picker === 'all' && allTab === 'furniture' && sellingCount > 0 ? (
+            <View style={[styles.sellingRow, { backgroundColor: t.surfaceMuted }]}>
+              <View style={styles.flex}>
+                <Text style={[Typography.label, { color: t.text }]}>
+                  {tr('market.selling.row', { n: sellingCount })}
+                </Text>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  {tr('market.selling.rowHint')}
+                </Text>
+              </View>
+              {onOpenSelling ? (
+                <Pressable
+                  onPress={() => guardedLeave(onOpenSelling)}
+                  accessibilityRole="button"
+                  accessibilityLabel={tr('market.selling.open')}
+                  style={[styles.sellingBtn, { backgroundColor: t.surface }]}>
+                  <Text style={[Typography.supporting, { color: t.primaryText }]}>
+                    {tr('market.selling.open')}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
+
+          {marketTabOpen && renderMarket ? renderMarket(guardedLeave) : null}
 
           {picker === 'wallpaper' ? (
             <SwatchGrid
@@ -1016,9 +1091,12 @@ export function RoomDecorScreen({
         }}
         onLeaveWithoutSaving={() => {
           setConfirmLeave(false);
-          onBack?.();
+          leave();
         }}
-        onStay={() => setConfirmLeave(false)}
+        onStay={() => {
+          leaveTargetRef.current = null;
+          setConfirmLeave(false);
+        }}
       />
 
       {/* 적용 시 미구매 프리뷰 일괄 확인 (#501) — 서버는 미보유 저장 불가. */}
@@ -1217,6 +1295,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     gap: Spacing.two,
+  },
+  // 판매 중 안내 줄 (#1427).
+  sellingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    padding: Spacing.three,
+    borderRadius: Radius.lg,
+  },
+  sellingBtn: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.pill,
   },
   panel: {
     marginHorizontal: Spacing.three,

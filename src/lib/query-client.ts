@@ -19,6 +19,7 @@ import { focusManager, MutationCache, QueryCache, QueryClient } from '@tanstack/
 import { onSessionCleared } from '@/api/auth';
 import { ApiError } from '@/api/http';
 import { reportError } from '@/lib/error-reporting';
+import { queryKeys } from '@/lib/query-keys';
 
 /**
  * 조회·변경 실패 중 Sentry로 보낼 것 (#1376). 화면은 실패를 토스트·재시도 UI로 삼키므로
@@ -48,8 +49,25 @@ function keyLabel(key: readonly unknown[] | undefined): string {
   return typeof head === 'string' ? head : 'unknown';
 }
 
+/**
+ * 키별 신선도 (성능 장부 N4) — 기본 30초는 **내 데이터**(오늘·지갑·방·집)용이다. 서버가
+ * 관리하는 카탈로그까지 30초면 앱에 돌아올 때마다 거의 안 바뀌는 목록을 다시 받는다
+ * (실측: 5분 뒤 복귀 7요청 중 3개). 기존 훅 23개를 옮길수록 이 비용이 커지므로 이관
+ * 전에 정해 둔다. 무효화(`invalidateQueries`)는 staleTime과 무관하게 즉시 다시 받는다.
+ *
+ * 새 키가 카탈로그면 여기에 추가한다. 앞부분이 일치하는 키 전부에 적용된다.
+ */
+export const QUERY_STALE_POLICY: readonly { key: readonly unknown[]; staleTime: number }[] = [
+  // 상점 가구·뽑기 카테고리·미니게임 목록 — 운영자가 바꾸는 카탈로그.
+  { key: queryKeys.items, staleTime: 60 * 60_000 },
+  { key: queryKeys.gachas, staleTime: 60 * 60_000 },
+  { key: ['minigames', 'catalog'], staleTime: 60 * 60_000 },
+  // 루틴 추천 — 서버가 주기적으로 만들고, 수락·거절은 뮤테이션이 캐시를 직접 고친다.
+  { key: queryKeys.recommendations, staleTime: 10 * 60_000 },
+];
+
 export function createQueryClient() {
-  return new QueryClient({
+  const client = new QueryClient({
     // 재시도까지 끝난 최종 실패만 한 번 온다 — 캐시 단위 콜백이라 훅마다 중복 보고되지 않는다.
     queryCache: new QueryCache({
       onError: (error, query) => {
@@ -89,6 +107,8 @@ export function createQueryClient() {
       },
     },
   });
+  for (const { key, staleTime } of QUERY_STALE_POLICY) client.setQueryDefaults(key, { staleTime });
+  return client;
 }
 
 /**

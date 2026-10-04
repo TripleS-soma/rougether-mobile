@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  cancelAnimation,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
@@ -102,6 +103,9 @@ export function PawRefreshScroll({
   const baseY = useRef(useSharedValue(0)).current;
   const engaged = useRef(useSharedValue(false)).current;
   const refreshingSV = useRef(useSharedValue(false)).current;
+  // 새로고침 중 두근거림 — 한 번 걸어 두고 끝날 때 멈춘다(성능 장부 M9). 예전엔 매퍼 안에서
+  // withRepeat를 만들어 스타일이 다시 계산될 때마다(HOLD 정착 160ms 동안 매 프레임) 새로 시작했다.
+  const beat = useRef(useSharedValue(1)).current;
   // 제스처를 재생성하지 않고 잠근다 — 활성 제스처 취소 사고 방지 (#333 계약).
   const disabledSV = useRef(useSharedValue(false)).current;
   useEffect(() => {
@@ -111,8 +115,10 @@ export function PawRefreshScroll({
 
   const finishRefresh = useCallback(() => {
     refreshingSV.value = false;
+    cancelAnimation(beat);
+    beat.value = 1;
     pull.value = withTiming(0, { duration: 240 });
-  }, [pull, refreshingSV]);
+  }, [pull, refreshingSV, beat]);
 
   const beginRefresh = useCallback(() => {
     // 발바닥 두근거림은 pawStyle이 refreshingSV로 그린다 — 끝나면 접는다.
@@ -199,6 +205,11 @@ export function PawRefreshScroll({
         if (refreshingSV.value || disabledSV.value) return;
         if (pull.value >= TRIGGER) {
           refreshingSV.value = true;
+          beat.value = withRepeat(
+            withSequence(withTiming(1.18, { duration: 320 }), withTiming(0.94, { duration: 320 })),
+            -1,
+            true,
+          );
           pull.value = withTiming(HOLD, { duration: 160 });
           runOnJS(beginRefresh)();
         } else {
@@ -218,6 +229,7 @@ export function PawRefreshScroll({
     pull,
     scrollY,
     refreshingSV,
+    beat,
     disabledSV,
     onRefresh,
     beginRefresh,
@@ -240,16 +252,7 @@ export function PawRefreshScroll({
       opacity: refreshingSV.value ? 1 : progress,
       transform: [
         {
-          scale: refreshingSV.value
-            ? withRepeat(
-                withSequence(
-                  withTiming(1.18, { duration: 320 }),
-                  withTiming(0.94, { duration: 320 }),
-                ),
-                -1,
-                true,
-              )
-            : 0.4 + 0.6 * progress,
+          scale: refreshingSV.value ? beat.value : 0.4 + 0.6 * progress,
         },
         { rotate: `${-24 + 24 * progress}deg` },
       ],

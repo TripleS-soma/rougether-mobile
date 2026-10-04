@@ -68,6 +68,8 @@
       "profileSaveFailed": "Couldn't save the profile",
       "categoryCreateFailed": "Couldn't create the category",
       "categoryUpdateFailed": "Couldn't update the category",
+      "missionUnlinkFailed": "Couldn't unlink the mission",
+      "houseUnlinkFailed": "Couldn't unlink the house",
       "categoryReorderFailed": "Couldn't save the category order",
       "categoryInUse": "This category still has routines and can't be deleted",
       "categoryDeleteFailed": "Couldn't delete the category",
@@ -290,6 +292,14 @@
       "create": "Add category"
     },
     "categoryManage": {
+      "houseLinked": "Linked to '{{house}}'",
+      "houseLinkedUnknown": "Linked to a house",
+      "unlinkHouseA11y": "Unlink {{name}} from the house",
+      "unlinkHouseTitle": "Unlink house",
+      "unlinkHouseBody": "Unlink the '{{name}}' category from its house?\nThe category and its routines and to-dos stay. Once unlinked, leaving the house won't delete this category, and routines linked to missions stay linked.",
+      "unlinkHouseConfirm": "Unlink",
+      "unlinkHouseConfirmA11y": "Confirm unlink house",
+      "unlinkHouseCancelA11y": "Cancel unlink house",
       "title": "Manage categories",
       "back": "Back",
       "addA11y": "Add a new category",

@@ -29,6 +29,9 @@ const PROGRESS_RADIUS = (PROGRESS_RING_SIZE - Spacing.half) / 2;
 
 type YMD = { y: number; m: number; d: number };
 
+/** 달력 칸 — 날짜와, 보이는 달에 속하는지(아니면 앞뒤를 채운 이웃 달 날짜). */
+type CalendarCell = { date: string; day: number; inMonth: boolean };
+
 function parse(date: string): YMD {
   const [y, m, d] = date.split('-').map((v) => parseInt(v, 10));
   return { y, m: m - 1, d };
@@ -138,12 +141,24 @@ function CalendarBase({
 
   // 42칸 배열 + Date 2개를 매 렌더 다시 만들던 자리 (#771) — 보이는 달이
   // 바뀔 때만 계산한다.
-  const cells = useMemo<(number | null)[]>(() => {
+  //
+  // 칸은 날짜로 담는다 — 앞뒤 빈칸 자리의 이웃 달 날짜까지. 월 보기는 그 자리를 비워 두고,
+  // 주 보기(접힘)만 이웃 달 날짜를 흐리게 보여 준다: 달이 걸친 주가 이번 달 날짜만 남아
+  // 반쪽으로 보이고(9/27~10/3이 10월 뷰에선 1·2·3만), '다음 주'가 9월 마지막 주를 건너뛴
+  // 것처럼 보였다(2026-10 사용자 제보).
+  const cells = useMemo<CalendarCell[]>(() => {
     const firstWeekday = new Date(view.y, view.m, 1).getDay();
     const daysInMonth = new Date(view.y, view.m + 1, 0).getDate();
-    const days = [
-      ...Array.from({ length: firstWeekday }, () => null),
-      ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+    const days: CalendarCell[] = [
+      ...Array.from({ length: firstWeekday }, (_, i) => {
+        const date = iso(view.y, view.m, i - firstWeekday + 1);
+        return { date, day: parse(date).d, inMonth: false };
+      }),
+      ...Array.from({ length: daysInMonth }, (_, i) => ({
+        date: iso(view.y, view.m, i + 1),
+        day: i + 1,
+        inMonth: true,
+      })),
     ];
     /**
      * 뒤도 7의 배수까지 채운다 (#1008) — 안 채우면 아래 `cells.length / 7`이
@@ -152,7 +167,13 @@ function CalendarBase({
      * 2026년 12달 중 9달이 같은 상태였고, 7월은 6일이 빠졌다.
      */
     const trailing = (7 - (days.length % 7)) % 7;
-    return [...days, ...Array.from({ length: trailing }, () => null)];
+    return [
+      ...days,
+      ...Array.from({ length: trailing }, (_, i) => {
+        const date = iso(view.y, view.m + 1, i + 1);
+        return { date, day: i + 1, inMonth: false };
+      }),
+    ];
   }, [view.y, view.m]);
   /** 7칸씩 주 단위로 자른다 (#845) — 한 줄에 몰아넣고 wrap 시키면 퍼센트 폭
    * 반올림으로 7번째가 다음 줄로 밀린다(맥에서 재현). 줄마다 flex:1이면
@@ -188,11 +209,8 @@ function CalendarBase({
     anim.start();
     return () => anim.stop();
   }, [collapsed, rowH, collapse]);
-  const weekOfYmd = weekOf ? parse(weekOf) : null;
-  const keptWeek =
-    weekOfYmd && weekOfYmd.y === view.y && weekOfYmd.m === view.m
-      ? weeks.findIndex((week) => week.includes(weekOfYmd.d))
-      : -1;
+  // 남기는 주 — 이웃 달 칸까지 날짜로 찾는다. 9/30을 고른 채 10월 뷰여도 그 주(첫 줄)가 남는다.
+  const keptWeek = weekOf ? weeks.findIndex((week) => week.some((c) => c.date === weekOf)) : -1;
   const rowCollapse = {
     height: rowH ? collapse.interpolate({ inputRange: [0, 1], outputRange: [rowH, 0] }) : undefined,
     opacity: collapse.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
@@ -406,10 +424,13 @@ function CalendarBase({
                     if (selectedInView) placeCircle(false);
                   }}>
                   <View style={styles.week}>
-                    {week.map((day, di) => {
+                    {week.map((cell, di) => {
                       const i = wi * 7 + di;
-                      if (day === null) return <View key={`blank-${i}`} style={styles.cell} />;
-                      const date = iso(view.y, view.m, day);
+                      // 월 보기는 이웃 달 칸을 비운다(종전과 같음). 주 보기만 채운다.
+                      if (!cell.inMonth && !collapsed)
+                        return <View key={`blank-${i}`} style={styles.cell} />;
+                      const { date, day } = cell;
+                      const otherMonth = !cell.inMonth;
                       const disabled = (min && date < min) || (max && date > max);
                       const isSelected = date === value;
                       const progress = progressByDate?.[date];
@@ -511,13 +532,17 @@ function CalendarBase({
                                 {
                                   color: disabled
                                     ? t.textDisabled
-                                    : isSelected
+                                    : // 이웃 달 날짜를 누른 직후 뷰가 넘어가기 전 한 프레임은
+                                      // 선택 원이 숨어 있다 — 흰 글자가 배경에 묻히지 않게.
+                                      isSelected && (selectedInView || progressByDate)
                                       ? t.onPrimary
-                                      : isSunday || holiday
-                                        ? t.danger
-                                        : isSaturday
-                                          ? t.info
-                                          : t.text,
+                                      : otherMonth
+                                        ? t.textMuted
+                                        : isSunday || holiday
+                                          ? t.danger
+                                          : isSaturday
+                                            ? t.info
+                                            : t.text,
                                 },
                               ]}>
                               {day}

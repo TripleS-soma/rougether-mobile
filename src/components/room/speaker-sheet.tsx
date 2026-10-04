@@ -1,5 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useRef } from 'react';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { memo, useRef } from 'react';
 import { PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { SpeakerSprite } from '@/components/room/speaker-sprite';
@@ -21,7 +21,7 @@ export type SpeakerSheetProps = {
   onSelectTrack: (id: SpeakerTrackId) => void;
   onVolumeChange: (value: number) => void;
 };
-export function SpeakerSheet({
+function SpeakerSheetBase({
   visible,
   onClose,
   trackId,
@@ -214,3 +214,6 @@ const styles = StyleSheet.create({
   fill: { height: '100%', borderRadius: Radius.pill },
   play: { alignItems: 'center', padding: Spacing.three, borderRadius: Radius.lg },
 });
+
+/** 셸이 렌더될 때마다 같이 그려지지 않게 (성능 장부 R9) — 셸은 콜백 참조를 고정해 넘긴다. */
+export const SpeakerSheet = memo(SpeakerSheetBase);

@@ -1,3 +1,5 @@
+import type { FeedBoardType } from '@/api/types';
+
 /**
  * react-query 키 레지스트리 (#1027 후속, 리팩토링 4묶음) — 키 모양을 한 곳에서.
  *
@@ -24,12 +26,29 @@ export const queryKeys = {
   },
   /** 집 온보딩 자동 입주 허용 (#1407, 방장 전용 GET /houses/{id}/auto-join). */
   houseAutoJoin: (houseId: number | undefined) => ['house', 'auto-join', houseId] as const,
+  /**
+   * 집 채팅 (#1408) — 방 상태(POST /houses/{id}/chat-room의 응답). 레일의 안 읽음 배지와
+   * 채팅 화면이 같은 캐시를 본다. 소켓·읽음 응답이 오면 setQueryData로 갱신한다.
+   */
+  chatRoom: (userId: number | null | undefined, houseId: number | undefined) =>
+    ['chat', userId, 'house-room', houseId] as const,
   /** 친구 초대 리워드 (#518) — 내 코드·보상 현황. */
   invites: (userId: number | null | undefined) => ['invites', userId] as const,
   /** 재화 증감 이력 (#734) — 무한 쿼리, 페이지 파라미터는 0부터. */
   walletHistory: (userId: number | null | undefined) => ['wallet-history', userId] as const,
   /** 상점 공개 카탈로그 (GET /items) — 사용자 무관. `owned` 플래그는 인벤토리로 덮는다. */
   items: ['items'] as const,
+  /**
+   * 집 구성원 방 (GET /houses/{id}/members/{mid}/room) — 좌석 미리보기와 친구 방 방문이
+   * 같은 응답을 나눠 쓴다(성능 장부 N5). 사용자 캐시는 로그아웃 시 통째로 비워진다.
+   */
+  memberRoom: {
+    all: ['house-member-room'] as const,
+    one: (houseId: number, membershipId: number) =>
+      ['house-member-room', houseId, membershipId] as const,
+  },
+  /** 집 커버 카탈로그 (GET /houses/cover-images) — 사용자 무관. */
+  houseCovers: ['house-covers'] as const,
   /** 내 인벤토리 (GET /me/items, itemId↔userItemId) — 뽑기·구매·AI 가구가 갱신한다. */
   myItems: {
     all: ['me', 'items'] as const,
@@ -55,5 +74,42 @@ export const queryKeys = {
       ['calendar', userId, 'day', dateIso] as const,
     month: (userId: number | null | undefined, yearMonth: string) =>
       ['calendar', userId, 'month', yearMonth] as const,
+  },
+  /**
+   * 공개 SNS 피드 (#1409). 목록은 무한 쿼리(cursor = 마지막 postId), 상세·댓글은 게시물별.
+   * 좋아요·댓글 수는 목록과 상세 캐시를 함께 고친다(`hooks/feed-cache.ts`).
+   * 목록은 게시판(서버 #428)별로 따로 — `ALL`(통합)·`FREE`·`VERIFICATION`. 등록·수정·삭제는
+   * `lists` 접두로 무효화·패치해 통합 피드와 게시판 목록을 한꺼번에 맞춘다.
+   */
+  feed: {
+    all: (userId: number | null | undefined) => ['feed', userId] as const,
+    lists: (userId: number | null | undefined) => ['feed', userId, 'posts'] as const,
+    list: (
+      userId: number | null | undefined,
+      authorId: number | null,
+      board: 'ALL' | FeedBoardType = 'ALL',
+    ) => ['feed', userId, 'posts', authorId, board] as const,
+    post: (userId: number | null | undefined, postId: number | null) =>
+      ['feed', userId, 'post', postId] as const,
+    comments: (userId: number | null | undefined, postId: number | null) =>
+      ['feed', userId, 'comments', postId] as const,
+    /** 모든 게시물의 댓글 — 차단(#1428) 직후 그 작성자 댓글을 한꺼번에 지울 때. */
+    allComments: (userId: number | null | undefined) => ['feed', userId, 'comments'] as const,
+  },
+  /** 내가 차단한 사용자 (#1428, GET /me/blocks) — 무한 쿼리, cursor = 차단 기록 id. */
+  blockedUsers: (userId: number | null | undefined) => ['blocked-users', userId] as const,
+  /**
+   * 가구 거래소 (#1427) — 상세의 `owned`·`isCreator`가 요청자 기준이라 목록까지 전부 사용자별.
+   * 주문·취소·발행 결과가 나오면 `all`로 통째 무효화한다(목록·상세·체결·내 주문).
+   */
+  market: {
+    all: (userId: number | null | undefined) => ['market', userId] as const,
+    assets: (userId: number | null | undefined) => ['market', userId, 'assets'] as const,
+    asset: (userId: number | null | undefined, assetId: number | null) =>
+      ['market', userId, 'asset', assetId] as const,
+    trades: (userId: number | null | undefined, assetId: number | null) =>
+      ['market', userId, 'trades', assetId] as const,
+    orders: (userId: number | null | undefined, status: 'OPEN' | 'CLOSED') =>
+      ['market', userId, 'orders', status] as const,
   },
 };

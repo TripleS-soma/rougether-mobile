@@ -1,3 +1,10 @@
+import type { MarketAsset, MarketAssetCard, MarketOrder, MarketTrade } from '@/api/market';
+import type {
+  FeedComment,
+  FeedCompletionGroup,
+  FeedDraftImage,
+  FeedPost,
+} from '@/components/screens/feed/types';
 import type { House, HouseMission } from '@/components/screens/house/types';
 import type { GuestbookEntry } from '@/components/screens/friend-room-screen';
 import type { NotificationEntry } from '@/components/screens/notification-list-screen';
@@ -149,4 +156,201 @@ export const DEMO_GUESTBOOK: GuestbookEntry[] = [
 export const DEMO_NOTIFICATIONS: NotificationEntry[] = [
   { id: 1, type: 'ROUTINE_REMINDER', title: '루틴 리마인드', body: '물 마시기 할 시간이에요', read: false, date: '오늘' }, // prettier-ignore
   { id: 2, type: 'HOUSE_KICK', title: '집 알림', body: '아침 기상단에서 내보내졌어요', read: true, date: '7월 5일' }, // prettier-ignore
+];
+
+/** 피드 갤러리·테스트용 게시물 (#1409) — 사진은 로더가 없어 자리표시로 그려진다. */
+export const DEMO_FEED_POSTS: FeedPost[] = [
+  {
+    postId: 3,
+    author: { userId: 7, nickname: '루틴친구', profileImageKey: null },
+    boardType: 'VERIFICATION',
+    content: '오늘 아침 루틴 완료! 물 한 잔, 스트레칭 10분, 일기 세 줄.',
+    routine: { routineId: 15, title: '아침 스트레칭', date: '2026-09-22' },
+    images: [
+      { imageId: 31, width: 1200, height: 1600 },
+      { imageId: 32, width: 1600, height: 1200 },
+    ],
+    likeCount: 3,
+    commentCount: 2,
+    likedByMe: false,
+    mine: false,
+    createdAt: '2026-09-22T03:00:00Z',
+    updatedAt: '2026-09-22T03:00:00Z',
+  },
+  {
+    postId: 2,
+    author: { userId: 4, nickname: '나', profileImageKey: null },
+    boardType: 'FREE',
+    content: '방을 새로 꾸몄어요. 창가 화분이 제일 마음에 들어요.',
+    routine: null,
+    images: [{ imageId: 21, width: 1200, height: 1200 }],
+    likeCount: 12,
+    commentCount: 0,
+    likedByMe: true,
+    mine: true,
+    createdAt: '2026-09-21T12:30:00Z',
+    updatedAt: '2026-09-21T13:00:00Z',
+  },
+  {
+    postId: 1,
+    author: { userId: 9, nickname: null, profileImageKey: null },
+    boardType: 'VERIFICATION',
+    content: '',
+    routine: null,
+    images: [{ imageId: 11, width: 1600, height: 900 }],
+    likeCount: 0,
+    commentCount: 1,
+    likedByMe: false,
+    mine: false,
+    createdAt: '2026-09-15T08:00:00Z',
+    updatedAt: '2026-09-15T08:00:00Z',
+  },
+];
+
+/** 사진 없는 자유게시판 글 (서버 #428) — 텍스트만 있는 카드·상세 미리보기용. */
+export const DEMO_FEED_TEXT_POST: FeedPost = {
+  postId: 4,
+  author: { userId: 7, nickname: '루틴친구', profileImageKey: null },
+  boardType: 'FREE',
+  content: '요즘 아침 루틴을 어떻게 지키고 계세요?\n저는 알람 대신 커튼을 열어 두고 자요.',
+  routine: null,
+  images: [],
+  likeCount: 1,
+  commentCount: 0,
+  likedByMe: false,
+  mine: false,
+  createdAt: '2026-09-22T05:00:00Z',
+  updatedAt: '2026-09-22T05:00:00Z',
+};
+
+export const DEMO_FEED_COMMENTS: FeedComment[] = [
+  {
+    commentId: 301,
+    postId: 3,
+    author: { userId: 8, nickname: '이웃', profileImageKey: null },
+    content: '멋져요! 저도 내일부터 스트레칭 해볼게요.',
+    mine: false,
+    createdAt: '2026-09-22T03:02:00Z',
+  },
+  {
+    commentId: 302,
+    postId: 3,
+    author: { userId: 4, nickname: '나', profileImageKey: null },
+    content: '같이 해요 🙌',
+    mine: true,
+    createdAt: '2026-09-22T03:10:00Z',
+  },
+];
+
+/** 루틴 고르기 픽스처의 "오늘"(KST) — 갤러리·테스트가 기기 날짜와 무관하게 같은 묶음을 그린다. */
+export const DEMO_FEED_TODAY = '2026-10-04';
+
+/** 최근 7일 완료 루틴 (#1456) — 오늘·어제·10/1 묶음. */
+export const DEMO_FEED_COMPLETIONS: FeedCompletionGroup[] = [
+  {
+    date: '2026-10-04',
+    options: [
+      { routineId: 15, title: '아침 스트레칭', date: '2026-10-04' },
+      { routineId: 16, title: '물 2L 마시기', date: '2026-10-04' },
+    ],
+  },
+  { date: '2026-10-03', options: [{ routineId: 15, title: '아침 스트레칭', date: '2026-10-03' }] },
+  { date: '2026-10-01', options: [{ routineId: 17, title: '일기 세 줄', date: '2026-10-01' }] },
+];
+
+export const DEMO_FEED_DRAFT: FeedDraftImage[] = [
+  { key: 'draft-1', uri: '', status: 'done', imageId: 41 },
+  { key: 'draft-2', uri: '', status: 'uploading' },
+  { key: 'draft-3', uri: '', status: 'failed', error: '사진 저장소가 잠시 불안정해요.' },
+];
+
+// --- 가구 거래소 (#1427) — 로컬 픽스처. 그림 키는 AI 가구와 같은 CDN 경로 모양(실물 없음 → 빈 칸).
+
+export const DEMO_MARKET_ASSETS: MarketAssetCard[] = [
+  {
+    assetId: 1,
+    itemId: 320,
+    name: '고양이 소파',
+    assetKey: 'items/photo-furniture/furniture/demo-cat-sofa.png',
+    creatorNickname: '영희',
+    totalSupply: 5,
+    bestAskPrice: 28,
+    askQuantity: 3,
+    lastTradePrice: 30,
+    status: 'ACTIVE',
+  },
+  {
+    assetId: 2,
+    itemId: 321,
+    name: '원목 책상',
+    assetKey: 'items/photo-furniture/furniture/demo-desk.png',
+    creatorNickname: null,
+    totalSupply: 3,
+    bestAskPrice: null,
+    askQuantity: 0,
+    lastTradePrice: null,
+    status: 'ACTIVE',
+  },
+  {
+    assetId: 3,
+    itemId: 322,
+    name: '초록 스탠드',
+    assetKey: 'items/photo-furniture/furniture/demo-lamp.png',
+    creatorNickname: '철수',
+    totalSupply: 10,
+    bestAskPrice: 12,
+    askQuantity: 1,
+    lastTradePrice: 15,
+    status: 'ACTIVE',
+  },
+];
+
+export const DEMO_MARKET_ASSET: MarketAsset = {
+  ...DEMO_MARKET_ASSETS[0],
+  isCreator: false,
+  unissuedQuantity: 2,
+  owned: false,
+  asks: [
+    { price: 28, quantity: 1 },
+    { price: 30, quantity: 2 },
+    { price: 35, quantity: 1 },
+    { price: 40, quantity: 1 },
+  ],
+  bids: [{ price: 25, quantity: 2 }],
+};
+
+export const DEMO_MARKET_TRADES: MarketTrade[] = [
+  { tradeId: 7, price: 30, quantity: 1, tradedAt: '2026-09-29T02:00:00Z' },
+  { tradeId: 6, price: 27, quantity: 1, tradedAt: '2026-09-28T09:00:00Z' },
+];
+
+export const DEMO_MARKET_ORDERS: MarketOrder[] = [
+  {
+    orderId: 5,
+    assetId: 1,
+    name: '고양이 소파',
+    assetKey: 'items/photo-furniture/furniture/demo-cat-sofa.png',
+    side: 'SELL',
+    source: 'INVENTORY',
+    price: 30,
+    quantity: 1,
+    filledQuantity: 0,
+    status: 'OPEN',
+    expiresAt: '2026-10-05T03:00:00Z',
+    createdAt: '2026-09-28T03:00:00Z',
+  },
+  {
+    orderId: 4,
+    assetId: 3,
+    name: '초록 스탠드',
+    assetKey: 'items/photo-furniture/furniture/demo-lamp.png',
+    side: 'BUY',
+    source: null,
+    price: 12,
+    quantity: 1,
+    filledQuantity: 0,
+    status: 'OPEN',
+    expiresAt: '2026-09-29T08:00:00Z',
+    createdAt: '2026-09-22T08:00:00Z',
+  },
 ];

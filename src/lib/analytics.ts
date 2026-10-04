@@ -44,6 +44,7 @@ export type AnalyticsEvent =
   | 'onboarding_complete'
   | 'starter_routine_view'
   | 'onboarding_house_view'
+  | 'friend_room_date'
   | 'onboarding_house_choice'
   | 'starter_routine_skip'
   | 'starter_routine_failed'
@@ -96,11 +97,39 @@ export type AnalyticsEvent =
   | 'calendar_week_open'
   /** 설정 > 언어 변경 (#893) — language: ko|en. */
   | 'language_change'
+  // 공개 SNS 피드 (#1409) — FEED_ENABLED가 꺼져 있는 동안은 발생하지 않는다.
+  /** 피드 탭 진입 — 탭 전환마다. */
+  | 'feed_view'
+  /** 게시물 등록 성공 — image_count, has_text, board_type(FREE|VERIFICATION, 서버 #428). */
+  | 'feed_post_create'
+  /** 좋아요 반영 성공 — liked: true(누름)|false(취소). */
+  | 'feed_like'
+  /** 댓글 등록 성공. */
+  | 'feed_comment'
+  // 신고·차단 (#1428) — App Store 1.2. 신고량·사유 분포로 운영 대기열 부담을 가늠한다.
+  /** 신고 접수 성공 — target: post|comment|asset, reason: 서버 enum(SPAM…OTHER). */
+  | 'content_report'
+  /** 사용자 차단 성공 — via: post|comment(어디서 차단했는지). */
+  | 'user_block'
+  // 가구 거래소 (#1427) — MARKET_ENABLED가 꺼져 있는 동안은 발생하지 않는다.
+  /** 거래소 화면 진입 — screen: list(꾸미기 거래소 탭)|asset(상세)|orders(내 주문). */
+  | 'market_view'
+  /**
+   * 주문·취소 결과 — side(BUY|SELL|CANCEL), source(INVENTORY|ISSUANCE|none),
+   * result(filled|open|cancelled|rejected|pending|error). rejected면 code에 거절 사유.
+   */
+  | 'market_order'
+  /** 발행 — total_supply, result(ok|error). */
+  | 'market_issue'
   // 그 밖의 핵심 행동
   | 'shop_purchase'
   | 'cheer_send'
   | 'guestbook_write'
   | 'friend_room_visit'
+  /** 집 채팅 화면 진입 (#1408) — 마운트당 1회. */
+  | 'house_chat_view'
+  /** 집 채팅 전송 성공 (#1408) — 서버가 저장을 확인한 뒤. */
+  | 'house_chat_send'
   | 'onboarding_mission_start'
   | 'onboarding_mission_complete'
   | 'onboarding_mission_skip'

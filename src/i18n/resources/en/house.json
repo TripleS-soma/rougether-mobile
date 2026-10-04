@@ -202,6 +202,13 @@
         "a11y": "Confirm delete mission",
         "cancelA11y": "Cancel delete mission"
       },
+      "linkChoice": {
+        "title": "Linked routine",
+        "body": "What should happen to your routine linked to the '{{title}}' mission?\nUnlinking keeps the routine, and contributions already made stay as they are.",
+        "unlink": "Unlink only",
+        "unlinkA11y": "Unlink from mission only",
+        "delete": "Delete routine"
+      },
       "unlinkConfirm": {
         "title": "Delete linked routine",
         "body": "Delete the '{{title}}' routine from my routines?\nContribution history stays. The mission itself is unchanged.",
@@ -379,6 +386,8 @@
     "missionLinks": {
       "linkedDeleted": "Linked routines were deleted too",
       "routineDeleted": "Linked routine deleted",
+      "routineUnlinked": "Unlinked from the mission. The routine stays",
+      "categoryUnlinked": "Unlinked from the house. The category and its routines stay",
       "categoryDeleted": "The linked category and its routines were deleted too",
       "cleanedEnded": "Cleaned up routines linked to ended missions",
       "cleanedGone": "Cleaned up routines linked to removed missions",
@@ -454,6 +463,31 @@
       "snowy-cabin": "Snowy Log Cabin",
       "herb-greenhouse": "Herb Greenhouse",
       "clockwork-cottage": "Clockwork Cottage"
+    },
+    "chat": {
+      "title": "House chat",
+      "rail": "Chat",
+      "railA11y": "House chat",
+      "railA11yUnread": "House chat, {{n}} unread messages",
+      "placeholder": "Send a message",
+      "inputA11y": "Message input",
+      "send": "Send",
+      "sending": "Sending",
+      "failed": "Failed · Tap to resend",
+      "retryA11y": "Resend",
+      "unreadA11y": "{{n}} haven't read",
+      "unknownSender": "Unknown",
+      "empty": "No messages yet. Say hi first!",
+      "loadFailed": "Couldn't load the chat",
+      "retry": "Try again",
+      "banned": "Your message contains a word that isn't allowed",
+      "forbidden": "You can't join this house's chat",
+      "invalid": "Couldn't send the message. Please check the content."
+    },
+    "friendWeek": {
+      "range": "{{sm}}/{{sd}} – {{em}}/{{ed}}",
+      "done": "{{n}} done",
+      "none": "Nothing done"
     }
   }
 }

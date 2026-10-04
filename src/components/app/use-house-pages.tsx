@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type Dispatch,
   type SetStateAction,
@@ -21,11 +22,13 @@ import {
 } from '@/components/screens/house/types';
 import { HouseMissionsScreen } from '@/components/screens/house-missions-screen';
 import { HouseMembersScreen } from '@/components/screens/house-members-screen';
+import { HouseChatPage } from '@/components/app/house-chat-page';
 import { useToast } from '@/components/ui/toast';
 import { manageableMembers } from '@/components/screens/house/members';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { type CharacterId } from '@/constants/characters';
 import { type Wallet } from '@/constants/currency';
+import { useHouseChatUnread } from '@/hooks/use-house-chat';
 import { useHouseCovers } from '@/hooks/use-house-covers';
 import type { useHouses } from '@/hooks/use-houses';
 import {
@@ -58,6 +61,13 @@ type FriendVisit = ReturnType<typeof useFriendVisit>;
  * 친구 방문(use-friend-visit)은 이 훅보다 먼저 서야 해서(집 스위처 인덱스를
  * 양쪽이 소비) 셸에 남고, 파생값·함수만 파라미터로 받는다.
  */
+/** 커버 카탈로그를 쓰는 화면 — 집(헤더 커버)·멤버 관리(수정)·집 만들기. */
+const HOUSE_COVER_SCREENS: ReadonlySet<Screen> = new Set<Screen>([
+  'house',
+  'houseMembers',
+  'createHouse',
+]);
+
 export function useHousePages({
   nav,
   data,
@@ -96,6 +106,7 @@ export function useHousePages({
     | 'searchError'
     | 'retry'
     | 'retrySearch'
+    | 'ensureSearch'
     | 'refreshHouses'
     | 'pendingJoinRequests'
     | 'cancelJoinRequest'
@@ -129,6 +140,7 @@ export function useHousePages({
     leaveHouseWithLinked: MissionLinks['leaveHouseWithLinked'];
     deleteMissionWithLinked: MissionLinks['deleteMissionWithLinked'];
     removeMissionRoutine: MissionLinks['removeMissionRoutine'];
+    unlinkMissionRoutine: MissionLinks['unlinkMissionRoutine'];
     addMissionRoutine: MissionLinks['addMissionRoutine'];
     houseLinkedRoutines: MissionLinks['houseLinkedRoutines'];
     contributedMissionIdList: MissionLinks['contributedMissionIdList'];
@@ -173,6 +185,7 @@ export function useHousePages({
     searchError,
     retry: retryHouses,
     retrySearch,
+    ensureSearch,
     refreshHouses,
     pendingJoinRequests,
     cancelJoinRequest,
@@ -196,6 +209,7 @@ export function useHousePages({
     leaveHouseWithLinked,
     deleteMissionWithLinked,
     removeMissionRoutine,
+    unlinkMissionRoutine,
     addMissionRoutine,
     houseLinkedRoutines,
     contributedMissionIdList,
@@ -298,7 +312,13 @@ export function useHousePages({
   }, [screen, currentHouse, catalogue, shopLoading, loadRoomPreviews]);
 
   // Selectable house-cover catalog (집 생성·집 정보 수정).
-  const { covers: houseCovers } = useHouseCovers();
+  // 집 탐색 목록·커버 카탈로그는 그 화면에 처음 들어갈 때 받는다 (성능 장부 N3).
+  useEffect(() => {
+    if (screen === 'houseSearch') ensureSearch();
+  }, [screen, ensureSearch]);
+  const coversWanted = useRef(false);
+  if (HOUSE_COVER_SCREENS.has(screen)) coversWanted.current = true;
+  const { covers: houseCovers } = useHouseCovers(coversWanted.current);
 
   // --- memo 화면(HouseScreen)으로 가는 콜백/파생 prop (#539) ---
   // 인라인 화살표·렌더마다 새로 만드는 객체는 memo 경계를 무효화한다. 매 렌더
@@ -327,10 +347,21 @@ export function useHousePages({
   // 공동 미션 화면 (#875) — 예전엔 집 화면 위 모달이었다.
   const openMissions = useCallback(() => setScreen('houseMissions'), [setScreen]);
   const closeMissions = useCallback(() => setScreen('house'), [setScreen]);
+  // 집 채팅 (#1408) — 레일 '채팅'. 배지는 방 상태 캐시(POST chat-room)에서 파생하고,
+  // 채팅 화면의 소켓·읽음 응답이 같은 캐시를 갱신한다. 집 탭·채팅에서만 조회한다.
+  const openChat = useCallback(() => setScreen('houseChat'), [setScreen]);
+  const closeChat = useCallback(() => setScreen('house'), [setScreen]);
+  const chatUnread = useHouseChatUnread(
+    currentHouse?.houseId,
+    screen === 'house' || screen === 'houseChat',
+  );
   // 관리 중 집이 사라지면(마지막 집 나가기·삭제, 갱신으로 강퇴 확인 등) 집
   // 탭으로 돌린다 — currentHouse 없는 구성원 화면은 그릴 것이 없다.
   useEffect(() => {
-    if ((screen === 'houseMembers' || screen === 'houseMissions') && !currentHouse)
+    if (
+      ((screen === 'houseMembers' || screen === 'houseMissions') && !currentHouse) ||
+      (screen === 'houseChat' && !currentHouse?.houseId)
+    )
       setScreen('house');
   }, [screen, currentHouse, setScreen]);
   const handleAcceptJoinRequest = useCallback(
@@ -386,6 +417,12 @@ export function useHousePages({
       void removeMissionRoutine(mission.id);
     },
     [removeMissionRoutine],
+  );
+  const handleUnlinkMissionRoutine = useCallback(
+    (mission: { id: number }) => {
+      void unlinkMissionRoutine(mission.id);
+    },
+    [unlinkMissionRoutine],
   );
   // 온보딩 자동 입주 허용 (#1407) — 방장이 집 관리를 열었을 때만 조회해 수정 시트의 현재 값으로.
   const { show: toast } = useToast();
@@ -458,6 +495,9 @@ export function useHousePages({
     onCreateMission: handleCreateMission,
     onDeleteMission: handleDeleteMission,
     onOpenMissions: openMissions,
+    // houseId가 있는 내 집에서만 레일에 '채팅'이 뜬다.
+    onOpenChat: currentHouse?.houseId ? openChat : undefined,
+    chatUnread,
     onUpdateHouse: handleUpdateHouse,
     onTransferOwnership: handleTransferOwnership,
     onReissueInviteCode: handleReissueInviteCode,
@@ -466,7 +506,13 @@ export function useHousePages({
 
   /** 현재 화면이 집 서브화면 3종이면 그 JSX, 아니면 null — 셸이 그대로 렌더. */
   const subScreen =
-    screen === 'houseMissions' && currentHouse ? (
+    screen === 'houseChat' && currentHouse?.houseId ? (
+      <HouseChatPage
+        houseId={currentHouse.houseId}
+        houseName={currentHouse.name}
+        onBack={closeChat}
+      />
+    ) : screen === 'houseMissions' && currentHouse ? (
       <HouseMissionsScreen
         house={currentHouse}
         missions={currentHouse.missions ?? []}
@@ -479,6 +525,7 @@ export function useHousePages({
         onClaimMission={handleClaimMission}
         onAddMissionRoutine={handleAddMissionRoutine}
         onRemoveMissionRoutine={handleRemoveMissionRoutine}
+        onUnlinkMissionRoutine={handleUnlinkMissionRoutine}
       />
     ) : screen === 'houseMembers' && currentHouse ? (
       <HouseMembersScreen

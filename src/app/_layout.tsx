@@ -17,7 +17,12 @@ import { notifyAppForegroundInteraction } from '@/lib/app-icon-events';
 import { AnimatedSplashOverlay } from '@/components/app/animated-splash-overlay';
 import { ToastProvider } from '@/components/ui/toast';
 import { AuthProvider } from '@/hooks/use-auth';
-import { BrandThemeProvider, useResolvedScheme, useTokens } from '@/hooks/use-tokens';
+import {
+  BrandThemeProvider,
+  useBrandTheme,
+  useResolvedScheme,
+  useTokens,
+} from '@/hooks/use-tokens';
 import { navigationThemeFor } from '@/lib/navigation-theme';
 import { LanguageProvider } from '@/hooks/use-language';
 import { useWebFonts } from '@/hooks/use-web-fonts';
@@ -57,6 +62,8 @@ void SplashScreen.preventAutoHideAsync().catch(() => {});
 function NavigationTheme({ children }: { children: ReactNode }) {
   const scheme = useResolvedScheme();
   const t = useTokens();
+  // Web-only app-font registration (#382) — 선택한 폰트만(B4). 네이티브는 빌드에 내장.
+  useWebFonts(useBrandTheme().fontId);
   // 토큰이 바뀔 때만 새 객체 — 매 렌더 새 테마면 내비게이션 트리 전체가 다시 그려진다.
   const theme = useMemo(() => navigationThemeFor(scheme, t), [scheme, t]);
   return (
@@ -73,8 +80,6 @@ function NavigationTheme({ children }: { children: ReactNode }) {
  * post-signup onboarding step are follow-ups.
  */
 function RootLayout() {
-  // Web-only app-font registration (#382); native embeds them at build time.
-  useWebFonts();
   // 화면 전환 추적 (#1376) — Expo Router의 내비게이션 컨테이너를 Sentry에 등록한다.
   const navigationRef = useNavigationContainerRef();
   useEffect(() => {

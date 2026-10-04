@@ -7,7 +7,7 @@
  *
  * 콜백은 전부 useCallback, 반환 객체는 useMemo — memo 경계(#539) 보존.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { ApiError, ErrorCode, fetchHousePreviewDetail, fetchHouses, requestHouseJoin } from '@/api';
 import { toHousePreviewDetail, toSearchHouse, type ShopCatalogue } from '@/api/adapters';
@@ -101,7 +101,14 @@ export function useHouseSearch() {
     }
   }, [reloadSearch]);
 
-  useEffect(() => {
+  /**
+   * 탐색 화면에 처음 들어갈 때 한 번 받는다 (성능 장부 N3) — 예전엔 집이 있는 사용자도
+   * 앱 시작마다 30건을 받았다. 이후 갱신은 참여 신청·다시 시도가 한다.
+   */
+  const requested = useRef(false);
+  const ensureSearch = useCallback(() => {
+    if (requested.current) return;
+    requested.current = true;
     void loadSearch();
   }, [loadSearch]);
 
@@ -161,6 +168,7 @@ export function useHouseSearch() {
       searchError,
       /** Re-run the failed initial load (에러 상태의 다시 시도, #549). */
       retrySearch: loadSearch,
+      ensureSearch,
       joinHouse,
       previewHouse,
     }),
@@ -172,6 +180,7 @@ export function useHouseSearch() {
       searchLoading,
       searchError,
       loadSearch,
+      ensureSearch,
       joinHouse,
       previewHouse,
     ],

@@ -27,6 +27,7 @@ const LIMITS: Record<string, number> = {
   'ko-KR/play/title.txt': 30,
   'ko-KR/play/short-description.txt': 80,
   'ko-KR/play/full-description.txt': 4000,
+  'ko-KR/play/release-notes.txt': 500,
   // en-US (#893 3단계) — 상한은 언어와 무관하게 같다.
   'en-US/app-store/name.txt': 30,
   'en-US/app-store/subtitle.txt': 30,
@@ -73,6 +74,7 @@ describe('스토어 메타데이터 (#818)', () => {
     'ko-KR/app-store/keywords.txt',
     'ko-KR/play/short-description.txt',
     'ko-KR/play/full-description.txt',
+    'ko-KR/play/release-notes.txt',
     'en-US/app-store/description.txt',
     'en-US/app-store/promotional-text.txt',
     'en-US/app-store/release-notes.txt',

@@ -432,8 +432,8 @@ describe('AppShell — 연동 루틴 스윕', () => {
   });
 });
 
-// --- 이름 매칭 연동분 1회성 승격 (#578) — 서버 백필이 없어 클라가 심는다. ---
-describe('AppShell — 링크 id 승격 마이그레이션', () => {
+// --- 이름 매칭 연동 승격(#578)은 2026-10-04에 없앴다 — 사용자가 해제한 연동이 다음 실행에 되살아났다. ---
+describe('AppShell — 이름 매칭 자동 연동 없음', () => {
   const json = (body: unknown) => ({
     ok: true,
     status: 200,
@@ -444,7 +444,7 @@ describe('AppShell — 링크 id 승격 마이그레이션', () => {
   beforeEach(() => {
     calls = [];
     // 구식 세계: 이름은 맞물리는데(카테고리명 == 집 이름, 루틴명 == 미션명)
-    // 링크 id가 없다 — 부팅 승격이 PUT으로 id를 심어야 한다.
+    // 링크 id가 없다 — 그래도 부팅 때 연동하지 않는다.
     global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
       const method = init?.method ?? 'GET';
       calls.push({ url, method, body: init?.body as string | undefined });
@@ -489,21 +489,12 @@ describe('AppShell — 링크 id 승격 마이그레이션', () => {
     }) as unknown as typeof fetch;
   });
 
-  it('이름 일치·id 없음 카테고리와 루틴에 링크 id를 PUT으로 심는다', async () => {
+  it('이름이 같아도 부팅 때 카테고리·루틴에 링크를 심지 않는다', async () => {
     await renderWithProviders(<AppShell />);
-
-    // 카테고리 승격 — houseId가 실린 PUT.
-    await waitFor(() => {
-      const put = calls.find((c) => c.method === 'PUT' && c.url.includes('/categories/20'));
-      expect(JSON.parse(put?.body ?? '{}').houseId).toBe(2);
-    });
-    // 루틴 승격 — ACTIVE 미션(6)의 id가 실린 PUT (EXPIRED 8은 제외).
-    await waitFor(() => {
-      const put = calls.find((c) => c.method === 'PUT' && c.url.includes('/routines/44'));
-      expect(JSON.parse(put?.body ?? '{}').houseMissionId).toBe(6);
-    });
-    // 승격은 삭제(스윕 오발)를 유발하지 않는다.
-    expect(calls.some((c) => c.method === 'DELETE')).toBe(false);
+    await waitFor(() => expect(calls.some((c) => c.url.includes('/houses/2/missions'))).toBe(true));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(calls.some((c) => c.method === 'PUT' && c.url.includes('/categories/20'))).toBe(false);
+    expect(calls.some((c) => c.method === 'PUT' && c.url.includes('/routines/44'))).toBe(false);
   });
 });
 
@@ -581,5 +572,71 @@ describe('AppShell — 루트 뒤로가기 더블 백 종료 (#522)', () => {
     nowSpy.mockRestore();
     spy.mockRestore();
     exitSpy.mockRestore();
+  });
+});
+
+// 완료 후 재조회 분기 (성능 장부 N2) — 방 성장·캐릭터는 지급 코인을 따르므로 보상 0 완료는
+// 달력만 다시 받는다. 보상이 있으면 방·캐릭터도.
+describe('AppShell — 완료 후 재조회 (성능 장부 N2)', () => {
+  const json = (body: unknown) => ({
+    ok: true,
+    status: 200,
+    text: async () => JSON.stringify(body),
+  });
+  let calls: { url: string; method: string }[] = [];
+  let reward = 0;
+  const worldFetch = async (url: string, init?: RequestInit) => {
+    const method = init?.method ?? 'GET';
+    calls.push({ url, method });
+    if (url.includes('/auth/')) return json({ accessToken: 't', refreshToken: 'r' });
+    if (method === 'POST' && url.includes('/routines/44/logs'))
+      return json({ rewardAmount: reward, rewardCurrencyType: 'COIN' });
+    if (url.includes('/categories')) return json({ items: [{ id: 20, name: '건강' }] });
+    if (url.endsWith('/routines'))
+      return json({ items: [{ id: 44, title: '스트레칭', categoryId: 20, repeatType: 'DAILY' }] });
+    if (url.endsWith('/today')) return json({ categories: [], summary: {}, streak: {} });
+    if (url.endsWith('/me')) return json({ userId: 4, nickname: '준서' });
+    return json({ items: [] });
+  };
+  beforeEach(() => {
+    calls = [];
+    global.fetch = jest.fn(worldFetch) as unknown as typeof fetch;
+  });
+
+  const completeAndCollect = async () => {
+    const { getByLabelText } = await renderWithProviders(<AppShell />);
+    await waitFor(() => expect(calls.some((c) => c.url.includes('/rooms/me'))).toBe(true));
+    await fireEvent.press(getByLabelText('스트레칭'));
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'POST' && c.url.includes('/routines/44/logs'))).toBe(
+        true,
+      ),
+    );
+    const at = calls.findIndex((c) => c.method === 'POST' && c.url.includes('/routines/44/logs'));
+    // 무효화가 붙인 재조회까지 기다린다(달력은 어느 경우든 다시 받는다).
+    await waitFor(() =>
+      expect(calls.slice(at).some((c) => c.url.includes('/calendar'))).toBe(true),
+    );
+    return calls.slice(at + 1).filter((c) => c.method === 'GET');
+  };
+
+  it('보상 0 완료 — 방·캐릭터·지갑은 다시 받지 않는다', async () => {
+    reward = 0;
+    const after = await completeAndCollect();
+    expect(after.some((c) => c.url.includes('/rooms/me'))).toBe(false);
+    expect(after.some((c) => c.url.includes('/me/characters'))).toBe(false);
+    expect(after.some((c) => c.url.includes('/wallets'))).toBe(false);
+  });
+
+  it('보상 있는 완료 — 방은 다시 받고, 지갑은 응답으로 반영해 받지 않는다', async () => {
+    reward = 10;
+    const after = await completeAndCollect();
+    const at = calls.findIndex((c) => c.method === 'POST' && c.url.includes('/routines/44/logs'));
+    await waitFor(() =>
+      expect(
+        calls.slice(at + 1).some((c) => c.method === 'GET' && c.url.includes('/rooms/me')),
+      ).toBe(true),
+    );
+    expect(after.some((c) => c.url.includes('/wallets'))).toBe(false);
   });
 });

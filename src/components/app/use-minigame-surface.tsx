@@ -12,6 +12,7 @@ import {
 import type { MinigameReplay } from '@/api/minigames';
 import type { Screen } from '@/components/app/navigation';
 import { MinigamePlayer } from '@/components/app/minigame-player';
+import { LandscapeStage, useLandscapeStage } from '@/components/minigame/landscape-stage';
 import { MinigamesScreen } from '@/components/screens/minigames-screen';
 import { MinigameRunnerScreen } from '@/components/screens/minigame-runner-screen';
 import { MinigameLeaderboardScreen } from '@/components/screens/minigame-leaderboard-screen';
@@ -22,7 +23,12 @@ import {
   type MinigameCode,
 } from '@/constants/minigames';
 import { useLatestRef } from '@/hooks/use-stable-value';
-import { useMinigames, useMinigameLeaderboard, useMinigameRun } from '@/hooks/use-minigames';
+import {
+  useMinigameBests,
+  useMinigames,
+  useMinigameLeaderboard,
+  useMinigameRun,
+} from '@/hooks/use-minigames';
 import { track } from '@/lib/analytics';
 
 // Retained transition nodes must match the current session, not just the game screen.
@@ -35,6 +41,7 @@ function ActiveMinigame({
   practice,
   finished,
   onFinish,
+  onExit,
 }: {
   gameCode: MinigameCode;
   sessionId: string;
@@ -42,18 +49,34 @@ function ActiveMinigame({
   practice: boolean;
   finished: boolean;
   onFinish: (replay: MinigameReplay) => void;
+  onExit: () => void;
 }) {
   const activeSessionId = useContext(MinigameActiveContext);
-  return (
+  const active = activeSessionId === sessionId && !finished;
+  const landscape = useLandscapeStage();
+  const player = (
     <MinigamePlayer
       gameCode={gameCode}
       seed={seed}
       practice={practice}
-      active={activeSessionId === sessionId && !finished}
+      active={active}
       onFinish={onFinish}
     />
   );
+  // 루틴 러너는 가로로 긴 판이라 세로 폰에선 화면 1/4도 안 된다 — 판 동안만 가로 무대로.
+  // 끝나면(결과·저장 중) 무대를 내리고 세로 화면이 이어받는다.
+  if (gameCode === 'room-runner' && landscape) {
+    return (
+      <LandscapeStage visible={active} aspect={RUNNER_ASPECT} onExit={onExit}>
+        {player}
+      </LandscapeStage>
+    );
+  }
+  return player;
 }
+
+/** 러너 캔버스 비율 (`runner-html` 720×420). */
+const RUNNER_ASPECT = 720 / 420;
 
 export function useMinigameSurface({
   screen,
@@ -66,6 +89,11 @@ export function useMinigameSurface({
   const definition = MINIGAME_DEFINITIONS[gameCode];
   const catalog = useMinigames(screen === 'minigames');
   const ranking = useMinigameLeaderboard(gameCode, screen === 'minigameLeaderboard');
+  // 목록 카드의 내 최고 기록 (#1425) — 랭킹과 같은 캐시.
+  const bests = useMinigameBests(
+    catalog.games.map((g) => g.gameCode),
+    screen === 'minigames',
+  );
   // Independent sessions preserve failed submissions when the user visits another game.
   const runner = useMinigameRun('room-runner');
   const stairs = useMinigameRun('cat-stairs');
@@ -127,6 +155,7 @@ export function useMinigameSurface({
       <MinigamesScreen
         {...catalog}
         practiceGames={PLAYABLE_MINIGAMES}
+        bests={bests}
         onRetry={catalog.retry}
         onSelectGame={openGame}
         onLeaderboard={openLeaderboard}
@@ -150,6 +179,7 @@ export function useMinigameSurface({
               practice={session.practice}
               finished={run.finished}
               onFinish={onFinish}
+              onExit={openMinigames}
             />
           ) : undefined
         }

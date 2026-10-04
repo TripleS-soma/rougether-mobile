@@ -412,7 +412,11 @@ describe('달력 탭 롱프레스 재정렬 (2026-09-08)', () => {
     expect(getByGestureTestId('routine-drag-routine-done').config.enabled).toBe(false);
     expect(getByGestureTestId('routine-drag-routine-gone').config.enabled).toBe(false);
     // 달력 탭 오늘 — 클라이언트 경로도 드래그 활성 (예전엔 방 탭에서만).
-    await fireEvent.press(ui.getByLabelText(`${TODAY}, 오늘`));
+    // 오늘이 공휴일이면 라벨이 `날짜, 공휴일, 오늘`이라 정확 일치가 깨진다(2026-09-24 추석) — 접두 매칭.
+    // 어제가 지난달이면(오늘이 1일) 달력이 지난달에 머물러 있다 — 이번 달로 돌아와서 누른다(2026-10-01 CI).
+    if (YESTERDAY.slice(0, 7) < TODAY.slice(0, 7))
+      await fireEvent.press(ui.getByLabelText('다음 달'));
+    await fireEvent.press(ui.getByLabelText(calendarCellLabel(TODAY)));
     expect(getByGestureTestId('routine-drag-routine-a').config.enabled).toBe(true);
   });
 

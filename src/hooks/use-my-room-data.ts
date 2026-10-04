@@ -29,19 +29,18 @@ import {
   deleteRoutine as apiDeleteRoutine,
   deleteTodo,
   fetchCategories,
-  fetchMe,
-  fetchRoutines,
-  fetchToday,
-  fetchTodos,
   fetchWallets,
   skipRoutineOccurrence,
   uncompleteRoutine,
   uncompleteTodo,
+  unlinkCategoryHouse as apiUnlinkCategoryHouse,
+  unlinkRoutineMission as apiUnlinkRoutineMission,
   updateCategory as apiUpdateCategory,
   updateMe,
   updateRoutine as apiUpdateRoutine,
   updateTodo,
 } from '@/api';
+import { getSessionUserId } from '@/api/auth';
 import {
   toAppCategory,
   toAppRoutine,
@@ -69,6 +68,7 @@ import { loadRoutineSkips, saveRoutineSkips, type RoutineSkips } from '@/lib/rou
 import { identifyUser, track } from '@/lib/analytics';
 import { setErrorUser } from '@/lib/error-reporting';
 import { useCalendarData } from '@/hooks/use-calendar-data';
+import { fetchMyRoomBootData, takeMyRoomPrefetch } from '@/lib/my-room-prefetch';
 import { i18n } from '@/i18n';
 
 /** 완료 토글 결과 — 코인 보상액과 서버 자동 미션 기여 결과 (#578). */
@@ -99,15 +99,12 @@ export function useMyRoomData() {
   const userIdRef = useRef<number | undefined>(undefined);
 
   const reload = useCallback(async () => {
-    const [cats, rts, tds, today, wals, me] = await Promise.all([
-      // includeDeleted → deleted categories still resolve for past records.
-      fetchCategories(true),
-      fetchRoutines(),
-      fetchTodos(),
-      fetchToday(),
-      fetchWallets(),
-      fetchMe(),
-    ]);
+    // 앱 루트가 게이트 확인과 동시에 띄워 둔 첫 요청이 있으면 넘겨받는다 (성능 장부 N1).
+    // 선행 요청이 실패하면 평소처럼 새로 받는다.
+    const prefetched = takeMyRoomPrefetch(getSessionUserId());
+    const [cats, rts, tds, today, wals, me] = prefetched
+      ? await prefetched.catch(() => fetchMyRoomBootData())
+      : await fetchMyRoomBootData();
     const appCatsAll = cats.map((c, i) => toAppCategory(c, i));
     const appCats = appCatsAll.filter((c) => !c.deleted);
     userIdRef.current = me.userId ?? undefined;
@@ -193,10 +190,15 @@ export function useMyRoomData() {
       try {
         const numId = toServerItemId(id);
         let rewardAmount: number | undefined;
+        let rewardCurrency: 'COIN' | 'DIAMOND' | undefined;
         let contribution: HouseMissionContributeResponse | null | undefined;
         if (item?.kind === 'todo') {
           if (wasDone) await uncompleteTodo(numId);
-          else rewardAmount = (await completeTodo(numId)).rewardAmount;
+          else {
+            const done = await completeTodo(numId);
+            rewardAmount = done.rewardAmount;
+            rewardCurrency = done.rewardCurrencyType;
+          }
         } else {
           // 루틴 완료·취소는 **스트릭을 바꾼다.** 서버가 갱신된 값을 응답에
           // 실어주므로 클라이언트가 다시 셀 필요가 없다 — 예전엔 그 값을 버려서
@@ -208,6 +210,7 @@ export function useMyRoomData() {
           } else {
             const log = await completeRoutine(numId, date);
             rewardAmount = log.rewardAmount;
+            rewardCurrency = log.rewardCurrencyType;
             // 오늘(KST) 완료면 서버가 연동 미션에 자동 기여한 결과가 실려온다.
             contribution = log.houseMissionContribution;
             if (typeof log.streak?.currentCount === 'number') setStreak(log.streak.currentCount);
@@ -220,7 +223,19 @@ export function useMyRoomData() {
         if (!wasDone && !rewardAmount && date === todayIso())
           toast(i18n.t('routineTodo.toast.coinCapReached'));
         if (!wasDone) track('routine_complete', { kind: item?.kind ?? 'routine' });
-        await refreshWallet();
+        // 지갑 (성능 장부 N2) — 완료는 응답의 지급액(COIN)만큼 더하면 서버와 같다(spec
+        // routine-todo api.md: 지급·차감은 한 트랜잭션, 보상 0이면 지갑 불변). 취소는
+        // 회수액이 응답에 없어 다시 받는다.
+        if (wasDone) await refreshWallet();
+        else if (rewardAmount && rewardAmount > 0) {
+          const earned = rewardAmount;
+          // 보상 통화는 지금 COIN뿐이지만(spec) 응답이 다른 통화를 말하면 그쪽에 더한다.
+          setWallet((w) =>
+            rewardCurrency === 'DIAMOND'
+              ? { ...w, diamond: w.diamond + earned }
+              : { ...w, coin: w.coin + earned },
+          );
+        }
         return wasDone
           ? null
           : { rewardAmount: rewardAmount ?? 0, houseMissionContribution: contribution };
@@ -552,46 +567,61 @@ export function useMyRoomData() {
   );
 
   /**
-   * 이름 매칭 연동분 1회성 승격 (#578) — 서버에 링크 id를 심고 로컬 상태에도
-   * 반영한다. 실패는 조용히 건너뛴다(조건 기반이라 다음 부팅에 재시도).
+   * 루틴의 공동미션 연동 해제 — 서버 전용 DELETE(PUT null은 "유지"라 해제가 안 된다).
+   * 낙관적으로 링크를 걷고, 실패하면 되돌리며 알린다. 루틴과 이미 반영된 기여는 남는다.
    */
-  const linkRoutineMission = useCallback(
-    async (id: string, missionId: number) => {
+  const { mutateAsync: sendRoutineUnlink } = useMutation({
+    mutationFn: apiUnlinkRoutineMission,
+    networkMode: 'always',
+  });
+  const unlinkRoutineMission = useCallback(
+    async (id: string) => {
       const item = findItem(id);
-      if (!item || item.kind === 'todo') return;
+      if (!item || item.kind === 'todo' || item.linkedMissionId == null) return false;
+      const missionId = item.linkedMissionId;
+      const setLink = (v: number | undefined) =>
+        setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, linkedMissionId: v } : r)));
+      setLink(undefined);
       try {
-        await apiUpdateRoutine(
-          toServerItemId(id),
-          toRoutineUpdate(item, { linkedMissionId: missionId }),
-        );
-        setRoutines((prev) =>
-          prev.map((r) => (r.id === id ? { ...r, linkedMissionId: missionId } : r)),
-        );
+        await sendRoutineUnlink(toServerItemId(id));
+        return true;
       } catch {
-        // Silent — 승격 실패는 이번 부팅에선 이름 매칭 없이 미연동으로 남는다.
+        setLink(missionId);
+        toast(i18n.t('routineTodo.toast.missionUnlinkFailed'), 'error');
+        return false;
       }
     },
-    [findItem],
+    [findItem, sendRoutineUnlink, toast],
   );
 
-  /** linkRoutineMission의 카테고리판 — houseId를 심는다 (#578). */
-  const linkCategoryHouse = useCallback(
-    async (id: string, houseId: number) => {
+  /** 카테고리의 집 연동 해제 — unlinkRoutineMission의 카테고리판. 소속 루틴·투두는 남는다. */
+  const { mutateAsync: sendCategoryUnlink } = useMutation({
+    mutationFn: apiUnlinkCategoryHouse,
+    networkMode: 'always',
+  });
+  const unlinkCategoryHouse = useCallback(
+    async (id: string) => {
       const cat = categories.find((c) => c.id === id);
-      if (!cat) return;
+      if (!cat || cat.houseId == null) return false;
+      const houseId = cat.houseId;
+      // 달력의 메타 소스(allCategories)도 같이 — updateRoutineCategory와 같은 규칙(#481).
+      const setLink = (v: number | undefined) => {
+        const apply = (prev: RoutineCategoryMeta[]) =>
+          prev.map((c) => (c.id === id ? { ...c, houseId: v } : c));
+        setCategories(apply);
+        setAllCategories(apply);
+      };
+      setLink(undefined);
       try {
-        const sortOrder = categories.findIndex((c) => c.id === id);
-        await apiUpdateCategory(
-          Number(id),
-          toCategoryCreate({ ...cat, houseId }, sortOrder >= 0 ? sortOrder : undefined),
-        );
-        setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, houseId } : c)));
-        setAllCategories((prev) => prev.map((c) => (c.id === id ? { ...c, houseId } : c)));
+        await sendCategoryUnlink(Number(id));
+        return true;
       } catch {
-        // Silent — 다음 부팅에 재시도.
+        setLink(houseId);
+        toast(i18n.t('routineTodo.toast.houseUnlinkFailed'), 'error');
+        return false;
       }
     },
-    [categories],
+    [categories, sendCategoryUnlink, toast],
   );
 
   const updateRoutineCategory = useCallback(
@@ -745,8 +775,8 @@ export function useMyRoomData() {
       deleteRoutine,
       createRoutineCategory,
       ensureCategory,
-      linkRoutineMission,
-      linkCategoryHouse,
+      unlinkRoutineMission,
+      unlinkCategoryHouse,
       updateRoutineCategory,
       deleteRoutineCategory,
       deleteCategoryCascade,
@@ -784,8 +814,8 @@ export function useMyRoomData() {
       deleteRoutine,
       createRoutineCategory,
       ensureCategory,
-      linkRoutineMission,
-      linkCategoryHouse,
+      unlinkRoutineMission,
+      unlinkCategoryHouse,
       updateRoutineCategory,
       deleteRoutineCategory,
       deleteCategoryCascade,

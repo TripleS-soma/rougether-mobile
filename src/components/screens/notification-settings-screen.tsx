@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import type { PushRegistrationStep } from '@/lib/push-token';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
+import { FEED_ENABLED } from '@/constants/feed';
 import { Radius, Spacing } from '@/constants/theme';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
@@ -17,6 +18,8 @@ export type NotificationSettings = {
   all: boolean;
   reminder: boolean;
   house: boolean;
+  /** 피드 댓글 (#1409) — 행은 FEED_ENABLED일 때만 보인다. */
+  feed: boolean;
 };
 
 /** 서버 기본과 동일 — 한 번도 끈 적 없는 항목은 켜짐. */
@@ -24,11 +27,13 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   all: true,
   reminder: true,
   house: true,
+  feed: true,
 };
 
 type RowKey = Exclude<keyof NotificationSettings, 'all'>;
 /** 행 문구는 `member.notificationSettings.rows.<key>` (#893). */
-const ROW_KEYS: RowKey[] = ['reminder', 'house'];
+// 피드 댓글 행은 피드가 숨어 있는 동안 보이지 않는다 (#1409, FEED_ENABLED).
+const ROW_KEYS: RowKey[] = FEED_ENABLED ? ['reminder', 'house', 'feed'] : ['reminder', 'house'];
 
 export type NotificationSettingsScreenProps = {
   /** Server-backed settings — controlled by the shell (fetch + optimistic PATCH). */

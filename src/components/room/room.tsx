@@ -89,6 +89,12 @@ export type RoomProps = {
    * Fill a house slot whose parent already supplies the shared room aspect ratio.
    */
   fill?: boolean;
+  /**
+   * 원본 해상도로 디코딩할지 — 기본은 `fill`과 같다(집 창문·미리보기는 카메라 줌 대상).
+   * 집 좌석처럼 평소엔 작게 보이는 곳은 확대했을 때만 켠다 (성능 장부 M2: 좌석마다 벽지·바닥·
+   * 가구를 원본으로 풀어 4인실에서도 네이티브 메모리가 약 43MB 늘었다).
+   */
+  sharp?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -184,6 +190,7 @@ export const Room = memo(function Room({
   onRegionPress,
   activeRegion = null,
   fill = false,
+  sharp = fill,
   style,
 }: RoomProps) {
   const t = useTokens();
@@ -258,8 +265,8 @@ export const Room = memo(function Room({
             contentFit="cover"
             cachePolicy="memory-disk"
             transition={120}
-            // fill(집 창문·미리보기)은 카메라 줌 대상 — 원본 해상도 유지.
-            allowDownscaling={!fill}
+            // 확대 대상(sharp)만 원본 해상도.
+            allowDownscaling={!sharp}
             accessibilityLabel={background.name}
           />
         ) : (
@@ -277,7 +284,7 @@ export const Room = memo(function Room({
           contentPosition={ROOM_RENDER_CONTRACT.surfaces.wallpaper.contentPosition}
           cachePolicy="memory-disk"
           transition={120}
-          allowDownscaling={!fill}
+          allowDownscaling={!sharp}
           accessibilityLabel={wallpaper.name}
         />
       ) : background && wallpaper ? (
@@ -292,7 +299,7 @@ export const Room = memo(function Room({
             contentPosition={ROOM_RENDER_CONTRACT.surfaces.floor.contentPosition}
             cachePolicy="memory-disk"
             transition={120}
-            allowDownscaling={!fill}
+            allowDownscaling={!sharp}
             accessibilityLabel={floor.name}
           />
         ) : (
@@ -355,7 +362,7 @@ export const Room = memo(function Room({
                   <SpeakerSprite playing={speakerPlaying} />
                 </Pressable>
               ) : (
-                <FurniturePlaceholder item={item} sharp={fill} />
+                <FurniturePlaceholder item={item} sharp={sharp} />
               )}
             </View>
           ))
@@ -375,7 +382,7 @@ export const Room = memo(function Room({
             // 여기서만 포즈가 넘어간다 — 다음 장을 미리 받아둘 값어치가 있다 (#970).
             prefetchFrames
             style={styles.characterFill}
-            sharp={fill}
+            sharp={sharp}
           />
         </Pressable>
       ) : (
@@ -388,7 +395,7 @@ export const Room = memo(function Room({
             characterId={characterId}
             frames={characterFrames}
             style={styles.characterFill}
-            sharp={fill}
+            sharp={sharp}
           />
         </View>
       )}

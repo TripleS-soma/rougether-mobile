@@ -853,3 +853,161 @@ describe('useMyRoomData — 루틴 몫 옮기기 (#189)', () => {
     }
   });
 });
+
+describe('useMyRoomData — 완료 후 지갑 (성능 장부 N2)', () => {
+  it('보상 있는 완료는 응답만큼 더하고 다시 받지 않는다, 보상 0은 그대로, 취소는 다시 받는다', async () => {
+    const todayIso = calendarToday();
+    let reward = 10;
+    let walletCoin = 100;
+    const walletGets: number[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      if (url.includes('/wallets')) {
+        walletGets.push(walletCoin);
+        return res({ items: [{ currencyType: 'COIN', balance: walletCoin }] });
+      }
+      if (url.includes('/categories')) return res({ items: [{ id: 1, name: '건강' }] });
+      if (url.endsWith('/routines'))
+        return res({ items: [{ id: 9, title: '운동', categoryId: 1, repeatType: 'DAILY' }] });
+      if (method === 'POST' && url.includes('/routines/9/logs'))
+        return res({ rewardAmount: reward });
+      if (method === 'DELETE') return res({});
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1 });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    const routine = result.current.routines[0];
+    const initialGets = walletGets.length;
+    expect(result.current.wallet.coin).toBe(100);
+
+    await act(async () => {
+      await result.current.toggleCompletion(routine.id, todayIso);
+    });
+    expect(result.current.wallet.coin).toBe(110);
+    expect(walletGets.length).toBe(initialGets);
+
+    // 취소 — 서버가 회수한 뒤의 잔액을 다시 받는다.
+    walletCoin = 100;
+    await act(async () => {
+      await result.current.toggleCompletion(routine.id, todayIso);
+    });
+    expect(walletGets.length).toBe(initialGets + 1);
+    expect(result.current.wallet.coin).toBe(100);
+
+    // 보상 0 완료 — 지갑 불변, 요청 없음.
+    reward = 0;
+    await act(async () => {
+      await result.current.toggleCompletion(routine.id, todayIso);
+    });
+    expect(walletGets.length).toBe(initialGets + 1);
+    expect(result.current.wallet.coin).toBe(100);
+  });
+});
+
+describe('useMyRoomData — 연동 해제 (루틴↔미션, 카테고리↔집)', () => {
+  /** 해제 요청을 붙잡아 두고 낙관적 반영을 본 뒤 성공/실패로 풀어준다. */
+  function serve(missionId: number | null = 6) {
+    const calls: { url: string; method: string }[] = [];
+    let release: (r: ReturnType<typeof res>) => void = () => {};
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      calls.push({ url, method });
+      if (method === 'DELETE' && /house(-mission)?-link$/.test(url))
+        return new Promise((resolve) => (release = resolve));
+      if (url.includes('/categories'))
+        return res({ items: [{ id: 1, name: '우리집', houseId: 2 }] });
+      if (url.endsWith('/routines'))
+        return res({
+          items: [{ id: 9, title: '스트레칭', categoryId: 1, repeatType: 'DAILY', houseMissionId: missionId }], // prettier-ignore
+        });
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1 });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+    return { calls, release: (r: ReturnType<typeof res>) => release(r) };
+  }
+
+  it('루틴 미션 연동 해제 — 링크를 즉시 걷고 DELETE …/house-mission-link를 보낸다', async () => {
+    const srv = serve();
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    let done: Promise<boolean> = Promise.resolve(false);
+    await act(async () => {
+      done = result.current.unlinkRoutineMission('r9');
+    });
+    // 응답 전 — 이미 미연동으로 보인다.
+    expect(result.current.routines[0].linkedMissionId).toBeUndefined();
+    await act(async () => {
+      srv.release(res(null, 204));
+      expect(await done).toBe(true);
+    });
+    expect(result.current.routines[0].linkedMissionId).toBeUndefined();
+    expect(
+      srv.calls.some((c) => c.method === 'DELETE' && c.url.endsWith('/routines/9/house-mission-link')), // prettier-ignore
+    ).toBe(true);
+    // PUT으로 해제를 시도하지 않는다(null은 "유지").
+    expect(srv.calls.some((c) => c.method === 'PUT')).toBe(false);
+  });
+
+  it('루틴 미션 연동 해제 실패 — 링크를 되돌린다', async () => {
+    const srv = serve();
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    let done: Promise<boolean> = Promise.resolve(true);
+    await act(async () => {
+      done = result.current.unlinkRoutineMission('r9');
+    });
+    await act(async () => {
+      srv.release(res({ code: 'INTERNAL' }, 500));
+      expect(await done).toBe(false);
+    });
+    expect(result.current.routines[0].linkedMissionId).toBe(6);
+  });
+
+  it('카테고리 집 연동 해제 — categories·allCategories 모두 즉시 반영, 실패 시 복구', async () => {
+    const srv = serve();
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    let done: Promise<boolean> = Promise.resolve(true);
+    await act(async () => {
+      done = result.current.unlinkCategoryHouse('1');
+    });
+    expect(result.current.categories[0].houseId).toBeUndefined();
+    expect(result.current.allCategories.find((c) => c.id === '1')?.houseId).toBeUndefined();
+    await act(async () => {
+      srv.release(res({ code: 'INTERNAL' }, 500));
+      expect(await done).toBe(false);
+    });
+    expect(result.current.categories[0].houseId).toBe(2);
+    expect(result.current.allCategories.find((c) => c.id === '1')?.houseId).toBe(2);
+
+    await act(async () => {
+      done = result.current.unlinkCategoryHouse('1');
+    });
+    await act(async () => {
+      srv.release(res(null, 204));
+      expect(await done).toBe(true);
+    });
+    expect(result.current.categories[0].houseId).toBeUndefined();
+    expect(
+      srv.calls.filter((c) => c.method === 'DELETE' && c.url.endsWith('/categories/1/house-link')),
+    ).toHaveLength(2);
+  });
+
+  it('연동이 없으면 요청 없이 false', async () => {
+    const srv = serve(null);
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    const before = srv.calls.length;
+    let ok = true;
+    await act(async () => {
+      ok = await result.current.unlinkRoutineMission('r9');
+    });
+    expect(ok).toBe(false);
+    expect(srv.calls.length).toBe(before);
+  });
+});

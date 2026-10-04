@@ -1,0 +1,151 @@
+{
+  "market": {
+    "creatorUnknown": "Deleted member",
+    "creator": "By {{name}}",
+    "coins": "{{n}} coins",
+    "imageA11y": "Image of {{name}}",
+    "list": {
+      "myOrders": "My orders",
+      "refreshA11y": "Refresh market",
+      "empty": "No furniture on the market yet",
+      "emptyHint": "List furniture you made in the AI furniture studio.",
+      "error": "Couldn't load the market.",
+      "more": "Load more",
+      "fromPrice": "From {{price}} coins",
+      "noAsk": "No sellers",
+      "lastPrice": "Last sold {{price}} coins",
+      "noTrade": "No trades yet",
+      "cardA11y": "View {{name}}"
+    },
+    "asset": {
+      "title": "Furniture details",
+      "loadError": "Couldn't load this furniture.",
+      "suspended": "Trading is suspended for this furniture",
+      "edition": "{{n}} issued",
+      "lastTrade": "Last price",
+      "bestAsk": "Lowest ask",
+      "none": "None",
+      "book": "Order book",
+      "asks": "Selling",
+      "bids": "Buying",
+      "bookEmpty": "No open orders",
+      "levelQty": "×{{n}}",
+      "trades": "Recent trades",
+      "tradesEmpty": "No trades yet",
+      "buy": "Buy",
+      "sell": "Sell",
+      "sellIssuance": "Sell issued stock",
+      "unissued": "{{n}} left in issued stock",
+      "ownedReason": "You already own this. You can hold only one of each furniture.",
+      "report": "Report",
+      "myOrders": "My orders"
+    },
+    "order": {
+      "buyTitle": "Buy order",
+      "sellTitle": "Sell order",
+      "issuanceTitle": "Sell issued stock",
+      "price": "Price per item (coins)",
+      "pricePlaceholder": "1–1,000",
+      "priceInvalid": "Enter a whole number from 1 to 1,000.",
+      "quantity": "Quantity",
+      "decreaseA11y": "Decrease quantity",
+      "increaseA11y": "Increase quantity",
+      "quantityValue": "{{n}}",
+      "balance": "Your coins {{n}}",
+      "total": "Order total {{n}} coins",
+      "notEnough": "Not enough coins",
+      "buyNote": "If you bid above the lowest ask, you pay the lower price and get the difference back.",
+      "proceeds": "Estimated proceeds",
+      "proceedsNote": "After a 10% royalty and 5% fee. You get more if a higher bid fills it.",
+      "proceedsNoteNoRoyalty": "After a 5% fee (no royalty). You get more if a higher bid fills it.",
+      "sellWarning": "While it's for sale, the furniture leaves your inventory and room. Cancelling won't restore its room placement.",
+      "expiryNote": "Orders not filled within 7 days are cancelled and refunded.",
+      "submitBuy": "Place buy order",
+      "submitSell": "Place sell order",
+      "submitting": "Placing order...",
+      "closeA11y": "Close order"
+    },
+    "orders": {
+      "title": "My orders",
+      "tabOpen": "Open",
+      "tabClosed": "Closed",
+      "tabA11y": "{{label}} orders",
+      "empty": "No orders",
+      "error": "Couldn't load your orders.",
+      "side": {
+        "BUY": "Buy",
+        "SELL": "Sell"
+      },
+      "status": {
+        "OPEN": "Open",
+        "FILLED": "Filled",
+        "CANCELLED": "Cancelled",
+        "EXPIRED": "Expired"
+      },
+      "priceLine": "{{price}} coins · {{filled}}/{{quantity}} filled",
+      "issuance": "Issued stock",
+      "expires": {
+        "days": "Expires in {{n}}d",
+        "hours": "Expires in {{n}}h",
+        "soon": "Expiring soon"
+      },
+      "cancel": "Cancel",
+      "cancelA11y": "Cancel order for {{name}}",
+      "cancelTitle": "Cancel this order?",
+      "cancelBody": "Your held coins or furniture will be returned. Cancelling a sale won't restore its room placement.",
+      "cancelConfirm": "Cancel order",
+      "cancelKeep": "Keep it",
+      "more": "Load more",
+      "rowA11y": "View {{name}}"
+    },
+    "selling": {
+      "row": "{{n}} furniture for sale",
+      "rowHint": "Furniture for sale is out of your inventory and room.",
+      "open": "View my orders"
+    },
+    "issue": {
+      "cta": "List on market",
+      "title": "List on market",
+      "supply": "Total supply",
+      "body": "Includes the 1 you keep; the rest is held by the market. You can't issue more later, and listed furniture can't be re-reviewed.",
+      "submit": "Issue {{n}}",
+      "submitting": "Listing...",
+      "done": "Listed on the market",
+      "closeA11y": "Close listing"
+    },
+    "toast": {
+      "buyFilled": "Purchased",
+      "sellFilled": "Sold",
+      "buyOpen": "Your buy order is waiting",
+      "sellOpen": "Your sell order is waiting",
+      "cancelled": "Order cancelled",
+      "pending": "Still processing. Check My orders."
+    },
+    "error": {
+      "MARKET_INSUFFICIENT_COIN": "Not enough coins.",
+      "MARKET_ALREADY_HOLDING": "You already own this or have a buy order for it.",
+      "MARKET_OWN_ORDER_CONFLICT": "You have an opposite order on this furniture. Check My orders first.",
+      "MARKET_ITEM_NOT_OWNED": "You don't have this furniture to sell.",
+      "MARKET_NOT_CREATOR": "Only the creator can do this.",
+      "MARKET_INSUFFICIENT_SUPPLY": "That's more than the issued stock left.",
+      "MARKET_ASSET_SUSPENDED": "Trading is suspended for this furniture.",
+      "MARKET_REQUEST_CONFLICT": "This order was already sent with different details. Please try again.",
+      "MARKET_ASSET_NOT_FOUND": "This furniture isn't on the market.",
+      "MARKET_ORDER_NOT_FOUND": "Order not found.",
+      "MARKET_ORDER_NOT_OPEN": "This order is already filled or cancelled.",
+      "MARKET_ITEM_NOT_TRADABLE": "This furniture can't be listed.",
+      "MARKET_ASSET_ALREADY_LISTED": "This furniture is already listed.",
+      "MARKET_ITEM_REVIEW_IN_PROGRESS": "This furniture is being made or re-reviewed. List it when that's done.",
+      "VALIDATION_FAILED": "Please check your input.",
+      "generic": "Something went wrong. Please try again shortly."
+    },
+    "reject": {
+      "MARKET_SELF_TRADE": "It matched your own order, so it wasn't processed. Your coins or furniture were returned.",
+      "MARKET_ASSET_SUSPENDED": "Trading is suspended, so it wasn't processed. Your coins or furniture were returned.",
+      "MARKET_ORDER_NOT_OPEN": "This order is already filled or cancelled.",
+      "MARKET_ENGINE_ERROR": "Processing failed. Your coins or furniture were returned.",
+      "MARKET_ENGINE_ERROR_UNREFUNDED": "Processing failed. Please contact support.",
+      "generic": "It couldn't be processed. Your coins or furniture were returned."
+    }
+  }
+}
