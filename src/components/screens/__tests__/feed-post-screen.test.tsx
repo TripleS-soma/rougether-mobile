@@ -1,7 +1,7 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { FeedPostScreen } from '@/components/screens/feed-post-screen';
-import { DEMO_FEED_COMMENTS, DEMO_FEED_POSTS } from '@/mocks/fixtures';
+import { DEMO_FEED_COMMENTS, DEMO_FEED_POSTS, DEMO_FEED_TEXT_POST } from '@/mocks/fixtures';
 
 const [OTHER_POST, MY_POST] = DEMO_FEED_POSTS;
 
@@ -74,6 +74,52 @@ describe('FeedPostScreen (#1409)', () => {
     const buttons = mine.getAllByLabelText('게시물 삭제');
     await fireEvent.press(buttons[buttons.length - 1]);
     expect(onDeletePost).toHaveBeenCalledWith(2);
+  });
+
+  it('게시판 배지를 보이고, 사진 없는 자유글은 사진 자리 없이 본문만 (서버 #428)', async () => {
+    const ui = await render(<FeedPostScreen post={DEMO_FEED_TEXT_POST} />);
+    expect(ui.getByTestId('feed-board-badge-FREE')).toBeTruthy();
+    expect(ui.getByText(/요즘 아침 루틴을 어떻게/)).toBeTruthy();
+    expect(ui.queryByLabelText(/^사진 1\//)).toBeNull();
+
+    const verified = await render(<FeedPostScreen post={OTHER_POST} />);
+    expect(verified.getByTestId('feed-board-badge-VERIFICATION')).toBeTruthy();
+  });
+
+  it('수정 창의 게시판은 읽기 전용, 사진 없는 자유글은 본문을 비우면 저장할 수 없다', async () => {
+    const onEditPost = jest.fn().mockResolvedValue(true);
+    const ui = await render(
+      <FeedPostScreen post={{ ...DEMO_FEED_TEXT_POST, mine: true }} onEditPost={onEditPost} />,
+    );
+    await fireEvent.press(ui.getByLabelText('게시물 본문 수정'));
+    expect(ui.getByText('자유 게시판 · 게시판은 바꿀 수 없어요')).toBeTruthy();
+    // 게시판을 고르는 탭은 없다.
+    expect(ui.queryByLabelText('인증 게시판')).toBeNull();
+
+    const input = ui.getByPlaceholderText('본문을 입력하세요');
+    await fireEvent.changeText(input, '   ');
+    const save = ui.getByRole('button', { name: '저장' });
+    expect(save.props.accessibilityState).toMatchObject({ disabled: true });
+
+    await fireEvent.changeText(input, '고친 본문');
+    expect(ui.getByRole('button', { name: '저장' }).props.accessibilityState).toMatchObject({
+      disabled: false,
+    });
+    await fireEvent.press(ui.getByRole('button', { name: '저장' }));
+    expect(onEditPost).toHaveBeenCalledWith(4, '고친 본문');
+  });
+
+  it('사진 있는 글은 본문을 비워도 저장할 수 있다', async () => {
+    const ui = await render(<FeedPostScreen post={MY_POST} onEditPost={() => true} />);
+    await fireEvent.press(ui.getByLabelText('게시물 본문 수정'));
+    expect(ui.getByText('자유 게시판 · 게시판은 바꿀 수 없어요')).toBeTruthy();
+    await fireEvent.changeText(
+      ui.getByPlaceholderText('본문을 입력하세요 (비워 둘 수 있어요)'),
+      '',
+    );
+    expect(ui.getByRole('button', { name: '저장' }).props.accessibilityState).toMatchObject({
+      disabled: false,
+    });
   });
 
   it('사라진 글(404)은 삭제 안내만', async () => {

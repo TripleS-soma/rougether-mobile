@@ -28,6 +28,8 @@ export function toFeedPost(res: FeedPostResponse): FeedPost | null {
   return {
     postId: res.postId,
     author: toFeedAuthor(res.author),
+    // 생략·모르는 값은 서버 기본값(기존 글 = 인증게시판)으로.
+    boardType: res.boardType === 'FREE' ? 'FREE' : 'VERIFICATION',
     content: res.content ?? '',
     images: (res.images ?? []).map(toFeedImage).filter((i): i is FeedImage => i !== null),
     likeCount: Math.max(0, res.likeCount ?? 0),

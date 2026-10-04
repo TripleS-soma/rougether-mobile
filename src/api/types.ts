@@ -1358,9 +1358,17 @@ export type FeedImageResponse = {
   contentType?: string;
 };
 
+/**
+ * 게시판 종류 (서버 #428, spec feed/api.md) — `FREE` 자유게시판(사진 0–10장, 사진이 없으면
+ * 본문 필수) · `VERIFICATION` 인증게시판(사진 1–10장). 등록 후 바꿀 수 없다.
+ */
+export type FeedBoardType = 'FREE' | 'VERIFICATION';
+
 export type FeedPostResponse = {
   postId?: number;
   author?: FeedAuthorResponse;
+  /** 기존 글은 서버가 `VERIFICATION`으로 돌려준다. */
+  boardType?: FeedBoardType;
   content?: string | null;
   images?: FeedImageResponse[];
   likeCount?: number;
@@ -1382,7 +1390,10 @@ export type FeedCommentResponse = {
 
 export type FeedCreateRequest = {
   clientPostId: string;
+  /** 서버는 생략 시 `VERIFICATION`으로 받지만, 앱은 항상 명시해서 보낸다. */
+  boardType: FeedBoardType;
   content?: string;
+  /** 자유게시판은 빈 배열 가능, 인증게시판은 1–10장. */
   imageIds: number[];
 };
 

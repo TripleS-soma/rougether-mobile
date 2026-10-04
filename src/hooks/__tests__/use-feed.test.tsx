@@ -82,4 +82,25 @@ describe('useFeed (#1409)', () => {
     expect(jest.mocked(fetchFeedPosts).mock.calls[1][0]).toMatchObject({ cursor: 2 });
     expect(result.current.hasNext).toBe(false);
   });
+
+  it('게시판을 바꾸면 그 boardType으로 첫 페이지부터, 전체는 boardType 없이 (서버 #428)', async () => {
+    const free = DEMO_FEED_POSTS.filter((p) => p.boardType === 'FREE');
+    jest
+      .mocked(fetchFeedPosts)
+      .mockImplementation(async ({ boardType } = {}) =>
+        page(boardType ? DEMO_FEED_POSTS.filter((p) => p.boardType === boardType) : undefined),
+      );
+    const { result, rerender } = await renderHook(
+      ({ board }: { board: 'ALL' | 'FREE' | 'VERIFICATION' }) => useFeed({ board }),
+      { wrapper: queryWrapper(), initialProps: { board: 'ALL' } },
+    );
+    await waitFor(() => expect(result.current.posts).toHaveLength(3));
+    expect(jest.mocked(fetchFeedPosts).mock.calls[0][0]).toMatchObject({ boardType: undefined });
+
+    await rerender({ board: 'FREE' });
+    await waitFor(() => expect(result.current.posts).toEqual(free));
+    expect(jest.mocked(fetchFeedPosts)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ boardType: 'FREE', cursor: undefined }),
+    );
+  });
 });

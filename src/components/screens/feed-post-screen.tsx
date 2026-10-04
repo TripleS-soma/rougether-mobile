@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import type { ReportReason } from '@/api/types';
+import { FEED_BOARD_LABEL_KEY } from '@/components/feed/feed-board';
 import {
   FeedActionRow,
   FeedAuthorRow,
@@ -21,7 +22,13 @@ import {
   feedTimeLabel,
 } from '@/components/feed/feed-parts';
 import { FeedPhoto, feedImageAspect } from '@/components/feed/feed-photo';
-import type { FeedComment, FeedImageLoader, FeedPost } from '@/components/screens/feed/types';
+import { feedContentRequired } from '@/components/screens/feed/board-rules';
+import type {
+  FeedBoardType,
+  FeedComment,
+  FeedImageLoader,
+  FeedPost,
+} from '@/components/screens/feed/types';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Icon } from '@/components/ui/icon';
@@ -128,15 +135,22 @@ function PhotoPager({ post, loadImage }: { post: FeedPost; loadImage?: FeedImage
   );
 }
 
-/** 본문 수정 창 — 사진은 바꿀 수 없고 본문만(빈 문자열 허용). */
+/**
+ * 본문 수정 창 — 사진·게시판은 바꿀 수 없고 본문만. 게시판은 읽기 전용으로 보여 준다
+ * (서버 #428: 등록 후 변경 불가). 사진 없는 자유글은 본문을 비울 수 없다.
+ */
 function EditPostDialog({
   visible,
   initial,
+  board,
+  contentRequired,
   onCancel,
   onSave,
 }: {
   visible: boolean;
   initial: string;
+  board: FeedBoardType;
+  contentRequired: boolean;
   onCancel: () => void;
   onSave: (content: string) => void;
 }) {
@@ -144,6 +158,7 @@ function EditPostDialog({
   const Typography = useTypography();
   const tr = useT();
   const [draft, setDraft] = useState(initial);
+  const canSave = !contentRequired || draft.trim().length > 0;
   return (
     <Modal
       transparent
@@ -157,12 +172,19 @@ function EditPostDialog({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={[styles.dialog, { backgroundColor: t.screen }]}>
           <Text style={[Typography.h3, { color: t.text }]}>{tr('feed.post.editTitle')}</Text>
+          <Text style={[Typography.supporting, { color: t.textMuted }]} testID="feed-edit-board">
+            {tr('feed.post.editBoardLocked', { board: tr(FEED_BOARD_LABEL_KEY[board]) })}
+          </Text>
           <TextInput
             value={draft}
             onChangeText={(v) => setDraft(v.slice(0, FEED_MAX_CONTENT))}
             multiline
             maxLength={FEED_MAX_CONTENT}
-            placeholder={tr('feed.post.editPlaceholder')}
+            placeholder={
+              contentRequired
+                ? tr('feed.post.editPlaceholderRequired')
+                : tr('feed.post.editPlaceholder')
+            }
             placeholderTextColor={t.textMuted}
             accessibilityLabel={tr('feed.post.editTitle')}
             style={[
@@ -183,9 +205,13 @@ function EditPostDialog({
             </Pressable>
             <Pressable
               onPress={() => onSave(draft)}
+              disabled={!canSave}
               accessibilityRole="button"
-              style={[styles.dialogBtn, { backgroundColor: t.primary }]}>
-              <Text style={[Typography.label, { color: t.onPrimary }]}>{tr('feed.post.save')}</Text>
+              accessibilityState={{ disabled: !canSave }}
+              style={[styles.dialogBtn, { backgroundColor: canSave ? t.primary : t.disabledBg }]}>
+              <Text style={[Typography.label, { color: canSave ? t.onPrimary : t.textDisabled }]}>
+                {tr('feed.post.save')}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -341,6 +367,7 @@ export function FeedPostScreen({
         author={post.author}
         createdAt={post.createdAt}
         edited={post.updatedAt !== post.createdAt}
+        board={post.boardType}
         now={now}
       />
       {post.images.length > 0 ? <PhotoPager post={post} loadImage={loadImage} /> : null}
@@ -574,6 +601,8 @@ export function FeedPostScreen({
         <EditPostDialog
           visible={editing}
           initial={post.content}
+          board={post.boardType}
+          contentRequired={feedContentRequired(post.boardType, post.images.length)}
           onCancel={() => setEditing(false)}
           onSave={(content) => {
             void Promise.resolve(onEditPost(post.postId, content)).then((ok) => {

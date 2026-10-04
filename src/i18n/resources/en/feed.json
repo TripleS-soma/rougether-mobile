@@ -2,7 +2,7 @@
   "feed": {
     "title": "Feed",
     "anonymous": "Unknown user",
-    "empty": "No posts yet.\nShare the first photo!",
+    "empty": "No posts yet.\nShare the first post!",
     "loadError": "Couldn't load the feed.",
     "composeA11y": "New post",
     "likeA11y": "Like",
@@ -37,7 +37,9 @@
       "deletePostTitle": "Delete this post?",
       "deletePostBody": "Its photos and comments will be removed for good.",
       "loadError": "Couldn't load the post.",
-      "notFound": "This post was deleted or isn't available."
+      "notFound": "This post was deleted or isn't available.",
+      "editBoardLocked": "{{board}} board · The board can't be changed",
+      "editPlaceholderRequired": "Write something"
     },
     "compose": {
       "title": "New post",
@@ -55,7 +57,11 @@
       "needPhoto": "Choose at least one photo.",
       "waitUpload": "Photos are still uploading. Please wait a moment.",
       "tooLarge": "Photos must be 10MB or smaller.",
-      "badType": "Only JPEG and PNG photos are supported."
+      "badType": "Only JPEG and PNG photos are supported.",
+      "needContent": "Write something or add a photo.",
+      "contentPlaceholderRequired": "What's on your mind?",
+      "boardHintFree": "Text alone is fine. You can attach up to 10 photos.",
+      "boardHintVerification": "Add at least one photo of your routine or room."
     },
     "toast": {
       "posted": "Your post is up.",
@@ -75,6 +81,13 @@
       "FEED_UPLOAD_LIMIT": "Too many unposted photos. Please try again later.",
       "FEED_STORAGE_UNAVAILABLE": "Photo storage is having trouble. Please try again later.",
       "generic": "Something went wrong. Please try again later."
+    },
+    "emptyFree": "No free board posts yet.\nStart a conversation!",
+    "board": {
+      "all": "All",
+      "free": "Free",
+      "verification": "Proof",
+      "tabA11y": "{{label}} board"
     }
   }
 }

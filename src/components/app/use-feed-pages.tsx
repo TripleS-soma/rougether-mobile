@@ -13,6 +13,7 @@ import type { ReportReason } from '@/api/types';
 import { type Screen } from '@/components/app/navigation';
 import { FeedComposeScreen } from '@/components/screens/feed-compose-screen';
 import { FeedPostScreen } from '@/components/screens/feed-post-screen';
+import type { FeedBoardFilter } from '@/components/screens/feed/types';
 import type { FeedScreenProps } from '@/components/screens/feed-screen';
 import { useToast } from '@/components/ui/toast';
 import { FEED_ENABLED, FEED_MAX_IMAGES } from '@/constants/feed';
@@ -49,7 +50,9 @@ export function useFeedPages({
     }
   }, [screen]);
 
-  const feed = useFeed({ enabled: FEED_ENABLED && visited, onError: showError });
+  // 게시판 필터 (서버 #428) — 셸에 두어 상세·작성에 다녀와도 보던 게시판이 유지된다.
+  const [board, setBoard] = useState<FeedBoardFilter>('ALL');
+  const feed = useFeed({ enabled: FEED_ENABLED && visited, board, onError: showError });
 
   // 상세는 연 글 id를 기억한다 — 떠나는 전환(#1094) 동안에도 같은 글을 그리게 비우지 않는다.
   const [postId, setPostId] = useState<number | null>(null);
@@ -70,7 +73,13 @@ export function useFeedPages({
   }, [screen, detail.notFound, toast, setScreen]);
 
   const compose = useFeedCompose({ onError: showError });
-  const openCompose = useCallback(() => setScreen('feedCompose'), [setScreen]);
+  // 자유·인증 게시판을 보다가 쓰면 그 게시판으로 시작한다(전체면 기본 자유).
+  const boardRef = useLatestRef(board);
+  const setComposeBoard = compose.setBoard;
+  const openCompose = useCallback(() => {
+    if (boardRef.current !== 'ALL') setComposeBoard(boardRef.current);
+    setScreen('feedCompose');
+  }, [boardRef, setComposeBoard, setScreen]);
 
   // 작성 화면을 어떤 경로로든(뒤로 버튼·하드웨어 백·엣지 백) 떠나면 초안을 버린다 — 올려 둔
   // 사진도 서버에서 취소해 미사용 업로드 30장 한도를 잡아먹지 않게.
@@ -146,6 +155,8 @@ export function useFeedPages({
   /** 탭 페이저의 피드 페이지 prop — 참조 고정(#539). */
   const tabProps: FeedScreenProps = useMemo(
     () => ({
+      board,
+      onChangeBoard: setBoard,
       posts: feed.posts,
       loading: feed.loading,
       loadError: feed.error,
@@ -159,7 +170,7 @@ export function useFeedPages({
       onCompose: openCompose,
       loadImage: fetchFeedImage,
     }),
-    [feed, handleToggleLike, openPost, openCompose],
+    [board, feed, handleToggleLike, openPost, openCompose],
   );
 
   // TODO(#1409): 알림함·푸시의 FEED_COMMENT(refId = postId) 탭을 openPost로 잇는다 — 지금 알림
@@ -190,6 +201,8 @@ export function useFeedPages({
       />
     ) : screen === 'feedCompose' ? (
       <FeedComposeScreen
+        board={compose.board}
+        onChangeBoard={compose.setBoard}
         images={compose.images}
         content={compose.content}
         onChangeContent={compose.setContent}

@@ -1,7 +1,8 @@
 import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { FeedAuthor } from '@/components/screens/feed/types';
+import { FeedBoardBadge } from '@/components/feed/feed-board';
+import type { FeedAuthor, FeedBoardType } from '@/components/screens/feed/types';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -46,16 +47,18 @@ export function FeedAvatar({ author, size = AVATAR_SIZE }: { author: FeedAuthor;
   );
 }
 
-/** 작성자 줄 — 아바타 · 이름 · 상대 시각(수정됨 표시). */
+/** 작성자 줄 — 아바타 · 이름 · 상대 시각(수정됨 표시) · 게시판 배지(주면). */
 export function FeedAuthorRow({
   author,
   createdAt,
   edited,
+  board,
   now,
 }: {
   author: FeedAuthor;
   createdAt: string;
   edited?: boolean;
+  board?: FeedBoardType;
   now?: Date;
 }) {
   const t = useTokens();
@@ -75,6 +78,7 @@ export function FeedAuthorRow({
           </Text>
         ) : null}
       </View>
+      {board ? <FeedBoardBadge board={board} /> : null}
     </View>
   );
 }

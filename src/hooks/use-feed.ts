@@ -17,7 +17,7 @@ import {
   unlikeFeedPost,
   updateFeedPost,
 } from '@/api/feed';
-import type { FeedPost } from '@/components/screens/feed/types';
+import type { FeedBoardFilter, FeedPost } from '@/components/screens/feed/types';
 import { FEED_PAGE_SIZE } from '@/constants/feed';
 import {
   type FeedCursor,
@@ -120,7 +120,10 @@ export function useFeedActions({ onError }: { onError?: FeedErrorHandler } = {})
     [qc, userId, deleteAsync, onErrorRef],
   );
 
-  /** 내 게시물 본문 수정(빈 문자열 허용) — 응답으로 목록·상세를 맞춘다. */
+  /**
+   * 내 게시물 본문 수정 — 응답으로 목록·상세를 맞춘다. 빈 본문은 사진이 있는 글만 서버가
+   * 받는다(사진 없는 자유글은 화면이 저장을 막는다).
+   */
   const editPost = useCallback(
     async (postId: number, content: string): Promise<boolean> => {
       try {
@@ -146,15 +149,20 @@ export function useFeedActions({ onError }: { onError?: FeedErrorHandler } = {})
 /**
  * 전체 공개 피드 (GET /feed/posts). `enabled=false`면 요청하지 않는다 — 셸에 상주하므로
  * 피드가 꺼져 있거나(FEED_ENABLED) 아직 탭을 안 연 동안엔 받지 않는다.
+ *
+ * `board`(서버 #428): `ALL`은 통합 피드(boardType 생략), 나머지는 그 게시판만. 게시판마다
+ * 쿼리 키가 달라 전환하면 cursor 없이 첫 페이지부터 받고, 다녀온 게시판은 캐시를 다시 쓴다.
  */
 export function useFeed({
   enabled = true,
+  board = 'ALL',
   onError,
-}: { enabled?: boolean; onError?: FeedErrorHandler } = {}) {
+}: { enabled?: boolean; board?: FeedBoardFilter; onError?: FeedErrorHandler } = {}) {
   const qc = useQueryClient();
   const userId = getSessionUserId();
-  // 키는 userId로 메모 — 매 렌더 새 배열이면 refresh 참조가 흔들린다 (#539).
-  const queryKey = useMemo(() => queryKeys.feed.list(userId, null), [userId]);
+  // 키는 userId·board로 메모 — 매 렌더 새 배열이면 refresh 참조가 흔들린다 (#539).
+  const queryKey = useMemo(() => queryKeys.feed.list(userId, null, board), [userId, board]);
+  const boardType = board === 'ALL' ? undefined : board;
 
   const {
     data,
@@ -168,7 +176,8 @@ export function useFeed({
     refetch,
   } = useInfiniteQuery({
     queryKey,
-    queryFn: ({ pageParam }) => fetchFeedPosts({ cursor: pageParam, size: FEED_PAGE_SIZE }),
+    queryFn: ({ pageParam }) =>
+      fetchFeedPosts({ cursor: pageParam, size: FEED_PAGE_SIZE, boardType }),
     initialPageParam: undefined as FeedCursor,
     getNextPageParam: (last) =>
       last.hasNext && last.nextCursor != null ? last.nextCursor : undefined,

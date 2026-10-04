@@ -1,7 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { FeedScreen } from '@/components/screens/feed-screen';
-import { DEMO_FEED_POSTS } from '@/mocks/fixtures';
+import { DEMO_FEED_POSTS, DEMO_FEED_TEXT_POST } from '@/mocks/fixtures';
 
 const NOW = new Date('2026-09-22T03:30:00Z');
 
@@ -68,6 +68,43 @@ describe('FeedScreen (#1409)', () => {
 
     await rerender(<FeedScreen posts={[]} />);
     expect(getByText(/아직 게시물이 없어요/)).toBeTruthy();
+  });
+
+  it('게시판 필터 — 전체가 선택돼 있고, 누르면 그 게시판으로 바꾼다 (서버 #428)', async () => {
+    const onChangeBoard = jest.fn();
+    const ui = await render(
+      <FeedScreen posts={DEMO_FEED_POSTS} board="ALL" onChangeBoard={onChangeBoard} />,
+    );
+    expect(ui.getByLabelText('전체 게시판').props.accessibilityState).toMatchObject({
+      selected: true,
+    });
+    await fireEvent.press(ui.getByLabelText('자유 게시판'));
+    expect(onChangeBoard).toHaveBeenCalledWith('FREE');
+    // 이미 고른 게시판을 다시 누르면 아무 일도 없다.
+    await fireEvent.press(ui.getByLabelText('전체 게시판'));
+    expect(onChangeBoard).toHaveBeenCalledTimes(1);
+
+    await ui.rerender(<FeedScreen posts={[]} board="FREE" onChangeBoard={onChangeBoard} />);
+    expect(ui.getByText(/아직 자유게시판 글이 없어요/)).toBeTruthy();
+  });
+
+  it('필터 콜백이 없으면 세그먼트를 그리지 않는다', async () => {
+    const { queryByLabelText } = await render(<FeedScreen posts={DEMO_FEED_POSTS} />);
+    expect(queryByLabelText('전체 게시판')).toBeNull();
+  });
+
+  it('카드마다 게시판 배지, 사진 없는 자유글은 사진 자리 없이 본문을 길게', async () => {
+    const ui = await render(<FeedScreen posts={[DEMO_FEED_TEXT_POST, ...DEMO_FEED_POSTS]} />);
+    expect(ui.getAllByTestId('feed-board-badge-FREE')).toHaveLength(2);
+    expect(ui.getAllByTestId('feed-board-badge-VERIFICATION')).toHaveLength(2);
+
+    const card = ui.getByTestId('feed-post-4');
+    expect(ui.queryByLabelText('사진 1/0')).toBeNull();
+    const body = ui.getByText(/요즘 아침 루틴을 어떻게/);
+    expect(body.props.numberOfLines).toBe(8);
+    expect(card).toBeTruthy();
+    // 사진 있는 글은 세 줄.
+    expect(ui.getByText(/오늘 아침 루틴 완료/).props.numberOfLines).toBe(3);
   });
 });
 
