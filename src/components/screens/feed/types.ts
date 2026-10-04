@@ -19,8 +19,11 @@ export type FeedImage = {
 
 export type { FeedBoardType } from '@/api/types';
 
-/** 피드 목록의 게시판 필터 — `ALL`은 통합 피드(boardType 생략). */
-export type FeedBoardFilter = 'ALL' | FeedBoardType;
+/**
+ * 피드 목록의 게시판 필터 — `ALL`은 통합 피드(boardType 생략), `MINE`은 내 글만
+ * (`authorId`=내 id, 게시판 무관, #1455).
+ */
+export type FeedBoardFilter = 'ALL' | FeedBoardType | 'MINE';
 
 export type FeedPost = {
   postId: number;

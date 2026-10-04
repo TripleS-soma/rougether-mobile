@@ -160,9 +160,15 @@ export function useFeed({
 }: { enabled?: boolean; board?: FeedBoardFilter; onError?: FeedErrorHandler } = {}) {
   const qc = useQueryClient();
   const userId = getSessionUserId();
+  // `MINE`(#1455)은 게시판 무관 내 글 — authorId만 준다.
+  const mine = board === 'MINE';
+  const authorId = mine && userId != null ? userId : null;
+  const boardType = board === 'FREE' || board === 'VERIFICATION' ? board : undefined;
   // 키는 userId·board로 메모 — 매 렌더 새 배열이면 refresh 참조가 흔들린다 (#539).
-  const queryKey = useMemo(() => queryKeys.feed.list(userId, null, board), [userId, board]);
-  const boardType = board === 'ALL' ? undefined : board;
+  const queryKey = useMemo(
+    () => queryKeys.feed.list(userId, authorId, boardType ?? 'ALL'),
+    [userId, authorId, boardType],
+  );
 
   const {
     data,
@@ -177,12 +183,18 @@ export function useFeed({
   } = useInfiniteQuery({
     queryKey,
     queryFn: ({ pageParam }) =>
-      fetchFeedPosts({ cursor: pageParam, size: FEED_PAGE_SIZE, boardType }),
+      fetchFeedPosts({
+        cursor: pageParam,
+        size: FEED_PAGE_SIZE,
+        boardType,
+        authorId: authorId ?? undefined,
+      }),
     initialPageParam: undefined as FeedCursor,
     getNextPageParam: (last) =>
       last.hasNext && last.nextCursor != null ? last.nextCursor : undefined,
     select: selectPosts,
-    enabled,
+    // 세션 id를 모르면 내 글을 물을 수 없다 — 전체 피드로 새지 않게 멈춘다.
+    enabled: enabled && (!mine || authorId != null),
   });
 
   /** 당겨서 새로고침 — spec: cursor 없이 다시. 이어 붙인 페이지는 버리고 첫 장만 받는다. */

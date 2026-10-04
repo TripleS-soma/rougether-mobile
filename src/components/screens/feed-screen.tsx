@@ -273,7 +273,11 @@ export function FeedScreen({
             </View>
           ) : (
             <Text style={[Typography.body, styles.state, styles.empty, { color: t.textMuted }]}>
-              {board === 'FREE' ? tr('feed.emptyFree') : tr('feed.empty')}
+              {board === 'FREE'
+                ? tr('feed.emptyFree')
+                : board === 'MINE'
+                  ? tr('feed.emptyMine')
+                  : tr('feed.empty')}
             </Text>
           )
         }

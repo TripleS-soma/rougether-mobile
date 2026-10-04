@@ -88,6 +88,18 @@ describe('FeedScreen (#1409)', () => {
     expect(ui.getByText(/아직 자유게시판 글이 없어요/)).toBeTruthy();
   });
 
+  it('내 글 칩 — 누르면 MINE으로, 비었으면 내 글 안내 (#1455)', async () => {
+    const onChangeBoard = jest.fn();
+    const ui = await render(
+      <FeedScreen posts={DEMO_FEED_POSTS} board="ALL" onChangeBoard={onChangeBoard} />,
+    );
+    await fireEvent.press(ui.getByText('내 글'));
+    expect(onChangeBoard).toHaveBeenCalledWith('MINE');
+
+    await ui.rerender(<FeedScreen posts={[]} board="MINE" onChangeBoard={onChangeBoard} />);
+    expect(ui.getByText(/아직 쓴 글이 없어요/)).toBeTruthy();
+  });
+
   it('필터 콜백이 없으면 세그먼트를 그리지 않는다', async () => {
     const { queryByLabelText } = await render(<FeedScreen posts={DEMO_FEED_POSTS} />);
     expect(queryByLabelText('전체 게시판')).toBeNull();

@@ -12,10 +12,16 @@ export const FEED_BOARD_LABEL_KEY: Record<FeedBoardFilter, string> = {
   ALL: 'feed.board.all',
   FREE: 'feed.board.free',
   VERIFICATION: 'feed.board.verification',
+  MINE: 'feed.board.mine',
 };
 
-/** 피드 목록 필터 순서 — 전체 / 자유 / 인증. */
-export const FEED_BOARD_FILTERS: readonly FeedBoardFilter[] = ['ALL', 'FREE', 'VERIFICATION'];
+/** 피드 목록 필터 순서 — 전체 / 자유 / 인증 / 내 글. */
+export const FEED_BOARD_FILTERS: readonly FeedBoardFilter[] = [
+  'ALL',
+  'FREE',
+  'VERIFICATION',
+  'MINE',
+];
 /** 작성 화면의 게시판 선택지 — 자유 / 인증. */
 export const FEED_BOARD_TYPES: readonly FeedBoardType[] = ['FREE', 'VERIFICATION'];
 

@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
+import { getSessionUserId } from '@/api/auth';
 import { fetchFeedPosts, likeFeedPost, unlikeFeedPost } from '@/api/feed';
 import { useFeed } from '@/hooks/use-feed';
 import { DEMO_FEED_POSTS } from '@/mocks/fixtures';
@@ -14,6 +15,11 @@ jest.mock('@/api/feed', () => ({
   clearFeedImageCache: jest.fn(),
 }));
 
+jest.mock('@/api/auth', () => ({
+  ...jest.requireActual('@/api/auth'),
+  getSessionUserId: jest.fn(() => 7),
+}));
+
 const page = (items = DEMO_FEED_POSTS, nextCursor?: number) => ({
   items,
   hasNext: nextCursor != null,
@@ -21,6 +27,7 @@ const page = (items = DEMO_FEED_POSTS, nextCursor?: number) => ({
 });
 
 beforeEach(() => {
+  jest.mocked(getSessionUserId).mockReturnValue(7);
   jest.mocked(fetchFeedPosts).mockReset().mockResolvedValue(page());
   jest.mocked(likeFeedPost).mockReset().mockResolvedValue(undefined);
   jest.mocked(unlikeFeedPost).mockReset().mockResolvedValue(undefined);
@@ -102,5 +109,26 @@ describe('useFeed (#1409)', () => {
     expect(jest.mocked(fetchFeedPosts)).toHaveBeenLastCalledWith(
       expect.objectContaining({ boardType: 'FREE', cursor: undefined }),
     );
+  });
+
+  it('내 글은 게시판 없이 authorId=내 id로 받는다 (#1455)', async () => {
+    const { result } = await renderHook(() => useFeed({ board: 'MINE' }), {
+      wrapper: queryWrapper(),
+    });
+    await waitFor(() => expect(result.current.posts).toHaveLength(3));
+    expect(jest.mocked(fetchFeedPosts).mock.calls[0][0]).toMatchObject({
+      authorId: 7,
+      boardType: undefined,
+    });
+  });
+
+  it('세션 id를 모르면 내 글을 요청하지 않는다 — 전체 피드로 새지 않게', async () => {
+    jest.mocked(getSessionUserId).mockReturnValue(undefined);
+    const { result } = await renderHook(() => useFeed({ board: 'MINE' }), {
+      wrapper: queryWrapper(),
+    });
+    await act(async () => {});
+    expect(result.current.posts).toEqual([]);
+    expect(fetchFeedPosts).not.toHaveBeenCalled();
   });
 });

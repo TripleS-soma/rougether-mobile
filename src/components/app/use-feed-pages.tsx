@@ -73,11 +73,12 @@ export function useFeedPages({
   }, [screen, detail.notFound, toast, setScreen]);
 
   const compose = useFeedCompose({ onError: showError });
-  // 자유·인증 게시판을 보다가 쓰면 그 게시판으로 시작한다(전체면 기본 자유).
+  // 자유·인증 게시판을 보다가 쓰면 그 게시판으로 시작한다(전체·내 글이면 기본 자유).
   const boardRef = useLatestRef(board);
   const setComposeBoard = compose.setBoard;
   const openCompose = useCallback(() => {
-    if (boardRef.current !== 'ALL') setComposeBoard(boardRef.current);
+    const current = boardRef.current;
+    if (current === 'FREE' || current === 'VERIFICATION') setComposeBoard(current);
     setScreen('feedCompose');
   }, [boardRef, setComposeBoard, setScreen]);
 
