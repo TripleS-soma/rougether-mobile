@@ -279,9 +279,13 @@ export function useHouseChat({
         applyRoom(room);
         void recover();
       },
+      // 본문 직접 수신 (서버 #429) — 순서 맵에 넣으면 연속 구간만큼 커서가 오르고, 뒤따르는
+      // ROOM_UPDATED의 lastSequence가 이미 커서 이하라 HTTP 복구가 생략된다. 틈이 있으면
+      // (앞 구간이 아직 없으면) 커서는 멈춰 있고 복구가 그 틈을 채운다.
+      onMessage: (message) => merge([message]),
     });
     return () => socket.close();
-  }, [roomId, appActive, applyRoom, recover]);
+  }, [roomId, appActive, applyRoom, recover, merge]);
 
   const flushRead = useCallback(async () => {
     readTimer.current = null;

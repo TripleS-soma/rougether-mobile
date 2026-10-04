@@ -14,7 +14,7 @@
  */
 import { API_BASE } from '@/api/config';
 import { getAccessToken, refreshSession } from '@/api/auth';
-import type { ChatRoomResponse } from '@/api/types';
+import type { ChatMessageResponse, ChatRoomResponse } from '@/api/types';
 
 /** `https://host/api/v1` → `wss://host/api/v1/chat/ws` (개발 http는 ws). */
 export function chatSocketUrl(apiBase: string = API_BASE): string {
@@ -28,13 +28,22 @@ export const CHAT_RECONNECT_MAX_MS = 30_000;
 /** 서버 종료 코드 (스펙 "WebSocket") — 인가 실패·잘못된 구독·인증 시간 초과. */
 const CLOSE_POLICY_VIOLATION = 1008;
 
-type ServerFrame = { type?: string; room?: ChatRoomResponse };
+type ServerFrame = {
+  type?: string;
+  room?: ChatRoomResponse;
+  message?: ChatMessageResponse;
+};
 
 export type ChatSocketHandlers = {
   /** READY·ROOM_UPDATED의 방 상태 — ready는 (재)연결 직후 첫 상태인지. */
   onRoom: (room: ChatRoomResponse, ready: boolean) => void;
   /** 갱신 후에도 인가가 거부돼 재연결을 멈췄다(비구성원·강퇴·로그아웃). */
   onDenied?: () => void;
+  /**
+   * 본문 직접 수신 (서버 #429, spec #132) — `MESSAGE_CREATED`의 메시지(HTTP와 같은 DTO). 서버가
+   * 이 모드를 지원할 때만 온다. 순서·중복 처리는 받는 쪽이 한다(HTTP 응답·복구와 겹칠 수 있다).
+   */
+  onMessage?: (message: ChatMessageResponse) => void;
 };
 
 export type ChatSocket = { close: () => void };
@@ -80,7 +89,11 @@ export function connectChatSocket(roomId: number, handlers: ChatSocketHandlers):
         handlers.onDenied?.();
         return;
       }
-      socket.send(JSON.stringify({ type: 'SUBSCRIBE', roomId, accessToken }));
+      // includeMessages — 지원하는 서버는 새 메시지 본문을 바로 보내 HTTP 재조회가 필요 없다.
+      // 모르는 서버는 이 필드를 무시하고 종전 상태 알림 모드로 READY를 보낸다(2026-10-04 운영 실측).
+      socket.send(
+        JSON.stringify({ type: 'SUBSCRIBE', roomId, accessToken, includeMessages: true }),
+      );
     };
     socket.onmessage = (event: { data?: unknown }) => {
       if (closed || typeof event.data !== 'string') return;
@@ -88,6 +101,10 @@ export function connectChatSocket(roomId: number, handlers: ChatSocketHandlers):
       try {
         frame = JSON.parse(event.data) as ServerFrame;
       } catch {
+        return;
+      }
+      if (frame.type === 'MESSAGE_CREATED') {
+        if (frame.message) handlers.onMessage?.(frame.message);
         return;
       }
       if (!frame.room) return;
