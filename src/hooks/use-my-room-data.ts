@@ -567,49 +567,6 @@ export function useMyRoomData() {
   );
 
   /**
-   * 이름 매칭 연동분 1회성 승격 (#578) — 서버에 링크 id를 심고 로컬 상태에도
-   * 반영한다. 실패는 조용히 건너뛴다(조건 기반이라 다음 부팅에 재시도).
-   */
-  const linkRoutineMission = useCallback(
-    async (id: string, missionId: number) => {
-      const item = findItem(id);
-      if (!item || item.kind === 'todo') return;
-      try {
-        await apiUpdateRoutine(
-          toServerItemId(id),
-          toRoutineUpdate(item, { linkedMissionId: missionId }),
-        );
-        setRoutines((prev) =>
-          prev.map((r) => (r.id === id ? { ...r, linkedMissionId: missionId } : r)),
-        );
-      } catch {
-        // Silent — 승격 실패는 이번 부팅에선 이름 매칭 없이 미연동으로 남는다.
-      }
-    },
-    [findItem],
-  );
-
-  /** linkRoutineMission의 카테고리판 — houseId를 심는다 (#578). */
-  const linkCategoryHouse = useCallback(
-    async (id: string, houseId: number) => {
-      const cat = categories.find((c) => c.id === id);
-      if (!cat) return;
-      try {
-        const sortOrder = categories.findIndex((c) => c.id === id);
-        await apiUpdateCategory(
-          Number(id),
-          toCategoryCreate({ ...cat, houseId }, sortOrder >= 0 ? sortOrder : undefined),
-        );
-        setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, houseId } : c)));
-        setAllCategories((prev) => prev.map((c) => (c.id === id ? { ...c, houseId } : c)));
-      } catch {
-        // Silent — 다음 부팅에 재시도.
-      }
-    },
-    [categories],
-  );
-
-  /**
    * 루틴의 공동미션 연동 해제 — 서버 전용 DELETE(PUT null은 "유지"라 해제가 안 된다).
    * 낙관적으로 링크를 걷고, 실패하면 되돌리며 알린다. 루틴과 이미 반영된 기여는 남는다.
    */
@@ -818,8 +775,6 @@ export function useMyRoomData() {
       deleteRoutine,
       createRoutineCategory,
       ensureCategory,
-      linkRoutineMission,
-      linkCategoryHouse,
       unlinkRoutineMission,
       unlinkCategoryHouse,
       updateRoutineCategory,
@@ -859,8 +814,6 @@ export function useMyRoomData() {
       deleteRoutine,
       createRoutineCategory,
       ensureCategory,
-      linkRoutineMission,
-      linkCategoryHouse,
       unlinkRoutineMission,
       unlinkCategoryHouse,
       updateRoutineCategory,

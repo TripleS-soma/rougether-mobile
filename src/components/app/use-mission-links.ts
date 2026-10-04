@@ -7,8 +7,6 @@ import { CATEGORY_COLORS, type Routine, type RoutineCategoryMeta } from '@/const
 import type { CompletionToggleResult } from '@/hooks/use-my-room-data';
 import type { HouseMissionContributeResponse } from '@/api/types';
 import { todayIso } from '@/utils/datetime';
-import { getSessionUserId } from '@/api/auth';
-import { addLinkOptOut, loadLinkOptOuts } from '@/lib/link-opt-out-store';
 
 /**
  * 공동미션 ↔ 내 루틴 연동 클러스터 (#272 → #578, #692 3단계) — 나의 방
@@ -31,8 +29,6 @@ export function useMissionLinks({
   contributedMissionIds,
   ensureCategory,
   addRoutineWithMission,
-  linkCategoryHouse,
-  linkRoutineMission,
   unlinkRoutineMission,
   unlinkCategoryHouse,
   deleteRoutine,
@@ -62,8 +58,6 @@ export function useMissionLinks({
     time: string;
     linkedMissionId: number;
   }) => Promise<boolean>;
-  linkCategoryHouse: (categoryId: string, houseId: number) => Promise<unknown>;
-  linkRoutineMission: (routineId: string, missionId: number) => Promise<unknown>;
   /** 루틴 미션 연동 해제 — 성공 여부. 실패 토스트·롤백은 데이터 훅이 한다. */
   unlinkRoutineMission: (routineId: string) => Promise<boolean>;
   /** 카테고리 집 연동 해제 — 성공 여부. 실패 토스트·롤백은 데이터 훅이 한다. */
@@ -202,8 +196,8 @@ export function useMissionLinks({
 
   /**
    * 내 연동 루틴의 **연동만** 해제 — 루틴은 남기고 미션 링크만 끊는다. 이미 반영된
-   * 기여는 서버가 회수하지 않는다. 해제한 미션은 기록해 두어 부팅 때의 이름 매칭
-   * 승격(아래)이 다시 걸지 않게 한다.
+   * 기여는 서버가 회수하지 않는다. (부팅 때 이름으로 다시 묶던 승격(#578)은 2026-10-04에
+   * 없앴다 — 해제한 연동이 다음 실행에 되살아났다.)
    */
   const unlinkMissionRoutine = useCallback(
     async (missionId: number) => {
@@ -212,7 +206,6 @@ export function useMissionLinks({
       let ok = true;
       for (const r of linked) ok = (await unlinkRoutineMission(r.id)) && ok;
       if (!ok) return;
-      await addLinkOptOut(getSessionUserId(), { missionId });
       toast(i18n.t('house.missionLinks.routineUnlinked'));
     },
     [linkedRoutinesFor, unlinkRoutineMission, toast],
@@ -227,7 +220,6 @@ export function useMissionLinks({
       const houseId = categories.find((c) => c.id === categoryId)?.houseId;
       if (houseId == null) return;
       if (!(await unlinkCategoryHouse(categoryId))) return;
-      await addLinkOptOut(getSessionUserId(), { houseId });
       toast(i18n.t('house.missionLinks.categoryUnlinked'));
     },
     [categories, unlinkCategoryHouse, toast],
@@ -251,48 +243,6 @@ export function useMissionLinks({
     },
     [categories, leaveHouse, deleteCategoryCascade, toast],
   );
-
-  // 이름 매칭 연동분 1회성 승격 (#578) — 서버 백필이 없어, 이름이 일치하는데
-  // 링크 id가 없는 카테고리·루틴에 id를 심는다. 조건 기반(대상 없으면 no-op)
-  // 이라 기기 플래그가 필요 없고, 실패분은 다음 부팅에 다시 잡힌다.
-  const promotedRef = useRef(false);
-  useEffect(() => {
-    if (promotedRef.current || myRoomLoading || housesLoading) return;
-    if (houses.length === 0) return;
-    promotedRef.current = true;
-    void (async () => {
-      // 사용자가 직접 해제한 연동은 이름이 같아도 다시 걸지 않는다.
-      const optOut = await loadLinkOptOuts(getSessionUserId());
-      for (const house of houses) {
-        if (house.houseId == null) continue;
-        let cat = categories.find((c) => c.houseId === house.houseId);
-        const nameMatched = categories.find((c) => c.name === house.name);
-        if (
-          !cat &&
-          nameMatched &&
-          nameMatched.houseId == null &&
-          !optOut.houseIds.includes(house.houseId)
-        ) {
-          await linkCategoryHouse(nameMatched.id, house.houseId);
-          cat = nameMatched;
-        }
-        if (!cat) continue;
-        const catId = cat.id;
-        for (const mission of house.missions ?? []) {
-          if (mission.status !== 'ACTIVE' || optOut.missionIds.includes(mission.id)) continue;
-          const routine = routines.find(
-            (r) =>
-              r.kind === 'routine' &&
-              r.linkedMissionId == null &&
-              r.category === catId &&
-              r.title === mission.title,
-          );
-          if (routine) await linkRoutineMission(routine.id, mission.id);
-        }
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [myRoomLoading, housesLoading, houses, routines, categories]);
 
   // 끝났거나 사라진 미션의 연동 루틴 자동 정리 (#338 → #979).
   //

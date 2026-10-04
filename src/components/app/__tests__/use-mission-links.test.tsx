@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useMissionLinks } from '@/components/app/use-mission-links';
@@ -51,8 +50,6 @@ const setup = (opts: { missions: HouseMission[]; routines: Routine[] }) => {
       contributedMissionIds: new Set<number>(),
       ensureCategory: jest.fn(),
       addRoutineWithMission: jest.fn(),
-      linkCategoryHouse: jest.fn(),
-      linkRoutineMission: jest.fn(),
       deleteRoutine,
       deleteCategoryCascade: jest.fn(),
       toggleCompletion: jest.fn(),
@@ -142,8 +139,6 @@ describe('houseLinkedRoutines 참조 유지 (성능 장부 R7)', () => {
       contributedMissionIds: new Set<number>(),
       ensureCategory: jest.fn(),
       addRoutineWithMission: jest.fn(),
-      linkCategoryHouse: jest.fn(),
-      linkRoutineMission: jest.fn(),
       deleteRoutine: jest.fn(async () => true),
       deleteCategoryCascade: jest.fn(),
       toggleCompletion: jest.fn(),
@@ -177,14 +172,11 @@ describe('houseLinkedRoutines 참조 유지 (성능 장부 R7)', () => {
 });
 
 describe('연동 해제 (루틴↔미션, 카테고리↔집)', () => {
-  const OPT_OUT_KEY = 'rougether.link-opt-outs.v1.7';
   type Args = Parameters<typeof useMissionLinks>[0];
 
   const harness = async (over: Partial<Args> & { missions: HouseMission[] }) => {
     const unlinkRoutineMission = jest.fn(async () => true);
     const unlinkCategoryHouse = jest.fn(async () => true);
-    const linkRoutineMission = jest.fn(async () => undefined);
-    const linkCategoryHouse = jest.fn(async () => undefined);
     const houses: House[] = [{ houseId: 6, name: 'TripleS', missions: over.missions } as House];
     const { missions: _m, ...rest } = over;
     const view = await renderHook(() =>
@@ -199,8 +191,6 @@ describe('연동 해제 (루틴↔미션, 카테고리↔집)', () => {
         contributedMissionIds: new Set<number>(),
         ensureCategory: jest.fn(),
         addRoutineWithMission: jest.fn(),
-        linkCategoryHouse,
-        linkRoutineMission,
         unlinkRoutineMission,
         unlinkCategoryHouse,
         deleteRoutine: jest.fn(async () => true),
@@ -216,12 +206,10 @@ describe('연동 해제 (루틴↔미션, 카테고리↔집)', () => {
       view,
       unlinkRoutineMission,
       unlinkCategoryHouse,
-      linkRoutineMission,
-      linkCategoryHouse,
     };
   };
 
-  it('미션의 내 연동 루틴을 지우지 않고 연동만 해제하고, 해제한 미션을 기록한다', async () => {
+  it('미션의 내 연동 루틴을 지우지 않고 연동만 해제한다', async () => {
     const deleteRoutine = jest.fn(async () => true);
     const h = await harness({
       missions: [mission(1, 'ACTIVE')],
@@ -235,40 +223,28 @@ describe('연동 해제 (루틴↔미션, 카테고리↔집)', () => {
     expect(h.unlinkRoutineMission).toHaveBeenCalledTimes(1);
     expect(deleteRoutine).not.toHaveBeenCalled();
     expect(mockToast).toHaveBeenCalledWith('미션 연동을 해제했어요. 루틴은 그대로 남아요');
-    expect(JSON.parse((await AsyncStorage.getItem(OPT_OUT_KEY))!)).toMatchObject({
-      missionIds: [1],
-    });
   });
 
-  it('해제가 실패하면 기록도 성공 토스트도 없다 (실패 토스트는 데이터 훅 몫)', async () => {
+  it('해제가 실패하면 성공 토스트가 없다 (실패 토스트는 데이터 훅 몫)', async () => {
     const h = await harness({ missions: [mission(1, 'ACTIVE')], routines: [routine('r1', 1)] });
     h.unlinkRoutineMission.mockResolvedValueOnce(false);
     await act(async () => {
       await h.view.result.current.unlinkMissionRoutine(1);
     });
     expect(mockToast).not.toHaveBeenCalled();
-    expect(await AsyncStorage.getItem(OPT_OUT_KEY)).toBeNull();
   });
 
-  it('카테고리의 집 연동을 해제하고 해제한 집을 기록한다', async () => {
+  it('카테고리의 집 연동을 해제한다', async () => {
     const h = await harness({ missions: [mission(1, 'ACTIVE')] });
     await act(async () => {
       await h.view.result.current.unlinkHouseCategory('c-house');
     });
     expect(h.unlinkCategoryHouse).toHaveBeenCalledWith('c-house');
     expect(mockToast).toHaveBeenCalledWith('집 연동을 해제했어요. 카테고리와 루틴은 그대로 남아요');
-    expect(JSON.parse((await AsyncStorage.getItem(OPT_OUT_KEY))!)).toMatchObject({
-      houseIds: [6],
-    });
     expect(h.view.result.current.houseNameById).toEqual({ 6: 'TripleS' });
   });
 
-  /**
-   * 부팅 때의 이름 매칭 승격(#578)은 "이름이 같은데 링크가 없는" 항목에 링크를 심는다.
-   * 사용자가 해제한 직후가 바로 그 상태라, 기록을 안 보면 다음 실행에 연동이 되살아난다.
-   */
-  it('승격은 사용자가 해제한 집·미션을 다시 걸지 않는다', async () => {
-    await AsyncStorage.setItem(OPT_OUT_KEY, JSON.stringify({ houseIds: [6], missionIds: [1] }));
+  it('이름이 같아도 부팅 때 다시 연동하지 않는다 — 이름 매칭 승격(#578)은 2026-10-04에 없앴다', async () => {
     const unlinkedCat = { ...CATEGORY, houseId: undefined };
     const h = await harness({
       missions: [mission(1, 'ACTIVE')],
@@ -276,18 +252,9 @@ describe('연동 해제 (루틴↔미션, 카테고리↔집)', () => {
       routines: [{ ...routine('r1'), title: '미션 1' } as Routine],
     });
     await new Promise((r) => setTimeout(r, 30));
-    expect(h.linkCategoryHouse).not.toHaveBeenCalled();
-    expect(h.linkRoutineMission).not.toHaveBeenCalled();
-  });
-
-  it('기록이 없으면 승격은 예전대로 이름으로 연동한다', async () => {
-    const unlinkedCat = { ...CATEGORY, houseId: undefined };
-    const h = await harness({
-      missions: [mission(1, 'ACTIVE')],
-      categories: [unlinkedCat],
-      routines: [{ ...routine('r1'), title: '미션 1' } as Routine],
-    });
-    await waitFor(() => expect(h.linkCategoryHouse).toHaveBeenCalledWith('c-house', 6));
-    await waitFor(() => expect(h.linkRoutineMission).toHaveBeenCalledWith('r1', 1));
+    // 승격용 연동 함수 자체가 훅 계약에서 빠졌다 — 어떤 해제·연동 호출도 없다.
+    expect(h.unlinkCategoryHouse).not.toHaveBeenCalled();
+    expect(h.unlinkRoutineMission).not.toHaveBeenCalled();
+    expect(Object.keys(h.view.result.current)).not.toContain('linkCategoryHouse');
   });
 });
