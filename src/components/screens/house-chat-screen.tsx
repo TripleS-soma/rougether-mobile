@@ -223,8 +223,10 @@ export function HouseChatScreen({
             {
               backgroundColor: t.surface,
               borderTopColor: t.border,
-              // 키보드가 올라오면 홈 인디케이터 여백은 키보드 밑이다 — 둘을 더하지 않는다.
-              paddingBottom: (androidKeyboard > 0 ? androidKeyboard : insets.bottom) + Spacing.two,
+              // 안드로이드 keyboardDidShow 높이는 ime − 시스템 바다(ReactRootView). 엣지투엣지에선
+              // 키보드가 내비바 자리까지 덮으니 하단 인셋을 그대로 두고 그 위에 더한다 — 빼면
+              // 내비바 높이만큼 입력칸이 키보드 밑에 깔린다(2026-10-04 갤럭시 제보).
+              paddingBottom: insets.bottom + androidKeyboard + Spacing.two,
             },
           ]}>
           <View style={[styles.inputInner, column]}>

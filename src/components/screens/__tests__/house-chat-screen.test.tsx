@@ -1,4 +1,6 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
+import { DeviceEventEmitter, Platform, StyleSheet } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { type ChatMessageView, HouseChatScreen } from '@/components/screens/house-chat-screen';
 
@@ -73,5 +75,45 @@ describe('HouseChatScreen (#1408)', () => {
   it('대화가 없으면 빈 상태 문구', async () => {
     const screen = await render(<HouseChatScreen messages={[]} myUserId={1} />);
     expect(screen.getByText('아직 대화가 없어요. 먼저 인사를 건네 보세요!')).toBeTruthy();
+  });
+});
+
+describe('HouseChatScreen 키보드 — Android', () => {
+  const NAV_BAR = 48;
+  const KEYBOARD = 282; // ime − system bars, what keyboardDidShow reports (ReactRootView)
+
+  beforeEach(() => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('입력줄 아래 여백은 내비바 인셋 위에 키보드 높이를 더한다 — 내비바만큼 가려지지 않게', async () => {
+    const screen = await render(
+      <SafeAreaInsetsContext.Provider value={{ top: 40, bottom: NAV_BAR, left: 0, right: 0 }}>
+        <HouseChatScreen messages={[]} myUserId={1} />
+      </SafeAreaInsetsContext.Provider>,
+    );
+    const bottom = () => {
+      let node = screen.getByLabelText('메시지 입력').parent;
+      while (node) {
+        const pb = StyleSheet.flatten(node.props.style)?.paddingBottom;
+        if (typeof pb === 'number') return pb;
+        node = node.parent;
+      }
+      return undefined;
+    };
+    const closed = bottom()!;
+    expect(closed).toBeGreaterThanOrEqual(NAV_BAR);
+
+    await act(async () => {
+      DeviceEventEmitter.emit('keyboardDidShow', {
+        endCoordinates: { screenX: 0, screenY: 0, width: 411, height: KEYBOARD },
+        easing: 'keyboard',
+        duration: 0,
+      });
+    });
+    expect(bottom()).toBe(closed + KEYBOARD);
   });
 });
