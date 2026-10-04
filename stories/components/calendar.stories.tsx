@@ -60,6 +60,11 @@ type Story = StoryObj<typeof meta>;
 
 export const Month: Story = { name: '월 달력' };
 export const OffToday: Story = { name: '다른 날 선택(오늘 칩)', args: { value: '2026-09-02' } };
+/** 주 보기에서 달이 걸친 주 — 이웃 달 날짜(9/27~30)를 흐리게 채워 7칸이 다 보인다. */
+export const WeekAcrossMonths: Story = {
+  name: '주 보기 — 달이 걸친 주',
+  args: { value: '2026-10-02', weekOf: '2026-10-02' },
+};
 export const Bounded: Story = {
   name: '선택 범위 제한',
   args: { min: '2026-09-10', max: '2026-09-25', markedDates: undefined },
