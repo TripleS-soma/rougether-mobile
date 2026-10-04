@@ -42,6 +42,7 @@
       "editNeedPhoto": "Only posts with photos can move to the Verification board.",
       "editToFreeHint": "Moving to the Free board removes the linked routine.",
       "editKeepRoutine": "If you don't pick another one, the linked routine stays.",
+      "editRestoreRoutine": "Keep the originally linked routine",
       "editCurrentRoutine": "Linked routine"
     },
     "compose": {

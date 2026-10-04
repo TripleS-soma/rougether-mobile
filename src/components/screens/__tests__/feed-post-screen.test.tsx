@@ -187,6 +187,28 @@ describe('FeedPostScreen (#1409)', () => {
     expect(onEditPost).toHaveBeenCalledWith(3, { content: OTHER_POST.content });
   });
 
+  it('다른 루틴을 골랐다가 되돌리면 창을 닫지 않고 원래 연결로 — 본문만 보낸다', async () => {
+    const onEditPost = jest.fn().mockResolvedValue(true);
+    const ui = await render(
+      <FeedPostScreen
+        post={{ ...OTHER_POST, mine: true }}
+        onEditPost={onEditPost}
+        routinePicker={{ groups: DEMO_FEED_COMPLETIONS, loading: false, error: false }}
+        today={DEMO_FEED_TODAY}
+      />,
+    );
+    await fireEvent.press(ui.getByLabelText('게시물 수정'));
+    expect(ui.queryByLabelText('원래 연결한 루틴으로 되돌리기')).toBeNull();
+
+    await fireEvent.press(ui.getByLabelText('아침 스트레칭, 10/3 완료'));
+    await fireEvent.press(ui.getByLabelText('원래 연결한 루틴으로 되돌리기'));
+    expect(ui.queryByLabelText('원래 연결한 루틴으로 되돌리기')).toBeNull();
+    expect(ui.getByText('바꾸지 않으면 지금 연결한 루틴이 그대로 남아요.')).toBeTruthy();
+
+    await fireEvent.press(ui.getByRole('button', { name: '저장' }));
+    expect(onEditPost).toHaveBeenCalledWith(3, { content: OTHER_POST.content });
+  });
+
   it('연결 루틴이 있는 인증글은 배지를 보인다', async () => {
     const ui = await render(<FeedPostScreen post={OTHER_POST} />);
     expect(ui.getByText('아침 스트레칭 · 9/22 완료')).toBeTruthy();

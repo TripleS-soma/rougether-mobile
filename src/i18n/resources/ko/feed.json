@@ -42,6 +42,7 @@
       "editNeedPhoto": "사진이 있는 글만 인증게시판으로 옮길 수 있어요.",
       "editToFreeHint": "자유게시판으로 옮기면 연결한 루틴이 풀려요.",
       "editKeepRoutine": "바꾸지 않으면 지금 연결한 루틴이 그대로 남아요.",
+      "editRestoreRoutine": "원래 연결한 루틴으로 되돌리기",
       "editCurrentRoutine": "지금 연결한 루틴"
     },
     "compose": {

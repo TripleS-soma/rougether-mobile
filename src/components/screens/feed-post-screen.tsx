@@ -246,7 +246,19 @@ function EditPostDialog({
                   onChange={setRoutine}
                   today={today}
                 />
-                {stayingVerification ? (
+                {stayingVerification && routine && post.routine ? (
+                  // 다른 루틴을 골랐다가 마음을 바꿔도 창을 닫지 않고 원래 연결로 돌아간다.
+                  <Pressable
+                    onPress={() => setRoutine(null)}
+                    accessibilityRole="button"
+                    accessibilityLabel={tr('feed.post.editRestoreRoutine')}
+                    hitSlop={Spacing.two}
+                    style={styles.restoreRoutine}>
+                    <Text style={[Typography.label, { color: t.primaryText }]}>
+                      {tr('feed.post.editRestoreRoutine')}
+                    </Text>
+                  </Pressable>
+                ) : stayingVerification ? (
                   <Text style={[Typography.supporting, { color: t.textMuted }]}>
                     {tr('feed.post.editKeepRoutine')}
                   </Text>
@@ -709,6 +721,7 @@ export function FeedPostScreen({
 }
 
 const styles = StyleSheet.create({
+  restoreRoutine: { alignSelf: 'flex-start' },
   screen: {
     flex: 1,
   },
