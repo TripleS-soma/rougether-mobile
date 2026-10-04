@@ -10,11 +10,13 @@ import {
   View,
 } from 'react-native';
 
-import type { FeedDraftImage } from '@/components/screens/feed/types';
+import { FEED_BOARD_TYPES, FeedBoardTabs } from '@/components/feed/feed-board';
+import { feedComposeBlocker } from '@/components/screens/feed/board-rules';
+import type { FeedBoardType, FeedDraftImage } from '@/components/screens/feed/types';
 import { Icon } from '@/components/ui/icon';
 import { Loading } from '@/components/ui/loading';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { FEED_MAX_CONTENT, FEED_MAX_IMAGES } from '@/constants/feed';
+import { FEED_DEFAULT_BOARD, FEED_MAX_CONTENT, FEED_MAX_IMAGES } from '@/constants/feed';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useAndroidKeyboardHeight } from '@/hooks/use-android-keyboard-height';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
@@ -26,6 +28,9 @@ const NO_IMAGES: FeedDraftImage[] = [];
 const THUMB_SIZE = 96;
 
 export type FeedComposeScreenProps = {
+  /** 올릴 게시판 (서버 #428) — 기본 자유(`FEED_DEFAULT_BOARD`). */
+  board?: FeedBoardType;
+  onChangeBoard?: (board: FeedBoardType) => void;
   images?: FeedDraftImage[];
   content?: string;
   onChangeContent?: (content: string) => void;
@@ -39,10 +44,13 @@ export type FeedComposeScreenProps = {
 };
 
 /**
- * 피드 게시물 작성 (#1409) — 사진 1–10장(고르는 즉시 올리며 장마다 진행 상태), 선택
- * 본문 2,000자. 사진이 한 장 이상이고 전부 올라가야 [올리기]가 켜진다. 순서 바꾸기는 없다.
+ * 피드 게시물 작성 (#1409) — 위에서 게시판(자유/인증, 서버 #428)을 고르고, 사진(고르는 즉시
+ * 올리며 장마다 진행 상태)과 본문 2,000자. 자유는 사진 0–10장이되 사진이 없으면 본문 필수,
+ * 인증은 사진 1–10장 필수. 고른 사진이 전부 올라가야 [올리기]가 켜진다. 순서 바꾸기는 없다.
  */
 export function FeedComposeScreen({
+  board = FEED_DEFAULT_BOARD,
+  onChangeBoard,
   images = NO_IMAGES,
   content = '',
   onChangeContent,
@@ -60,16 +68,12 @@ export function FeedComposeScreen({
   const headerInset = useHeaderContentInset();
   const androidKeyboard = useAndroidKeyboardHeight(Platform.OS === 'android');
 
-  const uploading = images.some((img) => img.status === 'uploading');
-  const ready = images.length > 0 && images.every((img) => img.status === 'done');
-  const canSubmit = ready && !submitting && !!onSubmit;
+  const blocker = feedComposeBlocker(board, images, content);
+  const canSubmit = blocker === null && !submitting && !!onSubmit;
   const canAdd = images.length < FEED_MAX_IMAGES && !submitting;
-  const hint =
-    images.length === 0
-      ? tr('feed.compose.needPhoto')
-      : uploading
-        ? tr('feed.compose.waitUpload')
-        : null;
+  // 실패한 장은 썸네일의 [다시]가 안내한다 — 아래 문구는 나머지 사유만.
+  const hint = blocker && blocker !== 'uploadFailed' ? tr(`feed.compose.${blocker}`) : null;
+  const optional = board === 'VERIFICATION' || images.length > 0;
 
   return (
     <View style={[styles.screen, useScreenStyle(['bottom'])]}>
@@ -102,6 +106,20 @@ export function FeedComposeScreen({
             headerInset ? { paddingTop: headerInset } : null,
             androidKeyboard ? { paddingBottom: Spacing.four + androidKeyboard } : null,
           ]}>
+          <View style={styles.boardRow}>
+            <FeedBoardTabs
+              options={FEED_BOARD_TYPES}
+              value={board}
+              onChange={onChangeBoard}
+              disabled={submitting || !onChangeBoard}
+              testID="feed-compose-board"
+            />
+            <Text style={[Typography.supporting, styles.boardHint, { color: t.textMuted }]}>
+              {board === 'FREE'
+                ? tr('feed.compose.boardHintFree')
+                : tr('feed.compose.boardHintVerification')}
+            </Text>
+          </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.thumbs}>
               {canAdd ? (
@@ -179,7 +197,11 @@ export function FeedComposeScreen({
             multiline
             maxLength={FEED_MAX_CONTENT}
             editable={!submitting}
-            placeholder={tr('feed.compose.contentPlaceholder')}
+            placeholder={
+              optional
+                ? tr('feed.compose.contentPlaceholder')
+                : tr('feed.compose.contentPlaceholderRequired')
+            }
             placeholderTextColor={t.textMuted}
             accessibilityLabel={tr('feed.compose.contentLabel')}
             style={[
@@ -207,6 +229,12 @@ const styles = StyleSheet.create({
   body: {
     padding: Spacing.three,
     gap: Spacing.three,
+  },
+  boardRow: {
+    gap: Spacing.one,
+  },
+  boardHint: {
+    textAlign: 'center',
   },
   submit: {
     paddingHorizontal: Spacing.three,

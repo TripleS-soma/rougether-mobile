@@ -1,3 +1,5 @@
+import type { FeedBoardType } from '@/api/types';
+
 /**
  * 피드 화면의 앱 모델 (#1409) — 서버 응답(`FeedPostResponse` 등)은 전부 옵셔널이라
  * 어댑터(`@/api/adapters/feed`)가 여기 모양으로 굳혀 넘긴다. 화면은 이 타입만 안다.
@@ -15,9 +17,16 @@ export type FeedImage = {
   height: number;
 };
 
+export type { FeedBoardType } from '@/api/types';
+
+/** 피드 목록의 게시판 필터 — `ALL`은 통합 피드(boardType 생략). */
+export type FeedBoardFilter = 'ALL' | FeedBoardType;
+
 export type FeedPost = {
   postId: number;
   author: FeedAuthor;
+  /** 등록 후 바뀌지 않는다(서버 #428). */
+  boardType: FeedBoardType;
   content: string;
   images: FeedImage[];
   likeCount: number;

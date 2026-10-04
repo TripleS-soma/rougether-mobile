@@ -39,6 +39,7 @@ import { FeedScreen } from '@/components/screens/feed-screen';
 import { FeedPostScreen } from '@/components/screens/feed-post-screen';
 import { BlockedUsersScreen } from '@/components/screens/blocked-users-screen';
 import { FeedComposeScreen } from '@/components/screens/feed-compose-screen';
+import type { FeedBoardFilter, FeedBoardType } from '@/components/screens/feed/types';
 import { MarketAssetScreen } from '@/components/screens/market-asset-screen';
 import { MarketOrdersScreen } from '@/components/screens/market-orders-screen';
 import { MarketList } from '@/components/screens/market/market-list';
@@ -114,6 +115,7 @@ import {
   DEMO_FEED_COMMENTS,
   DEMO_FEED_DRAFT,
   DEMO_FEED_POSTS,
+  DEMO_FEED_TEXT_POST,
   DEMO_MARKET_ASSET,
   DEMO_MARKET_ASSETS,
   DEMO_MARKET_ORDERS,
@@ -166,6 +168,37 @@ function InviteArrivalSheetDemo() {
         onLater={() => setOpen(false)}
       />
     </View>
+  );
+}
+
+/** 피드 게시판 필터 데모 (서버 #428) — 전체/자유/인증을 눌러 로컬 픽스처를 거른다. */
+function FeedScreenDemo() {
+  const [board, setBoard] = useState<FeedBoardFilter>('ALL');
+  const all = [DEMO_FEED_TEXT_POST, ...DEMO_FEED_POSTS];
+  const posts = board === 'ALL' ? all : all.filter((p) => p.boardType === board);
+  return (
+    <FeedScreen
+      posts={posts}
+      board={board}
+      onChangeBoard={setBoard}
+      onCompose={() => {}}
+      onToggleLike={() => {}}
+    />
+  );
+}
+
+/** 피드 작성 게시판 선택 데모 (서버 #428) — 자유는 글만으로도, 인증은 사진이 있어야 켜진다. */
+function FeedComposeDemo() {
+  const [board, setBoard] = useState<FeedBoardType>('FREE');
+  const [content, setContent] = useState('');
+  return (
+    <FeedComposeScreen
+      board={board}
+      onChangeBoard={setBoard}
+      content={content}
+      onChangeContent={setContent}
+      onSubmit={() => {}}
+    />
   );
 }
 
@@ -1215,10 +1248,10 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'FeedScreen',
     description:
-      '공개 피드 탭 (#1409, FEED_ENABLED로 숨김): 카드(작성자·첫 사진+장수·본문 3줄·좋아요/댓글), 떠 있는 + 작성 버튼. 로컬 픽스처 — 서버 요청·쓰기 없음, 사진은 자리표시.',
+      '공개 피드 탭 (#1409, FEED_ENABLED로 숨김): 위에 [전체 | 자유 | 인증] 게시판 필터(서버 #428), 카드(작성자·게시판 배지·첫 사진+장수·본문 3줄, 사진 없는 자유글은 8줄·좋아요/댓글), 떠 있는 + 작성 버튼. 로컬 픽스처 — 서버 요청·쓰기 없음, 사진은 자리표시.',
     render: () => (
       <View style={{ height: 720, alignSelf: 'stretch' }}>
-        <FeedScreen posts={DEMO_FEED_POSTS} onCompose={() => {}} onToggleLike={() => {}} />
+        <FeedScreenDemo />
       </View>
     ),
   },
@@ -1237,6 +1270,23 @@ export const galleryEntries: GalleryEntry[] = [
           onReportPost={() => true}
           onReportComment={() => true}
           onBlockUser={() => {}}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'FeedPostScreen · 자유게시판 글',
+    description:
+      '사진 없는 자유게시판 글 상세 (서버 #428): 사진 자리 없이 작성자·자유 배지·본문. 내 글이면 수정 창에서 게시판은 읽기 전용, 본문은 비울 수 없다. 로컬 픽스처.',
+    render: () => (
+      <View style={{ height: 560, alignSelf: 'stretch' }}>
+        <FeedPostScreen
+          post={{ ...DEMO_FEED_TEXT_POST, mine: true }}
+          comments={[]}
+          onAddComment={() => true}
+          onToggleLike={() => {}}
+          onEditPost={() => true}
+          onDeletePost={() => {}}
         />
       </View>
     ),
@@ -1306,7 +1356,21 @@ export const galleryEntries: GalleryEntry[] = [
       '피드 작성 (#1409): 사진 타일(올리는 중·완료·실패 다시), 본문 2,000자 카운터. 전부 올라가야 올리기가 켜진다. 로컬 픽스처.',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
-        <FeedComposeScreen images={DEMO_FEED_DRAFT} content="오늘의 루틴 인증" />
+        <FeedComposeScreen
+          board="VERIFICATION"
+          images={DEMO_FEED_DRAFT}
+          content="오늘의 루틴 인증"
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'FeedComposeScreen · 자유게시판',
+    description:
+      '피드 작성의 게시판 선택 (서버 #428): 자유는 사진 없이 본문만으로 올리기가 켜지고, 인증으로 바꾸면 사진 1장 이상이 필요하다는 안내. 로컬 상태만.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <FeedComposeDemo />
       </View>
     ),
   },

@@ -14,7 +14,14 @@ import { IS_INTERNAL_CHANNEL } from '@/constants/release-channel';
  */
 export const FEED_ENABLED = IS_INTERNAL_CHANNEL;
 
-/** 게시물당 사진 1–10장 (POST /feed/posts `imageIds`). */
+/**
+ * 작성 화면의 기본 게시판 (서버 #428). 서버는 boardType을 생략하면 `VERIFICATION`으로 받지만
+ * 앱은 항상 명시해서 보낸다. 기본을 `FREE`로 두는 건 사진 없이도 바로 쓸 수 있는 가벼운 쪽이라서
+ * — 사진을 고른 사람은 한 번 눌러 인증게시판으로 옮긴다.
+ */
+export const FEED_DEFAULT_BOARD = 'FREE' as const;
+
+/** 게시물당 사진 최대 10장 — 자유게시판 0–10장, 인증게시판 1–10장 (POST /feed/posts `imageIds`). */
 export const FEED_MAX_IMAGES = 10;
 /** 본문 최대 2,000자(UTF-16) — TextInput maxLength도 UTF-16 단위라 그대로 맞는다. */
 export const FEED_MAX_CONTENT = 2000;

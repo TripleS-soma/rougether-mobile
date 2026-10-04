@@ -134,4 +134,83 @@ describe('useFeedCompose (#1409)', () => {
     await waitFor(() => expect(result.current.images[0].status).toBe('done'));
     expect(result.current.canSubmit).toBe(true);
   });
+
+  describe('게시판 (서버 #428)', () => {
+    it('기본은 자유게시판 — 사진 없이 본문만 boardType FREE·빈 imageIds로 보낸다', async () => {
+      const { result } = await renderHook(() => useFeedCompose(), { wrapper: queryWrapper() });
+      expect(result.current.board).toBe('FREE');
+      expect(result.current.canSubmit).toBe(false);
+      await act(async () => {
+        result.current.setContent('  글만 올려요 ');
+      });
+      expect(result.current.canSubmit).toBe(true);
+      await act(async () => {
+        await result.current.submit();
+      });
+      expect(jest.mocked(createFeedPost).mock.calls[0][0]).toMatchObject({
+        boardType: 'FREE',
+        content: '글만 올려요',
+        imageIds: [],
+      });
+    });
+
+    it('인증게시판은 사진 없이 게시하지 않고 안내한다', async () => {
+      const onError = jest.fn();
+      const { result } = await renderHook(() => useFeedCompose({ onError }), {
+        wrapper: queryWrapper(),
+      });
+      await act(async () => {
+        result.current.setBoard('VERIFICATION');
+        result.current.setContent('본문만');
+      });
+      expect(result.current.canSubmit).toBe(false);
+      await act(async () => {
+        await result.current.submit();
+      });
+      expect(createFeedPost).not.toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledWith('사진을 한 장 이상 골라 주세요.');
+    });
+
+    it('자유게시판의 빈 글은 보내지 않는다', async () => {
+      const onError = jest.fn();
+      const { result } = await renderHook(() => useFeedCompose({ onError }), {
+        wrapper: queryWrapper(),
+      });
+      await act(async () => {
+        result.current.setContent('   ');
+        await result.current.submit();
+      });
+      expect(createFeedPost).not.toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledWith('본문을 쓰거나 사진을 골라 주세요.');
+    });
+
+    it('실패 후 게시판만 바꿔 보내도 새 clientPostId (같은 id·다른 게시판은 서버가 409)', async () => {
+      jest.mocked(createFeedPost).mockRejectedValueOnce(new Error('network'));
+      const { result } = await withUploaded();
+      await act(async () => {
+        await result.current.submit();
+      });
+      await act(async () => {
+        result.current.setBoard('VERIFICATION');
+      });
+      await act(async () => {
+        await result.current.submit();
+      });
+      const [first, second] = jest.mocked(createFeedPost).mock.calls.map((c) => c[0]);
+      expect(first.boardType).toBe('FREE');
+      expect(second).toMatchObject({ boardType: 'VERIFICATION', imageIds: [100, 101] });
+      expect(second.clientPostId).not.toBe(first.clientPostId);
+    });
+
+    it('작성을 버리면 게시판도 기본(자유)으로 돌아간다', async () => {
+      const { result } = await renderHook(() => useFeedCompose(), { wrapper: queryWrapper() });
+      await act(async () => {
+        result.current.setBoard('VERIFICATION');
+      });
+      await act(async () => {
+        result.current.discard();
+      });
+      expect(result.current.board).toBe('FREE');
+    });
+  });
 });

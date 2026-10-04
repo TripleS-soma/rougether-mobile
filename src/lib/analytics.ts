@@ -100,7 +100,7 @@ export type AnalyticsEvent =
   // 공개 SNS 피드 (#1409) — FEED_ENABLED가 꺼져 있는 동안은 발생하지 않는다.
   /** 피드 탭 진입 — 탭 전환마다. */
   | 'feed_view'
-  /** 게시물 등록 성공 — image_count, has_text. */
+  /** 게시물 등록 성공 — image_count, has_text, board_type(FREE|VERIFICATION, 서버 #428). */
   | 'feed_post_create'
   /** 좋아요 반영 성공 — liked: true(누름)|false(취소). */
   | 'feed_like'

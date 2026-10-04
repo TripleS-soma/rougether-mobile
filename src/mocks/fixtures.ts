@@ -158,6 +158,7 @@ export const DEMO_FEED_POSTS: FeedPost[] = [
   {
     postId: 3,
     author: { userId: 7, nickname: '루틴친구', profileImageKey: null },
+    boardType: 'VERIFICATION',
     content: '오늘 아침 루틴 완료! 물 한 잔, 스트레칭 10분, 일기 세 줄.',
     images: [
       { imageId: 31, width: 1200, height: 1600 },
@@ -173,6 +174,7 @@ export const DEMO_FEED_POSTS: FeedPost[] = [
   {
     postId: 2,
     author: { userId: 4, nickname: '나', profileImageKey: null },
+    boardType: 'FREE',
     content: '방을 새로 꾸몄어요. 창가 화분이 제일 마음에 들어요.',
     images: [{ imageId: 21, width: 1200, height: 1200 }],
     likeCount: 12,
@@ -185,6 +187,7 @@ export const DEMO_FEED_POSTS: FeedPost[] = [
   {
     postId: 1,
     author: { userId: 9, nickname: null, profileImageKey: null },
+    boardType: 'VERIFICATION',
     content: '',
     images: [{ imageId: 11, width: 1600, height: 900 }],
     likeCount: 0,
@@ -195,6 +198,21 @@ export const DEMO_FEED_POSTS: FeedPost[] = [
     updatedAt: '2026-09-15T08:00:00Z',
   },
 ];
+
+/** 사진 없는 자유게시판 글 (서버 #428) — 텍스트만 있는 카드·상세 미리보기용. */
+export const DEMO_FEED_TEXT_POST: FeedPost = {
+  postId: 4,
+  author: { userId: 7, nickname: '루틴친구', profileImageKey: null },
+  boardType: 'FREE',
+  content: '요즘 아침 루틴을 어떻게 지키고 계세요?\n저는 알람 대신 커튼을 열어 두고 자요.',
+  images: [],
+  likeCount: 1,
+  commentCount: 0,
+  likedByMe: false,
+  mine: false,
+  createdAt: '2026-09-22T05:00:00Z',
+  updatedAt: '2026-09-22T05:00:00Z',
+};
 
 export const DEMO_FEED_COMMENTS: FeedComment[] = [
   {

@@ -71,7 +71,7 @@ export const ErrorCode = {
   /** 409 — 이미 가져온 캘린더 일정 (#844). 지운 조합도 재등록되지 않는다. */
   TODO_EXTERNAL_DUPLICATE: 'TODO_EXTERNAL_DUPLICATE',
   // --- 공개 SNS 피드 (#1409, spec domains/feed/api.md "오류") ---
-  /** 400 — 본문/사진 수/중복 사진/커서/목록 크기 오류. */
+  /** 400 — 본문/사진 수(게시판별)/사진 없는 자유글의 빈 본문/중복 사진/커서/목록 크기/게시판 값 오류. */
   FEED_INPUT_INVALID: 'FEED_INPUT_INVALID',
   /** 400 — 본문·댓글 금칙어. */
   FEED_CONTENT_BANNED: 'FEED_CONTENT_BANNED',
@@ -85,7 +85,7 @@ export const ErrorCode = {
   FEED_COMMENT_NOT_FOUND: 'FEED_COMMENT_NOT_FOUND',
   /** 404 — 없음·만료·삭제·탈퇴·타인의 미게시 사진. */
   FEED_IMAGE_NOT_FOUND: 'FEED_IMAGE_NOT_FOUND',
-  /** 409 — 재시도 UUID를 다른 요청/삭제 결과에 재사용. */
+  /** 409 — 재시도 UUID를 다른 요청(본문·사진·게시판 종류)/삭제 결과에 재사용. */
   FEED_REQUEST_CONFLICT: 'FEED_REQUEST_CONFLICT',
   /** 409 — 사진이 본인 소유/완료/미사용/유효 상태가 아님. */
   FEED_IMAGE_UNAVAILABLE: 'FEED_IMAGE_UNAVAILABLE',

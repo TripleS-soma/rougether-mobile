@@ -11,9 +11,11 @@ const done = (key: string, imageId: number): FeedDraftImage => ({
 });
 
 describe('FeedComposeScreen (#1409)', () => {
-  it('사진이 없으면 올리기가 꺼져 있고 안내가 보인다', async () => {
+  it('인증게시판은 사진이 없으면 올리기가 꺼져 있고 안내가 보인다', async () => {
     const onSubmit = jest.fn();
-    const { getByLabelText, getByText } = await render(<FeedComposeScreen onSubmit={onSubmit} />);
+    const { getByLabelText, getByText } = await render(
+      <FeedComposeScreen board="VERIFICATION" content="본문만" onSubmit={onSubmit} />,
+    );
     const submit = getByLabelText('올리기');
     expect(submit.props.accessibilityState).toMatchObject({ disabled: true });
     await fireEvent.press(submit);
@@ -68,5 +70,29 @@ describe('FeedComposeScreen (#1409)', () => {
     const images = Array.from({ length: 10 }, (_, i) => done(`k${i}`, i + 1));
     const { queryByLabelText } = await render(<FeedComposeScreen images={images} />);
     expect(queryByLabelText(/사진 고르기/)).toBeNull();
+  });
+
+  it('기본은 자유게시판 — 사진 없이 본문만 있으면 올릴 수 있다', async () => {
+    const onSubmit = jest.fn();
+    const ui = await render(<FeedComposeScreen onSubmit={onSubmit} />);
+    expect(ui.getByLabelText('자유 게시판').props.accessibilityState).toMatchObject({
+      selected: true,
+    });
+    expect(ui.getByText('본문을 쓰거나 사진을 골라 주세요.')).toBeTruthy();
+    expect(ui.getByLabelText('올리기').props.accessibilityState).toMatchObject({ disabled: true });
+
+    await ui.rerender(<FeedComposeScreen content="   " onSubmit={onSubmit} />);
+    expect(ui.getByLabelText('올리기').props.accessibilityState).toMatchObject({ disabled: true });
+
+    await ui.rerender(<FeedComposeScreen content="글만 올려요" onSubmit={onSubmit} />);
+    await fireEvent.press(ui.getByLabelText('올리기'));
+    expect(onSubmit).toHaveBeenCalled();
+  });
+
+  it('게시판을 누르면 그 게시판으로 바꾼다', async () => {
+    const onChangeBoard = jest.fn();
+    const { getByLabelText } = await render(<FeedComposeScreen onChangeBoard={onChangeBoard} />);
+    await fireEvent.press(getByLabelText('인증 게시판'));
+    expect(onChangeBoard).toHaveBeenCalledWith('VERIFICATION');
   });
 });

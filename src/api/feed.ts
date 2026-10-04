@@ -21,6 +21,7 @@ import {
 import { API_BASE } from './config';
 import { buildQuery } from './http';
 import type {
+  FeedBoardType,
   FeedCommentResponse,
   FeedCreateRequest,
   FeedImageResponse,
@@ -166,14 +167,23 @@ export async function createFeedPost(input: FeedCreateRequest): Promise<FeedPost
   return adaptPost(await apiPost<FeedPostResponse>('/feed/posts', input));
 }
 
-/** GET /feed/posts — 최신 ID 내림차순. `authorId`를 주면 그 사람 글만. */
+/**
+ * GET /feed/posts — 최신 ID 내림차순. `authorId`를 주면 그 사람 글만, `boardType`을 주면
+ * 그 게시판만(생략 = 통합 피드). 게시판을 바꾸면 cursor 없이 첫 페이지부터(spec).
+ */
 export async function fetchFeedPosts({
   cursor,
   size,
   authorId,
-}: { cursor?: number; size?: number; authorId?: number } = {}): Promise<Page<FeedPost>> {
+  boardType,
+}: {
+  cursor?: number;
+  size?: number;
+  authorId?: number;
+  boardType?: FeedBoardType;
+} = {}): Promise<Page<FeedPost>> {
   const page = await apiGetPage<FeedPostResponse>(
-    `/feed/posts${buildQuery({ cursor, size, authorId })}`,
+    `/feed/posts${buildQuery({ cursor, size, authorId, boardType })}`,
   );
   return adaptPage(page, toFeedPost);
 }
@@ -185,7 +195,10 @@ export async function fetchFeedPost(postId: number): Promise<FeedPost> {
   );
 }
 
-/** PATCH /feed/posts/{postId} — 본인 본문만(빈 문자열 허용). 사진은 바꿀 수 없다. */
+/**
+ * PATCH /feed/posts/{postId} — 본인 본문만. 사진·게시판은 바꿀 수 없다. 빈 문자열은 사진이
+ * 있는 글만 허용(사진 없는 자유글은 400 FEED_INPUT_INVALID).
+ */
 export async function updateFeedPost(postId: number, content: string): Promise<FeedPost> {
   return adaptPost(await apiPatch<FeedPostResponse>(`/feed/posts/${postId}`, { content }));
 }

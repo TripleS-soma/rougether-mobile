@@ -10,9 +10,10 @@ import {
   View,
 } from 'react-native';
 
+import { FEED_BOARD_FILTERS, FeedBoardTabs } from '@/components/feed/feed-board';
 import { FeedActionRow, FeedAuthorRow, feedAuthorName } from '@/components/feed/feed-parts';
 import { FeedPhoto, feedImageAspect } from '@/components/feed/feed-photo';
-import type { FeedImageLoader, FeedPost } from '@/components/screens/feed/types';
+import type { FeedBoardFilter, FeedImageLoader, FeedPost } from '@/components/screens/feed/types';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon } from '@/components/ui/icon';
 import { Loading } from '@/components/ui/loading';
@@ -29,9 +30,16 @@ import { useT } from '@/i18n';
 
 const NO_POSTS: FeedPost[] = [];
 const COMPOSE_SIZE = 56;
+/** 목록 카드 본문 줄 수 — 사진 없는 자유글은 글이 주인공이라 더 길게 보인다. */
+const CARD_LINES = 3;
+const TEXT_ONLY_CARD_LINES = 8;
 
 export type FeedScreenProps = {
   posts?: FeedPost[];
+  /** 게시판 필터 (서버 #428) — 전체(통합)·자유·인증. */
+  board?: FeedBoardFilter;
+  /** 주면 목록 위에 [전체 | 자유 | 인증] 세그먼트를 그린다. */
+  onChangeBoard?: (board: FeedBoardFilter) => void;
   /** 첫 페이지를 받는 중. */
   loading?: boolean;
   /** 첫 페이지 실패 — 빈 상태로 위장하지 않고 재시도를 보인다. */
@@ -60,7 +68,10 @@ type CardProps = {
   now?: Date;
 };
 
-/** 목록 카드 — 첫 사진 + 본문 세 줄 + 좋아요·댓글. 사진·본문을 누르면 상세. */
+/**
+ * 목록 카드 — 작성자(게시판 배지) + 첫 사진 + 본문 세 줄 + 좋아요·댓글. 사진·본문을 누르면
+ * 상세. 사진 없는 자유글(서버 #428)은 사진 자리 없이 본문을 여덟 줄까지.
+ */
 const FeedPostCard = memo(function FeedPostCard({
   post,
   loadImage,
@@ -86,6 +97,7 @@ const FeedPostCard = memo(function FeedPostCard({
           author={post.author}
           createdAt={post.createdAt}
           edited={post.updatedAt !== post.createdAt}
+          board={post.boardType}
           now={now}
         />
         {first ? (
@@ -106,7 +118,9 @@ const FeedPostCard = memo(function FeedPostCard({
           </View>
         ) : null}
         {post.content ? (
-          <Text style={[Typography.body, { color: t.text }]} numberOfLines={3}>
+          <Text
+            style={[Typography.body, { color: t.text }]}
+            numberOfLines={first ? CARD_LINES : TEXT_ONLY_CARD_LINES}>
             {post.content}
           </Text>
         ) : null}
@@ -129,6 +143,8 @@ const FeedPostCard = memo(function FeedPostCard({
  */
 export function FeedScreen({
   posts = NO_POSTS,
+  board = 'ALL',
+  onChangeBoard,
   loading = false,
   loadError = false,
   onRetry,
@@ -167,6 +183,16 @@ export function FeedScreen({
   const handleScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => onScrollY?.(e.nativeEvent.contentOffset.y),
     [onScrollY],
+  );
+
+  // 게시판을 바꾸면 새 목록의 맨 위부터 — 이전 게시판의 스크롤 위치를 끌고 가지 않는다.
+  const handleChangeBoard = useCallback(
+    (next: FeedBoardFilter) => {
+      if (next === board) return;
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
+      onChangeBoard?.(next);
+    },
+    [board, onChangeBoard],
   );
 
   const handleRefresh = useCallback(async () => {
@@ -226,6 +252,16 @@ export function FeedScreen({
           headerInset ? { paddingTop: headerInset } : null,
           { paddingBottom: Spacing.four + navInset + COMPOSE_SIZE },
         ]}
+        ListHeaderComponent={
+          onChangeBoard ? (
+            <FeedBoardTabs
+              options={FEED_BOARD_FILTERS}
+              value={board}
+              onChange={handleChangeBoard}
+              testID="feed-board-filter"
+            />
+          ) : null
+        }
         ListEmptyComponent={
           loading ? (
             <View style={styles.state}>
@@ -237,7 +273,7 @@ export function FeedScreen({
             </View>
           ) : (
             <Text style={[Typography.body, styles.state, styles.empty, { color: t.textMuted }]}>
-              {tr('feed.empty')}
+              {board === 'FREE' ? tr('feed.emptyFree') : tr('feed.empty')}
             </Text>
           )
         }

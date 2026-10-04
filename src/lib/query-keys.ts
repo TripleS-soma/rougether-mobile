@@ -1,3 +1,5 @@
+import type { FeedBoardType } from '@/api/types';
+
 /**
  * react-query 키 레지스트리 (#1027 후속, 리팩토링 4묶음) — 키 모양을 한 곳에서.
  *
@@ -76,12 +78,17 @@ export const queryKeys = {
   /**
    * 공개 SNS 피드 (#1409). 목록은 무한 쿼리(cursor = 마지막 postId), 상세·댓글은 게시물별.
    * 좋아요·댓글 수는 목록과 상세 캐시를 함께 고친다(`hooks/feed-cache.ts`).
+   * 목록은 게시판(서버 #428)별로 따로 — `ALL`(통합)·`FREE`·`VERIFICATION`. 등록·수정·삭제는
+   * `lists` 접두로 무효화·패치해 통합 피드와 게시판 목록을 한꺼번에 맞춘다.
    */
   feed: {
     all: (userId: number | null | undefined) => ['feed', userId] as const,
     lists: (userId: number | null | undefined) => ['feed', userId, 'posts'] as const,
-    list: (userId: number | null | undefined, authorId: number | null) =>
-      ['feed', userId, 'posts', authorId] as const,
+    list: (
+      userId: number | null | undefined,
+      authorId: number | null,
+      board: 'ALL' | FeedBoardType = 'ALL',
+    ) => ['feed', userId, 'posts', authorId, board] as const,
     post: (userId: number | null | undefined, postId: number | null) =>
       ['feed', userId, 'post', postId] as const,
     comments: (userId: number | null | undefined, postId: number | null) =>
