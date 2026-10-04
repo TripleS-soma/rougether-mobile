@@ -105,6 +105,9 @@ export function useMyRoomPages({
     toggleWithMissionGuard: MissionLinks['toggleWithMissionGuard'];
     houseCategoryIds: MissionLinks['houseCategoryIds'];
     addRoutineWithMission: (n: Parameters<MyRoomData['addRoutine']>[0]) => Promise<boolean>;
+    /** 카테고리 관리의 집 연동 해제·연동 배지 이름. */
+    unlinkHouseCategory: MissionLinks['unlinkHouseCategory'];
+    houseNameById: MissionLinks['houseNameById'];
   };
   /** 착용 캐릭터 — 뽑기 후 리로드 등 다른 소비자가 있어 셸 소유. */
   character: {
@@ -162,7 +165,13 @@ export function useMyRoomPages({
     deleteRoutineCategory,
     reorderCategories,
   } = data;
-  const { toggleWithMissionGuard, houseCategoryIds, addRoutineWithMission } = missionLinks;
+  const {
+    toggleWithMissionGuard,
+    houseCategoryIds,
+    addRoutineWithMission,
+    unlinkHouseCategory,
+    houseNameById,
+  } = missionLinks;
   const refreshCharacters = useCallback(
     () => queryClient.invalidateQueries({ queryKey: queryKeys.myCharacters.all }),
     [queryClient],
@@ -584,6 +593,10 @@ export function useMyRoomPages({
         onCreate={createRoutineCategory}
         onUpdate={updateRoutineCategory}
         onDelete={deleteRoutineCategory}
+        houseNames={houseNameById}
+        onUnlinkHouse={(id) => {
+          void unlinkHouseCategory(id);
+        }}
         onReorder={(orderedIds) => {
           void reorderCategories(orderedIds);
         }}

@@ -140,6 +140,7 @@ export function useHousePages({
     leaveHouseWithLinked: MissionLinks['leaveHouseWithLinked'];
     deleteMissionWithLinked: MissionLinks['deleteMissionWithLinked'];
     removeMissionRoutine: MissionLinks['removeMissionRoutine'];
+    unlinkMissionRoutine: MissionLinks['unlinkMissionRoutine'];
     addMissionRoutine: MissionLinks['addMissionRoutine'];
     houseLinkedRoutines: MissionLinks['houseLinkedRoutines'];
     contributedMissionIdList: MissionLinks['contributedMissionIdList'];
@@ -208,6 +209,7 @@ export function useHousePages({
     leaveHouseWithLinked,
     deleteMissionWithLinked,
     removeMissionRoutine,
+    unlinkMissionRoutine,
     addMissionRoutine,
     houseLinkedRoutines,
     contributedMissionIdList,
@@ -416,6 +418,12 @@ export function useHousePages({
     },
     [removeMissionRoutine],
   );
+  const handleUnlinkMissionRoutine = useCallback(
+    (mission: { id: number }) => {
+      void unlinkMissionRoutine(mission.id);
+    },
+    [unlinkMissionRoutine],
+  );
   // 온보딩 자동 입주 허용 (#1407) — 방장이 집 관리를 열었을 때만 조회해 수정 시트의 현재 값으로.
   const { show: toast } = useToast();
   const queryClient = useQueryClient();
@@ -517,6 +525,7 @@ export function useHousePages({
         onClaimMission={handleClaimMission}
         onAddMissionRoutine={handleAddMissionRoutine}
         onRemoveMissionRoutine={handleRemoveMissionRoutine}
+        onUnlinkMissionRoutine={handleUnlinkMissionRoutine}
       />
     ) : screen === 'houseMembers' && currentHouse ? (
       <HouseMembersScreen

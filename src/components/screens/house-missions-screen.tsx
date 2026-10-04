@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import type { House, HouseMission, NewHouseMission } from '@/components/screens/house-screen';
 import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';
@@ -64,6 +64,11 @@ export type HouseMissionsScreenProps = {
    * 자기가 만든 연동 루틴을 되돌릴 길이 이 화면에 없었다.
    */
   onRemoveMissionRoutine?: (mission: HouseMission) => void;
+  /**
+   * 내 연동 루틴의 **연동만** 해제 — 루틴은 남고, 이미 반영된 기여도 남는다.
+   * 주어지면 배지 다이얼로그가 [연동만 해제 | 루틴 삭제] 선택지가 된다.
+   */
+  onUnlinkMissionRoutine?: (mission: HouseMission) => void;
 };
 
 /**
@@ -115,6 +120,7 @@ export function HouseMissionsScreen({
   onClaimMission,
   onAddMissionRoutine,
   onRemoveMissionRoutine,
+  onUnlinkMissionRoutine,
 }: HouseMissionsScreenProps) {
   const t = useTokens();
   const column = useResponsiveColumn();
@@ -292,7 +298,7 @@ export function HouseMissionsScreen({
                 const hasLinked = linkedRoutines.some((r) => r.missionId === mission.id);
                 // 배지를 눌러 정리할 수 있는 건 **내 연동 루틴이 실제로 있을 때**뿐이다.
                 // '기여함'은 직접 수행 체크로도 켜지므로 kind만 보면 안 된다 (#890).
-                const canUnlink = hasLinked && !!onRemoveMissionRoutine;
+                const canUnlink = hasLinked && !!(onRemoveMissionRoutine || onUnlinkMissionRoutine);
                 const cta = missionCtaState({
                   status: mission.status,
                   achieved: mission.achieved,
@@ -485,25 +491,85 @@ export function HouseMissionsScreen({
         onCancel={() => setMissionToDelete(null)}
       />
 
-      {/* 배지는 '연동됨'인데 결과는 삭제다 — 문구가 그 차이를 메운다 (#890). */}
-      <ConfirmDialog
-        visible={!!missionToUnlink}
-        title={tr('house.missions.unlinkConfirm.title')}
-        body={
-          missionToUnlink
-            ? tr('house.missions.unlinkConfirm.body', { title: missionToUnlink.title })
-            : ''
-        }
-        confirmLabel={tr('house.missions.unlinkConfirm.label')}
-        confirmAccessibilityLabel={tr('house.missions.unlinkConfirm.a11y')}
-        cancelAccessibilityLabel={tr('house.missions.unlinkConfirm.cancelA11y')}
-        destructive
-        onConfirm={() => {
-          if (missionToUnlink) onRemoveMissionRoutine?.(missionToUnlink);
-          setMissionToUnlink(null);
-        }}
-        onCancel={() => setMissionToUnlink(null)}
-      />
+      {/* 배지는 '연동됨'인데 결과는 삭제였다 (#890) — 이제 연동만 끊는 길이 먼저다.
+          해제 핸들러가 없을 땐 예전 삭제 확인 그대로. */}
+      {onUnlinkMissionRoutine ? (
+        <Modal
+          transparent
+          visible={!!missionToUnlink}
+          animationType="fade"
+          onRequestClose={() => setMissionToUnlink(null)}
+          aria-label={tr('house.missions.linkChoice.title')}>
+          <Pressable style={styles.choiceBackdrop} onPress={() => setMissionToUnlink(null)}>
+            <Pressable style={[styles.choiceCard, { backgroundColor: t.screen }]}>
+              <Text style={[Typography.h3, { color: t.text }]}>
+                {tr('house.missions.linkChoice.title')}
+              </Text>
+              <Text style={[Typography.body, { color: t.textMuted }]}>
+                {missionToUnlink
+                  ? tr('house.missions.linkChoice.body', { title: missionToUnlink.title })
+                  : ''}
+              </Text>
+              <View style={styles.choiceBtns}>
+                <Pressable
+                  onPress={() => {
+                    if (missionToUnlink) onUnlinkMissionRoutine(missionToUnlink);
+                    setMissionToUnlink(null);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={tr('house.missions.linkChoice.unlinkA11y')}
+                  style={[styles.choiceBtn, { backgroundColor: t.primary }]}>
+                  <Text style={[Typography.label, { color: t.onPrimary }]}>
+                    {tr('house.missions.linkChoice.unlink')}
+                  </Text>
+                </Pressable>
+                {onRemoveMissionRoutine ? (
+                  <Pressable
+                    onPress={() => {
+                      if (missionToUnlink) onRemoveMissionRoutine(missionToUnlink);
+                      setMissionToUnlink(null);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={tr('house.missions.unlinkConfirm.a11y')}
+                    style={[styles.choiceBtn, { backgroundColor: t.danger }]}>
+                    <Text style={[Typography.label, { color: t.onPrimary }]}>
+                      {tr('house.missions.linkChoice.delete')}
+                    </Text>
+                  </Pressable>
+                ) : null}
+                <Pressable
+                  onPress={() => setMissionToUnlink(null)}
+                  accessibilityRole="button"
+                  accessibilityLabel={tr('house.missions.unlinkConfirm.cancelA11y')}
+                  style={styles.choiceCancel}>
+                  <Text style={[Typography.label, { color: t.textMuted }]}>
+                    {tr('common.cancel')}
+                  </Text>
+                </Pressable>
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
+      ) : (
+        <ConfirmDialog
+          visible={!!missionToUnlink}
+          title={tr('house.missions.unlinkConfirm.title')}
+          body={
+            missionToUnlink
+              ? tr('house.missions.unlinkConfirm.body', { title: missionToUnlink.title })
+              : ''
+          }
+          confirmLabel={tr('house.missions.unlinkConfirm.label')}
+          confirmAccessibilityLabel={tr('house.missions.unlinkConfirm.a11y')}
+          cancelAccessibilityLabel={tr('house.missions.unlinkConfirm.cancelA11y')}
+          destructive
+          onConfirm={() => {
+            if (missionToUnlink) onRemoveMissionRoutine?.(missionToUnlink);
+            setMissionToUnlink(null);
+          }}
+          onCancel={() => setMissionToUnlink(null)}
+        />
+      )}
 
       {showCreateMission ? (
         <View style={styles.modalOverlay}>
@@ -680,6 +746,23 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     marginTop: Spacing.three,
   },
+  choiceBackdrop: {
+    flex: 1,
+    backgroundColor: Overlay.dim,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.four,
+  },
+  choiceCard: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: Radius.lg,
+    padding: Spacing.four,
+    gap: Spacing.three,
+  },
+  choiceBtns: { alignSelf: 'stretch', gap: Spacing.two, marginTop: Spacing.one },
+  choiceBtn: { paddingVertical: Spacing.three, borderRadius: Radius.pill, alignItems: 'center' },
+  choiceCancel: { paddingVertical: Spacing.two, alignItems: 'center' },
   modalBtn: {
     flex: 1,
     alignItems: 'center',

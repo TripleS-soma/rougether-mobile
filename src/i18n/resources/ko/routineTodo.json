@@ -68,6 +68,8 @@
       "profileSaveFailed": "프로필 저장에 실패했어요",
       "categoryCreateFailed": "카테고리를 만들지 못했어요",
       "categoryUpdateFailed": "카테고리 수정에 실패했어요",
+      "missionUnlinkFailed": "미션 연동 해제에 실패했어요",
+      "houseUnlinkFailed": "집 연동 해제에 실패했어요",
       "categoryReorderFailed": "카테고리 순서 저장에 실패했어요",
       "categoryInUse": "카테고리에 루틴이 남아 있어 삭제할 수 없어요",
       "categoryDeleteFailed": "카테고리 삭제에 실패했어요",
@@ -290,6 +292,14 @@
       "create": "카테고리 추가"
     },
     "categoryManage": {
+      "houseLinked": "'{{house}}' 집 연동",
+      "houseLinkedUnknown": "집 연동",
+      "unlinkHouseA11y": "{{name}} 집 연동 해제",
+      "unlinkHouseTitle": "집 연동 해제",
+      "unlinkHouseBody": "'{{name}}' 카테고리의 집 연동을 해제할까요?\n카테고리와 안의 루틴·할 일은 그대로 남아요. 연동을 풀면 집을 나가도 이 카테고리는 지워지지 않고, 미션에 연동된 루틴은 연동이 그대로예요.",
+      "unlinkHouseConfirm": "연동 해제",
+      "unlinkHouseConfirmA11y": "집 연동 해제 확인",
+      "unlinkHouseCancelA11y": "집 연동 해제 취소",
       "title": "카테고리 관리",
       "back": "뒤로가기",
       "addA11y": "새 카테고리 추가",

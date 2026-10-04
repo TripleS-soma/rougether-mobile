@@ -33,6 +33,8 @@ import {
   skipRoutineOccurrence,
   uncompleteRoutine,
   uncompleteTodo,
+  unlinkCategoryHouse as apiUnlinkCategoryHouse,
+  unlinkRoutineMission as apiUnlinkRoutineMission,
   updateCategory as apiUpdateCategory,
   updateMe,
   updateRoutine as apiUpdateRoutine,
@@ -607,6 +609,64 @@ export function useMyRoomData() {
     [categories],
   );
 
+  /**
+   * 루틴의 공동미션 연동 해제 — 서버 전용 DELETE(PUT null은 "유지"라 해제가 안 된다).
+   * 낙관적으로 링크를 걷고, 실패하면 되돌리며 알린다. 루틴과 이미 반영된 기여는 남는다.
+   */
+  const { mutateAsync: sendRoutineUnlink } = useMutation({
+    mutationFn: apiUnlinkRoutineMission,
+    networkMode: 'always',
+  });
+  const unlinkRoutineMission = useCallback(
+    async (id: string) => {
+      const item = findItem(id);
+      if (!item || item.kind === 'todo' || item.linkedMissionId == null) return false;
+      const missionId = item.linkedMissionId;
+      const setLink = (v: number | undefined) =>
+        setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, linkedMissionId: v } : r)));
+      setLink(undefined);
+      try {
+        await sendRoutineUnlink(toServerItemId(id));
+        return true;
+      } catch {
+        setLink(missionId);
+        toast(i18n.t('routineTodo.toast.missionUnlinkFailed'), 'error');
+        return false;
+      }
+    },
+    [findItem, sendRoutineUnlink, toast],
+  );
+
+  /** 카테고리의 집 연동 해제 — unlinkRoutineMission의 카테고리판. 소속 루틴·투두는 남는다. */
+  const { mutateAsync: sendCategoryUnlink } = useMutation({
+    mutationFn: apiUnlinkCategoryHouse,
+    networkMode: 'always',
+  });
+  const unlinkCategoryHouse = useCallback(
+    async (id: string) => {
+      const cat = categories.find((c) => c.id === id);
+      if (!cat || cat.houseId == null) return false;
+      const houseId = cat.houseId;
+      // 달력의 메타 소스(allCategories)도 같이 — updateRoutineCategory와 같은 규칙(#481).
+      const setLink = (v: number | undefined) => {
+        const apply = (prev: RoutineCategoryMeta[]) =>
+          prev.map((c) => (c.id === id ? { ...c, houseId: v } : c));
+        setCategories(apply);
+        setAllCategories(apply);
+      };
+      setLink(undefined);
+      try {
+        await sendCategoryUnlink(Number(id));
+        return true;
+      } catch {
+        setLink(houseId);
+        toast(i18n.t('routineTodo.toast.houseUnlinkFailed'), 'error');
+        return false;
+      }
+    },
+    [categories, sendCategoryUnlink, toast],
+  );
+
   const updateRoutineCategory = useCallback(
     async (id: string, cat: RoutineCategoryMeta) => {
       const before = categories;
@@ -760,6 +820,8 @@ export function useMyRoomData() {
       ensureCategory,
       linkRoutineMission,
       linkCategoryHouse,
+      unlinkRoutineMission,
+      unlinkCategoryHouse,
       updateRoutineCategory,
       deleteRoutineCategory,
       deleteCategoryCascade,
@@ -799,6 +861,8 @@ export function useMyRoomData() {
       ensureCategory,
       linkRoutineMission,
       linkCategoryHouse,
+      unlinkRoutineMission,
+      unlinkCategoryHouse,
       updateRoutineCategory,
       deleteRoutineCategory,
       deleteCategoryCascade,

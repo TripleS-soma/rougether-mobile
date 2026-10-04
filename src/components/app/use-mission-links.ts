@@ -7,6 +7,8 @@ import { CATEGORY_COLORS, type Routine, type RoutineCategoryMeta } from '@/const
 import type { CompletionToggleResult } from '@/hooks/use-my-room-data';
 import type { HouseMissionContributeResponse } from '@/api/types';
 import { todayIso } from '@/utils/datetime';
+import { getSessionUserId } from '@/api/auth';
+import { addLinkOptOut, loadLinkOptOuts } from '@/lib/link-opt-out-store';
 
 /**
  * 공동미션 ↔ 내 루틴 연동 클러스터 (#272 → #578, #692 3단계) — 나의 방
@@ -31,6 +33,8 @@ export function useMissionLinks({
   addRoutineWithMission,
   linkCategoryHouse,
   linkRoutineMission,
+  unlinkRoutineMission,
+  unlinkCategoryHouse,
   deleteRoutine,
   deleteCategoryCascade,
   toggleCompletion,
@@ -60,6 +64,10 @@ export function useMissionLinks({
   }) => Promise<boolean>;
   linkCategoryHouse: (categoryId: string, houseId: number) => Promise<unknown>;
   linkRoutineMission: (routineId: string, missionId: number) => Promise<unknown>;
+  /** 루틴 미션 연동 해제 — 성공 여부. 실패 토스트·롤백은 데이터 훅이 한다. */
+  unlinkRoutineMission: (routineId: string) => Promise<boolean>;
+  /** 카테고리 집 연동 해제 — 성공 여부. 실패 토스트·롤백은 데이터 훅이 한다. */
+  unlinkCategoryHouse: (categoryId: string) => Promise<boolean>;
   deleteRoutine: (id: string) => Promise<unknown>;
   deleteCategoryCascade: (categoryId: string) => Promise<unknown>;
   toggleCompletion: (id: string, date: string) => Promise<CompletionToggleResult | null>;
@@ -192,6 +200,46 @@ export function useMissionLinks({
     [linkedRoutinesFor, deleteRoutine, toast],
   );
 
+  /**
+   * 내 연동 루틴의 **연동만** 해제 — 루틴은 남기고 미션 링크만 끊는다. 이미 반영된
+   * 기여는 서버가 회수하지 않는다. 해제한 미션은 기록해 두어 부팅 때의 이름 매칭
+   * 승격(아래)이 다시 걸지 않게 한다.
+   */
+  const unlinkMissionRoutine = useCallback(
+    async (missionId: number) => {
+      const linked = linkedRoutinesFor([missionId]);
+      if (linked.length === 0) return;
+      let ok = true;
+      for (const r of linked) ok = (await unlinkRoutineMission(r.id)) && ok;
+      if (!ok) return;
+      await addLinkOptOut(getSessionUserId(), { missionId });
+      toast(i18n.t('house.missionLinks.routineUnlinked'));
+    },
+    [linkedRoutinesFor, unlinkRoutineMission, toast],
+  );
+
+  /**
+   * 카테고리의 집 연동 해제 — 카테고리·루틴·할 일은 남는다. 풀린 카테고리는 집을
+   * 나가도 통삭제 대상(leaveHouseWithLinked)이 아니고 빠른 추가도 다시 열린다.
+   */
+  const unlinkHouseCategory = useCallback(
+    async (categoryId: string) => {
+      const houseId = categories.find((c) => c.id === categoryId)?.houseId;
+      if (houseId == null) return;
+      if (!(await unlinkCategoryHouse(categoryId))) return;
+      await addLinkOptOut(getSessionUserId(), { houseId });
+      toast(i18n.t('house.missionLinks.categoryUnlinked'));
+    },
+    [categories, unlinkCategoryHouse, toast],
+  );
+
+  // 카테고리 관리 화면의 연동 배지 이름 — 내가 속한 집만 이름을 안다.
+  const houseNameById = useMemo(() => {
+    const map: Record<number, string> = {};
+    for (const h of houses) if (h.houseId != null) map[h.houseId] = h.name;
+    return map;
+  }, [houses]);
+
   /** 집 나가기/삭제 성공 시 연동 카테고리를 루틴째 통삭제 (#338). */
   const leaveHouseWithLinked = useCallback(
     async (houseId: number) => {
@@ -213,18 +261,25 @@ export function useMissionLinks({
     if (houses.length === 0) return;
     promotedRef.current = true;
     void (async () => {
+      // 사용자가 직접 해제한 연동은 이름이 같아도 다시 걸지 않는다.
+      const optOut = await loadLinkOptOuts(getSessionUserId());
       for (const house of houses) {
         if (house.houseId == null) continue;
         let cat = categories.find((c) => c.houseId === house.houseId);
         const nameMatched = categories.find((c) => c.name === house.name);
-        if (!cat && nameMatched && nameMatched.houseId == null) {
+        if (
+          !cat &&
+          nameMatched &&
+          nameMatched.houseId == null &&
+          !optOut.houseIds.includes(house.houseId)
+        ) {
           await linkCategoryHouse(nameMatched.id, house.houseId);
           cat = nameMatched;
         }
         if (!cat) continue;
         const catId = cat.id;
         for (const mission of house.missions ?? []) {
-          if (mission.status !== 'ACTIVE') continue;
+          if (mission.status !== 'ACTIVE' || optOut.missionIds.includes(mission.id)) continue;
           const routine = routines.find(
             (r) =>
               r.kind === 'routine' &&
@@ -318,6 +373,9 @@ export function useMissionLinks({
     contributedMissionIdList,
     deleteMissionWithLinked,
     removeMissionRoutine,
+    unlinkMissionRoutine,
+    unlinkHouseCategory,
+    houseNameById,
     leaveHouseWithLinked,
     toggleWithMissionGuard,
   };

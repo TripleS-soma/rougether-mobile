@@ -176,6 +176,8 @@ export function AppShell({
     ensureCategory,
     linkRoutineMission,
     linkCategoryHouse,
+    unlinkRoutineMission,
+    unlinkCategoryHouse,
     deleteCategoryCascade,
   } = myRoomData;
 
@@ -351,6 +353,9 @@ export function AppShell({
     contributedMissionIdList,
     deleteMissionWithLinked,
     removeMissionRoutine,
+    unlinkMissionRoutine,
+    unlinkHouseCategory,
+    houseNameById,
     leaveHouseWithLinked,
     toggleWithMissionGuard,
   } = useMissionLinks({
@@ -366,6 +371,8 @@ export function AppShell({
     addRoutineWithMission,
     linkCategoryHouse,
     linkRoutineMission,
+    unlinkRoutineMission,
+    unlinkCategoryHouse,
     deleteRoutine,
     deleteCategoryCascade,
     toggleCompletion,
@@ -473,7 +480,13 @@ export function AppShell({
     nav: { screen, setScreen, addReturnScreen, setAddReturnScreen },
     data: myRoomData,
     nickname,
-    missionLinks: { toggleWithMissionGuard, houseCategoryIds, addRoutineWithMission },
+    missionLinks: {
+      toggleWithMissionGuard,
+      houseCategoryIds,
+      addRoutineWithMission,
+      unlinkHouseCategory,
+      houseNameById,
+    },
     // 그날 첫 완료 → 튜토리얼 '루틴 완료' 미션(#1324) + 출석 시트 자동 출석 (#1294).
     onCompletedToday: completedTodayHandler,
     character: { wornCharacterId, wornCharacterFrames, ownedCharacters, wearCharacter },
@@ -572,6 +585,7 @@ export function AppShell({
       leaveHouseWithLinked,
       deleteMissionWithLinked,
       removeMissionRoutine,
+      unlinkMissionRoutine,
       addMissionRoutine,
       houseLinkedRoutines,
       contributedMissionIdList,
