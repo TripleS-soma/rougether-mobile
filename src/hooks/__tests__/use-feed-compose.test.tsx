@@ -31,6 +31,8 @@ beforeEach(() => {
   jest.mocked(createFeedPost).mockReset().mockResolvedValue(DEMO_FEED_POSTS[0]);
 });
 
+const ROUTINE = { routineId: 15, date: '2026-10-04' };
+
 async function withUploaded(onError = jest.fn()) {
   const hook = await renderHook(() => useFeedCompose({ onError }), { wrapper: queryWrapper() });
   await act(async () => {
@@ -192,6 +194,7 @@ describe('useFeedCompose (#1409)', () => {
       });
       await act(async () => {
         result.current.setBoard('VERIFICATION');
+        result.current.setRoutine(ROUTINE);
       });
       await act(async () => {
         await result.current.submit();
@@ -202,15 +205,82 @@ describe('useFeedCompose (#1409)', () => {
       expect(second.clientPostId).not.toBe(first.clientPostId);
     });
 
+    it('인증게시판은 루틴을 고르기 전엔 게시하지 않고 안내한다 (서버 #430)', async () => {
+      const onError = jest.fn();
+      const { result } = await withUploaded(onError);
+      await act(async () => {
+        result.current.setBoard('VERIFICATION');
+      });
+      expect(result.current.canSubmit).toBe(false);
+      await act(async () => {
+        await result.current.submit();
+      });
+      expect(createFeedPost).not.toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledWith('인증할 루틴을 골라 주세요.');
+
+      await act(async () => {
+        result.current.setRoutine(ROUTINE);
+      });
+      expect(result.current.canSubmit).toBe(true);
+      await act(async () => {
+        await result.current.submit();
+      });
+      expect(jest.mocked(createFeedPost).mock.calls[0][0]).toMatchObject({
+        boardType: 'VERIFICATION',
+        imageIds: [100, 101],
+        routineCompletion: ROUTINE,
+      });
+    });
+
+    it('자유게시판으로 바꾸면 골라 둔 루틴을 보내지 않는다', async () => {
+      const { result } = await withUploaded();
+      await act(async () => {
+        result.current.setBoard('VERIFICATION');
+        result.current.setRoutine(ROUTINE);
+      });
+      await act(async () => {
+        result.current.setBoard('FREE');
+      });
+      await act(async () => {
+        await result.current.submit();
+      });
+      const body = jest.mocked(createFeedPost).mock.calls[0][0];
+      expect(body.boardType).toBe('FREE');
+      expect(body).not.toHaveProperty('routineCompletion');
+    });
+
+    it('실패 후 루틴만 바꿔 보내도 새 clientPostId (같은 id·다른 루틴은 서버가 409)', async () => {
+      jest.mocked(createFeedPost).mockRejectedValueOnce(new Error('network'));
+      const { result } = await withUploaded();
+      await act(async () => {
+        result.current.setBoard('VERIFICATION');
+        result.current.setRoutine(ROUTINE);
+      });
+      await act(async () => {
+        await result.current.submit();
+      });
+      await act(async () => {
+        result.current.setRoutine({ routineId: 16, date: '2026-10-03' });
+      });
+      await act(async () => {
+        await result.current.submit();
+      });
+      const [first, second] = jest.mocked(createFeedPost).mock.calls.map((c) => c[0]);
+      expect(second.routineCompletion).toEqual({ routineId: 16, date: '2026-10-03' });
+      expect(second.clientPostId).not.toBe(first.clientPostId);
+    });
+
     it('작성을 버리면 게시판도 기본(자유)으로 돌아간다', async () => {
       const { result } = await renderHook(() => useFeedCompose(), { wrapper: queryWrapper() });
       await act(async () => {
         result.current.setBoard('VERIFICATION');
+        result.current.setRoutine(ROUTINE);
       });
       await act(async () => {
         result.current.discard();
       });
       expect(result.current.board).toBe('FREE');
+      expect(result.current.routine).toBeNull();
     });
   });
 });

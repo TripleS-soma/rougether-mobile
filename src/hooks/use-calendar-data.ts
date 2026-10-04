@@ -36,7 +36,7 @@ type UserId = ReturnType<typeof getSessionUserId>;
 // `fetchQuery(staleTime: 0)`와 무효화로만 나간다. 종전과 같은 "필요할 때만"이고,
 // 마운트·포커스 재조회로 요청이 늘거나 첫 조회가 두 번 나가는 일이 없다.
 /** 날짜 캐시 — 키의 날짜를 데이터에도 실어 `combine`이 키 없이 합칠 수 있게. */
-type CalendarDayData = { date: string; items: CalendarDayItem[] };
+export type CalendarDayData = { date: string; items: CalendarDayItem[] };
 /**
  * 달 캐시 — 일별 네 가지 집계를 보존한다. dates는 기존 날짜 선택기의 투두 점 호환용.
  */

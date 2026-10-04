@@ -1,7 +1,13 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { FeedPostScreen } from '@/components/screens/feed-post-screen';
-import { DEMO_FEED_COMMENTS, DEMO_FEED_POSTS, DEMO_FEED_TEXT_POST } from '@/mocks/fixtures';
+import {
+  DEMO_FEED_COMMENTS,
+  DEMO_FEED_COMPLETIONS,
+  DEMO_FEED_POSTS,
+  DEMO_FEED_TEXT_POST,
+  DEMO_FEED_TODAY,
+} from '@/mocks/fixtures';
 
 const [OTHER_POST, MY_POST] = DEMO_FEED_POSTS;
 
@@ -62,7 +68,7 @@ describe('FeedPostScreen (#1409)', () => {
       <FeedPostScreen post={OTHER_POST} onDeletePost={onDeletePost} onEditPost={() => true} />,
     );
     expect(other.queryByLabelText('게시물 삭제')).toBeNull();
-    expect(other.queryByLabelText('게시물 본문 수정')).toBeNull();
+    expect(other.queryByLabelText('게시물 수정')).toBeNull();
 
     const mine = await render(
       <FeedPostScreen post={MY_POST} onDeletePost={onDeletePost} onEditPost={() => true} />,
@@ -86,15 +92,16 @@ describe('FeedPostScreen (#1409)', () => {
     expect(verified.getByTestId('feed-board-badge-VERIFICATION')).toBeTruthy();
   });
 
-  it('수정 창의 게시판은 읽기 전용, 사진 없는 자유글은 본문을 비우면 저장할 수 없다', async () => {
+  it('사진 없는 자유글은 인증으로 옮길 수 없고, 본문을 비우면 저장할 수 없다 (서버 #430)', async () => {
     const onEditPost = jest.fn().mockResolvedValue(true);
     const ui = await render(
       <FeedPostScreen post={{ ...DEMO_FEED_TEXT_POST, mine: true }} onEditPost={onEditPost} />,
     );
-    await fireEvent.press(ui.getByLabelText('게시물 본문 수정'));
-    expect(ui.getByText('자유 게시판 · 게시판은 바꿀 수 없어요')).toBeTruthy();
-    // 게시판을 고르는 탭은 없다.
-    expect(ui.queryByLabelText('인증 게시판')).toBeNull();
+    await fireEvent.press(ui.getByLabelText('게시물 수정'));
+    expect(ui.getByLabelText('인증 게시판').props.accessibilityState).toMatchObject({
+      disabled: true,
+    });
+    expect(ui.getByText('사진이 있는 글만 인증게시판으로 옮길 수 있어요.')).toBeTruthy();
 
     const input = ui.getByPlaceholderText('본문을 입력하세요');
     await fireEvent.changeText(input, '   ');
@@ -106,13 +113,12 @@ describe('FeedPostScreen (#1409)', () => {
       disabled: false,
     });
     await fireEvent.press(ui.getByRole('button', { name: '저장' }));
-    expect(onEditPost).toHaveBeenCalledWith(4, '고친 본문');
+    expect(onEditPost).toHaveBeenCalledWith(4, { content: '고친 본문' });
   });
 
   it('사진 있는 글은 본문을 비워도 저장할 수 있다', async () => {
     const ui = await render(<FeedPostScreen post={MY_POST} onEditPost={() => true} />);
-    await fireEvent.press(ui.getByLabelText('게시물 본문 수정'));
-    expect(ui.getByText('자유 게시판 · 게시판은 바꿀 수 없어요')).toBeTruthy();
+    await fireEvent.press(ui.getByLabelText('게시물 수정'));
     await fireEvent.changeText(
       ui.getByPlaceholderText('본문을 입력하세요 (비워 둘 수 있어요)'),
       '',
@@ -120,6 +126,72 @@ describe('FeedPostScreen (#1409)', () => {
     expect(ui.getByRole('button', { name: '저장' }).props.accessibilityState).toMatchObject({
       disabled: false,
     });
+  });
+
+  it('사진 있는 자유글 → 인증은 루틴을 골라야 저장되고, 게시판·루틴을 함께 보낸다', async () => {
+    const onEditPost = jest.fn().mockResolvedValue(true);
+    const onEditOpenChange = jest.fn();
+    const ui = await render(
+      <FeedPostScreen
+        post={MY_POST}
+        onEditPost={onEditPost}
+        onEditOpenChange={onEditOpenChange}
+        routinePicker={{ groups: DEMO_FEED_COMPLETIONS, loading: false, error: false }}
+        today={DEMO_FEED_TODAY}
+      />,
+    );
+    await fireEvent.press(ui.getByLabelText('게시물 수정'));
+    expect(onEditOpenChange).toHaveBeenLastCalledWith(true);
+    expect(ui.queryByTestId('feed-routine-picker')).toBeNull();
+
+    await fireEvent.press(ui.getByLabelText('인증 게시판'));
+    expect(ui.getByTestId('feed-routine-picker')).toBeTruthy();
+    expect(ui.getByText('인증할 루틴을 골라 주세요.')).toBeTruthy();
+    expect(ui.getByRole('button', { name: '저장' }).props.accessibilityState).toMatchObject({
+      disabled: true,
+    });
+
+    await fireEvent.press(ui.getByLabelText('아침 스트레칭, 10/3 완료'));
+    await fireEvent.press(ui.getByRole('button', { name: '저장' }));
+    expect(onEditPost).toHaveBeenCalledWith(2, {
+      content: MY_POST.content,
+      boardType: 'VERIFICATION',
+      routineCompletion: { routineId: 15, date: '2026-10-03' },
+    });
+    await waitFor(() => expect(onEditOpenChange).toHaveBeenLastCalledWith(false));
+  });
+
+  it('인증글 → 자유는 연결 해제 안내, 요청엔 routineCompletion이 없다', async () => {
+    const onEditPost = jest.fn().mockResolvedValue(true);
+    const ui = await render(
+      <FeedPostScreen post={{ ...OTHER_POST, mine: true }} onEditPost={onEditPost} />,
+    );
+    await fireEvent.press(ui.getByLabelText('게시물 수정'));
+    // 인증으로 남는 동안엔 지금 연결이 보이고, 루틴을 안 바꿔도 저장된다.
+    expect(ui.getByText('지금 연결한 루틴')).toBeTruthy();
+    expect(ui.getByText('바꾸지 않으면 지금 연결한 루틴이 그대로 남아요.')).toBeTruthy();
+
+    await fireEvent.press(ui.getByLabelText('자유 게시판'));
+    expect(ui.getByText('자유게시판으로 옮기면 연결한 루틴이 풀려요.')).toBeTruthy();
+    await fireEvent.press(ui.getByRole('button', { name: '저장' }));
+    expect(onEditPost).toHaveBeenCalledWith(3, { content: OTHER_POST.content, boardType: 'FREE' });
+  });
+
+  it('인증글은 루틴을 바꾸지 않으면 본문만 보낸다', async () => {
+    const onEditPost = jest.fn().mockResolvedValue(true);
+    const ui = await render(
+      <FeedPostScreen post={{ ...OTHER_POST, mine: true }} onEditPost={onEditPost} />,
+    );
+    await fireEvent.press(ui.getByLabelText('게시물 수정'));
+    await fireEvent.press(ui.getByRole('button', { name: '저장' }));
+    expect(onEditPost).toHaveBeenCalledWith(3, { content: OTHER_POST.content });
+  });
+
+  it('연결 루틴이 있는 인증글은 배지를 보인다', async () => {
+    const ui = await render(<FeedPostScreen post={OTHER_POST} />);
+    expect(ui.getByText('아침 스트레칭 · 9/22 완료')).toBeTruthy();
+    const legacy = await render(<FeedPostScreen post={DEMO_FEED_POSTS[2]} />);
+    expect(legacy.queryByTestId('feed-routine-badge')).toBeNull();
   });
 
   it('사라진 글(404)은 삭제 안내만', async () => {

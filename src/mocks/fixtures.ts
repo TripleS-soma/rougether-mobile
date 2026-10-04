@@ -1,5 +1,10 @@
 import type { MarketAsset, MarketAssetCard, MarketOrder, MarketTrade } from '@/api/market';
-import type { FeedComment, FeedDraftImage, FeedPost } from '@/components/screens/feed/types';
+import type {
+  FeedComment,
+  FeedCompletionGroup,
+  FeedDraftImage,
+  FeedPost,
+} from '@/components/screens/feed/types';
 import type { House, HouseMission } from '@/components/screens/house/types';
 import type { GuestbookEntry } from '@/components/screens/friend-room-screen';
 import type { NotificationEntry } from '@/components/screens/notification-list-screen';
@@ -160,6 +165,7 @@ export const DEMO_FEED_POSTS: FeedPost[] = [
     author: { userId: 7, nickname: '루틴친구', profileImageKey: null },
     boardType: 'VERIFICATION',
     content: '오늘 아침 루틴 완료! 물 한 잔, 스트레칭 10분, 일기 세 줄.',
+    routine: { routineId: 15, title: '아침 스트레칭', date: '2026-09-22' },
     images: [
       { imageId: 31, width: 1200, height: 1600 },
       { imageId: 32, width: 1600, height: 1200 },
@@ -176,6 +182,7 @@ export const DEMO_FEED_POSTS: FeedPost[] = [
     author: { userId: 4, nickname: '나', profileImageKey: null },
     boardType: 'FREE',
     content: '방을 새로 꾸몄어요. 창가 화분이 제일 마음에 들어요.',
+    routine: null,
     images: [{ imageId: 21, width: 1200, height: 1200 }],
     likeCount: 12,
     commentCount: 0,
@@ -189,6 +196,7 @@ export const DEMO_FEED_POSTS: FeedPost[] = [
     author: { userId: 9, nickname: null, profileImageKey: null },
     boardType: 'VERIFICATION',
     content: '',
+    routine: null,
     images: [{ imageId: 11, width: 1600, height: 900 }],
     likeCount: 0,
     commentCount: 1,
@@ -205,6 +213,7 @@ export const DEMO_FEED_TEXT_POST: FeedPost = {
   author: { userId: 7, nickname: '루틴친구', profileImageKey: null },
   boardType: 'FREE',
   content: '요즘 아침 루틴을 어떻게 지키고 계세요?\n저는 알람 대신 커튼을 열어 두고 자요.',
+  routine: null,
   images: [],
   likeCount: 1,
   commentCount: 0,
@@ -231,6 +240,22 @@ export const DEMO_FEED_COMMENTS: FeedComment[] = [
     mine: true,
     createdAt: '2026-09-22T03:10:00Z',
   },
+];
+
+/** 루틴 고르기 픽스처의 "오늘"(KST) — 갤러리·테스트가 기기 날짜와 무관하게 같은 묶음을 그린다. */
+export const DEMO_FEED_TODAY = '2026-10-04';
+
+/** 최근 7일 완료 루틴 (#1456) — 오늘·어제·10/1 묶음. */
+export const DEMO_FEED_COMPLETIONS: FeedCompletionGroup[] = [
+  {
+    date: '2026-10-04',
+    options: [
+      { routineId: 15, title: '아침 스트레칭', date: '2026-10-04' },
+      { routineId: 16, title: '물 2L 마시기', date: '2026-10-04' },
+    ],
+  },
+  { date: '2026-10-03', options: [{ routineId: 15, title: '아침 스트레칭', date: '2026-10-03' }] },
+  { date: '2026-10-01', options: [{ routineId: 17, title: '일기 세 줄', date: '2026-10-01' }] },
 ];
 
 export const DEMO_FEED_DRAFT: FeedDraftImage[] = [

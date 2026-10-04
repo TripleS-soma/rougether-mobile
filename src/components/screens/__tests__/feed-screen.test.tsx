@@ -118,6 +118,27 @@ describe('FeedScreen (#1409)', () => {
     // 사진 있는 글은 세 줄.
     expect(ui.getByText(/오늘 아침 루틴 완료/).props.numberOfLines).toBe(3);
   });
+
+  it('연결 루틴이 있는 인증글만 "루틴 · M/D 완료" 배지 (서버 #430)', async () => {
+    const ui = await render(<FeedScreen posts={[DEMO_FEED_TEXT_POST, ...DEMO_FEED_POSTS]} />);
+    // 3번 글만 연결 루틴이 있다 — 1번(옛 인증글, routine null)·자유글은 배지 없음.
+    expect(ui.getAllByTestId('feed-routine-badge')).toHaveLength(1);
+    expect(ui.getByText('아침 스트레칭 · 9/22 완료')).toBeTruthy();
+  });
+
+  it('자유글에 routine이 남아 있어도 배지를 그리지 않는다', async () => {
+    const ui = await render(
+      <FeedScreen
+        posts={[
+          {
+            ...DEMO_FEED_TEXT_POST,
+            routine: { routineId: 1, title: '물 마시기', date: '2026-10-01' },
+          },
+        ]}
+      />,
+    );
+    expect(ui.queryByTestId('feed-routine-badge')).toBeNull();
+  });
 });
 
 /** 목록을 끝까지 내린 스크롤 이벤트 — VirtualizedList가 onEndReached를 판단한다. */

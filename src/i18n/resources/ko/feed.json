@@ -28,8 +28,8 @@
       "deleteCommentTitle": "댓글을 삭제할까요?",
       "deleteCommentBody": "삭제한 댓글은 되돌릴 수 없어요.",
       "edit": "수정",
-      "editA11y": "게시물 본문 수정",
-      "editTitle": "본문 수정",
+      "editA11y": "게시물 수정",
+      "editTitle": "게시물 수정",
       "editPlaceholder": "본문을 입력하세요 (비워 둘 수 있어요)",
       "save": "저장",
       "deletePost": "삭제",
@@ -38,8 +38,11 @@
       "deletePostBody": "사진과 댓글이 모두 사라지고 되돌릴 수 없어요.",
       "loadError": "게시물을 불러오지 못했어요.",
       "notFound": "삭제되었거나 볼 수 없는 게시물이에요.",
-      "editBoardLocked": "{{board}} 게시판 · 게시판은 바꿀 수 없어요",
-      "editPlaceholderRequired": "본문을 입력하세요"
+      "editPlaceholderRequired": "본문을 입력하세요",
+      "editNeedPhoto": "사진이 있는 글만 인증게시판으로 옮길 수 있어요.",
+      "editToFreeHint": "자유게시판으로 옮기면 연결한 루틴이 풀려요.",
+      "editKeepRoutine": "바꾸지 않으면 지금 연결한 루틴이 그대로 남아요.",
+      "editCurrentRoutine": "지금 연결한 루틴"
     },
     "compose": {
       "title": "새 게시물",
@@ -61,7 +64,8 @@
       "needContent": "본문을 쓰거나 사진을 골라 주세요.",
       "contentPlaceholderRequired": "어떤 이야기를 나눌까요?",
       "boardHintFree": "글만 써도 되고, 사진은 10장까지 붙일 수 있어요.",
-      "boardHintVerification": "루틴·방 인증 사진을 1장 이상 올려 주세요."
+      "boardHintVerification": "최근 7일 안에 완료한 루틴 하나와 사진 1장 이상이 필요해요.",
+      "needRoutine": "인증할 루틴을 골라 주세요."
     },
     "toast": {
       "posted": "게시물을 올렸어요.",
@@ -80,7 +84,9 @@
       "FEED_REQUEST_CONFLICT": "이미 처리된 요청이에요. 새로고침해 주세요.",
       "FEED_UPLOAD_LIMIT": "게시하지 않은 사진이 너무 많아요. 잠시 후 다시 시도해 주세요.",
       "FEED_STORAGE_UNAVAILABLE": "사진 저장소가 잠시 불안정해요. 잠시 후 다시 시도해 주세요.",
-      "generic": "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요."
+      "generic": "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.",
+      "FEED_ROUTINE_COMPLETION_REQUIRED": "인증할 루틴을 골라 주세요.",
+      "FEED_ROUTINE_COMPLETION_INVALID": "그 루틴의 완료 기록을 확인하지 못했어요. 최근 7일 안에 완료한 루틴을 다시 골라 주세요."
     },
     "emptyFree": "아직 자유게시판 글이 없어요.\n첫 이야기를 남겨 보세요!",
     "emptyMine": "아직 쓴 글이 없어요.\n오늘의 루틴이나 일상을 나눠 보세요!",
@@ -90,6 +96,19 @@
       "verification": "인증",
       "tabA11y": "{{label}} 게시판",
       "mine": "내 글"
+    },
+    "routine": {
+      "badge": "{{title}} · {{date}} 완료",
+      "badgeA11y": "인증한 루틴: {{title}}, {{date}} 완료",
+      "shortDate": "{{month}}/{{day}}",
+      "today": "오늘",
+      "yesterday": "어제",
+      "pickerTitle": "인증할 루틴",
+      "pickerHint": "최근 7일 안에 완료한 루틴 하나를 골라 주세요.",
+      "optionA11y": "{{title}}, {{date}} 완료",
+      "empty": "최근 7일 동안 완료한 루틴이 없어요",
+      "emptyHint": "루틴을 완료한 뒤 인증 글을 올리거나, 자유게시판에 글을 남겨 보세요.",
+      "loadError": "완료한 루틴을 불러오지 못했어요."
     }
   }
 }

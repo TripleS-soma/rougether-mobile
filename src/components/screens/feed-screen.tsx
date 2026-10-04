@@ -12,6 +12,7 @@ import {
 
 import { FEED_BOARD_FILTERS, FeedBoardTabs } from '@/components/feed/feed-board';
 import { FeedActionRow, FeedAuthorRow, feedAuthorName } from '@/components/feed/feed-parts';
+import { FeedRoutineBadge } from '@/components/feed/feed-routine';
 import { FeedPhoto, feedImageAspect } from '@/components/feed/feed-photo';
 import type { FeedBoardFilter, FeedImageLoader, FeedPost } from '@/components/screens/feed/types';
 import { GlassSurface } from '@/components/ui/glass-surface';
@@ -100,6 +101,9 @@ const FeedPostCard = memo(function FeedPostCard({
           board={post.boardType}
           now={now}
         />
+        {post.boardType === 'VERIFICATION' && post.routine ? (
+          <FeedRoutineBadge routine={post.routine} />
+        ) : null}
         {first ? (
           <View>
             <FeedPhoto

@@ -33,3 +33,8 @@ export const FEED_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const FEED_IMAGE_TYPES: readonly string[] = ['image/jpeg', 'image/png'];
 /** 목록 한 페이지 (서버 기본 20, 최대 50). */
 export const FEED_PAGE_SIZE = 20;
+/**
+ * 인증글에 연결할 수 있는 루틴 완료의 기간 (서버 #430) — KST 오늘과 그 이전 6일, 총 7일.
+ * 루틴 고르기가 이 날짜들의 GET /calendar를 받는다.
+ */
+export const FEED_ROUTINE_WINDOW_DAYS = 7;

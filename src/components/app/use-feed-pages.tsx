@@ -21,6 +21,7 @@ import { useFeed } from '@/hooks/use-feed';
 import { useFeedCompose } from '@/hooks/use-feed-compose';
 import { useFeedPost } from '@/hooks/use-feed-post';
 import { useModeration } from '@/hooks/use-moderation';
+import { useRecentRoutineCompletions } from '@/hooks/use-recent-routine-completions';
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { i18n } from '@/i18n';
 import { track } from '@/lib/analytics';
@@ -90,6 +91,19 @@ export function useFeedPages({
     if (prevScreen.current === 'feedCompose' && screen !== 'feedCompose') discardRef.current();
     prevScreen.current = screen;
   }, [screen, discardRef]);
+
+  // 인증글 루틴 고르기 (#1456) — 작성에서 인증게시판을 골랐거나 내 글 수정 창이 열린 동안만
+  // 최근 7일 /calendar를 받는다. 다른 화면으로 가면 수정 창 상태도 접는다.
+  const [editOpen, setEditOpen] = useState(false);
+  useEffect(() => {
+    if (screen !== 'feedPost') setEditOpen(false);
+  }, [screen]);
+  const routinePicker = useRecentRoutineCompletions({
+    enabled:
+      FEED_ENABLED &&
+      ((screen === 'feedCompose' && compose.board === 'VERIFICATION') ||
+        (screen === 'feedPost' && editOpen)),
+  });
 
   const imageCountRef = useLatestRef(compose.images.length);
   const addImages = compose.addImages;
@@ -194,6 +208,8 @@ export function useFeedPages({
         onToggleLike={handleToggleLike}
         onDeletePost={(id) => void handleDeletePost(id)}
         onEditPost={detail.editPost}
+        onEditOpenChange={setEditOpen}
+        routinePicker={routinePicker}
         onReportPost={handleReportPost}
         onReportComment={handleReportComment}
         onBlockUser={(userId, via) => void handleBlockUser(userId, via)}
@@ -204,6 +220,9 @@ export function useFeedPages({
       <FeedComposeScreen
         board={compose.board}
         onChangeBoard={compose.setBoard}
+        routine={compose.routine}
+        onChangeRoutine={compose.setRoutine}
+        routinePicker={routinePicker}
         images={compose.images}
         content={compose.content}
         onChangeContent={compose.setContent}

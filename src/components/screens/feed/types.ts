@@ -25,12 +25,57 @@ export type { FeedBoardType } from '@/api/types';
  */
 export type FeedBoardFilter = 'ALL' | FeedBoardType | 'MINE';
 
+/**
+ * 인증글이 연결한 루틴 완료 (서버 #430) — 글의 "✓ 루틴 · 날짜 완료" 배지. 제목은 연결 시점
+ * 스냅샷이라 루틴 이름을 바꿔도 그대로다. `date`는 KST 달력 날짜(`YYYY-MM-DD`).
+ */
+export type FeedPostRoutine = {
+  routineId: number;
+  title: string;
+  date: string;
+};
+
+/** 인증글에 연결할 루틴 완료 하나 — 요청의 `routineCompletion`과 같은 모양. */
+export type FeedRoutineCompletion = {
+  routineId: number;
+  date: string;
+};
+
+/** 루틴 고르기 목록의 한 줄 — 그 날짜에 완료한 루틴. */
+export type FeedCompletionOption = FeedRoutineCompletion & { title: string };
+
+/** 날짜 하나의 완료 루틴들 — 최근 날짜부터. */
+export type FeedCompletionGroup = {
+  date: string;
+  options: FeedCompletionOption[];
+};
+
+/** 루틴 고르기의 데이터 상태 — 셸이 `useRecentRoutineCompletions`로 채워 넘긴다. */
+export type FeedCompletionPicker = {
+  groups: FeedCompletionGroup[];
+  loading: boolean;
+  error: boolean;
+  onRetry?: () => void;
+};
+
+/**
+ * 내 글 수정 요청 (서버 #430) — `content`는 늘 보내고, 게시판·연결 루틴은 **바뀔 때만**
+ * 싣는다(생략 = 유지). 자유로 바꾸면 `routineCompletion` 없이 `boardType: 'FREE'`.
+ */
+export type FeedPostEdit = {
+  content: string;
+  boardType?: FeedBoardType;
+  routineCompletion?: FeedRoutineCompletion;
+};
+
 export type FeedPost = {
   postId: number;
   author: FeedAuthor;
-  /** 등록 후 바뀌지 않는다(서버 #428). */
+  /** 수정에서 자유↔인증으로 바꿀 수 있다(서버 #430). */
   boardType: FeedBoardType;
   content: string;
+  /** 인증글의 연결 루틴 — 자유글·연결 없는 옛 인증글은 null. */
+  routine: FeedPostRoutine | null;
   images: FeedImage[];
   likeCount: number;
   commentCount: number;

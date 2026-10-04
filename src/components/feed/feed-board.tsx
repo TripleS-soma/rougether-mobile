@@ -31,6 +31,8 @@ export type FeedBoardTabsProps<K extends FeedBoardFilter> = {
   onChange?: (value: K) => void;
   /** 잠금(작성 중 등) — 누를 수 없고 흐리게. */
   disabled?: boolean;
+  /** 이 선택지만 잠근다 — 수정 창에서 사진 없는 글의 인증게시판(서버 #430). */
+  disabledOptions?: readonly K[];
   testID?: string;
 };
 
@@ -43,6 +45,7 @@ export function FeedBoardTabs<K extends FeedBoardFilter>({
   value,
   onChange,
   disabled = false,
+  disabledOptions,
   testID,
 }: FeedBoardTabsProps<K>) {
   const t = useTokens();
@@ -54,17 +57,22 @@ export function FeedBoardTabs<K extends FeedBoardFilter>({
         {options.map((key) => {
           const active = value === key;
           const label = tr(FEED_BOARD_LABEL_KEY[key]);
+          const off = disabled || !!disabledOptions?.includes(key);
           return (
             <Pressable
               key={key}
               onPress={() => onChange?.(key)}
-              disabled={disabled}
+              disabled={off}
               accessibilityRole="tab"
-              accessibilityState={{ selected: active, disabled }}
+              accessibilityState={{ selected: active, disabled: off }}
               accessibilityLabel={tr('feed.board.tabA11y', { label })}
               testID={testID ? `${testID}-${key}` : undefined}
               style={[styles.item, active && { backgroundColor: t.surfaceMuted }]}>
-              <Text style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
+              <Text
+                style={[
+                  Typography.label,
+                  { color: active ? t.primaryText : off ? t.textDisabled : t.textMuted },
+                ]}>
                 {label}
               </Text>
             </Pressable>

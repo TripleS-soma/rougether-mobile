@@ -26,6 +26,7 @@ import type {
   FeedCreateRequest,
   FeedImageResponse,
   FeedPostResponse,
+  FeedUpdateRequest,
 } from './types';
 
 /** 업로드할 사진 — RN FormData 파일 디스크립터와 같은 모양(`lib/pick-image`). */
@@ -196,11 +197,12 @@ export async function fetchFeedPost(postId: number): Promise<FeedPost> {
 }
 
 /**
- * PATCH /feed/posts/{postId} — 본인 본문만. 사진·게시판은 바꿀 수 없다. 빈 문자열은 사진이
- * 있는 글만 허용(사진 없는 자유글은 400 FEED_INPUT_INVALID).
+ * PATCH /feed/posts/{postId} — 본인 글의 본문·게시판·연결 루틴(서버 #430). 생략한 필드는
+ * 유지된다. 사진은 바꿀 수 없다. 빈 본문은 사진이 있는 글만(사진 없는 자유글은 400
+ * FEED_INPUT_INVALID). #430 배포 전 서버는 `boardType`·`routineCompletion`을 무시한다.
  */
-export async function updateFeedPost(postId: number, content: string): Promise<FeedPost> {
-  return adaptPost(await apiPatch<FeedPostResponse>(`/feed/posts/${postId}`, { content }));
+export async function updateFeedPost(postId: number, body: FeedUpdateRequest): Promise<FeedPost> {
+  return adaptPost(await apiPatch<FeedPostResponse>(`/feed/posts/${postId}`, body));
 }
 
 /** DELETE /feed/posts/{postId} — 본인 글. 반복 호출해도 204. */
