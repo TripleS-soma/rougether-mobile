@@ -326,6 +326,7 @@
         "preparingA11y": "Preparing game",
         "startError": "Couldn't start the game",
         "pendingSubmit": "Waiting to save the previous score",
+        "exitA11y": "Quit game",
         "retrySave": "Save again",
         "submitError": "Couldn't save your score",
         "personalBest": "Personal best",

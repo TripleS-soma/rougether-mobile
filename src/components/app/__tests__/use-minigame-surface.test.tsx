@@ -1,6 +1,6 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { useRef, useState, type ReactNode } from 'react';
-import { View } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 
 import type { Screen } from '@/components/app/navigation';
 import {
@@ -18,6 +18,10 @@ import {
   finishMinigameRun,
 } from '@/api/minigames';
 
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({ width: 750, height: 1334, scale: 2, fontScale: 1 })),
+}));
 jest.mock('@/api/minigames');
 jest.mock('@/api/auth', () => ({ getSessionUserId: () => 7 }));
 const mockTrack = jest.fn();
@@ -235,4 +239,50 @@ it('uses separate leaderboard queries when switching games', async () => {
   expect(ui.queryByText('cat-stairs 1등')).toBeNull();
   expect(ranking).toHaveBeenCalledWith('cat-stairs');
   expect(ranking).toHaveBeenCalledWith('cat-merge');
+});
+
+describe('세로 폰의 루틴 러너는 가로 무대로 (#1458)', () => {
+  beforeEach(() => {
+    jest
+      .mocked(useWindowDimensions)
+      .mockReturnValue({ width: 390, height: 844, scale: 3, fontScale: 1 });
+  });
+  afterEach(() => {
+    jest
+      .mocked(useWindowDimensions)
+      .mockReturnValue({ width: 750, height: 1334, scale: 2, fontScale: 1 });
+  });
+
+  it('판 동안만 무대에 띄우고, 끝나면 내려 결과는 세로 화면이 받는다', async () => {
+    const ui = await setup();
+    await waitFor(() => expect(ui.getByLabelText('루틴 러너 시작')).toBeTruthy());
+    await fireEvent.press(ui.getByLabelText('루틴 러너 시작'));
+    await fireEvent.press(ui.getByLabelText('랭킹 도전'));
+    await waitFor(() => expect(ui.getByTestId('landscape-stage')).toBeTruthy());
+    expect(ui.getByTestId('runner-active').props.children).toBe('true');
+
+    await fireEvent.press(ui.getByLabelText('테스트 게임 완료'));
+    await waitFor(() => expect(ui.getByLabelText('전체 유저 랭킹 보기')).toBeTruthy());
+    expect(ui.queryByTestId('landscape-stage')).toBeNull();
+  });
+
+  it('무대의 그만하기는 미니게임 목록으로 돌아간다', async () => {
+    const ui = await setup();
+    await waitFor(() => expect(ui.getByLabelText('루틴 러너 시작')).toBeTruthy());
+    await fireEvent.press(ui.getByLabelText('루틴 러너 시작'));
+    await fireEvent.press(ui.getByLabelText('랭킹 도전'));
+    await waitFor(() => expect(ui.getByLabelText('게임 그만하기')).toBeTruthy());
+    await fireEvent.press(ui.getByLabelText('게임 그만하기'));
+    await waitFor(() => expect(ui.getByLabelText('루틴 러너 시작')).toBeTruthy());
+    expect(ui.queryByTestId('landscape-stage')).toBeNull();
+  });
+
+  it('세로 판인 계단은 무대를 쓰지 않는다', async () => {
+    const ui = await setup();
+    await waitFor(() => expect(ui.getByLabelText('고양이 계단 시작')).toBeTruthy());
+    await fireEvent.press(ui.getByLabelText('고양이 계단 시작'));
+    await fireEvent.press(ui.getByLabelText('랭킹 도전'));
+    await waitFor(() => expect(ui.getByTestId('runner-active').props.children).toBe('true'));
+    expect(ui.queryByTestId('landscape-stage')).toBeNull();
+  });
 });
