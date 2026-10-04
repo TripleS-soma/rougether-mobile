@@ -83,11 +83,13 @@
       "generic": "Something went wrong. Please try again later."
     },
     "emptyFree": "No free board posts yet.\nStart a conversation!",
+    "emptyMine": "You haven't posted yet.\nShare a routine or a moment from your day!",
     "board": {
       "all": "All",
       "free": "Free",
       "verification": "Proof",
-      "tabA11y": "{{label}} board"
+      "tabA11y": "{{label}} board",
+      "mine": "Mine"
     }
   }
 }
