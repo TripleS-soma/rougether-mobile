@@ -1,4 +1,4 @@
-import { IS_INTERNAL_CHANNEL } from '@/constants/release-channel';
+import { Platform } from 'react-native';
 
 /**
  * 가구 거래소 (#1427) — 서버 계약 `rougether-spec/domains/market`.
@@ -11,10 +11,10 @@ import { IS_INTERNAL_CHANNEL } from '@/constants/release-channel';
  * 연결한 뒤에 켠다. 켤 때는 개인정보 처리방침·스토어 문구도 같이 고친다(AGENTS.md
  * "새 데이터·새 권한").
  *
- * 2026-09-29부터 **내부 테스트 채널에서만** 켠다(실기기 확인용, `IS_INTERNAL_CHANNEL`).
- * 스토어 사용자에게 여는 것(`true`로 바꾸기)은 사용자(제품 오너)가 확인한 뒤에만.
+ * 2026-09-29부터 내부 테스트 채널에서만 켰다가, **2026-10-05 제품 오너 확인으로 스토어 앱에도
+ * 연다**(개인정보처리방침 2.0 반영 후). 웹앱은 아직 닫아 둔다 — 실기기로만 확인한 기능이다.
  */
-export const MARKET_ENABLED = IS_INTERNAL_CHANNEL;
+export const MARKET_ENABLED = Platform.OS !== 'web';
 
 /** 주문 가격 1~1,000 코인 정수 (POST /market/orders `price`). */
 export const MARKET_PRICE_MIN = 1;
