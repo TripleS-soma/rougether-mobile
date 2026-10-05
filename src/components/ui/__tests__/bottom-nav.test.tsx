@@ -8,6 +8,12 @@ import { BottomNav } from '@/components/ui/bottom-nav';
 import { Themes } from '@/constants/theme';
 import { scrubTarget } from '@/components/ui/use-bottom-nav-scrub';
 
+// 탭 4개(방·달력·집·내 정보) 기준의 스크럽·색 단언 — 피드 탭이 낀 5탭은 feed-navigation.test.tsx.
+jest.mock('@/constants/feed', () => ({
+  ...jest.requireActual('@/constants/feed'),
+  FEED_ENABLED: false,
+}));
+
 // 4탭 (#1138): 나의 방 · 달력 · 집 · 내 정보 — 중심 53 · 136 · 212 · 298.
 const FRAMES = [
   { x: 8, width: 90 },

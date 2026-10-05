@@ -8,6 +8,12 @@ import { AuthProvider } from '@/hooks/use-auth';
 import { DEFAULT_HAPTIC_STRENGTH, getHapticStrength, setHapticStrength } from '@/utils/haptics';
 import { BrandThemeProvider } from '@/hooks/use-tokens';
 import { QueryProvider } from '@/test-utils/query-wrapper';
+
+// 이 파일은 피드(=신고·차단)가 꺼진 설정 화면을 본다 — 켠 상태의 차단 목록은 피드 탭 테스트.
+jest.mock('@/constants/moderation', () => ({
+  ...jest.requireActual('@/constants/moderation'),
+  MODERATION_ENABLED: false,
+}));
 const PROFILE = { nickname: '준서', bio: '', characterId: 'cat' as const, onSave: jest.fn() };
 const STATS = { streak: 3, coin: 120, diamond: 2 };
 

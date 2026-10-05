@@ -1,4 +1,4 @@
-import { IS_INTERNAL_CHANNEL } from '@/constants/release-channel';
+import { UGC_AVAILABLE } from '@/constants/release-channel';
 
 /**
  * 공개 SNS 피드 (#1409) — 서버 계약 `rougether-spec/domains/feed`.
@@ -9,10 +9,11 @@ import { IS_INTERNAL_CHANNEL } from '@/constants/release-channel';
  * (TripleS-soma/rougether-server#399)가 생기고 앱에 연결한 뒤에 켠다. 켤 때는 개인정보
  * 처리방침·스토어 문구도 같이 고친다(AGENTS.md "새 데이터·새 권한").
  *
- * 2026-09-29부터 **내부 테스트 채널에서만** 켠다(실기기 확인용, `IS_INTERNAL_CHANNEL`).
- * 스토어 사용자에게 여는 것(`true`로 바꾸기)은 사용자(제품 오너)가 확인한 뒤에만.
+ * 2026-09-29부터 내부 테스트 채널에서만 켰다. **2026-10-05 결정: 웹은 지금 열고, 스토어 앱은
+ * 다음 네이티브 버전(1.5.4) 심사 때 켠 채로 제출** — 심사 때 꺼져 있던 1.5.3 바이너리에는 OTA로
+ * 켜지 않는다(App Store 2.5.2·연령 등급). 판정은 `UGC_AVAILABLE`(런타임 지문)이 한다.
  */
-export const FEED_ENABLED = IS_INTERNAL_CHANNEL;
+export const FEED_ENABLED = UGC_AVAILABLE;
 
 /**
  * 작성 화면의 기본 게시판 (서버 #428). 서버는 boardType을 생략하면 `VERIFICATION`으로 받지만
