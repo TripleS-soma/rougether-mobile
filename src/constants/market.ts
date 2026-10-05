@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { UGC_AVAILABLE } from '@/constants/release-channel';
 
 /**
  * 가구 거래소 (#1427) — 서버 계약 `rougether-spec/domains/market`.
@@ -11,10 +11,11 @@ import { Platform } from 'react-native';
  * 연결한 뒤에 켠다. 켤 때는 개인정보 처리방침·스토어 문구도 같이 고친다(AGENTS.md
  * "새 데이터·새 권한").
  *
- * 2026-09-29부터 내부 테스트 채널에서만 켰다가, **2026-10-05 제품 오너 확인으로 스토어 앱에도
- * 연다**(개인정보처리방침 2.0 반영 후). 웹앱은 아직 닫아 둔다 — 실기기로만 확인한 기능이다.
+ * 2026-09-29부터 내부 테스트 채널에서만 켰다. **2026-10-05 결정: 웹은 지금 열고, 스토어 앱은
+ * 다음 네이티브 버전(1.5.4) 심사 때 켠 채로 제출** — 심사 때 꺼져 있던 1.5.3 바이너리에는 OTA로
+ * 켜지 않는다(App Store 2.5.2·연령 등급). 판정은 `UGC_AVAILABLE`(런타임 지문)이 한다.
  */
-export const MARKET_ENABLED = Platform.OS !== 'web';
+export const MARKET_ENABLED = UGC_AVAILABLE;
 
 /** 주문 가격 1~1,000 코인 정수 (POST /market/orders `price`). */
 export const MARKET_PRICE_MIN = 1;
