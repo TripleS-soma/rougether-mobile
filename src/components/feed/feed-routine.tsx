@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type {
@@ -8,10 +8,12 @@ import type {
 } from '@/components/screens/feed/types';
 import { Icon } from '@/components/ui/icon';
 import { Loading } from '@/components/ui/loading';
+import { weekdayLabelKey } from '@/constants/routines';
+import { FEED_ROUTINE_WINDOW_DAYS } from '@/constants/feed';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { i18n, useT } from '@/i18n';
-import { shiftIso, todayIso } from '@/utils/datetime';
+import { shiftIso, todayIso, weekdayOf } from '@/utils/datetime';
 
 const NO_PICKER: FeedCompletionPicker = { groups: [], loading: false, error: false };
 
@@ -63,9 +65,18 @@ export type FeedRoutinePickerProps = {
   today?: string;
 };
 
+/** 고르기의 날짜 줄 — KST 오늘을 끝으로 지난 7일(서버 허용 창과 같다). */
+export function feedRoutineWindow(today: string): string[] {
+  return Array.from({ length: FEED_ROUTINE_WINDOW_DAYS }, (_, i) =>
+    shiftIso(today, i - (FEED_ROUTINE_WINDOW_DAYS - 1)),
+  );
+}
+
 /**
- * 인증할 루틴 고르기 (#1456) — 최근 7일 동안 완료한 루틴을 날짜별(오늘·어제·M/D)로 묶어
- * 하나만 고른다. 순수·prop 기반: 목록은 셸이 `useRecentRoutineCompletions`로 넘긴다.
+ * 인증할 루틴 고르기 (#1456) — 최근 7일 주간 달력에서 날짜를 누르면 그날 완료한 루틴이 나오고,
+ * 하나만 고른다(2026-10-06: 7일치를 한 줄로 쭉 늘어놓던 목록을 날짜 먼저 고르는 방식으로).
+ * 완료가 있는 날에는 점이 찍힌다. 처음 펼친 날은 고른 루틴의 날짜, 없으면 가장 최근 완료일.
+ * 순수·prop 기반: 목록은 셸이 `useRecentRoutineCompletions`로 넘긴다.
  */
 export function FeedRoutinePicker({
   picker = NO_PICKER,
@@ -79,6 +90,16 @@ export function FeedRoutinePicker({
   const tr = useT();
   const kstToday = today ?? todayIso();
   const { groups, loading, error, onRetry } = picker;
+  const days = feedRoutineWindow(kstToday);
+  const [pickedDay, setPickedDay] = useState<string | null>(null);
+  // 사용자가 누른 날 → 고른 루틴의 날 → 가장 최근 완료일 → 오늘.
+  const shownDay =
+    pickedDay ??
+    (value && days.includes(value.date) ? value.date : null) ??
+    groups[0]?.date ??
+    kstToday;
+  const byDate = new Map(groups.map((group) => [group.date, group.options]));
+  const dayOptions = byDate.get(shownDay) ?? [];
 
   let body: ReactNode;
   if (groups.length === 0 && loading) {
@@ -109,44 +130,86 @@ export function FeedRoutinePicker({
       </View>
     );
   } else {
-    body = groups.map((group) => (
-      <View key={group.date} style={styles.group} testID={`feed-routine-group-${group.date}`}>
-        <Text style={[Typography.supporting, { color: t.textMuted }]}>
-          {feedCompletionGroupLabel(group.date, kstToday)}
-        </Text>
-        {group.options.map((option) => {
-          const selected = value?.routineId === option.routineId && value?.date === option.date;
-          return (
-            <Pressable
-              key={`${option.date}-${option.routineId}`}
-              onPress={() => onChange?.({ routineId: option.routineId, date: option.date })}
-              disabled={disabled || !onChange}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: selected, disabled }}
-              accessibilityLabel={tr('feed.routine.optionA11y', {
-                title: option.title,
-                date: feedRoutineDateLabel(option.date),
-              })}
-              style={[
-                styles.option,
-                {
-                  backgroundColor: selected ? t.primarySoft : t.surfaceMuted,
-                  borderColor: selected ? t.primary : t.surfaceMuted,
-                },
-              ]}>
-              <Icon
-                name={selected ? 'check' : 'checkbox-off'}
-                size={18}
-                color={selected ? t.primaryText : t.textMuted}
-              />
-              <Text style={[Typography.body, styles.shrink, { color: t.text }]} numberOfLines={1}>
-                {option.title}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-    ));
+    body = (
+      <>
+        <View style={styles.week} accessibilityRole="tablist" testID="feed-routine-week">
+          {days.map((day) => {
+            const count = byDate.get(day)?.length ?? 0;
+            const active = day === shownDay;
+            const label = feedCompletionGroupLabel(day, kstToday);
+            return (
+              <Pressable
+                key={day}
+                onPress={() => setPickedDay(day)}
+                disabled={disabled}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active, disabled }}
+                accessibilityLabel={tr('feed.routine.dayA11y', { label, count })}
+                testID={`feed-routine-day-${day}`}
+                style={[styles.day, active && { backgroundColor: t.primarySoft }]}>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  {tr(weekdayLabelKey(weekdayOf(day)))}
+                </Text>
+                <Text
+                  style={[
+                    Typography.label,
+                    { color: active ? t.primaryText : count > 0 ? t.text : t.textMuted },
+                  ]}>
+                  {Number(day.slice(8))}
+                </Text>
+                <View
+                  style={[styles.dot, { backgroundColor: count > 0 ? t.primary : 'transparent' }]}
+                />
+              </Pressable>
+            );
+          })}
+        </View>
+        <View style={styles.group} testID={`feed-routine-group-${shownDay}`}>
+          <Text style={[Typography.supporting, { color: t.textMuted }]}>
+            {tr('feed.routine.dayTitle', { label: feedCompletionGroupLabel(shownDay, kstToday) })}
+          </Text>
+          {dayOptions.length === 0 ? (
+            <Text style={[Typography.supporting, styles.dayEmpty, { color: t.textMuted }]}>
+              {tr('feed.routine.dayEmpty')}
+            </Text>
+          ) : (
+            dayOptions.map((option) => {
+              const selected = value?.routineId === option.routineId && value?.date === option.date;
+              return (
+                <Pressable
+                  key={`${option.date}-${option.routineId}`}
+                  onPress={() => onChange?.({ routineId: option.routineId, date: option.date })}
+                  disabled={disabled || !onChange}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selected, disabled }}
+                  accessibilityLabel={tr('feed.routine.optionA11y', {
+                    title: option.title,
+                    date: feedRoutineDateLabel(option.date),
+                  })}
+                  style={[
+                    styles.option,
+                    {
+                      backgroundColor: selected ? t.primarySoft : t.surfaceMuted,
+                      borderColor: selected ? t.primary : t.surfaceMuted,
+                    },
+                  ]}>
+                  <Icon
+                    name={selected ? 'check' : 'checkbox-off'}
+                    size={18}
+                    color={selected ? t.primaryText : t.textMuted}
+                  />
+                  <Text
+                    style={[Typography.body, styles.shrink, { color: t.text }]}
+                    numberOfLines={1}>
+                    {option.title}
+                  </Text>
+                </Pressable>
+              );
+            })
+          )}
+        </View>
+      </>
+    );
   }
 
   return (
@@ -182,6 +245,25 @@ const styles = StyleSheet.create({
   },
   group: {
     gap: Spacing.one,
+  },
+  week: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  day: {
+    flex: 1,
+    alignItems: 'center',
+    gap: Spacing.half,
+    paddingVertical: Spacing.one,
+    borderRadius: Radius.lg,
+  },
+  dot: {
+    width: Spacing.one,
+    height: Spacing.one,
+    borderRadius: Radius.pill,
+  },
+  dayEmpty: {
+    paddingVertical: Spacing.two,
   },
   option: {
     flexDirection: 'row',
