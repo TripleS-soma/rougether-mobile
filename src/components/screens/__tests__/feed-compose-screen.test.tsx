@@ -137,16 +137,27 @@ describe('FeedComposeScreen (#1409)', () => {
       });
     });
 
-    it('날짜별로 오늘·어제·M/D로 묶는다', async () => {
+    it('최근 7일 주간 달력 — 처음엔 가장 최근 완료일, 날짜를 누르면 그날 루틴만', async () => {
       const ui = await render(
         <FeedComposeScreen board="VERIFICATION" routinePicker={picker} today={DEMO_FEED_TODAY} />,
       );
-      expect(ui.getByText('오늘')).toBeTruthy();
-      expect(ui.getByText('어제')).toBeTruthy();
-      expect(ui.getByText('10/1')).toBeTruthy();
-      // 같은 루틴이라도 날짜가 다르면 따로 고른다.
+      // 9/28~10/4 일곱 칸, 완료 수가 접근성 라벨에 실린다.
+      expect(ui.getByLabelText('9/28, 완료한 루틴 0개')).toBeTruthy();
+      expect(ui.getByLabelText('오늘, 완료한 루틴 2개').props.accessibilityState).toMatchObject({
+        selected: true,
+      });
+      expect(ui.getByText('오늘 완료한 루틴')).toBeTruthy();
       expect(ui.getByLabelText('아침 스트레칭, 10/4 완료')).toBeTruthy();
+      expect(ui.queryByLabelText('아침 스트레칭, 10/3 완료')).toBeNull();
+
+      // 같은 루틴이라도 날짜가 다르면 따로 고른다.
+      await fireEvent.press(ui.getByLabelText('어제, 완료한 루틴 1개'));
       expect(ui.getByLabelText('아침 스트레칭, 10/3 완료')).toBeTruthy();
+      expect(ui.queryByLabelText('아침 스트레칭, 10/4 완료')).toBeNull();
+
+      // 완료가 없는 날은 그 날 안내.
+      await fireEvent.press(ui.getByLabelText('10/2, 완료한 루틴 0개'));
+      expect(ui.getByText('이 날 완료한 루틴이 없어요')).toBeTruthy();
     });
 
     it('최근 7일 완료가 없으면 빈 안내', async () => {

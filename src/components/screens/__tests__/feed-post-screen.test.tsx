@@ -151,6 +151,7 @@ describe('FeedPostScreen (#1409)', () => {
       disabled: true,
     });
 
+    await fireEvent.press(ui.getByLabelText('어제, 완료한 루틴 1개'));
     await fireEvent.press(ui.getByLabelText('아침 스트레칭, 10/3 완료'));
     await fireEvent.press(ui.getByRole('button', { name: '저장' }));
     expect(onEditPost).toHaveBeenCalledWith(2, {
@@ -200,6 +201,7 @@ describe('FeedPostScreen (#1409)', () => {
     await fireEvent.press(ui.getByLabelText('게시물 수정'));
     expect(ui.queryByLabelText('원래 연결한 루틴으로 되돌리기')).toBeNull();
 
+    await fireEvent.press(ui.getByLabelText('어제, 완료한 루틴 1개'));
     await fireEvent.press(ui.getByLabelText('아침 스트레칭, 10/3 완료'));
     await fireEvent.press(ui.getByLabelText('원래 연결한 루틴으로 되돌리기'));
     expect(ui.queryByLabelText('원래 연결한 루틴으로 되돌리기')).toBeNull();

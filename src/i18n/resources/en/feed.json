@@ -109,7 +109,10 @@
       "optionA11y": "{{title}}, done {{date}}",
       "empty": "No routines completed in the last 7 days",
       "emptyHint": "Complete a routine first, or post on the Free board instead.",
-      "loadError": "Couldn't load your completed routines."
+      "loadError": "Couldn't load your completed routines.",
+      "dayTitle": "Routines done {{label}}",
+      "dayEmpty": "No routines completed on this day",
+      "dayA11y": "{{label}}, {{count}} routines done"
     }
   }
 }
