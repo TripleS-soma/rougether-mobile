@@ -12,6 +12,7 @@ Rougether is a routine tracker for habits that fizzle out when you go it alone �
 ■ A room that grows as you keep going
 • Complete routines to earn coins and collect furniture from the gacha
 • Decorate your room freely with what you collect. Your room is your record
+• Buy and sell furniture with other members in the furniture market — even list furniture you made from a photo
 • Choose a character to live in your room with you
 
 ■ Mini-games in your room
@@ -20,6 +21,7 @@ Rougether is a routine tracker for habits that fizzle out when you go it alone �
 
 ■ Better together
 • Build a house with friends, visit each other's rooms, and send cheers
+• Share your day and routine proof in the feed. Proof posts show the routine you completed
 • Complete shared missions to level up your house
 • Look back on your week with the weekly review: completion rate, by day and by routine
 • A room left empty for too long gets cobwebs. Clear them for coins
