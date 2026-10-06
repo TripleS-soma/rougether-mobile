@@ -65,6 +65,9 @@ describe('스토어 메타데이터 (#818)', () => {
     '인증샷',
     'photo verification',
     'photo proof',
+    // 스피커 잠금화면 재생 — 1.5.4에서 백그라운드 재생 권한을 뺐다(2026-10-06).
+    '화면을 잠가도',
+    'keeps playing when',
   ];
 
   const COPY_FILES = [

@@ -21,23 +21,21 @@ it('does not start after disposal while audio session setup is pending', async (
   expect(native.play).not.toHaveBeenCalled();
   expect(native.remove).toHaveBeenCalled();
 });
-it('uses native looping and lock screen controls, reflects remote pause and clears the session on disposal', async () => {
+it('uses native looping without a background/lock screen session (1.5.4), reflects pause and cleans up', async () => {
   const emit = jest.fn();
-  const controller = createSpeakerPlayer(1, 0.6, emit, jest.fn(), '모닥불');
+  const controller = createSpeakerPlayer(1, 0.6, emit, jest.fn());
   const native = jest.mocked(createAudioPlayer).mock.results[0].value;
   await controller.play();
   expect(native.loop).toBe(true);
   expect(setAudioModeAsync).toHaveBeenCalledWith(
-    expect.objectContaining({ shouldPlayInBackground: true }),
+    expect.objectContaining({ shouldPlayInBackground: false }),
   );
-  expect(native.setActiveForLockScreen).toHaveBeenCalledWith(
-    true,
-    { title: '모닥불', artist: '루게더' },
-    expect.any(Object),
-  );
+  // 재생 서비스가 매니페스트에 없으니 잠금화면 세션을 켜지 않는다.
+  expect(native.setActiveForLockScreen).not.toHaveBeenCalled();
+  expect(native.play).toHaveBeenCalled();
   native.addListener.mock.calls[0][1]({ playing: false, isBuffering: false });
   expect(emit).toHaveBeenLastCalledWith(false);
   controller.dispose();
-  expect(native.setActiveForLockScreen).toHaveBeenLastCalledWith(false);
+  expect(native.setActiveForLockScreen).not.toHaveBeenCalled();
   expect(native.remove).toHaveBeenCalled();
 });
