@@ -109,7 +109,10 @@
       "optionA11y": "{{title}}, {{date}} 완료",
       "empty": "최근 7일 동안 완료한 루틴이 없어요",
       "emptyHint": "루틴을 완료한 뒤 인증 글을 올리거나, 자유게시판에 글을 남겨 보세요.",
-      "loadError": "완료한 루틴을 불러오지 못했어요."
+      "loadError": "완료한 루틴을 불러오지 못했어요.",
+      "dayTitle": "{{label}} 완료한 루틴",
+      "dayEmpty": "이 날 완료한 루틴이 없어요",
+      "dayA11y": "{{label}}, 완료한 루틴 {{count}}개"
     }
   }
 }

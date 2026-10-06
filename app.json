@@ -2,7 +2,7 @@
   "expo": {
     "name": "Rougether",
     "slug": "rougether-mobile",
-    "version": "1.5.3",
+    "version": "1.5.4",
     "runtimeVersion": {
       "policy": "fingerprint"
     },
@@ -250,7 +250,7 @@
           "microphonePermission": false,
           "recordAudioAndroid": false,
           "enableBackgroundRecording": false,
-          "enableBackgroundPlayback": true
+          "enableBackgroundPlayback": false
         }
       ]
     ],
