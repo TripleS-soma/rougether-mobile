@@ -12,6 +12,10 @@ import { resolveHouseFrame } from '@/resources/house-frame';
 import { Spacing } from '@/constants/theme';
 import { CAM_PAN_SLOP } from '@/components/screens/house/camera';
 import { SWIPE_CLAIM_DX } from '@/utils/gesture';
+import {
+  HOUSE_BACKGROUND_KEY_BY_THEME,
+  HOUSE_DARK_BACKGROUND_KEY_BY_THEME,
+} from '@/resources/house-background';
 
 jest.mock('@/hooks/use-color-scheme', () => ({ useColorScheme: jest.fn(() => 'light') }));
 beforeEach(() => jest.mocked(useColorScheme).mockReturnValue('light'));
@@ -227,11 +231,11 @@ describe('HouseScreen', () => {
       </BrandThemeProvider>,
     );
     expect(ui.getByTestId('house-background').props.recyclingKey).toBe(
-      'house/cloud-balloon/backgrounds/rounded-v2-20260907/house-cloud-balloon-background-night.webp',
+      HOUSE_DARK_BACKGROUND_KEY_BY_THEME['cloud-balloon'],
     );
     await fireEvent.press(ui.getByLabelText('test-light-mode'));
     expect(ui.getByTestId('house-background').props.recyclingKey).toBe(
-      'house/cloud-balloon/backgrounds/rounded-v2-20260907/house-cloud-balloon-background-day.webp',
+      HOUSE_BACKGROUND_KEY_BY_THEME['cloud-balloon'],
     );
     await AsyncStorage.clear();
   });
@@ -262,7 +266,9 @@ describe('HouseScreen', () => {
       const key =
         theme === 'night-observatory'
           ? 'house/night-observatory/backgrounds/house-night-observatory-background-dark-v1.webp'
-          : `house/${theme}/backgrounds/rounded-v2-20260907/house-${theme}-background-night.webp`;
+          : HOUSE_DARK_BACKGROUND_KEY_BY_THEME[
+              theme as keyof typeof HOUSE_DARK_BACKGROUND_KEY_BY_THEME
+            ];
       expect(ui.getByTestId('house-background').props).toMatchObject({
         source: [assetSource(key)],
         recyclingKey: key,
@@ -304,14 +310,13 @@ describe('HouseScreen', () => {
     const ui = await render(<HouseScreen houses={[cloudHouse, mushroomHouse]} />);
 
     expect(ui.getByTestId('house-background').props).toMatchObject({
-      recyclingKey:
-        'house/cloud-balloon/backgrounds/rounded-v2-20260907/house-cloud-balloon-background-day.webp',
+      recyclingKey: HOUSE_BACKGROUND_KEY_BY_THEME['cloud-balloon'],
       contentFit: 'cover',
       cachePolicy: 'memory-disk',
     });
     await fireEvent.press(ui.getByLabelText('다음 집'));
     expect(ui.getByTestId('house-background').props.recyclingKey).toBe(
-      'house/mushroom-forest/backgrounds/rounded-v2-20260907/house-mushroom-forest-background-day.webp',
+      HOUSE_BACKGROUND_KEY_BY_THEME['mushroom-forest'],
     );
   });
 

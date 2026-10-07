@@ -15,6 +15,10 @@ import { Room } from '@/components/room/room';
 import { BrandThemeProvider, useBrandTheme } from '@/hooks/use-tokens';
 import { assetSource } from '@/resources/asset';
 import { renderWithProviders } from '@/test-utils/render';
+import {
+  HOUSE_BACKGROUND_KEY_BY_THEME,
+  HOUSE_DARK_BACKGROUND_KEY_BY_THEME,
+} from '@/resources/house-background';
 
 // 렌더마다 받은 props를 기록하는 MyRoomScreen 프로브.
 const mockMyRoomRenders: Record<string, unknown>[] = [];
@@ -87,12 +91,8 @@ it('집 목록이 그대로여도 다크모드 전환 시 새 배경을 미리 �
         <AppShell />
       </BrandThemeProvider>,
     );
-    const light = assetSource(
-      'house/cloud-balloon/backgrounds/rounded-v2-20260907/house-cloud-balloon-background-day.webp',
-    ).uri;
-    const dark = assetSource(
-      'house/cloud-balloon/backgrounds/rounded-v2-20260907/house-cloud-balloon-background-night.webp',
-    ).uri;
+    const light = assetSource(HOUSE_BACKGROUND_KEY_BY_THEME['cloud-balloon']).uri;
+    const dark = assetSource(HOUSE_DARK_BACKGROUND_KEY_BY_THEME['cloud-balloon']).uri;
     await waitFor(() =>
       expect(prefetch).toHaveBeenCalledWith(expect.arrayContaining([light]), {
         cachePolicy: 'memory-disk',

@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
 
 import type { Routine } from '@/constants/routines';
 import { useLanguage } from '@/hooks/use-language';
@@ -8,6 +7,7 @@ import { isScheduledOn } from '@/components/screens/my-room-screen';
 import { todayIso } from '@/utils/datetime';
 import { refreshWidgets } from '@/widgets/rougether-widgets';
 import { buildWidgetSummary, saveWidgetSummary, saveWidgetTheme } from '@/widgets/widget-data';
+import { supportsHomeWidget } from '@/config/features';
 
 /**
  * 홈 위젯 동기화 (앱 셸에서 분리, 리팩토링 4묶음) — 셸의 다른 어떤 상태와도 결합이 없다.
@@ -32,7 +32,7 @@ export function useWidgetSync({
   streak: number;
 }) {
   useEffect(() => {
-    if (Platform.OS !== 'android' && Platform.OS !== 'ios') return;
+    if (!supportsHomeWidget()) return;
     void saveWidgetTheme(resolvedScheme === 'dark').then(refreshWidgets);
   }, [resolvedScheme]);
 
@@ -42,7 +42,7 @@ export function useWidgetSync({
   const summarySigRef = useRef('');
   useEffect(() => {
     // 홈 위젯이 있는 플랫폼만 — 웹은 제외.
-    if (Platform.OS !== 'android' && Platform.OS !== 'ios') return;
+    if (!supportsHomeWidget()) return;
     const today = todayIso();
     const summary = buildWidgetSummary(
       routines.filter((r) => isScheduledOn(r, today)),

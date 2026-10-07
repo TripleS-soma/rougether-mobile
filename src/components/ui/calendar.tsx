@@ -14,7 +14,7 @@ import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { horizontalFlingGesture } from '@/utils/gesture';
 import { useAnimatedValue, useAnimatedValueXY, useLatestRef } from '@/hooks/use-stable-value';
-import { WEEKDAY_KEYS, weekdayLabelKey } from '@/constants/routines';
+import { WEEKDAY_KEYS } from '@/constants/routines';
 import { NATIVE_DRIVER } from '@/utils/animation';
 import { useT } from '@/i18n';
 

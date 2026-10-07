@@ -4,7 +4,7 @@ import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } fr
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
 import { HouseCoverArt } from '@/components/room/house-cover-art';
 import type { RoomCatalogProps } from '@/components/room/room';
-import type { HouseMission, MemberRoomPreview } from '@/components/screens/house-screen';
+import type { HouseMission, MemberRoomPreview } from '@/components/screens/house/types';
 import { Loading } from '@/components/ui/loading';
 import { Icon } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';

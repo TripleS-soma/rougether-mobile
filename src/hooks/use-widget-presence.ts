@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
-import { AppState, Platform } from 'react-native';
+import { AppState } from 'react-native';
 
 import { refreshWidgets } from '@/widgets/rougether-widgets';
 import { saveWidgetLastActive } from '@/widgets/widget-data';
+import { supportsHomeWidget } from '@/config/features';
 
 /**
  * 홈 위젯용 "마지막 접속" 기록 (#1122) — 앱이 실제로 포그라운드가 될 때만
@@ -12,7 +13,7 @@ import { saveWidgetLastActive } from '@/widgets/widget-data';
  */
 export function useWidgetPresence() {
   useEffect(() => {
-    if (Platform.OS !== 'android' && Platform.OS !== 'ios') return;
+    if (!supportsHomeWidget()) return;
     const mark = () => {
       void saveWidgetLastActive(new Date().toISOString()).then(refreshWidgets);
     };

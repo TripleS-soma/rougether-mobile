@@ -15,11 +15,7 @@ import type { useFriendVisit } from '@/components/app/use-friend-visit';
 import type { useMissionLinks } from '@/components/app/use-mission-links';
 import { houseCoverKey, resolveHouseFrame } from '@/resources/house-frame';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
-import {
-  type House,
-  type HouseEditInput,
-  type NewHouseMission,
-} from '@/components/screens/house/types';
+import { type House, type HouseEditInput } from '@/components/screens/house/types';
 import { HouseMissionsScreen } from '@/components/screens/house-missions-screen';
 import { HouseMembersScreen } from '@/components/screens/house-members-screen';
 import { HouseChatPage } from '@/components/app/house-chat-page';
@@ -364,54 +360,6 @@ export function useHousePages({
     )
       setScreen('house');
   }, [screen, currentHouse, setScreen]);
-  const handleAcceptJoinRequest = useCallback(
-    (houseId: number, requestId: number) => {
-      void acceptJoinRequest(houseId, requestId);
-    },
-    [acceptJoinRequest],
-  );
-  const handleRejectJoinRequest = useCallback(
-    (houseId: number, requestId: number) => {
-      void rejectJoinRequest(houseId, requestId);
-    },
-    [rejectJoinRequest],
-  );
-  const handleKickMember = useCallback(
-    (houseId: number, membershipId: number) => {
-      void kickMember(houseId, membershipId);
-    },
-    [kickMember],
-  );
-  const handleLeaveHouse = useCallback(
-    (houseId: number) => {
-      void leaveHouseWithLinked(houseId);
-    },
-    [leaveHouseWithLinked],
-  );
-  const handleAddMissionRoutine = useCallback(
-    (houseId: number, mission: { id: number; title: string }) => {
-      void addMissionRoutine(houseId, mission);
-    },
-    [addMissionRoutine],
-  );
-  const handleClaimMission = useCallback(
-    (houseId: number, missionId: number) => {
-      void claimMission(houseId, missionId);
-    },
-    [claimMission],
-  );
-  const handleCreateMission = useCallback(
-    (houseId: number, input: NewHouseMission) => {
-      void createMission(houseId, input);
-    },
-    [createMission],
-  );
-  const handleDeleteMission = useCallback(
-    (houseId: number, missionId: number) => {
-      void deleteMissionWithLinked(houseId, missionId);
-    },
-    [deleteMissionWithLinked],
-  );
   const handleRemoveMissionRoutine = useCallback(
     (mission: { id: number }) => {
       void removeMissionRoutine(mission.id);
@@ -483,17 +431,17 @@ export function useHousePages({
     onOpenSearch: openHouseSearch,
     onOpenMembers: openMembers,
     isKickedMember,
-    onAcceptJoinRequest: handleAcceptJoinRequest,
-    onRejectJoinRequest: handleRejectJoinRequest,
-    onKickMember: handleKickMember,
-    onLeaveHouse: handleLeaveHouse,
+    onAcceptJoinRequest: acceptJoinRequest,
+    onRejectJoinRequest: rejectJoinRequest,
+    onKickMember: kickMember,
+    onLeaveHouse: leaveHouseWithLinked,
     linkedRoutines: houseLinkedRoutines,
     contributedMissionIds: contributedMissionIdList,
-    onAddMissionRoutine: handleAddMissionRoutine,
+    onAddMissionRoutine: addMissionRoutine,
     onRemoveMissionRoutine: handleRemoveMissionRoutine,
-    onClaimMission: handleClaimMission,
-    onCreateMission: handleCreateMission,
-    onDeleteMission: handleDeleteMission,
+    onClaimMission: claimMission,
+    onCreateMission: createMission,
+    onDeleteMission: deleteMissionWithLinked,
     onOpenMissions: openMissions,
     // houseId가 있는 내 집에서만 레일에 '채팅'이 뜬다.
     onOpenChat: currentHouse?.houseId ? openChat : undefined,
@@ -520,10 +468,10 @@ export function useHousePages({
         linkedRoutines={houseLinkedRoutines}
         contributedMissionIds={contributedMissionIdList}
         onBack={closeMissions}
-        onCreateMission={handleCreateMission}
-        onDeleteMission={handleDeleteMission}
-        onClaimMission={handleClaimMission}
-        onAddMissionRoutine={handleAddMissionRoutine}
+        onCreateMission={createMission}
+        onDeleteMission={deleteMissionWithLinked}
+        onClaimMission={claimMission}
+        onAddMissionRoutine={addMissionRoutine}
         onRemoveMissionRoutine={handleRemoveMissionRoutine}
         onUnlinkMissionRoutine={handleUnlinkMissionRoutine}
       />
@@ -537,15 +485,15 @@ export function useHousePages({
         memberCharacterId={(m) => characterIdForMember(m, roomPreviews, wornCharacterId)}
         onBack={closeMembers}
         onInviteShared={handleInviteShared}
-        onKickMember={handleKickMember}
-        onAcceptJoinRequest={handleAcceptJoinRequest}
-        onRejectJoinRequest={handleRejectJoinRequest}
+        onKickMember={kickMember}
+        onAcceptJoinRequest={acceptJoinRequest}
+        onRejectJoinRequest={rejectJoinRequest}
         onLocalKick={localKick}
         onTransferOwnership={handleTransferOwnership}
         onReissueInviteCode={handleReissueInviteCode}
         onUpdateHouse={handleUpdateHouse}
         autoJoinEnabled={autoJoinQuery.data?.enabled}
-        onLeaveHouse={handleLeaveHouse}
+        onLeaveHouse={leaveHouseWithLinked}
         onLeaveDone={closeMembers}
       />
     ) : screen === 'houseSearch' ? (
