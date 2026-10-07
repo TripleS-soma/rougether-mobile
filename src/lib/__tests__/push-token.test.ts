@@ -35,6 +35,10 @@ describe('syncPushToken 진단 (#903)', () => {
   const device = Device as unknown as { isDevice: boolean };
   const getPerms = jest.spyOn(Notifications, 'getPermissionsAsync');
   const getToken = jest.spyOn(Notifications, 'getDevicePushTokenAsync');
+  // 위 둘은 파일 내내 쓰는 스파이라 beforeEach에서 값만 다시 정한다. 테스트 안에서 새로 건
+  // 스파이는 여기에 모아 끝날 때 복원 — 실패해도 다음 테스트로 새지 않게.
+  const testSpies: { mockRestore: () => void }[] = [];
+  afterEach(() => testSpies.splice(0).forEach((spy) => spy.mockRestore()));
 
   beforeEach(() => {
     device.isDevice = true;
@@ -61,9 +65,11 @@ describe('syncPushToken 진단 (#903)', () => {
 
   it('권한을 거부하면 permission-denied — 아래 단계는 무의미하다', async () => {
     getPerms.mockResolvedValue({ status: 'denied' } as never);
-    jest.spyOn(Notifications, 'requestPermissionsAsync').mockResolvedValue({
-      status: 'denied',
-    } as never);
+    testSpies.push(
+      jest.spyOn(Notifications, 'requestPermissionsAsync').mockResolvedValue({
+        status: 'denied',
+      } as never),
+    );
     expect(await syncPushToken()).toBeNull();
     expect(getPushDiagnostic().step).toBe('permission-denied');
     expect(registerDeviceToken).not.toHaveBeenCalled();
@@ -93,7 +99,9 @@ describe('syncPushToken 진단 (#903)', () => {
 
   it('어떤 단계에서 끝나든 던지지 않는다 — 푸시가 로그인을 막으면 안 된다', async () => {
     getPerms.mockRejectedValue(new Error('boom'));
-    jest.spyOn(Notifications, 'requestPermissionsAsync').mockRejectedValue(new Error('boom'));
+    testSpies.push(
+      jest.spyOn(Notifications, 'requestPermissionsAsync').mockRejectedValue(new Error('boom')),
+    );
     await expect(syncPushToken()).resolves.toBeNull();
   });
 });

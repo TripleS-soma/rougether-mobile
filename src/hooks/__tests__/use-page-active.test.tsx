@@ -6,6 +6,9 @@ import { PageActiveContext } from '@/hooks/use-page-active';
 
 // 숨은 탭의 반복 연출은 멈춘다 (성능 장부 M7).
 describe('PageActiveContext', () => {
+  // Animated.loop는 전역 — 다음 테스트에 스파이가 새지 않게.
+  afterEach(() => jest.restoreAllMocks());
+
   it('보이는 페이지의 접속 점만 펄스를 돌린다', async () => {
     const loop = jest.spyOn(Animated, 'loop');
     await render(
