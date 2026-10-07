@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
 import { Platform, useWindowDimensions } from 'react-native';
+
+import { useHydrated } from '@/hooks/use-hydrated';
 
 /**
  * 데스크톱 브라우저의 앱 프레임 폭 — 화면은 전부 폰 기준으로 설계됐으므로 넓은
@@ -57,9 +58,6 @@ export function resolveAppFrame(
 export function useAppFrame(): AppFrame {
   const window = useWindowDimensions();
   // 서버 렌더·클라이언트 첫 렌더는 프레임 없이(마크업 일치), 마운트 뒤에 프레임.
-  const [hydrated, setHydrated] = useState(Platform.OS !== 'web');
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
+  const hydrated = useHydrated();
   return resolveAppFrame(Platform.OS, window, hydrated);
 }

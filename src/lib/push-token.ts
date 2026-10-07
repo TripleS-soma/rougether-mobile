@@ -12,6 +12,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import { registerDeviceToken, unregisterDeviceToken } from '@/api/device-tokens';
+import { supportsPushNotifications } from '@/config/features';
 
 let currentToken: string | null = null;
 let rotationUnsub: (() => void) | null = null;
@@ -106,7 +107,7 @@ function watchTokenRotation(): void {
 }
 
 export async function syncPushToken(): Promise<string | null> {
-  if (Platform.OS === 'web') {
+  if (!supportsPushNotifications()) {
     record('unsupported');
     return null;
   }
