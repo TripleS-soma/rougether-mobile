@@ -8,6 +8,7 @@ import {
 } from '@/features/minigame/minigame-copy';
 import { RUNNER_CAT_IDLE } from '@/features/minigame/runner-character';
 import { RunnerPalette } from '@/features/minigame/runner-palette';
+import { contrastRatio } from '@/utils/color';
 
 export type MergeHtmlOptions = {
   seed: number;
@@ -17,15 +18,41 @@ export type MergeHtmlOptions = {
   colors?: SemanticColors;
 };
 
-/** The complete document is bundled and has no network or storage access. */
-export function createMergeHtml(options: MergeHtmlOptions): string {
-  if (!Number.isInteger(options.seed) || options.seed < 1 || options.seed > 2147483647) {
-    throw new Error('Invalid merge seed');
-  }
-  const copy = getMinigameCopy('merge');
-  const h = (key: string) => escapeHtml(copy[key] ?? '');
-  const t = options.colors;
-  const palette = t
+/**
+ * 타일 단계별 색(2·4·8·…·2048 → 팔레트 키) — 한 단계에 한 색. 종전엔 7색이라 128부터 전부
+ * 같은 초록이었다(2026-10-07). 2048보다 크면 마지막 색을 이어 쓴다.
+ */
+export const MERGE_TILE_COLOR_KEYS = [
+  'paper',
+  'bearLight',
+  'grassLight',
+  'grass',
+  'sun',
+  'bear',
+  'primary',
+  'blush',
+  'pot',
+  'potDark',
+  'moss',
+] as const satisfies readonly (keyof typeof RunnerPalette)[];
+/**
+ * 칸 글자색 — 배경과 대비가 더 큰 쪽(흰 / 진한 잉크)을 고른다. 앱은 테마 색을 주입하므로
+ * (`primary`가 밝은 테마도 있다) 단계별 고정 표가 아니라 실제 배경색으로 계산한다.
+ */
+export function mergeTileTextColors(
+  palette: Record<(typeof MERGE_TILE_COLOR_KEYS)[number] | 'white' | 'ink', string>,
+): string[] {
+  return MERGE_TILE_COLOR_KEYS.map((key) => {
+    const bg = palette[key];
+    return contrastRatio(palette.white, bg) >= contrastRatio(palette.ink, bg)
+      ? palette.white
+      : palette.ink;
+  });
+}
+
+/** 게임 문서의 색 — 앱 테마를 주입하면 그 값으로 일부를 덮는다(없으면 원화 고정색). */
+export function mergePalette(t?: MergeHtmlOptions['colors']) {
+  return t
     ? {
         ...RunnerPalette,
         sky: t.screen,
@@ -38,12 +65,24 @@ export function createMergeHtml(options: MergeHtmlOptions): string {
         ground: t.border,
       }
     : RunnerPalette;
+}
+
+/** The complete document is bundled and has no network or storage access. */
+export function createMergeHtml(options: MergeHtmlOptions): string {
+  if (!Number.isInteger(options.seed) || options.seed < 1 || options.seed > 2147483647) {
+    throw new Error('Invalid merge seed');
+  }
+  const copy = getMinigameCopy('merge');
+  const h = (key: string) => escapeHtml(copy[key] ?? '');
+  const palette = mergePalette(options.colors);
   const config = JSON.stringify({
     seed: options.seed,
     channelId: options.channelId,
     practice: options.practice === true,
     manualTime: options.practice === true && options.allowManualTime === true,
     palette,
+    tileColors: MERGE_TILE_COLOR_KEYS.map((key) => palette[key]),
+    tileTextColors: mergeTileTextColors(palette),
     catImage: RUNNER_CAT_IDLE,
     copy,
   }).replace(/</g, '\\u003c');
@@ -160,14 +199,14 @@ const MERGE_BROWSER_SOURCE = String.raw`function runMerge(config) {
       box(353,30,5,20,2,colors.primaryDark);box(364,30,5,20,2,colors.primaryDark);
     }
     box(20,80,360,360,22,colors.ground);
-    var tileColors=[colors.paper,colors.bearLight,colors.grassLight,colors.grass,colors.sun,colors.bear,colors.primary];
+    var tileColors=config.tileColors,tileText=config.tileTextColors;
     for(var i=0;i<16;i++){
       var value=state.board[i],x=29+(i%4)*87,y=89+Math.floor(i/4)*87;
       var level=value?Math.log2(value)-1:0;
       box(x,y,81,81,15,value?tileColors[Math.min(level,tileColors.length-1)]:colors.sky);
       if(value){
         cat(x+14,y+1,53);
-        text(String(value),x+40.5,y+63,value>=1024?22:27,level>=6?colors.white:colors.ink,'center');
+        text(String(value),x+40.5,y+63,value>=1024?22:27,tileText[Math.min(level,tileText.length-1)],'center');
       }
     }
     if(mode==='playing'){
