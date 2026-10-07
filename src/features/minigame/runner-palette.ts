@@ -17,4 +17,6 @@ export const RunnerPalette = {
   potDark: '#A16A51',
   sun: '#F8DE99',
   white: '#FFFFFF',
+  /** 합치기 2048 칸 — 테마가 덮지 않는 고정색(다크 테마는 primaryText = primary라 128과 겹친다). */
+  moss: '#55734B',
 } as const;
