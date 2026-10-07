@@ -50,7 +50,7 @@ describe('개발 빌드 수집 차단 (#954)', () => {
 
   it('꺼져 있어도 호출부가 죽지 않는다 — 분석은 앱을 멈추면 안 된다', () => {
     expect(() => {
-      track('routine_complete', { items: 3 });
+      track('routine_complete', { kind: 'routine' });
       screenView('house');
     }).not.toThrow();
   });

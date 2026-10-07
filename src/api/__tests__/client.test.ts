@@ -1,13 +1,17 @@
 import { apiGet, apiGetList, apiGetPage, apiUpload } from '@/api/client';
 import { fetchMe } from '@/api/me';
 import { clearSession, devLogin, getAccessToken, onSessionCleared } from '@/api/auth';
-import { track } from '@/lib/analytics';
+import { track, type AnalyticsParams } from '@/lib/analytics';
 
 jest.mock('@/lib/analytics', () => ({
   ...jest.requireActual('@/lib/analytics'),
   track: jest.fn(),
 }));
 const trackMock = track as jest.MockedFunction<typeof track>;
+/** 마지막 api_error 호출의 파라미터 — track은 이벤트별로 타입이 갈려 호출 기록에선 좁혀 읽는다. */
+const apiErrorProps = () =>
+  trackMock.mock.calls.find(([name]) => name === 'api_error')?.[1] as
+    AnalyticsParams['api_error'] | undefined;
 
 type MockRes = { ok: boolean; status: number; text: () => Promise<string> };
 const res = (status: number, body?: unknown): MockRes => ({
@@ -115,8 +119,8 @@ describe('api_error 계측', () => {
 
     const call = trackMock.mock.calls.find(([name]) => name === 'api_error');
     expect(call).toBeTruthy();
-    expect(call?.[1]).toEqual({ endpoint: 'GET /events/attendance', status: '404' });
-    expect(typeof call?.[1]?.status).toBe('string');
+    expect(apiErrorProps()).toEqual({ endpoint: 'GET /events/attendance', status: '404' });
+    expect(typeof apiErrorProps()?.status).toBe('string');
   });
 
   it('응답이 없는 네트워크 실패는 문자열 0으로 남는다', async () => {
@@ -125,16 +129,14 @@ describe('api_error 계측', () => {
     }) as unknown as typeof fetch;
     await expect(apiGet('/events/attendance')).rejects.toBeTruthy();
 
-    const call = trackMock.mock.calls.find(([name]) => name === 'api_error');
-    expect(call?.[1]?.status).toBe('0');
+    expect(apiErrorProps()?.status).toBe('0');
   });
 
   it('경로의 숫자 id는 지운다 — GA4 카디널리티·식별정보 방지', async () => {
     global.fetch = jest.fn(async () => res(403)) as unknown as typeof fetch;
     await expect(apiGet('/houses/6/join-requests?page=2')).rejects.toBeTruthy();
 
-    const call = trackMock.mock.calls.find(([name]) => name === 'api_error');
-    expect(call?.[1]?.endpoint).toBe('GET /houses/{id}/join-requests');
+    expect(apiErrorProps()?.endpoint).toBe('GET /houses/{id}/join-requests');
   });
 });
 
@@ -153,8 +155,7 @@ describe('expectedStatuses', () => {
   it('선언하지 않은 상태코드는 그대로 센다', async () => {
     global.fetch = jest.fn(async () => res(500)) as unknown as typeof fetch;
     await expect(apiGet('/events/attendance', { expectedStatuses: [404] })).rejects.toBeTruthy();
-    const call = trackMock.mock.calls.find(([name]) => name === 'api_error');
-    expect(call?.[1]?.status).toBe('500');
+    expect(apiErrorProps()?.status).toBe('500');
   });
 
   it('던지는 동작은 그대로 — 계측에서만 빠진다', async () => {
@@ -224,8 +225,7 @@ describe('apiUpload', () => {
     expect(trackMock.mock.calls.filter(([name]) => name === 'api_error')).toHaveLength(0);
 
     await expect(apiUpload('/me/furniture-generations', new FormData())).rejects.toBeTruthy();
-    const call = trackMock.mock.calls.find(([name]) => name === 'api_error');
-    expect(call?.[1]).toEqual({ endpoint: 'POST /me/furniture-generations', status: '413' });
+    expect(apiErrorProps()).toEqual({ endpoint: 'POST /me/furniture-generations', status: '413' });
   });
 });
 

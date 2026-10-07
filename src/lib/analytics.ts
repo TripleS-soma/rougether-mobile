@@ -251,11 +251,86 @@ export function resetAnalyticsUser() {
  */
 const RESERVED_PARAMS = new Set(['items', 'extend_session']);
 
-export function track(event: AnalyticsEvent, props?: Record<string, string | number | boolean>) {
+/**
+ * 이벤트별 파라미터 (리팩토링 장부 9번) — 이벤트 이름만 유니온이고 파라미터는 무타입이라
+ * 호출부 80여 곳이 객체를 손으로 맞추던 것을, 이름에 맞는 모양만 넘길 수 있게 한다.
+ * 여기 없는 이벤트는 파라미터를 받지 않는다. 값이 있을 때만 붙는 필드는 선택(`?`).
+ */
+export type AnalyticsParams = {
+  intro_view: { step: string; index: number };
+  login_view: { via: string };
+  login_tap: { provider: string };
+  login_cancel: { provider: string };
+  /** 일부 경로(세션 복원)는 provider를 모른다. */
+  login_success: { provider?: string } | undefined;
+  login_failed: { provider: string; code: string; hint?: string; detail?: string };
+  login_conflict: { provider: string; existing: string };
+  login_conflict_continue: { provider: string };
+  /** 닉네임은 값이 아니라 입력 여부만(set|skipped) — 개인정보를 분석 도구로 흘리지 않는다. */
+  onboarding_complete: { character: string; goals: number; nickname: 'set' | 'skipped' };
+  onboarding_house_choice: { choice: string; result: string };
+  starter_routine_view: { recommendation_count: number };
+  starter_routine_failed: { template_id: string };
+  routine_create: { kind: 'routine' | 'todo'; source?: 'onboarding'; template_id?: string };
+  routine_complete: { kind: 'routine' | 'todo' };
+  gacha_draw: { gachaId: number | string; count: number };
+  room_save: { item_count: number };
+  decor_open: { from: 'gacha' | 'direct' };
+  app_open: { source: string };
+  review_prompt_requested: { completions: number };
+  house_join_request: { via: 'browse' | 'code' };
+  house_joined: { via: string };
+  /** `how`는 공유 방식이 둘인 친구 초대에만. */
+  invite_code_copy: { kind: 'friend' | 'house'; how?: 'clipboard' | 'share' };
+  invite_redeem: { via: string };
+  invite_arrival_view: { via: string };
+  invite_paste_result: { kind: string };
+  invite_referrer_result: { kind: string };
+  minigame_start: { game: string; mode: string; via: string };
+  minigame_finish: {
+    game: string;
+    mode: string;
+    ticks: number;
+    score?: number;
+    personal_best?: boolean;
+    rank?: number;
+  };
+  minigame_abandon: { game: string; mode: string };
+  minigame_leaderboard_view: { game: string; via: string };
+  minigame_submit_failed: { game: string };
+  announcement_open: { id: number | string; kind: string };
+  calendar_week_open: { today: boolean };
+  language_change: { language: string };
+  feed_post_create: { image_count: number; has_text: boolean; board_type: string };
+  feed_like: { liked: boolean };
+  content_report: { target: string; reason: string };
+  user_block: { via: string } | undefined;
+  market_view: { screen: 'list' | 'asset' | 'orders' };
+  market_order: { side: string; source: string; result: string; code?: string };
+  market_issue: { total_supply: number; result: string };
+  shop_purchase: { itemId: number | string };
+  cheer_send: { type: string };
+  onboarding_mission_start: { step: string };
+  onboarding_mission_complete: { step: string };
+  onboarding_mission_skip: { step: string };
+  purchase_blocked: { currency: string; count?: number };
+  api_error: { endpoint: string; status: string };
+  session_forced_logout: { reason: string; status: string; code: string; app_state: string };
+  session_refresh_adopted: { app_state: string };
+};
+
+/** 이벤트에 맞는 나머지 인자 — 파라미터 없는 이벤트는 0개, 선택이면 생략 가능. */
+type TrackArgs<E extends AnalyticsEvent> = E extends keyof AnalyticsParams
+  ? undefined extends AnalyticsParams[E]
+    ? [props?: AnalyticsParams[E]]
+    : [props: AnalyticsParams[E]]
+  : [];
+
+export function track<E extends AnalyticsEvent>(event: E, ...[props]: TrackArgs<E>) {
   try {
     // GA4 이벤트 이름 규칙(영소문자+언더스코어)은 AnalyticsEvent 유니온이 보장.
     if (!ga || !gaMod) return;
-    const safe = props && sanitize(props);
+    const safe = props && sanitize(props as Record<string, string | number | boolean>);
     // 거부가 try/catch를 빠져나가 unhandled rejection이 된 적이 있다 (#912).
     // RNFB 26의 모듈러 `logEvent`는 내부 프로미스를 `void`로 버려 잡을 자리가
     // 없으므로(#1031), Promise를 돌려주는 인스턴스 메서드를 직접 부른다.
