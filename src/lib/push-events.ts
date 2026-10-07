@@ -7,6 +7,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import { i18n } from '@/i18n';
+import { supportsPushNotifications } from '@/config/features';
 
 /**
  * Android channel FCM v1 payloads should target
@@ -21,7 +22,7 @@ export const DEFAULT_CHANNEL_ID = 'default';
  * show nothing at all.
  */
 export function initPushDisplay(): void {
-  if (Platform.OS === 'web') return;
+  if (!supportsPushNotifications()) return;
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       // 포그라운드 배너는 **앱이 전담해 그린다** (#902, ui/notification-banner).
@@ -49,7 +50,7 @@ export function initPushDisplay(): void {
 export type PushTap = { type?: string };
 
 export function onNotificationTap(cb: (notification?: PushTap) => void): () => void {
-  if (Platform.OS === 'web') return () => {};
+  if (!supportsPushNotifications()) return () => {};
   let alive = true;
   let lastId: string | undefined;
   const receive = (response: Notifications.NotificationResponse) => {
@@ -82,7 +83,7 @@ export function onNotificationTap(cb: (notification?: PushTap) => void): () => v
 export function onNotificationReceived(
   cb: (n: { type?: string; title: string; body: string }) => void,
 ): () => void {
-  if (Platform.OS === 'web') return () => {};
+  if (!supportsPushNotifications()) return () => {};
   const sub = Notifications.addNotificationReceivedListener((event) => {
     const content = event.request.content;
     const data = (content.data ?? {}) as { type?: unknown };

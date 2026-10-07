@@ -10,3 +10,13 @@ import { Platform } from 'react-native';
 export function supportsHomeWidget(): boolean {
   return Platform.OS === 'ios' || Platform.OS === 'android';
 }
+
+/** 웹에 없는 네이티브 기능 — 웹에서 행·버튼을 숨기고, 라이브러리 호출은 하지 않는다. */
+const isNative = () => Platform.OS !== 'web';
+
+/** 기기 캘린더 읽기(일정 가져오기) — expo-calendar 네이티브 모듈. */
+export const supportsDeviceCalendar = isNative;
+/** 방 이미지를 기기 앨범에 저장 — view-shot·media-library 네이티브 모듈. */
+export const supportsRoomImageSave = isNative;
+/** 푸시 알림(토큰 등록·표시·탭 처리)과 그 설정 화면 — 웹은 토글이 되는 척만 하게 된다. */
+export const supportsPushNotifications = isNative;

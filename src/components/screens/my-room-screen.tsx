@@ -113,6 +113,7 @@ import { formatDate, localDate, monthDayLabel } from '@/utils/datetime';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 import { holidayName } from '@/utils/holidays';
 import { useT } from '@/i18n';
+import { supportsRoomImageSave } from '@/config/features';
 
 // 스케줄 판정은 my-room/schedule로 이동 (#693) — 기존 임포트 경로 유지용 재수출.
 export { isScheduledOn };
@@ -1772,7 +1773,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           }
           onEditRoom={onEdit}
           // 웹은 view-shot이 없어 항목을 숨긴다 — 눌러서 '지원 안 함' 토스트를 보이는 것보다 낫다.
-          onSaveRoomImage={Platform.OS === 'web' ? undefined : () => void onSaveRoomImage()}
+          onSaveRoomImage={supportsRoomImageSave() ? () => void onSaveRoomImage() : undefined}
           onOpenCategoryManager={() => onManageCategories?.()}
           // Routine management remains separate from the quick composer.
           onManageRoutines={onManageRoutines ?? onAddRoutine}
