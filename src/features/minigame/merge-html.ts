@@ -17,6 +17,41 @@ export type MergeHtmlOptions = {
   colors?: SemanticColors;
 };
 
+/**
+ * 타일 단계별 색(2·4·8·…·2048 → 팔레트 키) — 한 단계에 한 색. 종전엔 7색이라 128부터 전부
+ * 같은 초록이었다(2026-10-07). 2048보다 크면 마지막 색을 이어 쓴다.
+ */
+export const MERGE_TILE_COLOR_KEYS = [
+  'paper',
+  'bearLight',
+  'grassLight',
+  'grass',
+  'sun',
+  'bear',
+  'primary',
+  'blush',
+  'pot',
+  'potDark',
+  'primaryDark',
+] as const satisfies readonly (keyof typeof RunnerPalette)[];
+/**
+ * 어두운 칸(128 초록·1024 진한 화분·2048 진한 초록)만 흰 글자 — 256 블러시·512 화분은 중간
+ * 밝기라 흰 글자 대비가 약해(512에 흰 글자 약 2.6:1) 진한 글자를 쓴다.
+ */
+export const MERGE_TILE_LIGHT_TEXT: readonly boolean[] = [
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  true,
+  false,
+  false,
+  true,
+  true,
+];
+
 /** The complete document is bundled and has no network or storage access. */
 export function createMergeHtml(options: MergeHtmlOptions): string {
   if (!Number.isInteger(options.seed) || options.seed < 1 || options.seed > 2147483647) {
@@ -44,6 +79,8 @@ export function createMergeHtml(options: MergeHtmlOptions): string {
     practice: options.practice === true,
     manualTime: options.practice === true && options.allowManualTime === true,
     palette,
+    tileColors: MERGE_TILE_COLOR_KEYS.map((key) => palette[key]),
+    tileLightText: MERGE_TILE_LIGHT_TEXT,
     catImage: RUNNER_CAT_IDLE,
     copy,
   }).replace(/</g, '\\u003c');
@@ -160,14 +197,14 @@ const MERGE_BROWSER_SOURCE = String.raw`function runMerge(config) {
       box(353,30,5,20,2,colors.primaryDark);box(364,30,5,20,2,colors.primaryDark);
     }
     box(20,80,360,360,22,colors.ground);
-    var tileColors=[colors.paper,colors.bearLight,colors.grassLight,colors.grass,colors.sun,colors.bear,colors.primary];
+    var tileColors=config.tileColors,tileInk=config.tileLightText;
     for(var i=0;i<16;i++){
       var value=state.board[i],x=29+(i%4)*87,y=89+Math.floor(i/4)*87;
       var level=value?Math.log2(value)-1:0;
       box(x,y,81,81,15,value?tileColors[Math.min(level,tileColors.length-1)]:colors.sky);
       if(value){
         cat(x+14,y+1,53);
-        text(String(value),x+40.5,y+63,value>=1024?22:27,level>=6?colors.white:colors.ink,'center');
+        text(String(value),x+40.5,y+63,value>=1024?22:27,tileInk[Math.min(level,tileInk.length-1)]?colors.white:colors.ink,'center');
       }
     }
     if(mode==='playing'){
