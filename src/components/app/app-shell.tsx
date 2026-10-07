@@ -341,7 +341,7 @@ export function AppShell({
       // 거래소 상세·내 주문(#1427)은 꾸미기로 돌아오는 서브화면이라 연 탭을 기억한다.
       if (screen !== 'marketAsset' && screen !== 'marketOrders') setDecorInitialTab(undefined);
     }
-  }, [screen]);
+  }, [screen, fromGachaRef]);
 
   // 공동미션 ↔ 내 루틴 연동 (#272 → #578) — use-mission-links.ts로 이관 (#692 3단계).
   const {
