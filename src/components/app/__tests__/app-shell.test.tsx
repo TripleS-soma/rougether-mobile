@@ -49,6 +49,50 @@ afterEach(() => {
   global.fetch = realFetch;
 });
 
+// --- 집(2)·미션 세계 (#578 계열 테스트 셋이 같이 쓴다) — 카테고리·루틴·미션만 바꿔 끼우고,
+// 특정 요청(POST·PUT 등)은 `extra`가 먼저 받는다. 나머지 응답은 세 벌이 글자 그대로 같았다.
+type ApiCall = { url: string; method: string; body?: string };
+const okJson = (body: unknown) => ({
+  ok: true,
+  status: 200,
+  text: async () => JSON.stringify(body),
+});
+const weeklyMission = (missionId: number, title: string, status = 'ACTIVE') => ({
+  missionId,
+  title,
+  missionType: 'WEEKLY_MEMBER_COUNT',
+  targetValue: 5,
+  currentValue: 0,
+  status,
+});
+function houseWorld(
+  calls: ApiCall[],
+  world: {
+    categories: unknown[];
+    routines: unknown[];
+    missions: unknown[];
+    /** 공통 라우트보다 먼저 — 값을 돌려주면 그 본문으로 응답한다. */
+    extra?: (url: string, method: string) => unknown;
+  },
+) {
+  return async (url: string, init?: RequestInit) => {
+    const method = init?.method ?? 'GET';
+    calls.push({ url, method, body: init?.body as string | undefined });
+    if (url.includes('/auth/')) return okJson({ accessToken: 't', refreshToken: 'r' });
+    const hit = world.extra?.(url, method);
+    if (hit !== undefined) return okJson(hit);
+    if (url.includes('/categories')) return okJson({ items: world.categories });
+    if (url.endsWith('/routines')) return okJson({ items: world.routines });
+    if (url.endsWith('/me/houses')) return okJson({ items: [{ houseId: 2, name: 'TripleS' }] });
+    if (url.includes('/houses/2/missions')) return okJson({ items: world.missions });
+    if (url.includes('/houses/2/members')) return okJson({ items: [] });
+    if (url.includes('/houses/2')) return okJson({ houseId: 2, name: 'TripleS', myRole: 'OWNER' });
+    if (url.endsWith('/today')) return okJson({ categories: [], summary: {}, streak: {} });
+    if (url.endsWith('/me')) return okJson({ userId: 4, nickname: '준서' });
+    return okJson({ items: [] });
+  };
+}
+
 describe('AppShell — 푸시 탭 라우팅 (#405)', () => {
   it.each(['APP_INACTIVITY_REMINDER', 'ROOM_COBWEB_APPEARED'])(
     '%s 알림을 누르면 알림함에서 내 방으로 돌아간다',
@@ -199,71 +243,30 @@ describe('AppShell', () => {
 // 이어지는지. 루틴 제목은 미션 제목과 다르게 두어 "이름을 바꿔도 연동 유지"를
 // 함께 단언한다.
 describe('AppShell — 공동미션 연동', () => {
-  const json = (body: unknown) => ({
-    ok: true,
-    status: 200,
-    text: async () => JSON.stringify(body),
-  });
-  let calls: { url: string; method: string; body?: string }[] = [];
+  const calls: ApiCall[] = [];
 
-  const worldFetch = async (url: string, init?: RequestInit) => {
-    const method = init?.method ?? 'GET';
-    calls.push({ url, method, body: init?.body as string | undefined });
-    if (url.includes('/auth/')) return json({ accessToken: 't', refreshToken: 'r' });
-    if (method === 'POST' && url.endsWith('/routines'))
-      return json({
-        id: 99,
-        title: '물 마시기',
-        categoryId: 20,
-        repeatType: 'DAILY',
-        houseMissionId: 7,
-      });
-    if (method === 'POST' && url.includes('/routines/44/logs'))
-      // 오늘 완료 — 서버가 연동 미션(6)에 자동 기여한 결과가 실려온다 (#578).
-      return json({
-        rewardAmount: 0,
-        houseMissionContribution: { missionId: 6, myContribution: 1, currentValue: 1, achieved: false }, // prettier-ignore
-      });
-    if (url.includes('/categories'))
-      return json({ items: [{ id: 20, name: 'TripleS', houseId: 2 }] });
-    if (url.endsWith('/routines'))
-      return json({
-        // 제목은 미션명과 다름 — 연동은 houseMissionId가 판정한다.
-        items: [
-          { id: 44, title: '개명한 스트레칭', categoryId: 20, repeatType: 'DAILY', houseMissionId: 6 }, // prettier-ignore
-        ],
-      });
-    if (url.endsWith('/me/houses')) return json({ items: [{ houseId: 2, name: 'TripleS' }] });
-    if (url.includes('/houses/2/missions'))
-      return json({
-        items: [
-          {
-            missionId: 6,
-            title: '아침 스트레칭',
-            missionType: 'WEEKLY_MEMBER_COUNT',
-            targetValue: 5,
-            currentValue: 0,
-            status: 'ACTIVE',
-          },
-          {
-            missionId: 7,
-            title: '물 마시기',
-            missionType: 'WEEKLY_MEMBER_COUNT',
-            targetValue: 5,
-            currentValue: 0,
-            status: 'ACTIVE',
-          },
-        ],
-      });
-    if (url.includes('/houses/2/members')) return json({ items: [] });
-    if (url.includes('/houses/2')) return json({ houseId: 2, name: 'TripleS', myRole: 'OWNER' });
-    if (url.endsWith('/today')) return json({ categories: [], summary: {}, streak: {} });
-    if (url.endsWith('/me')) return json({ userId: 4, nickname: '준서' });
-    return json({ items: [] });
-  };
+  const worldFetch = houseWorld(calls, {
+    categories: [{ id: 20, name: 'TripleS', houseId: 2 }],
+    // 제목은 미션명과 다름 — 연동은 houseMissionId가 판정한다.
+    routines: [
+      { id: 44, title: '개명한 스트레칭', categoryId: 20, repeatType: 'DAILY', houseMissionId: 6 }, // prettier-ignore
+    ],
+    missions: [weeklyMission(6, '아침 스트레칭'), weeklyMission(7, '물 마시기')],
+    extra: (url, method) => {
+      if (method === 'POST' && url.endsWith('/routines'))
+        return { id: 99, title: '물 마시기', categoryId: 20, repeatType: 'DAILY', houseMissionId: 7 }; // prettier-ignore
+      if (method === 'POST' && url.includes('/routines/44/logs'))
+        // 오늘 완료 — 서버가 연동 미션(6)에 자동 기여한 결과가 실려온다 (#578).
+        return {
+          rewardAmount: 0,
+          houseMissionContribution: { missionId: 6, myContribution: 1, currentValue: 1, achieved: false }, // prettier-ignore
+        };
+      return undefined;
+    },
+  });
 
   beforeEach(() => {
-    calls = [];
+    calls.splice(0);
     global.fetch = jest.fn(worldFetch) as unknown as typeof fetch;
   });
 
@@ -378,49 +381,21 @@ describe('AppShell — 공동미션 연동', () => {
 
 // --- 미션 목록과 어긋난 잔여 연동 루틴 자동 정리 (#338). ---
 describe('AppShell — 연동 루틴 스윕', () => {
-  const json = (body: unknown) => ({
-    ok: true,
-    status: 200,
-    text: async () => JSON.stringify(body),
-  });
-  let calls: { url: string; method: string }[] = [];
+  const calls: ApiCall[] = [];
 
   beforeEach(() => {
-    calls = [];
-    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
-      const method = init?.method ?? 'GET';
-      calls.push({ url, method });
-      if (url.includes('/auth/')) return json({ accessToken: 't', refreshToken: 'r' });
-      if (url.includes('/categories'))
-        return json({ items: [{ id: 20, name: 'TripleS', houseId: 2 }] });
-      if (url.endsWith('/routines'))
-        return json({
-          items: [
-            // 44는 살아있는 미션(6)에 연동, 45는 사라진 미션(99)의 잔여물.
-            { id: 44, title: '아침 스트레칭', categoryId: 20, repeatType: 'DAILY', houseMissionId: 6 }, // prettier-ignore
-            { id: 45, title: '사라진 미션', categoryId: 20, repeatType: 'DAILY', houseMissionId: 99 }, // prettier-ignore
-          ],
-        });
-      if (url.endsWith('/me/houses')) return json({ items: [{ houseId: 2, name: 'TripleS' }] });
-      if (url.includes('/houses/2/missions'))
-        return json({
-          items: [
-            {
-              missionId: 6,
-              title: '아침 스트레칭',
-              missionType: 'WEEKLY_MEMBER_COUNT',
-              targetValue: 5,
-              currentValue: 0,
-              status: 'ACTIVE',
-            },
-          ],
-        });
-      if (url.includes('/houses/2/members')) return json({ items: [] });
-      if (url.includes('/houses/2')) return json({ houseId: 2, name: 'TripleS', myRole: 'OWNER' });
-      if (url.endsWith('/today')) return json({ categories: [], summary: {}, streak: {} });
-      if (url.endsWith('/me')) return json({ userId: 4, nickname: '준서' });
-      return json({ items: [] });
-    }) as unknown as typeof fetch;
+    calls.splice(0);
+    global.fetch = jest.fn(
+      houseWorld(calls, {
+        categories: [{ id: 20, name: 'TripleS', houseId: 2 }],
+        routines: [
+          // 44는 살아있는 미션(6)에 연동, 45는 사라진 미션(99)의 잔여물.
+          { id: 44, title: '아침 스트레칭', categoryId: 20, repeatType: 'DAILY', houseMissionId: 6 }, // prettier-ignore
+          { id: 45, title: '사라진 미션', categoryId: 20, repeatType: 'DAILY', houseMissionId: 99 }, // prettier-ignore
+        ],
+        missions: [weeklyMission(6, '아침 스트레칭')],
+      }),
+    ) as unknown as typeof fetch;
   });
 
   it('미션이 사라진 연동 루틴은 로드 후 자동 삭제되고, 일치하는 루틴은 남는다', async () => {
@@ -434,59 +409,27 @@ describe('AppShell — 연동 루틴 스윕', () => {
 
 // --- 이름 매칭 연동 승격(#578)은 2026-10-04에 없앴다 — 사용자가 해제한 연동이 다음 실행에 되살아났다. ---
 describe('AppShell — 이름 매칭 자동 연동 없음', () => {
-  const json = (body: unknown) => ({
-    ok: true,
-    status: 200,
-    text: async () => JSON.stringify(body),
-  });
-  let calls: { url: string; method: string; body?: string }[] = [];
+  const calls: ApiCall[] = [];
 
   beforeEach(() => {
-    calls = [];
+    calls.splice(0);
     // 구식 세계: 이름은 맞물리는데(카테고리명 == 집 이름, 루틴명 == 미션명)
     // 링크 id가 없다 — 그래도 부팅 때 연동하지 않는다.
-    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
-      const method = init?.method ?? 'GET';
-      calls.push({ url, method, body: init?.body as string | undefined });
-      if (url.includes('/auth/')) return json({ accessToken: 't', refreshToken: 'r' });
-      if (method === 'PUT' && url.includes('/categories/20'))
-        return json({ id: 20, name: 'TripleS', houseId: 2 });
-      if (method === 'PUT' && url.includes('/routines/44'))
-        return json({ id: 44, title: '아침 스트레칭', categoryId: 20, repeatType: 'DAILY', houseMissionId: 6 }); // prettier-ignore
-      if (url.includes('/categories')) return json({ items: [{ id: 20, name: 'TripleS' }] });
-      if (url.endsWith('/routines'))
-        return json({
-          items: [{ id: 44, title: '아침 스트레칭', categoryId: 20, repeatType: 'DAILY' }],
-        });
-      if (url.endsWith('/me/houses')) return json({ items: [{ houseId: 2, name: 'TripleS' }] });
-      if (url.includes('/houses/2/missions'))
-        return json({
-          items: [
-            {
-              missionId: 6,
-              title: '아침 스트레칭',
-              missionType: 'WEEKLY_MEMBER_COUNT',
-              targetValue: 5,
-              currentValue: 0,
-              status: 'ACTIVE',
-            },
-            // 만료 미션은 승격 대상이 아니다.
-            {
-              missionId: 8,
-              title: '아침 스트레칭',
-              missionType: 'WEEKLY_MEMBER_COUNT',
-              targetValue: 5,
-              currentValue: 0,
-              status: 'EXPIRED',
-            },
-          ],
-        });
-      if (url.includes('/houses/2/members')) return json({ items: [] });
-      if (url.includes('/houses/2')) return json({ houseId: 2, name: 'TripleS', myRole: 'OWNER' });
-      if (url.endsWith('/today')) return json({ categories: [], summary: {}, streak: {} });
-      if (url.endsWith('/me')) return json({ userId: 4, nickname: '준서' });
-      return json({ items: [] });
-    }) as unknown as typeof fetch;
+    global.fetch = jest.fn(
+      houseWorld(calls, {
+        categories: [{ id: 20, name: 'TripleS' }],
+        routines: [{ id: 44, title: '아침 스트레칭', categoryId: 20, repeatType: 'DAILY' }],
+        // 만료 미션은 승격 대상이 아니다.
+        missions: [weeklyMission(6, '아침 스트레칭'), weeklyMission(8, '아침 스트레칭', 'EXPIRED')],
+        extra: (url, method) => {
+          if (method === 'PUT' && url.includes('/categories/20'))
+            return { id: 20, name: 'TripleS', houseId: 2 };
+          if (method === 'PUT' && url.includes('/routines/44'))
+            return { id: 44, title: '아침 스트레칭', categoryId: 20, repeatType: 'DAILY', houseMissionId: 6 }; // prettier-ignore
+          return undefined;
+        },
+      }),
+    ) as unknown as typeof fetch;
   });
 
   it('이름이 같아도 부팅 때 카테고리·루틴에 링크를 심지 않는다', async () => {

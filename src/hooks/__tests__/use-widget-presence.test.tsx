@@ -9,6 +9,13 @@ jest.mock('@/widgets/rougether-widgets', () => ({ refreshWidgets: jest.fn() }));
 
 // 마지막 접속 기록 (#1122) — 포그라운드가 될 때만 남기고 위젯을 다시 그린다.
 describe('useWidgetPresence', () => {
+  // AppState는 전역 — 스파이와 직접 바꾼 currentState를 테스트마다 되돌린다.
+  const initialState = AppState.currentState;
+  afterEach(() => {
+    jest.restoreAllMocks();
+    (AppState as { currentState: string }).currentState = initialState;
+  });
+
   it('마운트 시 active면 즉시 기록하고, 다시 active가 되면 또 기록한다', async () => {
     let listener: ((s: string) => void) | undefined;
     const remove = jest.fn();
