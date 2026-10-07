@@ -1,10 +1,7 @@
-import { useToast } from '@/components/ui/toast';
 import { useT } from '@/i18n';
 import { useStarterGacha } from '@/hooks/use-starter-gacha';
 import { toGachaMachine } from '@/api/adapters';
 import { SpeakerSheet } from '@/components/room/speaker-sheet';
-import { useRoomSpeaker } from '@/hooks/use-room-speaker';
-import { isSpeakerFurniture } from '@/resources/speaker';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
@@ -27,12 +24,10 @@ import { HouseScreen } from '@/components/screens/house-screen';
 import { FeedScreen } from '@/components/screens/feed-screen';
 import { FEED_ENABLED } from '@/constants/feed';
 import { isScheduledOn, MyRoomScreen } from '@/components/screens/my-room-screen';
-import {
-  type DecorTab,
-  dominantDecorTab,
-  RoomDecorScreen,
-} from '@/components/screens/room-decor-screen';
-import { useLatestRef, useStableCallback } from '@/hooks/use-stable-value';
+import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
+import { useStableCallback } from '@/hooks/use-stable-value';
+import { useDecorEntry } from '@/components/app/use-decor-entry';
+import { useSpeakerSurface } from '@/components/app/use-speaker-surface';
 import { MyPageScreen } from '@/components/screens/my-page-screen';
 import { FurnitureStudio } from '@/components/app/furniture-studio';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
@@ -57,7 +52,6 @@ import { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useMemberRoomPreviews } from '@/hooks/use-member-room-previews';
 import { useShop } from '@/hooks/use-shop';
 import { useResolvedScheme } from '@/hooks/use-tokens';
-import type { DrawResult } from '@/api';
 import { fetchGachaRewards } from '@/api';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
 import { usePagerLock } from '@/components/app/use-pager-lock';
@@ -315,46 +309,14 @@ export function AppShell({
     setBackgroundId(placement.backgroundId);
   }, [placement]);
 
-  // 뽑기 → 가구 배치하러 가기 (#630, #622 개편) — 방금 뽑은 아이템을 꾸미기
-  // 카탈로그에서 NEW로 강조한다. 꾸미기를 떠나면 강조를 비워 일반 진입과 구분.
-  const placeableFurnitureIds = useMemo(
-    () => catalogue.furniture.map((f) => f.id),
-    [catalogue.furniture],
-  );
-  const [newDecorItemIds, setNewDecorItemIds] = useState<string[]>([]);
-  /** 뽑기에서 넘어올 때 열 종류 탭 (#897) — 그 외 경로는 기본 탭. */
-  const [decorInitialTab, setDecorInitialTab] = useState<DecorTab | undefined>(undefined);
-  /**
-   * 뽑기 → '가구 배치하러 가기' (#630). 하이라이트만으로는 부족하다 (#897):
-   * 벽지를 뽑았는데 가구 탭이 열려 있으면 표시가 안 보이는 탭에 있다.
-   * 뽑은 게 가장 많은 종류의 탭을 함께 열어준다.
-   */
-  // 참조 고정 (#794 결) — catalogue를 deps에 넣으면 상점 구매 때마다 이
-  // 콜백이 재생성된다. useStableCallback은 최신 catalogue를 읽으면서 참조는
-  // 유지한다.
-  const goPlaceDrawn = useStableCallback((results: DrawResult[]) => {
-    const ids = results.map((r) => String(r.itemId)).filter(Boolean);
-    setNewDecorItemIds(ids);
-    setDecorInitialTab(dominantDecorTab(ids, catalogue));
-    setScreen('decor');
-  });
-  // 진입 시점의 값만 필요하고 의존성에 넣으면 화면 안에서 목록이 비워질 때
-  // 이펙트가 다시 돌므로 최신값 ref로 읽는다.
-  const fromGachaRef = useLatestRef(newDecorItemIds.length > 0);
-  useEffect(() => {
-    if (screen === 'decor') {
-      // 꾸미기 퍼널의 첫 단계 (#1043) — 진입 경로 셋(나의 방·뽑기·미션)이 전부
-      // 이 상태 전환을 지나므로 여기서 한 번만 센다. 뽑기에서 온 경우만 구분.
-      track('decor_open', { from: fromGachaRef.current ? 'gacha' : 'direct' });
-    }
-    if (screen !== 'decor') {
-      // 이미 비어 있으면 같은 참조를 돌려 셸 렌더를 한 번 더 일으키지 않는다(성능 장부 R1).
-      setNewDecorItemIds((prev) => (prev.length > 0 ? [] : prev));
-      // 다음에 꾸미기를 직접 열면 기본 탭이어야 한다 — 뽑기에서 온 게 아니다.
-      // 거래소 상세·내 주문(#1427)은 꾸미기로 돌아오는 서브화면이라 연 탭을 기억한다.
-      if (screen !== 'marketAsset' && screen !== 'marketOrders') setDecorInitialTab(undefined);
-    }
-  }, [screen, fromGachaRef]);
+  // 꾸미기 진입 (#630·#897·#1043) — 뽑기에서 온 NEW 강조·열 탭·진입 계측. use-decor-entry.ts (장부 5번).
+  const {
+    newDecorItemIds,
+    decorInitialTab,
+    setDecorInitialTab,
+    placeableFurnitureIds,
+    goPlaceDrawn,
+  } = useDecorEntry({ screen, setScreen, catalogue });
 
   // 공동미션 ↔ 내 루틴 연동 (#272 → #578) — use-mission-links.ts로 이관 (#692 3단계).
   const {
@@ -439,34 +401,15 @@ export function AppShell({
     // 첫 온보딩 직후 1회만 (#1007) — 온보딩 다시 보기는 미션 건너뛰기가 켜진 쪽이다.
     offerInvitePaste: startMissions && !missionSkipEnabled,
   });
-  const [speakerOpen, setSpeakerOpen] = useState(false);
-  const speakerPlaced = placedItems.some((placement) =>
-    catalogue.furniture.some(
-      (item) => item.id === placement.furnitureId && isSpeakerFurniture(item),
-    ),
-  );
-  const speaker = useRoomSpeaker(speakerPlaced);
-  const { show: showSpeakerError } = useToast();
-  useEffect(() => {
-    if (speaker.error) showSpeakerError(speaker.error);
-  }, [speaker.error, showSpeakerError]);
-  const playSpeaker = useStableCallback(() => {
-    settingsSurface.enableSpeakerMusic();
-    speaker.play();
-  });
-  const stopSpeaker = speaker.stop;
-  useEffect(() => {
-    if (!settingsSurface.soundSettings.music) stopSpeaker();
-  }, [settingsSurface.soundSettings.music, stopSpeaker]);
-  const toggleSpeaker = useStableCallback(() => {
-    if (speaker.playing || speaker.loading) speaker.stop();
-    else playSpeaker();
-  });
-  const openSpeaker = useCallback(() => setSpeakerOpen(true), []);
-  const closeSpeaker = useCallback(() => setSpeakerOpen(false), []);
-  useEffect(() => {
-    if (screen !== 'myRoom' || !speakerPlaced) setSpeakerOpen(false);
-  }, [screen, speakerPlaced]);
+  // 방 스피커 (#1325) — 재생·시트·소리 설정 연동. use-speaker-surface.ts (장부 5번).
+  const { speaker, speakerOpen, playSpeaker, toggleSpeaker, openSpeaker, closeSpeaker } =
+    useSpeakerSurface({
+      screen,
+      placedItems,
+      catalogue,
+      musicEnabled: settingsSurface.soundSettings.music,
+      enableSpeakerMusic: settingsSurface.enableSpeakerMusic,
+    });
   // 나의 방 페이지 배선 (#692 5단계) — 나의 방 탭 페이지와 서브화면 4종
   // (루틴 관리·추가·카테고리 관리·알림 목록)의 훅·콜백·JSX 소유.
   const completedTodayHandler = useCallback(() => {
@@ -619,7 +562,7 @@ export function AppShell({
 
   // 가구 거래소 배선 (#1427) — 꾸미기의 거래소 탭·판매 중 줄, 상세·내 주문 서브화면, 스튜디오
   // 발행. MARKET_ENABLED가 꺼져 있으면 요청도 화면도 없다.
-  const openDecorMarketTab = useCallback(() => setDecorInitialTab('market'), []);
+  const openDecorMarketTab = useCallback(() => setDecorInitialTab('market'), [setDecorInitialTab]);
   const marketPages = useMarketPages({
     nav: { screen, setScreen, goBack },
     coinBalance: wallet.coin,
