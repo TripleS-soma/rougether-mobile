@@ -35,9 +35,14 @@ import { pickLibraryImages } from '@/lib/pick-image';
 export function useFeedPages({
   nav,
 }: {
-  nav: { screen: Screen; setScreen: Dispatch<SetStateAction<Screen>> };
+  nav: {
+    screen: Screen;
+    setScreen: Dispatch<SetStateAction<Screen>>;
+    /** 셸의 뒤로가기 — 서브화면 뒤로 버튼이 뒤로 맵(BACK_SCREEN)을 다시 적지 않게 (장부 6번). */
+    goBack: () => void;
+  };
 }) {
-  const { screen, setScreen } = nav;
+  const { screen, setScreen, goBack } = nav;
   const { show: toast } = useToast();
   const showError = useCallback((message: string) => toast(message, 'error'), [toast]);
 
@@ -213,7 +218,7 @@ export function useFeedPages({
         onReportPost={handleReportPost}
         onReportComment={handleReportComment}
         onBlockUser={(userId, via) => void handleBlockUser(userId, via)}
-        onBack={() => setScreen('feed')}
+        onBack={goBack}
         loadImage={fetchFeedImage}
       />
     ) : screen === 'feedCompose' ? (
@@ -231,7 +236,7 @@ export function useFeedPages({
         onRetryImage={compose.retryImage}
         onSubmit={() => void handleSubmit()}
         submitting={compose.submitting}
-        onBack={() => setScreen('feed')}
+        onBack={goBack}
       />
     ) : null;
 

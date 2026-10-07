@@ -57,6 +57,14 @@ type FriendVisit = ReturnType<typeof useFriendVisit>;
  * 친구 방문(use-friend-visit)은 이 훅보다 먼저 서야 해서(집 스위처 인덱스를
  * 양쪽이 소비) 셸에 남고, 파생값·함수만 파라미터로 받는다.
  */
+/**
+ * 집이 하나도 없는 유저인가 (#571) — 로딩·에러 중엔 아니다(빈 목록을 '집 없음'으로 오판하지
+ * 않게). 셸이 내비게이션 훅을 페이지 훅보다 먼저 세우려고 순수 함수로 뺐다(장부 6번).
+ */
+export function hasNoHouses(d: { loading: boolean; error: unknown; houses: readonly unknown[] }) {
+  return !d.loading && !d.error && d.houses.length === 0;
+}
+
 /** 커버 카탈로그를 쓰는 화면 — 집(헤더 커버)·멤버 관리(수정)·집 만들기. */
 const HOUSE_COVER_SCREENS: ReadonlySet<Screen> = new Set<Screen>([
   'house',
@@ -86,7 +94,12 @@ export function useHousePages({
   roomPreviewStore,
 }: {
   /** 셸 내비 상태 — screen 상태는 셸 소유(useState setter 계약, #692). */
-  nav: { screen: Screen; setScreen: Dispatch<SetStateAction<Screen>> };
+  nav: {
+    screen: Screen;
+    setScreen: Dispatch<SetStateAction<Screen>>;
+    /** 셸의 뒤로가기 — 서브화면 뒤로 버튼이 뒤로 맵(BACK_SCREEN)을 다시 적지 않게 (장부 6번). */
+    goBack: () => void;
+  };
   /** useHouses 파생값 — 호출 자체는 교차 도메인 소비자(미션 연동·친구 방문·
    * 방 배치)가 있어 셸에 남고, 이 훅은 필요한 조각만 받는다. */
   data: Pick<
@@ -168,7 +181,7 @@ export function useHousePages({
   roomPreviewStore: ReturnType<typeof useMemberRoomPreviews>;
 }) {
   const scheme = useResolvedScheme();
-  const { screen, setScreen } = nav;
+  const { screen, setScreen, goBack } = nav;
   const {
     houses,
     searchHouses,
@@ -272,7 +285,7 @@ export function useHousePages({
   // 집이 없는 유저 (#571) — 집 탭은 빈 상태 대신 집 탐색으로 직행하고,
   // 탐색의 뒤로가기도 (빈) 집 화면 대신 나의 방으로 돌아간다. 로딩/에러
   // 중엔 판정하지 않아 집이 있는 유저가 탐색으로 튕기지 않는다.
-  const noHouses = !housesLoading && !housesError && houses.length === 0;
+  const noHouses = hasNoHouses({ loading: housesLoading, error: housesError, houses });
 
   // 초대 링크로 받은 코드 (#624) — 집 탐색을 열고 코드 미리보기를 자동 실행.
   const [pendingJoinCode, setPendingJoinCode] = useState<string | null>(null);
@@ -514,7 +527,7 @@ export function useHousePages({
         loading={searchLoading}
         loadError={searchError}
         onRetry={retrySearch}
-        onBack={() => setScreen(noHouses ? 'myRoom' : 'house')}
+        onBack={goBack}
         onJoinByCode={async (code) => {
           const ok = await joinByCode(code);
           if (ok === true) setScreen('house');
@@ -537,7 +550,7 @@ export function useHousePages({
     ) : screen === 'createHouse' ? (
       <CreateHouseScreen
         covers={houseCovers}
-        onBack={() => setScreen('houseSearch')}
+        onBack={goBack}
         onCreate={(input) => {
           void createHouse(input).then((ok) => ok && setScreen('house'));
         }}

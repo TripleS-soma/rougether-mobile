@@ -73,14 +73,19 @@ export function useMarketPages({
   onWalletChanged,
   onLeaveDecorFromMarketTab,
 }: {
-  nav: { screen: Screen; setScreen: Dispatch<SetStateAction<Screen>> };
+  nav: {
+    screen: Screen;
+    setScreen: Dispatch<SetStateAction<Screen>>;
+    /** 셸의 뒤로가기 — 서브화면 뒤로 버튼이 뒤로 맵(BACK_SCREEN)을 다시 적지 않게 (장부 6번). */
+    goBack: () => void;
+  };
   coinBalance: number;
   /** 주문 결과가 나오면 셸 지갑을 다시 받는다(지갑은 아직 react-query가 아니다). */
   onWalletChanged?: () => void | Promise<unknown>;
   /** 거래소 탭에서 상세·내 주문으로 나갈 때 — 돌아오면 거래소 탭이 다시 열리게. */
   onLeaveDecorFromMarketTab?: () => void;
 }) {
-  const { screen, setScreen } = nav;
+  const { screen, setScreen, goBack } = nav;
   const { show: toast } = useToast();
 
   const [listVisited, setListVisited] = useState(false);
@@ -203,7 +208,7 @@ export function useMarketPages({
       onPlaceOrder={placeOrder}
       onOpenOrders={openOrdersScreen}
       onReport={reportAsset}
-      onBack={() => setScreen('decor')}
+      onBack={goBack}
     />
   ) : screen === 'marketOrders' ? (
     <MarketOrdersScreen
@@ -219,7 +224,7 @@ export function useMarketPages({
       onLoadMore={orders.loadMore}
       onCancel={cancel}
       onOpenAsset={openAsset}
-      onBack={() => setScreen('decor')}
+      onBack={goBack}
     />
   ) : null;
 
