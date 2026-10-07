@@ -27,6 +27,10 @@ const EXEMPT: Record<string, string> = {
   // 집 화면은 하늘이 화면을 꽉 채워야 한다 (#986). 560으로 묶으면 태블릿에서
   // 좌우가 크림으로 남아 목적과 정반대가 된다 — 의도적으로 캡에서 뺀 유일한 화면.
   'house-screen.tsx': '전체 폭 캔버스 — 하늘이 화면을 채워야 한다 (#986)',
+  // 온보딩은 공용 상한보다 좁은 자체 상한(CONTENT_MAX_W 480, #725)으로 단계 화면을 묶는다 —
+  // onboarding/onboarding-styles.ts. 예전엔 그 상수 옆 주석의 단어 때문에 이 검사를
+  // 통과하고 있었다(장부 25번 분리 때 드러남).
+  'onboarding-screen.tsx': '자체 폭 상한 CONTENT_MAX_W(480) — onboarding-styles.ts (#725)',
 };
 
 /** Shared layouts are verified delegation, not width-limit exemptions. */
