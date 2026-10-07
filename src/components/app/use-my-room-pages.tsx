@@ -64,7 +64,8 @@ export function useMyRoomPages({
   nav: {
     screen: Screen;
     setScreen: Dispatch<SetStateAction<Screen>>;
-    addReturnScreen: Screen;
+    /** 셸의 뒤로가기 — 서브화면 뒤로 버튼이 뒤로 맵(BACK_SCREEN)을 다시 적지 않게 (장부 6번). */
+    goBack: () => void;
     setAddReturnScreen: Dispatch<SetStateAction<Screen>>;
   };
   /** useMyRoomData 파생값 — 호출 자체는 교차 도메인 소비자(위젯 요약·미션
@@ -137,7 +138,7 @@ export function useMyRoomPages({
   onCompletedToday?: () => void;
 }) {
   const queryClient = useQueryClient();
-  const { screen, setScreen, addReturnScreen, setAddReturnScreen } = nav;
+  const { screen, setScreen, goBack, setAddReturnScreen } = nav;
   const {
     routines,
     completions,
@@ -568,7 +569,7 @@ export function useMyRoomPages({
         loading={myRoomLoading}
         loadError={!!myRoomError}
         onRetry={retryMyRoom}
-        onBack={() => setScreen('myRoom')}
+        onBack={goBack}
         onAdd={() => {
           setEditingRoutine(null);
           setAddReturnScreen('routineManage');
@@ -584,7 +585,7 @@ export function useMyRoomPages({
         onUpdate={updateRoutine}
         onDelete={deleteRoutine}
         onCreateCategory={createRoutineCategory}
-        onBack={() => setScreen(addReturnScreen)}
+        onBack={goBack}
       />
     ) : screen === 'categoryManage' ? (
       <CategoryManageScreen
@@ -600,14 +601,14 @@ export function useMyRoomPages({
         onReorder={(orderedIds) => {
           void reorderCategories(orderedIds);
         }}
-        onBack={() => setScreen('myRoom')}
+        onBack={goBack}
       />
     ) : screen === 'weeklyReport' ? (
       <WeeklyReportScreen
         report={weeklyReport.detail}
         loading={weeklyReport.loading}
         recommendations={recommendationProps}
-        onBack={() => setScreen(addReturnScreen)}
+        onBack={goBack}
       />
     ) : screen === 'notificationList' ? (
       <NotificationListScreen
@@ -616,7 +617,7 @@ export function useMyRoomPages({
         loadError={notificationsError}
         onRetry={loadNotifications}
         hasNext={notificationsHasNext}
-        onBack={() => setScreen('myRoom')}
+        onBack={goBack}
         onRead={(id) => {
           void markNotificationRead(id);
         }}

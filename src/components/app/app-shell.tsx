@@ -16,7 +16,7 @@ import { useAppNavigation } from '@/components/app/use-app-navigation';
 import { useStoreReview } from '@/hooks/use-store-review';
 import { useScreenTransition } from '@/components/app/use-screen-transition';
 import { useFriendVisit } from '@/components/app/use-friend-visit';
-import { useHousePages } from '@/components/app/use-house-pages';
+import { hasNoHouses, useHousePages } from '@/components/app/use-house-pages';
 import { useFeedPages } from '@/components/app/use-feed-pages';
 import { useMarketPages } from '@/components/app/use-market-pages';
 import { useMissionLinks } from '@/components/app/use-mission-links';
@@ -260,6 +260,19 @@ export function AppShell({
     applyMissionContribution,
     deleteMission,
   } = housesData;
+  const noHouses = hasNoHouses(housesData);
+
+  // 내비게이션 컨트롤러 (#692) — 뒤로가기·엣지 백·전환 손맛·페이저 정착. 페이지 훅보다
+  // 먼저 세워 서브화면들이 뒤로 맵(BACK_SCREEN)을 다시 적지 않고 goBack을 그대로 쓴다(장부 6번).
+  // 주간 보기(#1327)가 하드웨어 백·엣지 백을 가로채 펼침 연출을 먼저 돌린다.
+  const weekBackRef = useRef<(() => boolean) | null>(null);
+  const { edgeBackPan, activeTab, handlePageChange, goBack } = useAppNavigation({
+    screen,
+    setScreen,
+    addReturnScreen,
+    noHouses,
+    backInterceptorRef: weekBackRef,
+  });
 
   // Locally saved tile arrangements (#278) — the 집 화면 shows arranged houses
   // and drag-and-drop swaps persist per viewer+house on this device.
@@ -473,7 +486,7 @@ export function AppShell({
   }, [missions.step?.id, completedTodayAlready, completeMission]);
 
   const myRoomPages = useMyRoomPages({
-    nav: { screen, setScreen, addReturnScreen, setAddReturnScreen },
+    nav: { screen, setScreen, goBack, setAddReturnScreen },
     data: myRoomData,
     nickname,
     missionLinks: {
@@ -571,7 +584,7 @@ export function AppShell({
   // 생성)의 훅·콜백·JSX 소유. noHouses 판정·탐색 이탈 미션 판정을 반환해
   // 아래 내비 훅·BottomNav로 흘린다.
   const housePages = useHousePages({
-    nav: { screen, setScreen },
+    nav: { screen, setScreen, goBack },
     data: housesData,
     houseIndex,
     setHouseIndex,
@@ -602,22 +615,22 @@ export function AppShell({
 
   // 피드 페이지 배선 (#1409) — 피드 탭과 서브화면 2종(상세·작성). FEED_ENABLED가 꺼져
   // 있으면 요청도 화면도 없다.
-  const feedPages = useFeedPages({ nav: { screen, setScreen } });
+  const feedPages = useFeedPages({ nav: { screen, setScreen, goBack } });
 
   // 가구 거래소 배선 (#1427) — 꾸미기의 거래소 탭·판매 중 줄, 상세·내 주문 서브화면, 스튜디오
   // 발행. MARKET_ENABLED가 꺼져 있으면 요청도 화면도 없다.
   const openDecorMarketTab = useCallback(() => setDecorInitialTab('market'), []);
   const marketPages = useMarketPages({
-    nav: { screen, setScreen },
+    nav: { screen, setScreen, goBack },
     coinBalance: wallet.coin,
     onWalletChanged: myRoomData.refreshWallet,
     onLeaveDecorFromMarketTab: openDecorMarketTab,
   });
 
-  // 코치마크 단계 (#1324) — housePages.noHouses를 읽으므로 그 아래에서 계산.
+  // 코치마크 단계 (#1324) — noHouses를 읽으므로 그 아래에서 계산.
   const coachStep =
     missions.step && missions.completedIndex == null
-      ? tutorialCoachStep(missions.step.id, screen, { noHouses: housePages.noHouses })
+      ? tutorialCoachStep(missions.step.id, screen, { noHouses: noHouses })
       : null;
   const coachSteps = useMemo(() => (coachStep ? [coachStep] : []), [coachStep]);
   useEffect(() => {
@@ -627,22 +640,10 @@ export function AppShell({
   // 시작 화면이 집인데 집이 없으면(#571 규칙) 탐색으로 — 집 목록이 도착한 첫 순간 한 번만.
   const startHouseCorrectedRef = useRef(initialScreen !== 'house');
   useEffect(() => {
-    if (startHouseCorrectedRef.current || !housePages.noHouses) return;
+    if (startHouseCorrectedRef.current || !noHouses) return;
     startHouseCorrectedRef.current = true;
     setScreen((s) => (s === 'house' ? 'houseSearch' : s));
-  }, [housePages.noHouses]);
-
-  // 내비게이션 컨트롤러 (#692) — 뒤로가기·엣지 백·전환 손맛·페이저 정착.
-  // noHouses·탐색 이탈 판정이 use-house-pages 반환값이라 훅 호출이 그 뒤에 선다.
-  // 주간 보기(#1327)가 하드웨어 백·엣지 백을 가로채 펼침 연출을 먼저 돌린다.
-  const weekBackRef = useRef<(() => boolean) | null>(null);
-  const { edgeBackPan, activeTab, handlePageChange } = useAppNavigation({
-    screen,
-    setScreen,
-    addReturnScreen,
-    noHouses: housePages.noHouses,
-    backInterceptorRef: weekBackRef,
-  });
+  }, [noHouses]);
 
   // 현재 화면 트리 — 슬라이드 전환(#1094)이 직전 렌더의 노드를 떠나는 층으로 들고 있는다.
   const screenNode = (
@@ -693,7 +694,7 @@ export function AppShell({
       {screen === 'furnitureStudio' ? (
         <FurnitureStudio
           key={`${attendance.status?.eventId ?? 0}:${attendance.status?.completed ?? false}`}
-          onBack={() => setScreen('myRoom')}
+          onBack={goBack}
           onAttendance={
             attendance.status?.reward?.type === 'GENERATION_CREDIT' ? openAttendance : undefined
           }
@@ -751,7 +752,7 @@ export function AppShell({
           onConflictReload={() => {
             void retryShop();
           }}
-          onBack={() => setScreen('myRoom')}
+          onBack={goBack}
           renderMarket={marketPages.renderMarket}
           sellingCount={marketPages.sellingCount}
           onOpenSelling={marketPages.onOpenSelling}
@@ -777,7 +778,7 @@ export function AppShell({
           coinBalance={wallet.coin}
           diamondBalance={wallet.diamond}
           soundEffectsEnabled={settingsSurface.soundSettings.effects}
-          onBack={() => setScreen('myRoom')}
+          onBack={goBack}
           // 뽑은 아이템·캐릭터의 재조회는 useGacha가 인벤토리·캐릭터 쿼리를
           // 무효화해 처리한다 (#1027) — 셸이 손으로 꿰던 재조회 두 줄이 사라졌다.
           onDraw={starterAllowed ? starterGacha.draw : drawGachaMachine}
@@ -815,7 +816,7 @@ export function AppShell({
   // 하단 바·미션 시트가 같이 다시 그려진다(성능 장부 R9).
   const changeTab = useStableCallback((tab: NavTab) =>
     // 집이 없으면 집 탭은 빈 상태 대신 집 탐색으로 직행 (#571).
-    setScreen(tab === 'house' && housePages.noHouses ? 'houseSearch' : SCREEN_FOR_TAB[tab]),
+    setScreen(tab === 'house' && noHouses ? 'houseSearch' : SCREEN_FOR_TAB[tab]),
   );
   const goToNextMission = useStableCallback(() => {
     const id = missions.step?.id;

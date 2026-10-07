@@ -36,7 +36,8 @@ describe('거래소 내비게이션 (#1427)', () => {
     });
     const setScreen = jest.fn();
     const { result } = await renderHook(
-      () => useMarketPages({ nav: { screen: 'decor', setScreen }, coinBalance: 0 }),
+      () =>
+        useMarketPages({ nav: { screen: 'decor', setScreen, goBack: jest.fn() }, coinBalance: 0 }),
       { wrapper: queryWrapper() },
     );
     expect(result.current.renderMarket).toBeDefined();
@@ -108,5 +109,21 @@ describe('스튜디오 "거래소에 올리기" (#1427)', () => {
       <FurnitureStudioScreen balance={{ available: 0, reserved: 0 }} jobs={jobs} photo={null} />,
     );
     expect(ui.queryByLabelText('거래소에 올리기')).toBeNull();
+  });
+
+  it('상세·내 주문의 뒤로 버튼은 셸의 goBack을 부른다 — 뒤로 맵을 다시 적지 않는다 (장부 6번)', async () => {
+    for (const screen of ['marketOrders', 'marketAsset'] as const) {
+      const goBack = jest.fn();
+      const setScreen = jest.fn();
+      const { result } = await renderHook(
+        () => useMarketPages({ nav: { screen, setScreen, goBack }, coinBalance: 0 }),
+        { wrapper: queryWrapper() },
+      );
+      const ui = await render(<>{result.current.subScreen}</>, { wrapper: queryWrapper() });
+      await fireEvent.press(await ui.findByLabelText('뒤로 가기'));
+      expect(goBack).toHaveBeenCalledTimes(1);
+      expect(setScreen).not.toHaveBeenCalled();
+      ui.unmount();
+    }
   });
 });

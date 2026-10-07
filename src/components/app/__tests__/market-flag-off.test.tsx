@@ -24,7 +24,7 @@ describe('MARKET_ENABLED=false (#1427)', () => {
     const setScreen = jest.fn();
     for (const screen of ['decor', 'marketAsset', 'marketOrders'] as const) {
       const { result } = await renderHook(
-        () => useMarketPages({ nav: { screen, setScreen }, coinBalance: 0 }),
+        () => useMarketPages({ nav: { screen, setScreen, goBack: jest.fn() }, coinBalance: 0 }),
         { wrapper: queryWrapper() },
       );
       expect(result.current.renderMarket).toBeUndefined();
