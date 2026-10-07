@@ -197,9 +197,9 @@ const MERGE_BROWSER_SOURCE = String.raw`function runMerge(config) {
     text(fmt(copy.points,{score:state.score}),86,53,25,colors.ink);
     if(lastMerge>0&&glowTicks>0)text('+'+lastMerge,218,53,14,colors.primaryDark,'right');
     if(mode==='playing'||mode==='paused'){
-      // Highlight the last 30 seconds.
+      // Highlight the last 30 seconds (fixed potDark: white text stays readable in every theme).
       var hurry=secondsLeft()<=30;
-      box(228,12,102,25,12,hurry?colors.pot:colors.paper);
+      box(228,12,102,25,12,hurry?colors.potDark:colors.paper);
       text(fmt(copy.timeLeft,{time:timeLabel()}),279,25,11,hurry?colors.white:colors.primaryDark,'center');
     }
     if(mode==='playing'){
