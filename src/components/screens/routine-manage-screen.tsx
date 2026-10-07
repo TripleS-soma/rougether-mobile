@@ -1,11 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import {
-  ROUTINE_CATEGORIES,
-  type Routine,
-  type RoutineCategoryMeta,
-  UNCATEGORIZED_META,
-} from '@/constants/routines';
+import { ROUTINE_CATEGORIES, type Routine, type RoutineCategoryMeta } from '@/constants/routines';
 import { Loading } from '@/components/ui/loading';
 import { Icon } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -18,6 +13,7 @@ import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { formatTime } from '@/utils/datetime';
 import { useT } from '@/i18n';
+import { groupByCategory } from '@/utils/category-groups';
 
 export type RoutineManageScreenProps = {
   routines?: Routine[];
@@ -56,14 +52,9 @@ export function RoutineManageScreen({
   const headerInset = useHeaderContentInset();
   // The routines prop carries the merged routine+todo list; this screen manages routines only.
   const routineItems = routines.filter((r) => r.kind !== 'todo');
-  const knownIds = categories.map((c) => c.id);
   // 미분류(카테고리 삭제 UNASSIGN 산물, #517)·미상 카테고리 항목은 마지막
-  // 카테고리에 섞지 않고 전용 '미분류' 그룹으로 맨 뒤에 붙는다.
-  const hasUncategorized = routineItems.some((r) => !r.category || !knownIds.includes(r.category));
-  const groups =
-    categories.length > 0
-      ? [...categories, ...(hasUncategorized ? [UNCATEGORIZED_META] : [])]
-      : [UNCATEGORIZED_META];
+  // 카테고리에 섞지 않고 전용 '미분류' 그룹으로 맨 뒤에 붙는다 (groupByCategory).
+  const groups = groupByCategory(routineItems, categories);
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
@@ -119,14 +110,7 @@ export function RoutineManageScreen({
 
         {loading || loadError
           ? null
-          : groups.map((cat) => {
-              const isUncategorized = cat.id === '';
-              const items = routineItems.filter((r) => {
-                if (r.category === cat.id) return true;
-                return isUncategorized && (!r.category || !knownIds.includes(r.category));
-              });
-              if (items.length === 0) return null;
-
+          : groups.map(({ meta: cat, items }) => {
               return (
                 <View key={cat.id} style={styles.group}>
                   <View style={styles.catHeader}>

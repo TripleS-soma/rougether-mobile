@@ -18,12 +18,7 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { Room, type RoomSceneProps } from '@/components/room/room';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
-import {
-  type Routine,
-  type RoutineCategoryMeta,
-  UNCATEGORIZED_META,
-  weekdayLabelKey,
-} from '@/constants/routines';
+import { type Routine, type RoutineCategoryMeta, weekdayLabelKey } from '@/constants/routines';
 import { Loading } from '@/components/ui/loading';
 import { BearCheck } from '@/components/ui/bear-check';
 import { CategoryIcon } from '@/components/ui/category-icon';
@@ -48,6 +43,7 @@ import { DEMO_GUESTBOOK, FRIEND_DEMO_ROUTINES } from '@/mocks/fixtures';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 import { NATIVE_DRIVER } from '@/utils/animation';
 import { useT } from '@/i18n';
+import { groupByCategory } from '@/utils/category-groups';
 
 /** Cheer reactions a visitor can leave on a friend's room. */
 export type CheerType = 'great' | 'support' | 'best';
@@ -193,12 +189,7 @@ export function FriendRoomScreen({
   // (데모 미리보기·구서버) 기존 플랫 목록 그대로.
   const categoryGroups = useMemo(() => {
     if (!categories || categories.length === 0) return null;
-    const groups = categories
-      .map((meta) => ({ meta, items: routineList.filter((r) => r.category === meta.id) }))
-      .filter((g) => g.items.length > 0);
-    const known = new Set(categories.map((c) => c.id));
-    const rest = routineList.filter((r) => !r.category || !known.has(r.category));
-    if (rest.length > 0) groups.push({ meta: UNCATEGORIZED_META, items: rest });
+    const groups = groupByCategory(routineList, categories);
     return groups.length > 0 ? groups : null;
   }, [categories, routineList]);
   const completedCount = routineList.filter((r) => r.completed).length;
