@@ -35,9 +35,14 @@ import { pickLibraryImages } from '@/lib/pick-image';
 export function useFeedPages({
   nav,
 }: {
-  nav: { screen: Screen; setScreen: Dispatch<SetStateAction<Screen>> };
+  nav: {
+    screen: Screen;
+    setScreen: Dispatch<SetStateAction<Screen>>;
+    /** 셸의 뒤로가기 — 서브화면 뒤로 버튼이 뒤로 맵(BACK_SCREEN)을 다시 적지 않게 (장부 6번). */
+    goBack: () => void;
+  };
 }) {
-  const { screen, setScreen } = nav;
+  const { screen, setScreen, goBack } = nav;
   const { show: toast } = useToast();
   const showError = useCallback((message: string) => toast(message, 'error'), [toast]);
 
@@ -188,8 +193,8 @@ export function useFeedPages({
     [board, feed, handleToggleLike, openPost, openCompose],
   );
 
-  // TODO(#1409): 알림함·푸시의 FEED_COMMENT(refId = postId) 탭을 openPost로 잇는다 — 지금 알림
-  // 목록은 종류별 이동이 없고(행 탭 = 읽음), 푸시 탭은 use-my-room-pages가 알림함으로 보낸다.
+  // 알림함 카드·푸시 탭·인앱 배너의 FEED_COMMENT(refId·FCM postId = 게시물 id)는 셸이
+  // notification-destination 표를 거쳐 openPost로 잇는다 (#1409).
   const subScreen =
     screen === 'feedPost' ? (
       <FeedPostScreen
@@ -213,7 +218,7 @@ export function useFeedPages({
         onReportPost={handleReportPost}
         onReportComment={handleReportComment}
         onBlockUser={(userId, via) => void handleBlockUser(userId, via)}
-        onBack={() => setScreen('feed')}
+        onBack={goBack}
         loadImage={fetchFeedImage}
       />
     ) : screen === 'feedCompose' ? (
@@ -231,7 +236,7 @@ export function useFeedPages({
         onRetryImage={compose.retryImage}
         onSubmit={() => void handleSubmit()}
         submitting={compose.submitting}
-        onBack={() => setScreen('feed')}
+        onBack={goBack}
       />
     ) : null;
 

@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
-import type { House, HouseEditInput, RoomCell } from '@/components/screens/house-screen';
+import type { House, HouseEditInput, RoomCell } from '@/components/screens/house/types';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Icon } from '@/components/ui/icon';
 import { CrownPictogram, DoorPictogram, PencilPictogram } from '@/components/ui/pictograms';

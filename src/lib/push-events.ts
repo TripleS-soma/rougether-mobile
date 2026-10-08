@@ -7,6 +7,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import { i18n } from '@/i18n';
+import { supportsPushNotifications } from '@/config/features';
 
 /**
  * Android channel FCM v1 payloads should target
@@ -21,7 +22,7 @@ export const DEFAULT_CHANNEL_ID = 'default';
  * show nothing at all.
  */
 export function initPushDisplay(): void {
-  if (Platform.OS === 'web') return;
+  if (!supportsPushNotifications()) return;
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       // 포그라운드 배너는 **앱이 전담해 그린다** (#902, ui/notification-banner).
@@ -46,18 +47,35 @@ export function initPushDisplay(): void {
  * tap that cold-started the app (the launch response predates any listener).
  * Returns the unsubscribe.
  */
-export type PushTap = { type?: string };
+export type PushTap = {
+  type?: string;
+  /**
+   * 목적지 리소스 id (#1409) — 피드 댓글 FCM data의 `postId`(spec notification api.md, 문자열 값).
+   * 다른 알림은 data에 id를 싣지 않아 비어 있다(앞으로 `refId`를 실으면 그것도 읽는다).
+   */
+  refId?: number;
+};
+
+/** FCM data → 탭 정보. 값은 문자열로 온다(spec) — 숫자로 못 바꾸면 버린다. */
+function pushTapFrom(data: Record<string, unknown> | undefined): PushTap {
+  const type = data?.type;
+  const raw = data?.postId ?? data?.refId;
+  const refId = typeof raw === 'string' || typeof raw === 'number' ? Number(raw) : NaN;
+  return {
+    type: typeof type === 'string' ? type : undefined,
+    refId: Number.isInteger(refId) && refId > 0 ? refId : undefined,
+  };
+}
 
 export function onNotificationTap(cb: (notification?: PushTap) => void): () => void {
-  if (Platform.OS === 'web') return () => {};
+  if (!supportsPushNotifications()) return () => {};
   let alive = true;
   let lastId: string | undefined;
   const receive = (response: Notifications.NotificationResponse) => {
     const { identifier, content } = response.notification.request;
     if (!alive || identifier === lastId) return;
     lastId = identifier;
-    const type: unknown = content.data?.type;
-    cb({ type: typeof type === 'string' ? type : undefined });
+    cb(pushTapFrom(content.data as Record<string, unknown> | undefined));
   };
   const sub = Notifications.addNotificationResponseReceivedListener(receive);
   void Notifications.getLastNotificationResponseAsync()
@@ -80,17 +98,16 @@ export function onNotificationTap(cb: (notification?: PushTap) => void): () => v
  * 반환값은 구독 해제.
  */
 export function onNotificationReceived(
-  cb: (n: { type?: string; title: string; body: string }) => void,
+  cb: (n: PushTap & { title: string; body: string }) => void,
 ): () => void {
-  if (Platform.OS === 'web') return () => {};
+  if (!supportsPushNotifications()) return () => {};
   const sub = Notifications.addNotificationReceivedListener((event) => {
     const content = event.request.content;
-    const data = (content.data ?? {}) as { type?: unknown };
     const title = content.title ?? '';
     const body = content.body ?? '';
     // 제목·본문이 모두 비면 그릴 게 없다 (data-only 메시지 등) — 조용히 넘긴다.
     if (!title && !body) return;
-    cb({ type: typeof data.type === 'string' ? data.type : undefined, title, body });
+    cb({ ...pushTapFrom(content.data as Record<string, unknown> | undefined), title, body });
   });
   return () => sub.remove();
 }

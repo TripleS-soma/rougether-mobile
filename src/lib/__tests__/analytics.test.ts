@@ -44,7 +44,8 @@ describe('analytics (#912)', () => {
   // jest는 __DEV__가 true라, 수집 켜짐 경로를 보려면 명시해야 한다 (#954).
   beforeAll(() => initAnalytics({ collect: true }));
   it('예약 파라미터 items를 그대로 보내지 않는다', () => {
-    track('room_save', { items: 3 });
+    // 예약 파라미터는 타입이 막지만, 런타임 방어(sanitize)를 보려고 일부러 넣는다.
+    track('room_save', { items: 3 } as never);
     const props = mockLogEvent.mock.calls[0]?.[2] as Record<string, unknown> | undefined;
     expect(props).toBeDefined();
     expect(props).not.toHaveProperty('items');
@@ -90,3 +91,15 @@ describe('analytics (#912)', () => {
     expect(mockSetUserProperty).toHaveBeenCalledWith(expect.anything(), 'app_language', 'en');
   });
 });
+
+// 이벤트별 파라미터 타입 (리팩토링 장부 9번) — 아래가 컴파일 오류가 아니게 되면 typecheck가 깨진다.
+// 실행하지 않는 함수 안에 둬서 이벤트가 실제로 나가지 않는다.
+export function _analyticsParamTypeGuards() {
+  // @ts-expect-error room_save에는 item_count만
+  track('room_save', { count: 1 });
+  // @ts-expect-error 파라미터가 필요한 이벤트를 빈손으로
+  track('decor_open');
+  // @ts-expect-error 파라미터 없는 이벤트에 객체
+  track('feed_view', { from: 'tab' });
+  track('user_block'); // 선택 파라미터는 생략 가능
+}

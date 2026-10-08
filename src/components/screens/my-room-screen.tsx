@@ -32,16 +32,9 @@ import {
   groupRoomRoutines,
 } from '@/components/screens/my-room/grouping';
 import { isScheduledOn } from '@/components/screens/my-room/schedule';
-import {
-  type DragSlot,
-  type DropTarget,
-  type GroupSlot,
-  isRejectedDrop,
-  mergeOrderedSubset,
-  reorderedIds,
-  resolveDrop,
-  resolveGroupDrop,
-} from '@/components/screens/my-room/routine-drag';
+import type { GroupSlot } from '@/components/screens/my-room/routine-drag';
+import { useRoutineRowDrag } from '@/components/screens/my-room/use-routine-row-drag';
+import { useCategoryHeaderDrag } from '@/components/screens/my-room/use-category-header-drag';
 import {
   useAnimatedValue,
   useConstant,
@@ -113,6 +106,7 @@ import { formatDate, localDate, monthDayLabel } from '@/utils/datetime';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 import { holidayName } from '@/utils/holidays';
 import { useT } from '@/i18n';
+import { supportsRoomImageSave } from '@/config/features';
 
 // 스케줄 판정은 my-room/schedule로 이동 (#693) — 기존 임포트 경로 유지용 재수출.
 export { isScheduledOn };
@@ -864,103 +858,22 @@ export const MyRoomScreen = memo(function MyRoomScreen({
    */
   const rowHandlers = useConstant(() => new Map<string, { spec: RowSpec; categoryId?: string }>());
 
-  // --- 루틴/투두 롱프레스 재정렬 (#716) ---
-  // 미완료 행만 대상. 롱프레스로 들어 손가락을 따라가고, 놓으면 같은 카테고리면
-  // 순서 변경(로컬), 다른 카테고리 그룹 위면 영구 이동(서버). 완료 행은 하단으로
-  // 가라앉은 상태라 드래그에서 제외한다. 방 탭뿐 아니라 달력 탭의 모든 날짜에서도
-  // 같은 의미다 (2026-09-08) — 서버 날짜의 행은 레지스트리의 routineId로 그 루틴
-  // 자체를 옮기고, 순서는 카테고리 전역 순서(routineOrder)에 쓴다.
+  // --- 루틴/투두 롱프레스 재정렬 (#716) — 상태·드롭 계산은 use-routine-row-drag (장부 14번) ---
   const reorderEnabled = !!onReorderRoutines;
-  const [dragId, setDragId] = useState<string | null>(null);
-  const dragTY = useAnimatedValue(0);
-  const rowRefs = useRef(new Map<string, View>());
-  const dragSlotsRef = useRef<DragSlot[]>([]);
-  const dropRef = useRef<DropTarget | null>(null);
-  // 드래그 시작 시점의 카테고리별 미완료 id 순서 스냅샷 — 드롭 계산의 기준.
-  const baseOrderRef = useRef<Map<string, string[]>>(new Map());
-
-  // 인자는 행 키 (#1207) — dragId는 `active` 비교용이라 행 키 공간에 둔다.
-  const beginDrag = useCallback(
-    (rowKey: string) => {
-      hapticSelection();
-      setDragId(rowKey);
-      // 기준 순서는 **지금 그려진 리스트**(방 탭 오늘 / 달력 오늘 / 달력 서버 날짜)의
-      // 드래그 가능한 행 — 레지스트리는 렌더 순서대로 채워지므로 그대로 읽는다.
-      // 카테고리 id는 그룹의 것(서버 날짜면 기록 당시 카테고리).
-      const base = new Map<string, string[]>();
-      const catById = new Map<string, string>();
-      rowHandlers.forEach(({ spec, categoryId }) => {
-        if (!spec.draggable || categoryId === undefined) return;
-        base.set(categoryId, [...(base.get(categoryId) ?? []), spec.routineId]);
-        catById.set(spec.routineId, categoryId);
-      });
-      baseOrderRef.current = base;
-      // window 좌표 측정은 비동기 — 다음 프레임 안에 채워져 onUpdate가 쓴다
-      // (집 좌석 드래그 #278와 같은 리프트 시점 측정).
-      dragSlotsRef.current = [];
-      rowRefs.current.forEach((node, key) => {
-        // ref 맵은 행 키로 등록된다 — 슬롯은 루틴 id 공간이라 레지스트리로 되찾는다.
-        const routineId = rowHandlers.get(key)?.spec.routineId;
-        if (!routineId) return;
-        node.measureInWindow((x, y, w, h) => {
-          dragSlotsRef.current.push({
-            routineId,
-            categoryId: catById.get(routineId) ?? '',
-            top: y,
-            bottom: y + h,
-          });
-        });
-      });
-    },
-    [rowHandlers],
-  );
-
-  const updateDrop = useCallback((draggedId: string, absoluteY: number) => {
-    dropRef.current = resolveDrop(dragSlotsRef.current, absoluteY, draggedId);
-  }, []);
-
-  const endDrag = useCallback(
-    (draggedId: string, fromCategoryId: string) => {
-      const target = dropRef.current;
-      dropRef.current = null;
-      setDragId(null);
-      dragTY.setValue(0);
-      if (!target) return;
-      // 실제 카테고리가 있을 때 '미분류'로의 이동은 서버 반영이 안 돼(#718
-      // 리뷰) 스냅백 — 미분류 내 순서 변경은 아래 same-category 분기로 허용.
-      if (isRejectedDrop(target, fromCategoryId, categories.length > 0)) return;
-      const destBase = baseOrderRef.current.get(target.categoryId) ?? [];
-      if (target.categoryId === fromCategoryId) {
-        const next = reorderedIds(destBase, draggedId, target.index);
-        // 구분자는 반드시 이스케이프 `\0`로 — 예전엔 리터럴 NUL 문자를 그대로
-        // 박아 넣어서, grep·ripgrep이 이 파일을 바이너리로 보고 **1600줄 전체가
-        // 검색에서 사라졌다**. 동작은 같지만 도구에 보이는지가 다르다.
-        if (next.join('\0') !== destBase.join('\0')) {
-          hapticSuccess();
-          onReorderRoutines?.(fromCategoryId, next);
-        }
-        return;
-      }
-      // 다른 카테고리 = 영구 이동(서버) + 양쪽 로컬 순서 갱신.
-      hapticSuccess();
-      onMoveRoutineCategory?.(draggedId, target.categoryId);
-      onReorderRoutines?.(target.categoryId, reorderedIds(destBase, draggedId, target.index));
-      const fromNext = (baseOrderRef.current.get(fromCategoryId) ?? []).filter(
-        (id) => id !== draggedId,
-      );
-      onReorderRoutines?.(fromCategoryId, fromNext);
-    },
-    [dragTY, onReorderRoutines, onMoveRoutineCategory, categories.length],
-  );
-
-  const registerRowRef = useCallback((rowKey: string, node: View | null) => {
-    if (node) rowRefs.current.set(rowKey, node);
-    else rowRefs.current.delete(rowKey);
-  }, []);
-
-  const dragIdRef = useLatestRef(dragId);
-  /** 행 키 → 서버 루틴 id. 드래그 콜백은 행 키로 오지만 재정렬·이동은 루틴 id로 나간다. */
-  const routineIdOf = (rowKey: string) => rowHandlers.get(rowKey)?.spec.routineId;
+  const {
+    dragId,
+    dragTY,
+    registerRowRef,
+    dispatchDragStart,
+    dispatchDragUpdate,
+    dispatchDragEnd,
+    dispatchDragFinalize,
+  } = useRoutineRowDrag({
+    rowHandlers,
+    hasRealCategories: categories.length > 0,
+    onReorderRoutines,
+    onMoveRoutineCategory,
+  });
   const dispatchToggle = useStableCallback((rowKey: string, e?: GestureResponderEvent) =>
     rowHandlers.get(rowKey)?.spec.onToggle(e),
   );
@@ -970,80 +883,22 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const dispatchDelete = useStableCallback((rowKey: string) =>
     rowHandlers.get(rowKey)?.spec.onDelete?.(),
   );
-  const dispatchDragStart = useStableCallback((rowKey: string) => beginDrag(rowKey));
-  const dispatchDragUpdate = useStableCallback((rowKey: string, absoluteY: number) => {
-    const routineId = routineIdOf(rowKey);
-    if (routineId !== undefined) updateDrop(routineId, absoluteY);
-  });
-  const dispatchDragEnd = useStableCallback((rowKey: string) => {
-    const entry = rowHandlers.get(rowKey);
-    if (entry?.categoryId !== undefined) endDrag(entry.spec.routineId, entry.categoryId);
-  });
-  const dispatchDragFinalize = useStableCallback((rowKey: string) => {
-    if (dragIdRef.current !== rowKey) return;
-    setDragId(null);
-    dragTY.setValue(0);
-  });
 
-  // --- 카테고리 헤더 롱프레스 드래그 (2026-09-08) ---
-  // 헤더를 꾹 눌러 끌면 그룹(헤더+행)이 통째로 들려 손가락을 따라가고, 놓으면
-  // onReorderCategories(전체 카테고리 id 순서)로 서버 sortOrder를 바꾼다. 미분류('')는
-  // 항상 꼬리라 들 수 없고 그 아래로 떨어질 수도 없다(resolveGroupDrop이 세지 않음).
-  // 행 드래그와는 배타 — 한쪽이 활성이면 다른 쪽 제스처는 enabled=false.
+  // --- 카테고리 헤더 롱프레스 드래그 (2026-09-08) — use-category-header-drag (장부 14번) ---
   const categoryReorderEnabled = !!onReorderCategories;
-  const [catDragId, setCatDragId] = useState<string | null>(null);
-  const catDragTY = useAnimatedValue(0);
   /** 그룹 컨테이너 onLayout 사각형 — 카테고리 id 키, 부모(리스트 섹션) 기준. */
   const groupLayouts = useConstant(() => new Map<string, GroupSlot>());
   /** 이번 렌더에 그려진 그룹의 카테고리 id — 렌더 순서. 렌더마다 비우고 다시 채운다. */
   const groupOrder = useConstant(() => [] as string[]);
-  /** 드래그 시작 시점의 이동 가능(실제 카테고리) 그룹 순서 스냅샷. */
-  const catOrderRef = useRef<string[]>([]);
-  const catDropRef = useRef<number | null>(null);
-  const catDragIdRef = useLatestRef(catDragId);
-  const categoriesRef = useLatestRef(categories);
-
   const isRealCategory = (id: string) => id !== '' && categories.some((c) => c.id === id);
-
-  const dispatchCatDragStart = useStableCallback((categoryId: string) => {
-    hapticSelection();
-    setCatDragId(categoryId);
-    catDropRef.current = null;
-    const live = new Set(categoriesRef.current.map((c) => c.id));
-    catOrderRef.current = groupOrder.filter((id) => id !== '' && live.has(id));
-  });
-  const dispatchCatDragUpdate = useStableCallback((categoryId: string, translationY: number) => {
-    catDropRef.current = resolveGroupDrop(
-      groupLayouts,
-      catOrderRef.current,
-      categoryId,
-      translationY,
-    );
-  });
-  const dispatchCatDragEnd = useStableCallback((categoryId: string) => {
-    const index = catDropRef.current;
-    catDropRef.current = null;
-    setCatDragId(null);
-    catDragTY.setValue(0);
-    if (index === null) return;
-    const order = catOrderRef.current;
-    const next = reorderedIds(order, categoryId, index);
-    // 구분자는 이스케이프 `\0` — 위 endDrag의 주석 참고.
-    if (next.join('\0') === order.join('\0')) return;
-    hapticSuccess();
-    // 달력 서버 날짜엔 일부 카테고리가 안 그려질 수 있다 — 전체 순서에 되섞어 보낸다.
-    onReorderCategories?.(
-      mergeOrderedSubset(
-        categoriesRef.current.map((c) => c.id),
-        next,
-      ),
-    );
-  });
-  const dispatchCatDragFinalize = useStableCallback((categoryId: string) => {
-    if (catDragIdRef.current !== categoryId) return;
-    setCatDragId(null);
-    catDragTY.setValue(0);
-  });
+  const {
+    catDragId,
+    catDragTY,
+    dispatchCatDragStart,
+    dispatchCatDragUpdate,
+    dispatchCatDragEnd,
+    dispatchCatDragFinalize,
+  } = useCategoryHeaderDrag({ categories, groupOrder, groupLayouts, onReorderCategories });
 
   // 이번 렌더의 행만 남긴다 (#1207) — 아래 renderCategoryGroup이 같은 렌더 안에서
   // 동기적으로 다시 채운다. 지우지 않으면 지나간 날짜·삭제된 루틴의 항목이 영영 쌓였다.
@@ -1772,7 +1627,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           }
           onEditRoom={onEdit}
           // 웹은 view-shot이 없어 항목을 숨긴다 — 눌러서 '지원 안 함' 토스트를 보이는 것보다 낫다.
-          onSaveRoomImage={Platform.OS === 'web' ? undefined : () => void onSaveRoomImage()}
+          onSaveRoomImage={supportsRoomImageSave() ? () => void onSaveRoomImage() : undefined}
           onOpenCategoryManager={() => onManageCategories?.()}
           // Routine management remains separate from the quick composer.
           onManageRoutines={onManageRoutines ?? onAddRoutine}

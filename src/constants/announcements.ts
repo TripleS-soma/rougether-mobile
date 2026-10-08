@@ -1,4 +1,6 @@
 import type { Screen } from '@/components/app/navigation';
+import { FEED_ENABLED } from '@/constants/feed';
+import { MARKET_ENABLED } from '@/constants/market';
 import { i18n } from '@/i18n';
 
 /**
@@ -37,9 +39,32 @@ type AnnouncementSource = {
   id: string;
   date: string;
   action?: AnnouncementActionSource;
+  /** 이 설치본에서 보일 때만 — 꺼진 기능(1.5.3 바이너리의 피드·거래소)을 홍보하지 않는다. */
+  enabled?: boolean;
 };
 
 const ANNOUNCEMENT_SOURCES: readonly AnnouncementSource[] = [
+  {
+    id: '2026-10-08-feed',
+    date: '2026-10-08',
+    action: { kind: 'screen', screen: 'feed' },
+    enabled: FEED_ENABLED,
+  },
+  {
+    id: '2026-10-08-market',
+    date: '2026-10-08',
+    action: { kind: 'screen', screen: 'decor' },
+    enabled: MARKET_ENABLED,
+  },
+  {
+    id: '2026-10-08-games',
+    date: '2026-10-08',
+    action: { kind: 'screen', screen: 'minigames' },
+  },
+  {
+    id: '2026-10-08-routines',
+    date: '2026-10-08',
+  },
   {
     id: '2026-09-13-minigames',
     date: '2026-09-13',
@@ -66,7 +91,7 @@ const defaultTranslate: AnnouncementTranslate = (key, options) => i18n.t(key, op
  * 최신이 위(`ANNOUNCEMENT_SOURCES` 순서).
  */
 export function getAnnouncements(t: AnnouncementTranslate = defaultTranslate): Announcement[] {
-  return ANNOUNCEMENT_SOURCES.map((a) => {
+  return ANNOUNCEMENT_SOURCES.filter((a) => a.enabled !== false).map((a) => {
     const base = `notification.announcements.${a.id}`;
     return {
       id: a.id,

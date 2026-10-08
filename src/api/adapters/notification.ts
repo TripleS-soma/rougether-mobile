@@ -13,6 +13,8 @@ export function toNotificationEntry(n: NotificationItem): NotificationEntry {
     title: n.title ?? i18n.t('notification.list.defaultTitle'),
     body: n.body ?? '',
     read: n.isRead === true,
+    // spec상 nullable — 화면 타입(number | undefined)으로 정리.
+    refId: n.refId ?? undefined,
     date: d ? relativeTimeLabel(d) : '',
   };
 }

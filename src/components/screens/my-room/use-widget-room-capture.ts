@@ -1,9 +1,10 @@
 import { type Dispatch, type RefObject, type SetStateAction, useEffect, useRef } from 'react';
-import { Platform, type View } from 'react-native';
+import { type View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 
 import { refreshWidgets } from '@/widgets/rougether-widgets';
 import { saveWidgetRoomImage } from '@/widgets/widget-data';
+import { supportsHomeWidget } from '@/config/features';
 
 /**
  * 홈 위젯용 무음 방 캡처 (#604, 안드로이드 전용) — 방 구성이 바뀌었을 때만
@@ -29,7 +30,7 @@ export function useWidgetRoomCapture({
   const widgetShotSigRef = useRef('');
   useEffect(() => {
     // 홈 위젯이 있는 플랫폼만 (#604 안드, #606 iOS) — 웹은 캡처 제외.
-    if (Platform.OS !== 'android' && Platform.OS !== 'ios') return;
+    if (!supportsHomeWidget()) return;
     if (widgetShotSigRef.current === signature) return;
     // 로딩 중이거나 다른 캡처가 진행 중이면 다음 변화 때 다시 시도된다.
     if (loading || capturing) return;

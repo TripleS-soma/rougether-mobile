@@ -76,21 +76,33 @@ describe('NotificationListScreen', () => {
     expect(noTabs.queryByTestId('notification-tabs')).toBeNull();
   });
 
-  it('renders rows and marks an unread one read on tap', async () => {
-    const onRead = jest.fn();
+  it('카드를 누르면 그 알림을 연다 — 읽은 카드도, 탭으로는 읽음 처리하지 않는다 (2026-10-08)', async () => {
+    const onOpen = jest.fn();
     const { getByText, getByLabelText } = await render(
-      <NotificationListScreen notifications={NOTIFICATIONS} onRead={onRead} />,
+      <NotificationListScreen notifications={NOTIFICATIONS} onOpen={onOpen} />,
     );
 
     expect(getByText('물 마시기 할 시간이에요')).toBeTruthy();
     expect(getByText('아침 기상단에서 내보내졌어요')).toBeTruthy();
 
     await fireEvent.press(getByLabelText('루틴 리마인드'));
-    expect(onRead).toHaveBeenCalledWith(1);
-
-    // Already-read rows don't re-fire the read receipt.
+    expect(onOpen).toHaveBeenLastCalledWith(expect.objectContaining({ id: 1 }));
     await fireEvent.press(getByLabelText('집 알림'));
-    expect(onRead).toHaveBeenCalledTimes(1);
+    expect(onOpen).toHaveBeenLastCalledWith(expect.objectContaining({ id: 2 }));
+  });
+
+  it('[새 소식] 탭을 열면 onViewNews로 알린다 — 떠날 때 새 소식도 읽음 처리할지 셸이 판단', async () => {
+    const onViewNews = jest.fn();
+    const ui = await render(
+      <NotificationListScreen
+        notifications={NOTIFICATIONS}
+        announcements={[]}
+        onViewNews={onViewNews}
+      />,
+    );
+    expect(onViewNews).not.toHaveBeenCalled();
+    await fireEvent.press(ui.getByText('새 소식'));
+    expect(onViewNews).toHaveBeenCalled();
   });
 
   it('shows 모두 읽음 only while something is unread', async () => {
@@ -173,9 +185,9 @@ describe('NotificationListScreen', () => {
       expect(onDelete).toHaveBeenCalledWith(2);
     });
 
-    it('스와이프 읽음(#560)은 없어졌다 — 읽음은 행 탭으로만', async () => {
+    it('스와이프 읽음(#560)은 없어졌다 — 읽음은 알림함을 떠날 때', async () => {
       const { queryByLabelText } = await render(
-        <NotificationListScreen notifications={NOTIFICATIONS} onRead={jest.fn()} onDelete={jest.fn()} />, // prettier-ignore
+        <NotificationListScreen notifications={NOTIFICATIONS} onOpen={jest.fn()} onDelete={jest.fn()} />, // prettier-ignore
       );
       expect(queryByLabelText('루틴 리마인드 읽음')).toBeNull();
     });

@@ -4,13 +4,14 @@
  */
 import type { RefObject } from 'react';
 import * as MediaLibrary from 'expo-media-library';
-import { Platform, type View } from 'react-native';
+import { type View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
+import { supportsRoomImageSave } from '@/config/features';
 
 export type SaveRoomResult = 'saved' | 'denied' | 'unsupported' | 'failed';
 
 export async function saveRoomImage(ref: RefObject<View | null>): Promise<SaveRoomResult> {
-  if (Platform.OS === 'web') return 'unsupported';
+  if (!supportsRoomImageSave()) return 'unsupported';
   try {
     // 쓰기 전용(writeOnly)으로 묻는다 — Play 사진/동영상 권한 정책(2026-09-12 거절)으로
     // READ_MEDIA_IMAGES/VIDEO를 매니페스트에서 뗐다. 저장만 하므로 Android 13+는 권한

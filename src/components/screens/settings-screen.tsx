@@ -1,5 +1,5 @@
 import { memo, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { GlassSurface } from '@/components/ui/glass-surface';
@@ -27,6 +27,7 @@ import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import type { NavTab } from '@/components/ui/bottom-nav';
 import { DEFAULT_START_TAB, START_TAB_OPTIONS } from '@/lib/start-tab';
 import { type AppLanguage, DEFAULT_LANGUAGE, LANGUAGE_OPTIONS, useT } from '@/i18n';
+import { supportsPushNotifications } from '@/config/features';
 
 const MODE_OPTIONS: ThemeMode[] = ['system', 'light', 'dark'];
 
@@ -143,7 +144,7 @@ export const SettingsScreen = memo(function SettingsScreen({
 
   const sections: { id: string; title: string; rows: Row[] }[] = [
     // 푸시·햅틱은 네이티브 전용 — 웹에선 토글이 되는 척만 하므로 섹션째 숨긴다.
-    ...(Platform.OS === 'web'
+    ...(!supportsPushNotifications()
       ? []
       : [
           {
