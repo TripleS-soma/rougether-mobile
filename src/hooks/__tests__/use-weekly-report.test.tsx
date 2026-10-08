@@ -124,4 +124,32 @@ describe('useWeeklyReport', () => {
     await waitFor(() => expect(result.current.loaded).toBe(true));
     expect(result.current.unread).toBe(true);
   });
+
+  it('상세가 한 번 실패해도 다시 열면 재요청해 채운다', async () => {
+    const calls = mockServer();
+    const ok = global.fetch;
+    let failNext = true;
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (failNext && /\/reports\/weekly\/\d+$/.test(url)) {
+        failNext = false;
+        calls.push(url);
+        return res({ code: 'INTERNAL_SERVER_ERROR' }, 500);
+      }
+      return ok(url, init);
+    }) as unknown as typeof global.fetch;
+
+    const { result } = await renderHook(() => useWeeklyReport(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    await act(async () => {
+      await result.current.loadDetail();
+    });
+    expect(result.current.detail).toBeNull();
+    expect(result.current.loading).toBe(false);
+
+    await act(async () => {
+      await result.current.loadDetail();
+    });
+    await waitFor(() => expect(result.current.detail?.reportId).toBe(9));
+    expect(calls.filter((u) => /\/reports\/weekly\/9$/.test(u))).toHaveLength(2);
+  });
 });
