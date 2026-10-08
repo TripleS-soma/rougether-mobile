@@ -3,6 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useWeeklyReport } from '@/hooks/use-weekly-report';
 import { jsonRes as res } from '@/test-utils/fetch';
+import { queryWrapper } from '@/test-utils/query-wrapper';
 
 const realFetch = global.fetch;
 afterEach(() => {
@@ -33,14 +34,14 @@ function mockServer() {
 describe('useWeeklyReport', () => {
   it('목록 순서와 무관하게 가장 최근 주를 고른다', async () => {
     mockServer();
-    const { result } = await renderHook(() => useWeeklyReport());
+    const { result } = await renderHook(() => useWeeklyReport(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loaded).toBe(true));
     expect(result.current.latest?.reportId).toBe(9);
   });
 
   it('상세는 마운트가 아니라 loadDetail을 부를 때만 받아온다', async () => {
     const calls = mockServer();
-    const { result } = await renderHook(() => useWeeklyReport());
+    const { result } = await renderHook(() => useWeeklyReport(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loaded).toBe(true));
     // 카드에 필요한 건 요약뿐 — 아직 상세를 부르면 안 된다.
     expect(calls.some((u) => /\/reports\/weekly\/9$/.test(u))).toBe(false);
@@ -54,7 +55,7 @@ describe('useWeeklyReport', () => {
 
   it('같은 회고를 다시 열면 재요청하지 않는다', async () => {
     const calls = mockServer();
-    const { result } = await renderHook(() => useWeeklyReport());
+    const { result } = await renderHook(() => useWeeklyReport(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loaded).toBe(true));
     await act(async () => {
       await result.current.loadDetail();
@@ -70,14 +71,14 @@ describe('useWeeklyReport', () => {
     global.fetch = jest.fn(async () => {
       throw new Error('network down');
     }) as unknown as typeof global.fetch;
-    const { result } = await renderHook(() => useWeeklyReport());
+    const { result } = await renderHook(() => useWeeklyReport(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loaded).toBe(true));
     expect(result.current.latest).toBeNull();
   });
 
   it('enabled=false면 아무 요청도 하지 않는다', async () => {
     const calls = mockServer();
-    const { result } = await renderHook(() => useWeeklyReport(false));
+    const { result } = await renderHook(() => useWeeklyReport(false), { wrapper: queryWrapper() });
     expect(calls).toHaveLength(0);
     expect(result.current.loaded).toBe(false);
   });
@@ -86,14 +87,14 @@ describe('useWeeklyReport', () => {
   it('한 번도 안 열어봤으면 새 회고로 본다', async () => {
     await AsyncStorage.removeItem('rougether.weeklyReport.lastRead.v1');
     mockServer();
-    const { result } = await renderHook(() => useWeeklyReport());
+    const { result } = await renderHook(() => useWeeklyReport(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.unread).toBe(true));
   });
 
   it('markRead 후에는 새 회고 표시가 꺼지고 저장된다', async () => {
     await AsyncStorage.removeItem('rougether.weeklyReport.lastRead.v1');
     mockServer();
-    const { result } = await renderHook(() => useWeeklyReport());
+    const { result } = await renderHook(() => useWeeklyReport(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.unread).toBe(true));
     await act(async () => {
       result.current.markRead();
@@ -107,7 +108,7 @@ describe('useWeeklyReport', () => {
   it('이미 읽은 회고면 처음부터 표시하지 않는다', async () => {
     await AsyncStorage.setItem('rougether.weeklyReport.lastRead.v1', '9');
     mockServer();
-    const { result } = await renderHook(() => useWeeklyReport());
+    const { result } = await renderHook(() => useWeeklyReport(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loaded).toBe(true));
     expect(result.current.unread).toBe(false);
   });
@@ -119,7 +120,7 @@ describe('useWeeklyReport', () => {
   it('다음 주 회고가 오면 다시 새 회고로 본다', async () => {
     await AsyncStorage.setItem('rougether.weeklyReport.lastRead.v1', '3');
     mockServer();
-    const { result } = await renderHook(() => useWeeklyReport());
+    const { result } = await renderHook(() => useWeeklyReport(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loaded).toBe(true));
     expect(result.current.unread).toBe(true);
   });

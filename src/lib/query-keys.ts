@@ -36,6 +36,14 @@ export const queryKeys = {
   invites: (userId: number | null | undefined) => ['invites', userId] as const,
   /** 재화 증감 이력 (#734) — 무한 쿼리, 페이지 파라미터는 0부터. */
   walletHistory: (userId: number | null | undefined) => ['wallet-history', userId] as const,
+  /** 주간 회고 (#852) — 목록(최신 1건만 쓴다)과 상세(열 때 지연 로드). */
+  weeklyReports: {
+    list: (userId: number | null | undefined) => ['weekly-reports', userId, 'list'] as const,
+    detail: (userId: number | null | undefined, reportId: number | null) =>
+      ['weekly-reports', userId, 'detail', reportId] as const,
+  },
+  /** 진행 중인 출석 이벤트 (#851) — 없으면 null. */
+  attendance: (userId: number | null | undefined) => ['attendance', userId] as const,
   /** 상점 공개 카탈로그 (GET /items) — 사용자 무관. `owned` 플래그는 인벤토리로 덮는다. */
   items: ['items'] as const,
   /**
