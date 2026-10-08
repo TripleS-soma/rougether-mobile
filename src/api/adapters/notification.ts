@@ -13,6 +13,7 @@ export function toNotificationEntry(n: NotificationItem): NotificationEntry {
     title: n.title ?? i18n.t('notification.list.defaultTitle'),
     body: n.body ?? '',
     read: n.isRead === true,
+    refId: n.refId,
     date: d ? relativeTimeLabel(d) : '',
   };
 }

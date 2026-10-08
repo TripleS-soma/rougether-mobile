@@ -60,6 +60,8 @@ import { calendarToday } from '@/utils/calendar-progress';
 import { CoachMarkOverlay } from '@/components/ui/coach-mark';
 import { useTabScroll } from '@/components/app/use-tab-scroll';
 import { MinigameActiveContext, useMinigameSurface } from '@/components/app/use-minigame-surface';
+import { notificationDestination } from '@/components/app/notification-destination';
+import type { NotificationEntry } from '@/components/screens/notification-list-screen';
 
 // 내비게이션 상수·backTargetFor는 navigation.ts로 이동 (#692) — 기존
 // 임포터(테스트 등)를 위한 재수출.
@@ -428,6 +430,16 @@ export function AppShell({
     }
   }, [missions.step?.id, completedTodayAlready, completeMission]);
 
+  // 알림 카드 탭 → 그 알림의 화면 (2026-10-08). 목적지가 피드·집·나의 방 페이지 훅에 흩어져 있어
+  // 셸이 모은다 — 뒤에 서는 페이지 훅의 값은 누를 때 읽는다(useStableCallback).
+  const openNotification = useStableCallback((entry: NotificationEntry) => {
+    const dest = notificationDestination(entry.type, entry.refId);
+    if (!dest) return;
+    if (dest.kind === 'feedPost') feedPages.openPost(dest.postId);
+    else if (dest.kind === 'weeklyReport') myRoomPages.openWeeklyReport('notificationList');
+    else if (dest.kind === 'houseMembers') housePages.openMembers();
+    else setScreen(dest.screen);
+  });
   const myRoomPages = useMyRoomPages({
     nav: { screen, setScreen, goBack, setAddReturnScreen },
     data: myRoomData,
@@ -441,6 +453,7 @@ export function AppShell({
     },
     // 그날 첫 완료 → 튜토리얼 '루틴 완료' 미션(#1324) + 출석 시트 자동 출석 (#1294).
     onCompletedToday: completedTodayHandler,
+    onOpenNotification: openNotification,
     character: { wornCharacterId, wornCharacterFrames, ownedCharacters, wearCharacter },
     room: {
       growthLevel,

@@ -38,6 +38,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { calendarToday } from '@/utils/calendar-progress';
 import { i18n } from '@/i18n';
+import type { NotificationEntry } from '@/components/screens/notification-list-screen';
 
 type MyRoomData = ReturnType<typeof useMyRoomData>;
 type MissionLinks = ReturnType<typeof useMissionLinks>;
@@ -59,6 +60,7 @@ export function useMyRoomPages({
   character,
   room,
   onCompletedToday,
+  onOpenNotification,
 }: {
   /** 셸 내비 상태 — 추가/수정 화면의 복귀 목적지 포함. */
   nav: {
@@ -136,6 +138,11 @@ export function useMyRoomPages({
    * 자동 출석 모드로 연다. 취소·실패·과거 날짜는 부르지 않는다.
    */
   onCompletedToday?: () => void;
+  /**
+   * 알림 카드 탭 → 그 알림의 화면 (2026-10-08). 목적지가 다른 페이지 훅(피드·집)에 있어
+   * 셸이 모아 넘긴다. 탭으로는 읽음 처리하지 않는다 — 알림함을 떠날 때 한꺼번에.
+   */
+  onOpenNotification?: (entry: NotificationEntry) => void;
 }) {
   const queryClient = useQueryClient();
   const { screen, setScreen, goBack, setAddReturnScreen } = nav;
@@ -252,7 +259,6 @@ export function useMyRoomPages({
     error: notificationsError,
     load: loadNotifications,
     loadMore: loadMoreNotifications,
-    markRead: markNotificationRead,
     markAllRead: markAllNotificationsRead,
     remove: removeNotification,
     removeAll: removeAllNotifications,
@@ -260,8 +266,28 @@ export function useMyRoomPages({
   useEffect(() => {
     void loadNotifications();
   }, [loadNotifications]);
+
   // 앱 번들 새 소식 (#1320) — 알림함 상단 섹션, 읽지 않은 수는 벨 배지에 합산.
   const announcements = useAnnouncements(getSessionUserId());
+
+  // 알림함을 떠날 때 읽음 (2026-10-08) — 카드 탭은 이동만 하고, 본 것은 나갈 때 한꺼번에
+  // 읽음 처리한다. 새 소식은 그 탭을 열어 본 방문에서만(안 본 새 소식 배지가 조용히 사라지지 않게).
+  const newsViewedRef = useRef(false);
+  const markNewsViewed = useCallback(() => {
+    newsViewedRef.current = true;
+  }, []);
+  const prevScreenRef = useRef(screen);
+  const hasUnreadRef = useLatestRef(notificationEntries?.some((n) => !n.read) ?? false);
+  const markAllNotificationsReadRef = useLatestRef(markAllNotificationsRead);
+  const markAllNewsReadRef = useLatestRef(announcements.markAllRead);
+  useEffect(() => {
+    const prev = prevScreenRef.current;
+    prevScreenRef.current = screen;
+    if (prev !== 'notificationList' || screen === 'notificationList') return;
+    if (hasUnreadRef.current) void markAllNotificationsReadRef.current();
+    if (newsViewedRef.current) markAllNewsReadRef.current();
+    newsViewedRef.current = false;
+  }, [screen, hasUnreadRef, markAllNotificationsReadRef, markAllNewsReadRef]);
   const openAnnouncement = useCallback(
     (announcement: AnnouncementRow) => {
       announcements.markRead(announcement.id);
@@ -618,9 +644,8 @@ export function useMyRoomPages({
         onRetry={loadNotifications}
         hasNext={notificationsHasNext}
         onBack={goBack}
-        onRead={(id) => {
-          void markNotificationRead(id);
-        }}
+        onOpen={onOpenNotification}
+        onViewNews={markNewsViewed}
         onReadAll={() => {
           void markAllNotificationsRead();
         }}

@@ -116,6 +116,56 @@ describe('AppShell — 푸시 탭 라우팅 (#405)', () => {
   });
 });
 
+describe('AppShell — 알림함 카드 탭·떠날 때 읽음 (2026-10-08)', () => {
+  const calls: { url: string; method: string }[] = [];
+  beforeEach(() => {
+    calls.splice(0);
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      calls.push({ url, method: init?.method ?? 'GET' });
+      if (url.includes('/notifications?') || url.endsWith('/notifications'))
+        return okJson({
+          items: [
+            { notificationId: 1, type: 'ROUTINE_REMINDER', title: '물 마시기 할 시간', body: '', isRead: false, createdAt: '2026-10-08T00:00:00Z' }, // prettier-ignore
+          ],
+          hasNext: false,
+        });
+      return emptyRes(url);
+    }) as unknown as typeof fetch;
+  });
+
+  it('카드를 누르면 그 화면으로 가고, 탭 자체로는 개별 읽음을 보내지 않으며, 떠나면 모두 읽음', async () => {
+    const view = await renderWithProviders(<AppShell />);
+    await act(async () => notificationTapCb?.());
+    await waitFor(() => view.getByText('물 마시기 할 시간'));
+
+    await fireEvent.press(view.getByLabelText('물 마시기 할 시간'));
+    // 루틴 리마인드 → 나의 방.
+    await waitFor(() => expect(view.queryByText('물 마시기 할 시간')).toBeNull());
+    expect(calls.some((c) => c.method === 'PATCH' && /\/notifications\/1\/read$/.test(c.url))).toBe(
+      false,
+    );
+    await waitFor(() =>
+      expect(
+        calls.some((c) => c.method === 'PATCH' && c.url.endsWith('/notifications/read-all')),
+      ).toBe(true),
+    );
+  });
+
+  it('뒤로 나가도 안 읽은 알림을 모두 읽음 처리한다', async () => {
+    const view = await renderWithProviders(<AppShell />);
+    await act(async () => notificationTapCb?.());
+    await waitFor(() => view.getByText('물 마시기 할 시간'));
+    expect(calls.some((c) => c.url.endsWith('/notifications/read-all'))).toBe(false);
+
+    await fireEvent.press(view.getByLabelText('뒤로 가기'));
+    await waitFor(() =>
+      expect(
+        calls.some((c) => c.method === 'PATCH' && c.url.endsWith('/notifications/read-all')),
+      ).toBe(true),
+    );
+  });
+});
+
 describe('AppShell — 인앱 푸시 배너 (#902)', () => {
   it('앱이 켜져 있을 때 도착한 알림을 상단 배너로 띄우고, 탭하면 알림함으로 간다', async () => {
     const { getByText, getByLabelText, queryByTestId } = await renderWithProviders(<AppShell />);

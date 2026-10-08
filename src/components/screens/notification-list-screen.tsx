@@ -1,4 +1,4 @@
-import { type ReactNode, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import ReanimatedSwipeable, {
   type SwipeableMethods,
@@ -25,6 +25,7 @@ import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
 import { DEMO_NOTIFICATIONS } from '@/mocks/fixtures';
+import { useLatestRef } from '@/hooks/use-stable-value';
 
 /** One notification row (server GET /notifications). */
 export type NotificationEntry = {
@@ -34,6 +35,8 @@ export type NotificationEntry = {
   title: string;
   body: string;
   read: boolean;
+  /** 발송 원인 리소스 id (spec notification api.md) — 카드 탭 목적지에 쓴다(피드 댓글 = 게시물 id). */
+  refId?: number;
   /** Display date, e.g. "7월 8일". */
   date: string;
 };
@@ -49,8 +52,13 @@ export type NotificationListScreenProps = {
   /** More pages exist server-side (shows 더보기). */
   hasNext?: boolean;
   onBack?: () => void;
-  /** Mark one notification read (fired on tapping an unread row). */
-  onRead?: (id: number) => void;
+  /**
+   * 카드 탭 — 그 알림의 화면으로 이동(2026-10-08). 탭으로는 읽음 처리하지 않는다 — 알림함을
+   * **떠날 때** 셸이 한꺼번에 읽음 처리한다.
+   */
+  onOpen?: (entry: NotificationEntry) => void;
+  /** [새 소식] 탭을 열었다 — 셸이 떠날 때 새 소식도 읽음 처리할지 판단한다. */
+  onViewNews?: () => void;
   /** Mark everything read (header button; shown while something is unread). */
   onReadAll?: () => void;
   /** 하나 삭제 (#1137) — 스와이프. 넘기지 않으면 스와이프가 꺼진다. */
@@ -119,7 +127,7 @@ function DeleteAction({
 /**
  * 알림 행 스와이프 삭제 (#1137) — OS 알림 센터처럼 왼쪽으로 **끝까지 밀면 바로
  * 삭제**, 짧게 밀면 [삭제] 버튼이 남고 탭해야 지운다. 서버 삭제는 되돌릴 수 없다.
- * 예전의 스와이프 읽음(#560)은 이 동작으로 대체했고, 읽음은 행 탭으로 한다.
+ * 예전의 스와이프 읽음(#560)은 이 동작으로 대체했다. 읽음은 알림함을 떠날 때 한꺼번에.
  *
  * 삭제 콜백이 없어도 **같은 Swipeable 트리**로 그린다(팬만 꺼짐) — 행 트리 모양이
  * 바뀌면 재마운트되며 RNGH 태그가 어긋나던 #1207과 같은 이유.
@@ -175,8 +183,8 @@ function SwipeDeleteRow({
 
 /**
  * "알림" list screen (server GET /notifications): newest-first rows with an
- * unread accent dot; tapping an unread row marks it read, the header's 모두
- * 읽음 clears everything, swiping a row deletes it and 전체 삭제 empties the
+ * unread accent dot; tapping a row opens its screen (읽음은 알림함을 떠날 때 셸이 한꺼번에,
+ * 2026-10-08), the header's 모두 읽음 clears everything, swiping a row deletes it and 전체 삭제 empties the
  * inbox after a confirm. Pure + prop-driven.
  */
 export function NotificationListScreen({
@@ -186,7 +194,8 @@ export function NotificationListScreen({
   onRetry,
   hasNext = false,
   onBack,
-  onRead,
+  onOpen,
+  onViewNews,
   onReadAll,
   onDelete,
   onDeleteAll,
@@ -211,6 +220,10 @@ export function NotificationListScreen({
   const hasNewsTab = announcements != null;
   const [tab, setTab] = useState<NotificationTab>(hasNewsTab ? initialTab : 'notifications');
   const showingNews = hasNewsTab && tab === 'news';
+  const onViewNewsRef = useLatestRef(onViewNews);
+  useEffect(() => {
+    if (showingNews) onViewNewsRef.current?.();
+  }, [showingNews, onViewNewsRef]);
 
   const tabs = hasNewsTab ? (
     <NotificationTabs
@@ -323,7 +336,7 @@ export function NotificationListScreen({
           renderItem={({ item: n }) => (
             <SwipeDeleteRow entry={n} onDelete={onDelete}>
               <Pressable
-                onPress={() => !n.read && onRead?.(n.id)}
+                onPress={() => onOpen?.(n)}
                 accessibilityRole="button"
                 accessibilityLabel={n.title}
                 accessibilityState={{ selected: !n.read }}
