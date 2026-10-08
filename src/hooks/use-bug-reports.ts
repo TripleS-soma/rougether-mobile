@@ -1,13 +1,18 @@
 /**
  * 버그 제보 (#496) — 내 제보 목록 로드 + 제출. 제출 성공 시 목록을 다시
  * 불러와 방금 제보가 접수됨 배지로 바로 보이게 한다.
+ *
+ * 서버 상태는 react-query (#1027, 리팩토링 장부 16번). 호출 계약은 그대로 명령형 —
+ * 화면을 열 때 `load()`가 받고, 마운트만으로는 받지 않는다(enabled:false).
  */
-import { useCallback, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo } from 'react';
 
 import {
   fetchBugReportScreenshot,
   type BugReportImage,
   fetchMyBugReports,
+  getSessionUserId,
   submitBugReport,
 } from '@/api';
 import { toBugReportEntry } from '@/api/adapters';
@@ -15,19 +20,41 @@ import type { BugReportEntry } from '@/components/screens/bug-report-screen';
 import { appVersion, deviceInfo } from '@/lib/app-info';
 import { formatDiagnostics } from '@/lib/diagnostics-log';
 import { lastErrorEventId } from '@/lib/error-reporting';
+import { queryKeys } from '@/lib/query-keys';
 import { MAX_BUG_REPORT_CONTENT } from '@/components/screens/bug-report-screen';
 
+const NO_ENTRIES: BugReportEntry[] = [];
+
+async function fetchEntries(): Promise<BugReportEntry[]> {
+  return (await fetchMyBugReports()).map(toBugReportEntry);
+}
+
 export function useBugReports() {
-  const [entries, setEntries] = useState<BugReportEntry[]>([]);
+  const userId = getSessionUserId();
+  const queryClient = useQueryClient();
+  const { data } = useQuery({
+    queryKey: queryKeys.bugReports(userId),
+    queryFn: fetchEntries,
+    enabled: false,
+  });
+  const entries = data ?? NO_ENTRIES;
 
   /** Refresh 내 제보 내역 (call when the screen opens). */
   const load = useCallback(async () => {
     try {
-      setEntries((await fetchMyBugReports()).map(toBugReportEntry));
+      // staleTime 0 — 부를 때마다 받는다. 기본값(30초)이면 제출 직후 load()가 캐시만 돌려줘
+      // 방금 낸 제보가 목록에 안 보인다.
+      await queryClient.fetchQuery({
+        queryKey: queryKeys.bugReports(userId),
+        queryFn: fetchEntries,
+        staleTime: 0,
+      });
     } catch {
-      // 목록 로드 실패는 조용히 — 폼 제출은 독립적으로 동작한다.
+      // 목록 로드 실패는 조용히(받아 둔 목록 유지) — 폼 제출은 독립적으로 동작한다.
     }
-  }, []);
+  }, [queryClient, userId]);
+
+  const { mutateAsync: send } = useMutation({ mutationFn: submitBugReport });
 
   /**
    * Submit a report (appVersion/deviceInfo 자동 첨부). Resolves true on success.
@@ -45,7 +72,7 @@ export function useBugReports() {
       const { includeDiagnostics = false, ...rest } = input;
       const content = includeDiagnostics ? withDiagnostics(rest.content) : rest.content;
       try {
-        await submitBugReport({
+        await send({
           ...rest,
           content,
           appVersion: appVersion(),
@@ -57,16 +84,19 @@ export function useBugReports() {
         return false;
       }
     },
-    [load],
+    [send, load],
   );
 
-  return {
-    /** 첨부 스크린샷 한 장 (#736) — 인증이 필요해 화면이 직접 못 그린다. */
-    loadScreenshot: fetchBugReportScreenshot,
-    entries,
-    load,
-    submit,
-  };
+  return useMemo(
+    () => ({
+      /** 첨부 스크린샷 한 장 (#736) — 인증이 필요해 화면이 직접 못 그린다. */
+      loadScreenshot: fetchBugReportScreenshot,
+      entries,
+      load,
+      submit,
+    }),
+    [entries, load, submit],
+  );
 }
 
 /** 운영자가 읽는 구분선 — 언어와 무관하게 고정(서버·어드민에서 검색 가능). */
