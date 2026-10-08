@@ -34,6 +34,25 @@
       "dateLabel": "{{month}}/{{day}}"
     },
     "announcements": {
+      "2026-10-08-feed": {
+        "title": "The feed is here",
+        "body": "Share your day on the Free board and today's completed routines on the Proof board. Proof posts carry a badge with the routine you completed, and \"Mine\" gathers just your own posts.",
+        "action": "Open the feed"
+      },
+      "2026-10-08-market": {
+        "title": "Furniture market",
+        "body": "Buy and sell furniture with other members in the Market tab of Decorate. You can even list furniture you made from a photo. Report posts or furniture that bother you, and block members you don't want to see.",
+        "action": "Open Decorate"
+      },
+      "2026-10-08-games": {
+        "title": "Mini-games, bigger and clearer",
+        "body": "Play Routine Runner big by turning your phone sideways, and Cat Merge now shows the time left. Tiles from 128 up each get their own color.",
+        "action": "Play a game"
+      },
+      "2026-10-08-routines": {
+        "title": "Calendar and routine tweaks",
+        "body": "The weekly calendar now shows all 7 days of a week that spans two months. You can unlink a routine or category from its house mission yourself."
+      },
       "2026-09-13-minigames": {
         "title": "Three mini-games in your room",
         "body": "Routine Runner, Cat Stairs, and Merge Cats. Pick one from the game button in your room and climb the global ranking.",
