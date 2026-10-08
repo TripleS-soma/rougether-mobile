@@ -151,6 +151,29 @@ describe('AppShell — 알림함 카드 탭·떠날 때 읽음 (2026-10-08)', ()
     );
   });
 
+  it('새 소식은 그 탭을 열어 본 방문에서만 떠날 때 읽음 처리한다', async () => {
+    const NEWS = '미니게임이 더 시원해졌어요';
+    const unread = (v: Awaited<ReturnType<typeof renderWithProviders>>) =>
+      v.getByLabelText(NEWS).props.accessibilityState?.selected === true;
+    const view = await renderWithProviders(<AppShell />);
+    // 알림 탭만 보고 나가면 새 소식은 그대로 안 읽음.
+    await act(async () => notificationTapCb?.());
+    await waitFor(() => view.getByText('물 마시기 할 시간'));
+    await fireEvent.press(view.getByLabelText('뒤로 가기'));
+    await waitFor(() => expect(view.queryByText('새 소식')).toBeNull());
+    await act(async () => notificationTapCb?.());
+    await waitFor(() => view.getByText('새 소식'));
+    await fireEvent.press(view.getByText('새 소식'));
+    expect(unread(view)).toBe(true);
+    // 새 소식 탭을 열어 본 뒤 나가면 새 소식도 읽음.
+    await fireEvent.press(view.getByLabelText('뒤로 가기'));
+    await waitFor(() => expect(view.queryByText('새 소식')).toBeNull());
+    await act(async () => notificationTapCb?.());
+    await waitFor(() => view.getByText('새 소식'));
+    await fireEvent.press(view.getByText('새 소식'));
+    await waitFor(() => expect(unread(view)).toBe(false));
+  });
+
   it('뒤로 나가도 안 읽은 알림을 모두 읽음 처리한다', async () => {
     const view = await renderWithProviders(<AppShell />);
     await act(async () => notificationTapCb?.());
