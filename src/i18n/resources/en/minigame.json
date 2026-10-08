@@ -33,7 +33,9 @@
       "statusPaused": "Paused.",
       "statusExtraTile": "New tile in {{n}} turns.",
       "statusRow": "Row {{row}}:",
-      "statusEmpty": "empty"
+      "statusEmpty": "empty",
+      "timeLeft": "Time {{time}}",
+      "timeUp": "Time's up"
     },
     "runner": {
       "mainA11y": "Cat Run",

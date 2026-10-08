@@ -181,10 +181,14 @@ const MERGE_BROWSER_SOURCE = String.raw`function runMerge(config) {
   }
   function announce() {
     status.textContent=fmt(copy.statusScore,{score:state.score,moves:state.directions.length})+' '+
-      (mode==='ended'?copy.statusEnded+' ':mode==='paused'?copy.statusPaused+' ':'')+
+      (mode==='ended'?copy.statusEnded+' '+(endReason==='limit'?copy.timeUp+' ':''):mode==='paused'?copy.statusPaused+' ':'')+
       (state.movesUntilExtraTile===null?'':fmt(copy.statusExtraTile,{n:state.movesUntilExtraTile})+' ')+
       state.board.map(function(value,index){return (index%4===0?' '+fmt(copy.statusRow,{row:Math.floor(index/4)+1})+' ':'')+(value||copy.statusEmpty);}).join(', ');
   }
+  // Time left (2026-10-07): a run is 18000 ticks (60/s = 5 min). Ticks only advance while
+  // playing, so pause/background keeps the clock. Display only, no effect on replay scoring.
+  function secondsLeft(){return Math.max(0,Math.ceil((18000-ticks)/60));}
+  function timeLabel(){var s=secondsLeft();return Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60);}
   function render() {
     if(destroyed)return;
     ctx.fillStyle=colors.sky;ctx.fillRect(0,0,400,600);
@@ -192,6 +196,12 @@ const MERGE_BROWSER_SOURCE = String.raw`function runMerge(config) {
     text(config.practice?copy.titlePractice:copy.title,86,25,15,colors.primaryDark);
     text(fmt(copy.points,{score:state.score}),86,53,25,colors.ink);
     if(lastMerge>0&&glowTicks>0)text('+'+lastMerge,218,53,14,colors.primaryDark,'right');
+    if(mode==='playing'||mode==='paused'){
+      // Highlight the last 30 seconds (fixed potDark: white text stays readable in every theme).
+      var hurry=secondsLeft()<=30;
+      box(228,12,102,25,12,hurry?colors.potDark:colors.paper);
+      text(fmt(copy.timeLeft,{time:timeLabel()}),279,25,11,hurry?colors.white:colors.primaryDark,'center');
+    }
     if(mode==='playing'){
       box(228,41,102,25,12,colors.paper);
       text(fmt(copy.extraTile,{n:state.movesUntilExtraTile}),279,54,11,colors.primaryDark,'center');
@@ -223,6 +233,7 @@ const MERGE_BROWSER_SOURCE = String.raw`function runMerge(config) {
       if(mode==='ended'){
         text(fmt(copy.points,{score:state.score}),200,294,38,colors.primaryDark,'center');
         if(endReason==='blocked')text(copy.blocked,200,342,15,colors.muted,'center');
+        else if(endReason==='limit')text(copy.timeUp,200,342,15,colors.muted,'center');
       }else{
         if(mode==='ready')text(copy.hint,200,244,17,colors.muted,'center');
         if(hostActive){box(100,284,200,56,20,colors.primaryDark);text(mode==='ready'?copy.start:copy.resume,200,312,21,colors.white,'center');}

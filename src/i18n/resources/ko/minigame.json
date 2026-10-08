@@ -33,7 +33,9 @@
       "statusPaused": "일시정지.",
       "statusExtraTile": "추가 타일 {{n}}턴 뒤.",
       "statusRow": "{{row}}행:",
-      "statusEmpty": "빈칸"
+      "statusEmpty": "빈칸",
+      "timeLeft": "남은 시간 {{time}}",
+      "timeUp": "시간 종료"
     },
     "runner": {
       "mainA11y": "고양이 달리기",

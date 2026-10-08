@@ -41,3 +41,20 @@ describe('합치기 타일 색', () => {
     expect(html).toContain('"tileTextColors"');
   });
 });
+
+/** 남은 시간 알약 (2026-10-07) — 막판 강조 배경은 테마가 덮지 않는 고정색이라 대비를 여기서 고정한다. */
+describe('합치기 남은 시간', () => {
+  it('막판 강조(진한 화분색)의 흰 글자는 4.4:1 이상 — 화분색(약 2.6:1)은 쓰지 않는다', () => {
+    const palette = mergePalette();
+    expect(contrastRatio(palette.white, palette.potDark)).toBeGreaterThanOrEqual(4.4);
+  });
+
+  it('문서 설정에 남은 시간·시간 종료 문구가 실린다', () => {
+    const html = createMergeHtml({ seed: 7, channelId: 'c' } as Parameters<
+      typeof createMergeHtml
+    >[0]);
+    expect(html).toContain('"timeLeft":"남은 시간 {{time}}"');
+    expect(html).toContain('"timeUp":"시간 종료"');
+    expect(html).toContain('hurry?colors.potDark');
+  });
+});
