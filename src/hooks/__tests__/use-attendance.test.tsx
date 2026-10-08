@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useAttendance } from '@/hooks/use-attendance';
 import { jsonRes as res } from '@/test-utils/fetch';
+import { queryWrapper } from '@/test-utils/query-wrapper';
 
 const STATUS = {
   eventId: 7,
@@ -28,7 +29,7 @@ describe('useAttendance', () => {
     global.fetch = jest.fn(async () =>
       res({ ...STATUS, checkedInToday: false }),
     ) as unknown as typeof global.fetch;
-    const { result } = await renderHook(() => useAttendance());
+    const { result } = await renderHook(() => useAttendance(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loaded).toBe(true));
     expect(result.current.status?.eventId).toBe(7);
   });
@@ -41,7 +42,7 @@ describe('useAttendance', () => {
     global.fetch = jest.fn(async () =>
       res({ code: 'ATTENDANCE_EVENT_NOT_FOUND', message: 'no event' }, 404),
     ) as unknown as typeof global.fetch;
-    const { result } = await renderHook(() => useAttendance());
+    const { result } = await renderHook(() => useAttendance(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loaded).toBe(true));
     expect(result.current.status).toBeNull();
   });
@@ -50,7 +51,7 @@ describe('useAttendance', () => {
     global.fetch = jest.fn(async () => {
       throw new Error('offline');
     }) as unknown as typeof global.fetch;
-    const { result } = await renderHook(() => useAttendance());
+    const { result } = await renderHook(() => useAttendance(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loaded).toBe(true));
     expect(result.current.status).toBeNull();
   });
@@ -70,7 +71,9 @@ describe('useAttendance', () => {
       return res({ ...STATUS, currentStreak: 3, checkedInToday: false });
     }) as unknown as typeof global.fetch;
 
-    const { result } = await renderHook(() => useAttendance({ onCoinBalance }));
+    const { result } = await renderHook(() => useAttendance({ onCoinBalance }), {
+      wrapper: queryWrapper(),
+    });
     await waitFor(() => expect(result.current.loaded).toBe(true));
 
     let out;
@@ -78,7 +81,8 @@ describe('useAttendance', () => {
       out = await result.current.checkIn();
     });
     expect(out).toMatchObject({ newCheckIn: true, coinRewardAmount: 30 });
-    expect(result.current.status?.currentStreak).toBe(4);
+    // 캐시 반영은 notifyManager가 배칭한다 — 즉시 단언하지 않고 기다린다.
+    await waitFor(() => expect(result.current.status?.currentStreak).toBe(4));
     expect(onCoinBalance).toHaveBeenCalledWith(190);
   });
 
@@ -100,7 +104,7 @@ describe('useAttendance', () => {
       return res(STATUS);
     }) as unknown as typeof global.fetch;
 
-    const { result } = await renderHook(() => useAttendance());
+    const { result } = await renderHook(() => useAttendance(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loaded).toBe(true));
     let out;
     await act(async () => {
@@ -116,7 +120,7 @@ describe('useAttendance', () => {
    */
   it('200이어도 형태가 안 맞는 응답은 이벤트 없음으로 접는다', async () => {
     global.fetch = jest.fn(async () => res({})) as unknown as typeof global.fetch;
-    const { result } = await renderHook(() => useAttendance());
+    const { result } = await renderHook(() => useAttendance(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loaded).toBe(true));
     expect(result.current.status).toBeNull();
   });
@@ -125,7 +129,7 @@ describe('useAttendance', () => {
     global.fetch = jest.fn(async () =>
       res({ eventId: 7, title: '10일 연속 출석' }),
     ) as unknown as typeof global.fetch;
-    const { result } = await renderHook(() => useAttendance());
+    const { result } = await renderHook(() => useAttendance(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loaded).toBe(true));
     expect(result.current.status).toBeNull();
   });
