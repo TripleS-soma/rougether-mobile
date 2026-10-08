@@ -42,9 +42,12 @@ export function useBugReports() {
   /** Refresh 내 제보 내역 (call when the screen opens). */
   const load = useCallback(async () => {
     try {
+      // staleTime 0 — 부를 때마다 받는다. 기본값(30초)이면 제출 직후 load()가 캐시만 돌려줘
+      // 방금 낸 제보가 목록에 안 보인다.
       await queryClient.fetchQuery({
         queryKey: queryKeys.bugReports(userId),
         queryFn: fetchEntries,
+        staleTime: 0,
       });
     } catch {
       // 목록 로드 실패는 조용히(받아 둔 목록 유지) — 폼 제출은 독립적으로 동작한다.

@@ -8,6 +8,7 @@ import {
 } from '@/hooks/use-bug-reports';
 import * as diagnosticsLog from '@/lib/diagnostics-log';
 import { jsonRes as res } from '@/test-utils/fetch';
+import { createQueryClient } from '@/lib/query-client';
 import { queryWrapper } from '@/test-utils/query-wrapper';
 
 const realFetch = global.fetch;
@@ -52,6 +53,32 @@ describe('useBugReports', () => {
     expect(fields).toEqual(expect.arrayContaining(['title', 'content', 'deviceInfo']));
     // 제출 성공 후 목록을 다시 불러온다.
     await waitFor(() => expect(calls.filter((c) => c.method !== 'POST').length).toBeGreaterThan(1));
+  });
+
+  // 운영 클라이언트(staleTime 30초)로 돈다 — 테스트 래퍼(staleTime 0)로는 못 잡는 회귀.
+  it('제출 직후 다시 불러오면 방금 낸 제보가 목록에 보인다(운영 기본값)', async () => {
+    let submitted = false;
+    global.fetch = jest.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') {
+        submitted = true;
+        return res({ bugReportId: 2 }, 201);
+      }
+      const items = [{ bugReportId: 1, title: '버그', status: 'RECEIVED' }];
+      if (submitted) items.unshift({ bugReportId: 2, title: '새 버그', status: 'RECEIVED' });
+      return res({ items });
+    }) as unknown as typeof fetch;
+
+    const client = createQueryClient();
+    const { result } = await renderHook(() => useBugReports(), { wrapper: queryWrapper(client) });
+    await act(async () => {
+      await result.current.load();
+    });
+    await waitFor(() => expect(result.current.entries).toHaveLength(1));
+    await act(async () => {
+      await result.current.submit({ title: '새 버그', content: '내용', images: [] });
+    });
+    await waitFor(() => expect(result.current.entries).toHaveLength(2));
+    client.clear();
   });
 
   it('다시 불러오기가 실패해도 받아 둔 목록은 그대로 둔다', async () => {

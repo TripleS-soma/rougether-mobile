@@ -107,6 +107,23 @@ describe('useGuestbook', () => {
     expect(calls.filter((c) => c.url.includes('cursor=1'))).toHaveLength(1);
   });
 
+  it('더보기가 실패하면 토스트로 알리고 받아 둔 글은 남긴다', async () => {
+    mockGuestbookServer();
+    const ok = global.fetch;
+    const { result } = await renderHook(() => useGuestbook(), { wrapper: queryWrapper() });
+    await act(async () => {
+      await result.current.load(7, 11);
+    });
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) =>
+      url.includes('cursor=1') ? res({ code: 'X' }, 500) : ok(url, init),
+    ) as unknown as typeof fetch;
+    await act(async () => {
+      await result.current.loadMore();
+    });
+    expect(mockShowToast).toHaveBeenCalledWith('방명록을 더 불러오지 못했어요', 'error');
+    expect(result.current.entries?.map((e) => e.content)).toEqual(['새 글']);
+  });
+
   it('쓰면 내 글을 맨 위에 붙이고 작성자는 "나"로 보인다', async () => {
     mockGuestbookServer();
     const { result } = await renderHook(() => useGuestbook(), { wrapper: queryWrapper() });
