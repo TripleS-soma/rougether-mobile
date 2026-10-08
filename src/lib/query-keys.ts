@@ -42,6 +42,14 @@ export const queryKeys = {
     detail: (userId: number | null | undefined, reportId: number | null) =>
       ['weekly-reports', userId, 'detail', reportId] as const,
   },
+  /** 친구 방 방명록 (#147) — 방 주인 + 같이 사는 집 단위 커서 페이지. */
+  guestbook: (
+    userId: number | null | undefined,
+    roomOwnerId: number | null,
+    houseId: number | null,
+  ) => ['guestbook', userId, roomOwnerId, houseId] as const,
+  /** 내 버그 제보 목록 (#496). */
+  bugReports: (userId: number | null | undefined) => ['bug-reports', userId] as const,
   /** 진행 중인 출석 이벤트 (#851) — 없으면 null. */
   attendance: (userId: number | null | undefined) => ['attendance', userId] as const,
   /** 상점 공개 카탈로그 (GET /items) — 사용자 무관. `owned` 플래그는 인벤토리로 덮는다. */

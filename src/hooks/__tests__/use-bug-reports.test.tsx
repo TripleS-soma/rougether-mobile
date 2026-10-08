@@ -8,6 +8,7 @@ import {
 } from '@/hooks/use-bug-reports';
 import * as diagnosticsLog from '@/lib/diagnostics-log';
 import { jsonRes as res } from '@/test-utils/fetch';
+import { queryWrapper } from '@/test-utils/query-wrapper';
 
 const realFetch = global.fetch;
 afterEach(() => {
@@ -25,11 +26,12 @@ describe('useBugReports', () => {
       });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useBugReports());
+    const { result } = await renderHook(() => useBugReports(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load();
     });
-    expect(result.current.entries).toHaveLength(1);
+    // 캐시 반영은 notifyManager가 배칭한다 — 즉시 단언하지 않고 기다린다.
+    await waitFor(() => expect(result.current.entries).toHaveLength(1));
     expect(result.current.entries[0]).toMatchObject({ id: 1, status: 'RECEIVED' });
 
     let ok = false;
@@ -52,13 +54,33 @@ describe('useBugReports', () => {
     await waitFor(() => expect(calls.filter((c) => c.method !== 'POST').length).toBeGreaterThan(1));
   });
 
+  it('다시 불러오기가 실패해도 받아 둔 목록은 그대로 둔다', async () => {
+    let fail = false;
+    global.fetch = jest.fn(async () =>
+      fail
+        ? res({ code: 'X' }, 500)
+        : res({ items: [{ bugReportId: 1, title: '버그', status: 'RECEIVED' }] }),
+    ) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useBugReports(), { wrapper: queryWrapper() });
+    await act(async () => {
+      await result.current.load();
+    });
+    await waitFor(() => expect(result.current.entries).toHaveLength(1));
+    fail = true;
+    await act(async () => {
+      await result.current.load();
+    });
+    expect(result.current.entries).toHaveLength(1);
+  });
+
   it('load 실패는 조용히(기존 목록 유지), submit 실패는 false', async () => {
     global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
       if (init?.method === 'POST') return res({ code: 'X' }, 500);
       return res({ code: 'X' }, 500);
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useBugReports());
+    const { result } = await renderHook(() => useBugReports(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load();
     });
