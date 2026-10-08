@@ -76,12 +76,46 @@ describe('onNotificationTap', () => {
     await Promise.resolve();
     listener?.(response);
     expect(received).toHaveBeenCalledTimes(1);
-    expect(received).toHaveBeenCalledWith({ type: 'APP_INACTIVITY_REMINDER' });
+    expect(received).toHaveBeenCalledWith({ type: 'APP_INACTIVITY_REMINDER', refId: undefined });
     stop();
     listener?.({
       notification: { request: { ...response.notification.request, identifier: 'late' } },
     });
     expect(received).toHaveBeenCalledTimes(1);
+    getLast.mockRestore();
+    subscribe.mockRestore();
+  });
+
+  it('피드 댓글 FCM data의 postId(문자열)를 refId로 넘긴다 (#1409)', async () => {
+    const getLast = jest
+      .spyOn(Notifications, 'getLastNotificationResponseAsync')
+      .mockResolvedValue(null as never);
+    let listener: ((r: unknown) => void) | undefined;
+    const subscribe = jest
+      .spyOn(Notifications, 'addNotificationResponseReceivedListener')
+      .mockImplementation((cb) => {
+        listener = cb as unknown as typeof listener;
+        return { remove: jest.fn() } as never;
+      });
+    const received = jest.fn();
+    const stop = onNotificationTap(received);
+    listener?.({
+      notification: {
+        request: {
+          identifier: 'feed-1',
+          content: { data: { type: 'FEED_COMMENT', notificationId: '100', postId: '42' } },
+        },
+      },
+    });
+    expect(received).toHaveBeenLastCalledWith({ type: 'FEED_COMMENT', refId: 42 });
+    // 숫자로 못 바꾸는 값은 버린다.
+    listener?.({
+      notification: {
+        request: { identifier: 'feed-2', content: { data: { type: 'FEED_COMMENT', postId: 'x' } } },
+      },
+    });
+    expect(received).toHaveBeenLastCalledWith({ type: 'FEED_COMMENT', refId: undefined });
+    stop();
     getLast.mockRestore();
     subscribe.mockRestore();
   });

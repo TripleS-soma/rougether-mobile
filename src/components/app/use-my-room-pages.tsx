@@ -39,6 +39,7 @@ import { useLatestRef } from '@/hooks/use-stable-value';
 import { calendarToday } from '@/utils/calendar-progress';
 import { i18n } from '@/i18n';
 import type { NotificationEntry } from '@/components/screens/notification-list-screen';
+import { notificationDestination } from '@/components/app/notification-destination';
 
 type MyRoomData = ReturnType<typeof useMyRoomData>;
 type MissionLinks = ReturnType<typeof useMissionLinks>;
@@ -142,7 +143,7 @@ export function useMyRoomPages({
    * 알림 카드 탭 → 그 알림의 화면 (2026-10-08). 목적지가 다른 페이지 훅(피드·집)에 있어
    * 셸이 모아 넘긴다. 탭으로는 읽음 처리하지 않는다 — 알림함을 떠날 때 한꺼번에.
    */
-  onOpenNotification?: (entry: NotificationEntry) => void;
+  onOpenNotification?: (target: Pick<NotificationEntry, 'type' | 'refId'>) => boolean;
 }) {
   const queryClient = useQueryClient();
   const { screen, setScreen, goBack, setAddReturnScreen } = nav;
@@ -306,19 +307,16 @@ export function useMyRoomPages({
     setScreen('notificationList');
   }, [loadNotifications, setScreen]);
 
-  // 푸시 탭(콜드 스타트 포함) → 알림 목록으로 (#405).
+  const onOpenNotificationRef = useLatestRef(onOpenNotification);
+  // 푸시 탭(콜드 스타트 포함) → 그 알림의 화면, 모르면 알림함 (#405 → #1409).
   useEffect(
     () =>
       onNotificationTap((notification) => {
         reportAppOpen('push');
-        if (
-          notification?.type === 'APP_INACTIVITY_REMINDER' ||
-          notification?.type === 'ROOM_COBWEB_APPEARED'
-        )
-          setScreen('myRoom');
-        else openNotifications();
+        // 알림함 카드와 같은 목적지 표 (#1409) — 갈 곳을 모르는 종류만 알림함으로.
+        if (!notification || !onOpenNotificationRef.current?.(notification)) openNotifications();
       }),
-    [openNotifications, setScreen],
+    [openNotifications, onOpenNotificationRef],
   );
 
   /**
@@ -346,13 +344,13 @@ export function useMyRoomPages({
         setPushBanner({
           key: pushBannerSeq.current,
           ...n,
-          onPress:
-            n.type === 'APP_INACTIVITY_REMINDER' || n.type === 'ROOM_COBWEB_APPEARED'
-              ? () => setScreen('myRoom')
-              : undefined,
+          // 배너 탭도 같은 목적지 표 (#1409) — 갈 곳이 없으면(undefined) 알림함.
+          onPress: notificationDestination(n.type, n.refId)
+            ? () => void onOpenNotificationRef.current?.(n)
+            : undefined,
         });
       }),
-    [loadNotifications, setScreen],
+    [loadNotifications, onOpenNotificationRef],
   );
   const dismissPushBanner = useCallback(() => setPushBanner(null), []);
 

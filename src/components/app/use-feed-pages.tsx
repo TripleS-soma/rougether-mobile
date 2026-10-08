@@ -193,8 +193,8 @@ export function useFeedPages({
     [board, feed, handleToggleLike, openPost, openCompose],
   );
 
-  // 알림함의 FEED_COMMENT 카드(refId = postId)는 셸이 openPost로 잇는다(2026-10-08).
-  // TODO(#1409): 푸시 탭은 아직 use-my-room-pages가 알림함으로 보낸다 — 같은 목적지 표로 잇기.
+  // 알림함 카드·푸시 탭·인앱 배너의 FEED_COMMENT(refId·FCM postId = 게시물 id)는 셸이
+  // notification-destination 표를 거쳐 openPost로 잇는다 (#1409).
   const subScreen =
     screen === 'feedPost' ? (
       <FeedPostScreen
