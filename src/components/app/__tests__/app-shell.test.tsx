@@ -11,12 +11,12 @@ import { QueryProvider } from '@/test-utils/query-wrapper';
 import { renderWithProviders } from '@/test-utils/render';
 
 // 푸시 탭 콜백을 붙잡아 테스트에서 직접 발화한다 (#405).
-let notificationTapCb: ((n?: { type?: string }) => void) | null = null;
+let notificationTapCb: ((n?: { type?: string; refId?: number }) => void) | null = null;
 let notificationReceivedCb: ((n: { type?: string; title: string; body: string }) => void) | null =
   null;
 
 jest.mock('@/lib/push-events', () => ({
-  onNotificationTap: (cb: (n?: { type?: string }) => void) => {
+  onNotificationTap: (cb: (n?: { type?: string; refId?: number }) => void) => {
     notificationTapCb = cb;
     return () => {
       notificationTapCb = null;
@@ -106,6 +106,17 @@ describe('AppShell — 푸시 탭 라우팅 (#405)', () => {
     },
   );
 
+  it('피드 댓글 푸시는 그 게시물 상세로 연다 (#1409)', async () => {
+    const view = await renderWithProviders(<AppShell />);
+    await act(async () => notificationTapCb?.({ type: 'FEED_COMMENT', refId: 42 }));
+    await waitFor(() =>
+      expect(
+        (global.fetch as jest.Mock).mock.calls.some(([u]) => String(u).endsWith('/feed/posts/42')),
+      ).toBe(true),
+    );
+    expect(view.queryByText('알림')).toBeNull();
+  });
+
   it('알림 탭 콜백이 발화하면 알림 목록 화면으로 이동한다', async () => {
     const { getByText } = await renderWithProviders(<AppShell />);
     expect(notificationTapCb).toBeTruthy();
@@ -189,8 +200,8 @@ describe('AppShell — 알림함 카드 탭·떠날 때 읽음 (2026-10-08)', ()
   });
 });
 
-describe('AppShell — 인앱 푸시 배너 (#902)', () => {
-  it('앱이 켜져 있을 때 도착한 알림을 상단 배너로 띄우고, 탭하면 알림함으로 간다', async () => {
+describe('AppShell — 인앱 푸시 배너 (#902 → #1409)', () => {
+  it('갈 곳을 모르는 알림의 배너를 탭하면 알림함으로 간다', async () => {
     const { getByText, getByLabelText, queryByTestId } = await renderWithProviders(<AppShell />);
     expect(notificationReceivedCb).toBeTruthy();
     // 아무것도 안 왔으면 배너도 없다.
@@ -198,17 +209,35 @@ describe('AppShell — 인앱 푸시 배너 (#902)', () => {
 
     await act(async () =>
       notificationReceivedCb?.({
+        type: 'SOMETHING_NEW',
+        title: '새 기능 안내',
+        body: '확인해 보세요',
+      }),
+    );
+    await waitFor(() => getByText('새 기능 안내'));
+    await act(async () => {
+      await fireEvent.press(getByLabelText('새 기능 안내. 확인해 보세요'));
+    });
+    await waitFor(() => getByText('알림'));
+  });
+
+  it('응원 배너는 알림 카드와 같은 목적지(나의 방)로 간다', async () => {
+    const view = await renderWithProviders(<AppShell />);
+    await act(async () => notificationTapCb?.());
+    await waitFor(() => view.getByText('알림'));
+    await act(async () =>
+      notificationReceivedCb?.({
         type: 'FRIEND_CHEER',
         title: '응원이 도착했어요',
         body: '오늘도 화이팅!',
       }),
     );
-    await waitFor(() => getByText('응원이 도착했어요'));
-
+    await waitFor(() => view.getByText('응원이 도착했어요'));
     await act(async () => {
-      await fireEvent.press(getByLabelText('응원이 도착했어요. 오늘도 화이팅!'));
+      await fireEvent.press(view.getByLabelText('응원이 도착했어요. 오늘도 화이팅!'));
     });
-    await waitFor(() => getByText('알림'));
+    await waitFor(() => expect(view.queryByText('모두 읽음')).toBeNull());
+    expect(view.getByText('오늘의 할 일')).toBeTruthy();
   });
 });
 
