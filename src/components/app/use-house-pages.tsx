@@ -562,6 +562,7 @@ export function useHousePages({
     subScreen,
     /** 집 없는 유저 판정 (#571) — 셸의 내비(useAppNavigation)·BottomNav가 쓴다. */
     noHouses,
-    /** 탐색을 뒤로 떠나는 순간의 미션 판정 — 셸이 useAppNavigation에 넘긴다. */
+    /** 구성원 화면 — 방장이면 입주 신청 목록을 새로 받는다(#526). 알림 카드 탭도 이 경로로. */
+    openMembers,
   };
 }
