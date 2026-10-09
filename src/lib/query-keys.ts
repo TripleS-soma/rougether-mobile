@@ -50,6 +50,8 @@ export const queryKeys = {
   ) => ['guestbook', userId, roomOwnerId, houseId] as const,
   /** 알림함 (GET /notifications) — 커서 페이지, 화면 모델(NotificationEntry)로 캐시. */
   notifications: (userId: number | null | undefined) => ['notifications', userId] as const,
+  /** 집 탐색 목록 (#975) — 페이지 번호 방식, excludeJoined(#578)라 사용자별. */
+  houseSearch: (userId: number | null | undefined) => ['house-search', userId] as const,
   /** 내 버그 제보 목록 (#496). */
   bugReports: (userId: number | null | undefined) => ['bug-reports', userId] as const,
   /** 진행 중인 출석 이벤트 (#851) — 없으면 null. */

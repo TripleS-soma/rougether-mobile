@@ -3,6 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import * as auth from '@/api/auth';
 import { useHouses } from '@/hooks/use-houses';
 import { jsonRes as res } from '@/test-utils/fetch';
+import { queryWrapper } from '@/test-utils/query-wrapper';
 
 // 토스트 캡처 — 탈퇴 신청자 승인 가드(#240) 문구 단언용.
 const mockToast = jest.fn();
@@ -34,7 +35,7 @@ describe('useHouses — 응원 보내기 (#329)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useHouses());
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
@@ -50,7 +51,7 @@ describe('useHouses — 입주 신청 처리', () => {
   it('calls the owner accept and reject endpoints', async () => {
     global.fetch = jest.fn(async () => res({ items: [] })) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useHouses());
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
@@ -84,7 +85,7 @@ describe('useHouses — 집 생성 goalIds 클램프', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useHouses());
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
     let ok = false;
     await act(async () => {
@@ -108,7 +109,7 @@ describe('useHouses — 탈퇴 신청자 승인 가드 (#240)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useHouses());
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(async () => {
       await result.current.acceptJoinRequest(6, 9);
@@ -134,7 +135,7 @@ describe('useHouses — 단일 집 갱신 (#534)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useHouses());
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.houses.length).toBe(1));
     expect(result.current.houses[0].joinRequests?.length).toBe(1);
 
@@ -168,7 +169,7 @@ describe('useHouses — 로드 실패 → error + 재시도 (#549)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useHouses());
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.error).toBe(true);
     expect(result.current.houses).toEqual([]);
@@ -195,7 +196,7 @@ describe('useHouses — 초대코드 오류 구분 (#549)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useHouses());
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
@@ -213,7 +214,7 @@ describe('useHouses — 초대코드 오류 구분 (#549)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useHouses());
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
@@ -259,7 +260,7 @@ describe('useHouses — 집 순서 변경 (#820)', () => {
 
   it('204를 성공으로 처리한다 — 본문이 없어도 터지지 않는다', async () => {
     const calls = setUp({ status: 204 });
-    const { result } = await renderHook(() => useHouses());
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.houses.length).toBe(2));
 
     await act(async () => {
@@ -274,7 +275,7 @@ describe('useHouses — 집 순서 변경 (#820)', () => {
 
   it('400 HOUSE_ORDER_INVALID면 되돌리지 않고 다시 불러온다', async () => {
     setUp({ status: 400, body: { code: 'HOUSE_ORDER_INVALID' } });
-    const { result } = await renderHook(() => useHouses());
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.houses.length).toBe(2));
 
     await act(async () => {
@@ -286,7 +287,7 @@ describe('useHouses — 집 순서 변경 (#820)', () => {
 
   it('그 밖의 실패는 이전 순서로 되돌린다', async () => {
     setUp({ status: 500, body: {} });
-    const { result } = await renderHook(() => useHouses());
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.houses.length).toBe(2));
     const before = result.current.houses.map((h) => h.houseId);
 
@@ -325,7 +326,7 @@ describe('useHouses — 프로필 닉네임 반영 (#924)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useHouses());
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     const names = () => result.current.houses[0].floors.flatMap((f) => f.rooms).map((r) => r.name);

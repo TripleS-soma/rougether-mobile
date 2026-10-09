@@ -5,16 +5,31 @@
  * 내 집 목록과는 서버 excludeJoined 필터(#578)로만 엮인다 — 입주 신청은
  * 방장 승인 대기라 내 집 번들을 건드리지 않고 탐색 목록만 다시 받는다.
  *
+ * 서버 상태는 react-query (#1027, 리팩토링 장부 16번) — 받은 페이지를 그대로 캐시하고
+ * 화면 목록은 `mergeSearchPages`로 계산한다. 호출 계약은 명령형 그대로라 쿼리는 스스로
+ * 받지 않고(enabled:false) `ensureSearch`·다시 시도·입주 신청이 첫 페이지부터 다시 받는다.
+ *
  * 콜백은 전부 useCallback, 반환 객체는 useMemo — memo 경계(#539) 보존.
  */
+import { type InfiniteData, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
-import { ApiError, ErrorCode, fetchHousePreviewDetail, fetchHouses, requestHouseJoin } from '@/api';
+import {
+  ApiError,
+  ErrorCode,
+  fetchHousePreviewDetail,
+  fetchHouses,
+  getSessionUserId,
+  type Page,
+  requestHouseJoin,
+} from '@/api';
 import { toHousePreviewDetail, toSearchHouse, type ShopCatalogue } from '@/api/adapters';
 import type { HousePreviewDetail, SearchHouse } from '@/components/screens/house-search-screen';
 import { useToast } from '@/components/ui/toast';
 import { i18n } from '@/i18n';
+import type { HouseSummary } from '@/api/types';
 import { track } from '@/lib/analytics';
+import { queryKeys } from '@/lib/query-keys';
 
 /** 집 탐색 한 페이지 크기 (#975). */
 const SEARCH_PAGE_SIZE = 30;
@@ -28,57 +43,80 @@ function hasNextPage(res: { items?: unknown[]; totalElements?: number }, loaded:
   return (res.items?.length ?? 0) >= SEARCH_PAGE_SIZE;
 }
 
+type SearchPages = InfiniteData<Page<HouseSummary>, number>;
+
+function searchOptions(userId: number | null | undefined) {
+  return {
+    queryKey: queryKeys.houseSearch(userId),
+    // excludeJoined — 본인 ACTIVE(소유 포함) 집은 서버가 걸러 준다 (#578).
+    queryFn: ({ pageParam }: { pageParam: number }) =>
+      fetchHouses(pageParam, SEARCH_PAGE_SIZE, true),
+    initialPageParam: 0,
+    getNextPageParam: (_last: Page<HouseSummary>, _all: unknown, lastPage: number) => lastPage + 1,
+  };
+}
+
+const NO_SEARCH = { houses: [] as SearchHouse[], hasNext: false };
+
+/**
+ * 받은 페이지들 → 탐색 목록 (#975).
+ *
+ * `toSearchHouse`의 index가 아이콘·배경색을 돌리므로 **이미 쌓인 개수만큼 밀어서**
+ * 넘긴다. 0부터 다시 세면 페이지 경계에서 같은 아이콘이 붙는다. 같은 집이 두 번 오면
+ * (생성/삭제로 페이지가 밀릴 때, 한 페이지 안에서도) 중복 키가 되므로 건너뛴다.
+ */
+export function mergeSearchPages(pages: Page<HouseSummary>[]) {
+  const seen = new Set<SearchHouse['id']>();
+  const houses: SearchHouse[] = [];
+  let hasNext = false;
+  for (const page of pages) {
+    for (const h of page.items) {
+      // index는 최종 목록에서의 자리 — 아이콘·배경이 여기서 갈린다.
+      const mapped = toSearchHouse(h, houses.length);
+      if (seen.has(mapped.id)) continue;
+      seen.add(mapped.id);
+      houses.push(mapped);
+    }
+    hasNext = hasNextPage(page, houses.length);
+  }
+  return { houses, hasNext };
+}
+
 export function useHouseSearch() {
-  const [searchHouses, setSearchHouses] = useState<SearchHouse[]>([]);
-  /** 다음 페이지가 남았는지 (#975) — 목록 끝에서 이어 붙일지 판단. */
-  const [searchHasNext, setSearchHasNext] = useState(false);
+  const userId = getSessionUserId();
+  const queryClient = useQueryClient();
+  const { data } = useInfiniteQuery({ ...searchOptions(userId), enabled: false });
+  const { houses: searchHouses, hasNext: searchHasNext } = useMemo(
+    () => (data ? mergeSearchPages(data.pages) : NO_SEARCH),
+    [data],
+  );
   const [searchLoadingMore, setSearchLoadingMore] = useState(false);
-  /** 마지막으로 받은 페이지 번호. 무한 스크롤이 여기서 이어간다. */
-  const searchPageRef = useRef(0);
   const [searchLoading, setSearchLoading] = useState(true);
   // 초기 로드 실패 플래그 (#549) — 빈 검색 결과로 위장하지 않도록 화면이
   // 에러+다시 시도를 보여준다. 재시도 성공 시 해제.
   const [searchError, setSearchError] = useState(false);
   const { show: toast } = useToast();
 
+  /** 첫 페이지만 다시 받는다 — 이어 붙였던 페이지는 접는다. 실패는 던진다. */
   const reloadSearch = useCallback(async () => {
-    // excludeJoined — 본인 ACTIVE(소유 포함) 집은 서버가 걸러 준다 (#578).
-    const list = await fetchHouses(0, SEARCH_PAGE_SIZE, true);
-    const items = list.items.map((h, i) => toSearchHouse(h, i));
-    searchPageRef.current = 0;
-    setSearchHouses(items);
-    setSearchHasNext(hasNextPage(list, items.length));
-  }, []);
+    await queryClient.fetchInfiniteQuery({ ...searchOptions(userId), pages: 1, staleTime: 0 });
+  }, [queryClient, userId]);
 
   /**
-   * 다음 페이지를 이어 붙인다 (#975) — 종전엔 30개에서 조용히 잘렸다.
-   *
-   * `toSearchHouse`의 index가 아이콘·배경색을 돌리므로 **이미 쌓인 개수만큼
-   * 밀어서** 넘긴다. 0부터 다시 세면 페이지 경계에서 같은 아이콘이 붙는다.
+   * 다음 페이지를 이어 붙인다 (#975) — 종전엔 30개에서 조용히 잘렸다. 캐시에 **함수형으로**
+   * 붙인다(fetchNextPage는 시작 시점 페이지에 붙인 결과로 덮어쓴다).
    */
   const loadMoreSearch = useCallback(async () => {
     if (searchLoadingMore || !searchHasNext) return;
     setSearchLoadingMore(true);
     try {
-      const next = searchPageRef.current + 1;
-      const list = await fetchHouses(next, SEARCH_PAGE_SIZE, true);
-      searchPageRef.current = next;
-      setSearchHouses((prev) => {
-        // 같은 집이 두 번 오면(생성/삭제로 페이지가 밀릴 때) 중복 키가 된다.
-        // seen을 돌면서 갱신해 **한 페이지 안의 중복**까지 같이 막는다.
-        const seen = new Set(prev.map((h) => h.id));
-        const added: SearchHouse[] = [];
-        for (const h of list.items) {
-          // index는 최종 목록에서의 자리 — 아이콘·배경이 여기서 갈린다.
-          const mapped = toSearchHouse(h, prev.length + added.length);
-          if (seen.has(mapped.id)) continue;
-          seen.add(mapped.id);
-          added.push(mapped);
-        }
-        const merged = [...prev, ...added];
-        setSearchHasNext(hasNextPage(list, merged.length));
-        return merged;
-      });
+      const key = queryKeys.houseSearch(userId);
+      const next = (queryClient.getQueryData<SearchPages>(key)?.pageParams.at(-1) ?? -1) + 1;
+      const page = await fetchHouses(next, SEARCH_PAGE_SIZE, true);
+      queryClient.setQueryData<SearchPages>(
+        key,
+        (old) => old && { pages: [...old.pages, page], pageParams: [...old.pageParams, next] },
+      );
     } catch {
       // 이 훅의 다른 액션과 같은 처리 — 조용히 멈추면 스피너만 사라져
       // "왜 안 나오지?"가 된다. hasNext는 그대로라 다시 스크롤하면 재시도된다.
@@ -86,7 +124,7 @@ export function useHouseSearch() {
     } finally {
       setSearchLoadingMore(false);
     }
-  }, [searchHasNext, searchLoadingMore, toast]);
+  }, [searchHasNext, searchLoadingMore, queryClient, userId, toast]);
 
   /** 탐색 목록 로드 사이클 — 실패는 빈 검색 결과와 구분해 표시한다 (#549). */
   const loadSearch = useCallback(async () => {

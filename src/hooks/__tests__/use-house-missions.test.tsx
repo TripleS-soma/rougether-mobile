@@ -6,6 +6,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useHouses } from '@/hooks/use-houses';
 import { jsonRes as res } from '@/test-utils/fetch';
+import { queryWrapper } from '@/test-utils/query-wrapper';
 
 const mockToast = jest.fn();
 jest.mock('@/components/ui/toast', () => ({
@@ -33,7 +34,7 @@ describe('useHouses — 기여 추적', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useHouses());
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
@@ -61,7 +62,7 @@ describe('useHouses — 완료 응답의 서버 자동 기여 반영 (#578)', ()
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useHouses());
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.houses.length).toBe(1));
 
     calls.length = 0;
