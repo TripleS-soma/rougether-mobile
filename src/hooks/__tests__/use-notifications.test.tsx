@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useNotifications } from '@/hooks/use-notifications';
 import { jsonRes as res } from '@/test-utils/fetch';
+import { queryWrapper } from '@/test-utils/query-wrapper';
 
 const PAGE_1 = {
   items: [
@@ -12,10 +13,23 @@ const PAGE_1 = {
   hasNext: true,
 };
 
+// 토스트 스파이 — 훅은 no-op 기본 컨텍스트로도 돌지만 발화 여부를 단언한다.
+const mockShowToast = jest.fn();
+jest.mock('@/components/ui/toast', () => ({
+  useToast: () => ({ show: mockShowToast }),
+}));
+
 const realFetch = global.fetch;
 afterEach(() => {
   global.fetch = realFetch;
+  mockShowToast.mockClear();
 });
+
+const PAGE_2 = {
+  items: [{ notificationId: 10, title: '지난 알림', body: '', isRead: true, createdAt: '2026-07-01T09:00:00Z' }], // prettier-ignore
+  nextCursor: null,
+  hasNext: false,
+};
 
 describe('useNotifications', () => {
   it('loads the first page, counts unread, and pages with the cursor', async () => {
@@ -32,12 +46,12 @@ describe('useNotifications', () => {
       return res(PAGE_1);
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useNotifications());
+    const { result } = await renderHook(() => useNotifications(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load();
     });
 
-    expect(result.current.entries).toHaveLength(2);
+    await waitFor(() => expect(result.current.entries).toHaveLength(2));
     expect(result.current.unreadCount).toBe(1);
     expect(result.current.entries?.[0]).toMatchObject({ id: 12, read: false, date: '7월 12일' });
     expect(result.current.hasNext).toBe(true);
@@ -46,7 +60,7 @@ describe('useNotifications', () => {
       await result.current.loadMore();
     });
     expect(urls.some((u) => u.includes('/notifications?cursor=11'))).toBe(true);
-    expect(result.current.entries).toHaveLength(3);
+    await waitFor(() => expect(result.current.entries).toHaveLength(3));
     expect(result.current.hasNext).toBe(false);
   });
 
@@ -57,7 +71,7 @@ describe('useNotifications', () => {
       return res(PAGE_1);
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useNotifications());
+    const { result } = await renderHook(() => useNotifications(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load();
     });
@@ -66,7 +80,8 @@ describe('useNotifications', () => {
     });
 
     expect(calls.some((c) => c.method === 'PATCH' && c.url.endsWith('/notifications/12/read'))).toBe(true); // prettier-ignore
-    expect(result.current.unreadCount).toBe(0);
+    // 캐시 반영은 notifyManager가 배칭한다 — 즉시 단언하지 않고 기다린다.
+    await waitFor(() => expect(result.current.unreadCount).toBe(0));
   });
 
   it('rolls the row back when the read PATCH fails', async () => {
@@ -77,7 +92,7 @@ describe('useNotifications', () => {
       return res(PAGE_1);
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useNotifications());
+    const { result } = await renderHook(() => useNotifications(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load();
     });
@@ -96,19 +111,19 @@ describe('useNotifications', () => {
       return res(PAGE_1);
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useNotifications());
+    const { result } = await renderHook(() => useNotifications(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load();
     });
     expect(result.current.error).toBe(true);
-    expect(result.current.entries).toEqual([]);
+    await waitFor(() => expect(result.current.entries).toEqual([]));
 
     broken = false;
     await act(async () => {
       await result.current.load();
     });
     expect(result.current.error).toBe(false);
-    expect(result.current.entries).toHaveLength(2);
+    await waitFor(() => expect(result.current.entries).toHaveLength(2));
   });
 
   describe('삭제 (#1137)', () => {
@@ -123,7 +138,7 @@ describe('useNotifications', () => {
       return calls;
     };
     const loaded = async () => {
-      const hook = await renderHook(() => useNotifications());
+      const hook = await renderHook(() => useNotifications(), { wrapper: queryWrapper() });
       await act(async () => {
         await hook.result.current.load();
       });
@@ -139,7 +154,8 @@ describe('useNotifications', () => {
       });
 
       expect(calls.some((c) => c.method === 'DELETE' && c.url.endsWith('/notifications/12'))).toBe(true); // prettier-ignore
-      expect(result.current.entries?.map((n) => n.id)).toEqual([11]);
+      // 캐시 반영은 notifyManager가 배칭한다 — 즉시 단언하지 않고 기다린다.
+      await waitFor(() => expect(result.current.entries?.map((n) => n.id)).toEqual([11]));
       expect(result.current.unreadCount).toBe(0);
     });
 
@@ -167,7 +183,8 @@ describe('useNotifications', () => {
         await result.current.remove(11);
       });
 
-      expect(result.current.entries?.map((n) => n.id)).toEqual([12]);
+      // 캐시 반영은 notifyManager가 배칭한다 — 즉시 단언하지 않고 기다린다.
+      await waitFor(() => expect(result.current.entries?.map((n) => n.id)).toEqual([12]));
     });
 
     it('코드 없는 404(삭제 API가 없는 서버)는 실패로 되돌린다', async () => {
@@ -184,14 +201,15 @@ describe('useNotifications', () => {
     it('전체 삭제는 목록을 비우고 더보기를 닫는다', async () => {
       const calls = mockServer(() => ({ ok: true, status: 204, text: async () => '' }));
       const { result } = await loaded();
-      expect(result.current.hasNext).toBe(true);
+      await waitFor(() => expect(result.current.hasNext).toBe(true));
 
       await act(async () => {
         await result.current.removeAll();
       });
 
       expect(calls.some((c) => c.method === 'DELETE' && /\/notifications$/.test(c.url))).toBe(true);
-      expect(result.current.entries).toEqual([]);
+      // 캐시 반영은 notifyManager가 배칭한다 — 즉시 단언하지 않고 기다린다.
+      await waitFor(() => expect(result.current.entries).toEqual([]));
       expect(result.current.hasNext).toBe(false);
       expect(result.current.unreadCount).toBe(0);
     });
@@ -205,7 +223,7 @@ describe('useNotifications', () => {
       });
 
       await waitFor(() => expect(result.current.entries).toHaveLength(2));
-      expect(result.current.hasNext).toBe(true);
+      await waitFor(() => expect(result.current.hasNext).toBe(true));
     });
   });
 
@@ -216,7 +234,7 @@ describe('useNotifications', () => {
       return res(PAGE_1);
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useNotifications());
+    const { result } = await renderHook(() => useNotifications(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load();
     });
@@ -225,6 +243,77 @@ describe('useNotifications', () => {
     });
 
     expect(calls.some((c) => c.method === 'PATCH' && c.url.endsWith('/notifications/read-all'))).toBe(true); // prettier-ignore
+    // 캐시 반영은 notifyManager가 배칭한다 — 즉시 단언하지 않고 기다린다.
+    await waitFor(() => expect(result.current.unreadCount).toBe(0));
+  });
+
+  it('다시 불러오면 더보기로 붙인 페이지는 접고 첫 페이지로 돌아간다', async () => {
+    const urls: string[] = [];
+    global.fetch = jest.fn(async (url: string) => {
+      urls.push(url);
+      return res(url.includes('cursor=11') ? PAGE_2 : PAGE_1);
+    }) as unknown as typeof fetch;
+    const { result } = await renderHook(() => useNotifications(), { wrapper: queryWrapper() });
+    await act(async () => {
+      await result.current.load();
+    });
+    await act(async () => {
+      await result.current.loadMore();
+    });
+    await waitFor(() => expect(result.current.entries).toHaveLength(3));
+    await act(async () => {
+      await result.current.load();
+    });
+    await waitFor(() => expect(result.current.entries).toHaveLength(2));
+    expect(result.current.hasNext).toBe(true);
+    // 첫 페이지만 다시 받는다 — 붙였던 페이지를 다시 요청하지 않는다.
+    expect(urls.filter((u) => u.includes('cursor=11'))).toHaveLength(1);
+  });
+
+  it('더보기가 실패하면 토스트로 알리고 목록은 그대로 둔다', async () => {
+    global.fetch = jest.fn(async (url: string) =>
+      url.includes('cursor=11') ? res({ code: 'X' }, 500) : res(PAGE_1),
+    ) as unknown as typeof fetch;
+    const { result } = await renderHook(() => useNotifications(), { wrapper: queryWrapper() });
+    await act(async () => {
+      await result.current.load();
+    });
+    await act(async () => {
+      await result.current.loadMore();
+    });
+    expect(mockShowToast).toHaveBeenCalledWith('알림을 더 불러오지 못했어요', 'error');
+    await waitFor(() => expect(result.current.entries).toHaveLength(2));
+    expect(result.current.hasNext).toBe(true);
+  });
+
+  it('더보기 요청 중에 읽음 처리해도 응답이 도착한 뒤 되돌아가지 않는다', async () => {
+    let releasePage2!: () => void;
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if ((init?.method ?? 'GET') === 'PATCH') return res({});
+      if (url.includes('cursor=11')) {
+        await new Promise<void>((r) => {
+          releasePage2 = r;
+        });
+        return res(PAGE_2);
+      }
+      return res(PAGE_1);
+    }) as unknown as typeof fetch;
+    const { result } = await renderHook(() => useNotifications(), { wrapper: queryWrapper() });
+    await act(async () => {
+      await result.current.load();
+    });
+    await waitFor(() => expect(result.current.unreadCount).toBe(1));
+
+    let more!: Promise<void>;
+    await act(async () => {
+      more = result.current.loadMore();
+      await result.current.markRead(12);
+    });
+    await act(async () => {
+      releasePage2();
+      await more;
+    });
+    await waitFor(() => expect(result.current.entries).toHaveLength(3));
     expect(result.current.unreadCount).toBe(0);
   });
 });
