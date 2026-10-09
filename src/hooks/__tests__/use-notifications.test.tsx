@@ -285,4 +285,35 @@ describe('useNotifications', () => {
     await waitFor(() => expect(result.current.entries).toHaveLength(2));
     expect(result.current.hasNext).toBe(true);
   });
+
+  it('더보기 요청 중에 읽음 처리해도 응답이 도착한 뒤 되돌아가지 않는다', async () => {
+    let releasePage2!: () => void;
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if ((init?.method ?? 'GET') === 'PATCH') return res({});
+      if (url.includes('cursor=11')) {
+        await new Promise<void>((r) => {
+          releasePage2 = r;
+        });
+        return res(PAGE_2);
+      }
+      return res(PAGE_1);
+    }) as unknown as typeof fetch;
+    const { result } = await renderHook(() => useNotifications(), { wrapper: queryWrapper() });
+    await act(async () => {
+      await result.current.load();
+    });
+    await waitFor(() => expect(result.current.unreadCount).toBe(1));
+
+    let more!: Promise<void>;
+    await act(async () => {
+      more = result.current.loadMore();
+      await result.current.markRead(12);
+    });
+    await act(async () => {
+      releasePage2();
+      await more;
+    });
+    await waitFor(() => expect(result.current.entries).toHaveLength(3));
+    expect(result.current.unreadCount).toBe(0);
+  });
 });

@@ -23,7 +23,6 @@ import { toNotificationEntry } from '@/api/adapters';
 import { ApiError } from '@/api/http';
 import { useToast } from '@/components/ui/toast';
 import type { NotificationEntry } from '@/components/screens/notification-list-screen';
-import { useLatestRef } from '@/hooks/use-stable-value';
 import { i18n } from '@/i18n';
 import { queryKeys } from '@/lib/query-keys';
 
@@ -61,7 +60,7 @@ export function useNotifications() {
   const userId = getSessionUserId();
   const queryClient = useQueryClient();
   const { show: toast } = useToast();
-  const { data, fetchNextPage } = useInfiniteQuery({
+  const { data } = useInfiniteQuery({
     ...notificationOptions(userId),
     enabled: false,
   });
@@ -78,7 +77,6 @@ export function useNotifications() {
   const lastPage = data?.pages[data.pages.length - 1];
   const hasNext = !error && (lastPage?.hasNext ?? false);
   const unreadCount = (entries ?? []).filter((n) => !n.read).length;
-  const canLoadMoreRef = useLatestRef(lastPage?.nextCursor != null);
 
   /** 페이지 구조를 지키며 행만 바꾼다. 아직 안 불러왔으면(undefined) 그대로. */
   const updateItems = useCallback(
@@ -96,8 +94,12 @@ export function useNotifications() {
     [queryClient, userId],
   );
   const restore = useCallback(
-    (snapshot: NotificationPages | undefined) =>
-      queryClient.setQueryData(queryKeys.notifications(userId), snapshot),
+    (before: NotificationPages | undefined) => {
+      const queryKey = queryKeys.notifications(userId);
+      // 불러오기 전 상태로 되돌릴 땐 setQueryData(undefined)가 no-op이라 초기화한다.
+      if (before) queryClient.setQueryData(queryKey, before);
+      else void queryClient.resetQueries({ queryKey, exact: true });
+    },
     [queryClient, userId],
   );
 
@@ -120,11 +122,23 @@ export function useNotifications() {
     }
   }, [queryClient, userId]);
 
+  /**
+   * 다음 페이지를 받아 **함수형으로** 이어 붙인다. react-query의 fetchNextPage는 요청을
+   * 시작한 시점의 페이지에 붙인 결과로 캐시를 덮어써서, 요청 중에 한 읽음·삭제가 되돌아간다.
+   */
   const loadMore = useCallback(async () => {
-    if (!canLoadMoreRef.current) return;
-    const result = await fetchNextPage();
-    if (result.isError) toast(i18n.t('notification.list.loadMoreFailed'), 'error');
-  }, [canLoadMoreRef, fetchNextPage, toast]);
+    const cursor = snapshot()?.pages.at(-1)?.nextCursor;
+    if (cursor == null) return;
+    try {
+      const page = await notificationOptions(userId).queryFn({ pageParam: cursor });
+      queryClient.setQueryData<NotificationPages>(
+        queryKeys.notifications(userId),
+        (old) => old && { pages: [...old.pages, page], pageParams: [...old.pageParams, cursor] },
+      );
+    } catch {
+      toast(i18n.t('notification.list.loadMoreFailed'), 'error');
+    }
+  }, [snapshot, queryClient, userId, toast]);
 
   /** Mark one read (optimistic; the server has no unread-undo). */
   const markRead = useCallback(
