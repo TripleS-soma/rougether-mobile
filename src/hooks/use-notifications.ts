@@ -3,13 +3,19 @@
  * receipts and deletion. `load()` fetches the first page (also refreshing the
  * unread badge count); reads and deletes are optimistic — failures roll the
  * row(s) back.
+ *
+ * 서버 상태는 react-query (#1027, 리팩토링 장부 16번) — 페이지를 화면 모델로 캐시하고
+ * 낙관적 갱신·되돌리기는 `setQueryData`로 한다. 호출 계약은 명령형 그대로라 쿼리는
+ * 스스로 받지 않고(enabled:false) `load()`가 첫 페이지만 다시 받는다.
  */
-import { useCallback, useRef, useState } from 'react';
+import { type InfiniteData, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo, useState } from 'react';
 
 import {
   deleteAllNotifications,
   deleteNotification,
   fetchNotifications,
+  getSessionUserId,
   markAllNotificationsRead,
   markNotificationRead,
 } from '@/api';
@@ -19,6 +25,10 @@ import { useToast } from '@/components/ui/toast';
 import type { NotificationEntry } from '@/components/screens/notification-list-screen';
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { i18n } from '@/i18n';
+import { queryKeys } from '@/lib/query-keys';
+
+type NotificationPage = { items: NotificationEntry[]; hasNext: boolean; nextCursor?: number };
+type NotificationPages = InfiniteData<NotificationPage, number | undefined>;
 
 /** 서버 목록 순서(id 내림차순)를 지키며 되돌린 행을 다시 끼운다. */
 function reinsert(list: NotificationEntry[], entry: NotificationEntry): NotificationEntry[] {
@@ -26,77 +36,121 @@ function reinsert(list: NotificationEntry[], entry: NotificationEntry): Notifica
   return [...list, entry].sort((a, b) => b.id - a.id);
 }
 
+const EMPTY_PAGES: NotificationPages = {
+  pages: [{ items: [], hasNext: false }],
+  pageParams: [undefined],
+};
+
+function notificationOptions(userId: number | null | undefined) {
+  return {
+    queryKey: queryKeys.notifications(userId),
+    queryFn: async ({ pageParam }: { pageParam: number | undefined }) => {
+      const page = await fetchNotifications(pageParam);
+      return {
+        items: page.items.map(toNotificationEntry),
+        hasNext: page.hasNext,
+        nextCursor: page.nextCursor ?? undefined,
+      } satisfies NotificationPage;
+    },
+    initialPageParam: undefined as number | undefined,
+    getNextPageParam: (last: NotificationPage) => last.nextCursor,
+  };
+}
+
 export function useNotifications() {
-  const [entries, setEntries] = useState<NotificationEntry[] | undefined>(undefined);
+  const userId = getSessionUserId();
+  const queryClient = useQueryClient();
+  const { show: toast } = useToast();
+  const { data, fetchNextPage } = useInfiniteQuery({
+    ...notificationOptions(userId),
+    enabled: false,
+  });
+
   const [loading, setLoading] = useState(false);
-  const [hasNext, setHasNext] = useState(false);
   // 첫 페이지 로드 실패 (#549) — 화면이 빈 상태('알림 없음')와 구분해
   // 실패+다시 시도를 보여준다. 재시도 성공 시 해제.
   const [error, setError] = useState(false);
-  const { show: toast } = useToast();
-  const cursorRef = useRef<number | undefined>(undefined);
-  // 삭제 실패 시 되돌릴 원본 — 콜백 의존성에 entries를 넣지 않으려고 ref로 읽는다.
-  const entriesRef = useLatestRef(entries);
-  const hasNextRef = useLatestRef(hasNext);
 
+  const entries = useMemo(
+    () => (data ? data.pages.flatMap((p) => p.items) : error ? [] : undefined),
+    [data, error],
+  );
+  const lastPage = data?.pages[data.pages.length - 1];
+  const hasNext = !error && (lastPage?.hasNext ?? false);
   const unreadCount = (entries ?? []).filter((n) => !n.read).length;
+  const canLoadMoreRef = useLatestRef(lastPage?.nextCursor != null);
+
+  /** 페이지 구조를 지키며 행만 바꾼다. 아직 안 불러왔으면(undefined) 그대로. */
+  const updateItems = useCallback(
+    (fn: (items: NotificationEntry[], pageIndex: number) => NotificationEntry[]) =>
+      queryClient.setQueryData<NotificationPages>(
+        queryKeys.notifications(userId),
+        (old) =>
+          old && { ...old, pages: old.pages.map((p, i) => ({ ...p, items: fn(p.items, i) })) },
+      ),
+    [queryClient, userId],
+  );
+  /** 되돌리기용 스냅샷 — 렌더된 값이 아니라 캐시를 읽는다(방금 받은 페이지도 포함). */
+  const snapshot = useCallback(
+    () => queryClient.getQueryData<NotificationPages>(queryKeys.notifications(userId)),
+    [queryClient, userId],
+  );
+  const restore = useCallback(
+    (snapshot: NotificationPages | undefined) =>
+      queryClient.setQueryData(queryKeys.notifications(userId), snapshot),
+    [queryClient, userId],
+  );
 
   /** (Re)load the first page. */
   const load = useCallback(async () => {
     setLoading(true);
     setError(false);
     try {
-      const page = await fetchNotifications();
-      cursorRef.current = page.nextCursor ?? undefined;
-      setEntries(page.items.map(toNotificationEntry));
-      setHasNext(page.hasNext);
+      // 첫 페이지만 — 더보기로 붙였던 페이지는 접는다.
+      await queryClient.fetchInfiniteQuery({
+        ...notificationOptions(userId),
+        pages: 1,
+        staleTime: 0,
+      });
     } catch {
       // Keep whatever was on screen; a fresh open shows the error state (#549).
-      setEntries((prev) => prev ?? []);
-      setHasNext(false);
       setError(true);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [queryClient, userId]);
 
   const loadMore = useCallback(async () => {
-    if (cursorRef.current == null) return;
-    try {
-      const page = await fetchNotifications(cursorRef.current);
-      cursorRef.current = page.nextCursor ?? undefined;
-      setEntries((prev) => [...(prev ?? []), ...page.items.map(toNotificationEntry)]);
-      setHasNext(page.hasNext);
-    } catch {
-      toast(i18n.t('notification.list.loadMoreFailed'), 'error');
-    }
-  }, [toast]);
+    if (!canLoadMoreRef.current) return;
+    const result = await fetchNextPage();
+    if (result.isError) toast(i18n.t('notification.list.loadMoreFailed'), 'error');
+  }, [canLoadMoreRef, fetchNextPage, toast]);
 
   /** Mark one read (optimistic; the server has no unread-undo). */
   const markRead = useCallback(
     async (id: number) => {
-      setEntries((prev) => prev?.map((n) => (n.id === id ? { ...n, read: true } : n)));
+      updateItems((items) => items.map((n) => (n.id === id ? { ...n, read: true } : n)));
       try {
         await markNotificationRead(id);
       } catch {
-        setEntries((prev) => prev?.map((n) => (n.id === id ? { ...n, read: false } : n)));
+        updateItems((items) => items.map((n) => (n.id === id ? { ...n, read: false } : n)));
         toast(i18n.t('notification.list.markReadFailed'), 'error');
       }
     },
-    [toast],
+    [updateItems, toast],
   );
 
   /** Mark everything read (optimistic). */
   const markAllRead = useCallback(async () => {
-    const before = entries;
-    setEntries((prev) => prev?.map((n) => (n.read ? n : { ...n, read: true })));
+    const before = snapshot();
+    updateItems((items) => items.map((n) => (n.read ? n : { ...n, read: true })));
     try {
       await markAllNotificationsRead();
     } catch {
-      setEntries(before);
+      restore(before);
       toast(i18n.t('notification.list.markReadFailed'), 'error');
     }
-  }, [entries, toast]);
+  }, [snapshot, updateItems, restore, toast]);
 
   /**
    * 하나 삭제 (#1137) — 목록에서 먼저 빼고 서버에 보낸다. 실패하면 원래 자리로
@@ -106,38 +160,34 @@ export function useNotifications() {
    */
   const remove = useCallback(
     async (id: number) => {
-      const entry = entriesRef.current?.find((n) => n.id === id);
-      if (!entry) return;
-      setEntries((prev) => prev?.filter((n) => n.id !== id));
+      const pages = snapshot()?.pages ?? [];
+      const pageIndex = pages.findIndex((p) => p.items.some((n) => n.id === id));
+      if (pageIndex < 0) return;
+      const entry = pages[pageIndex].items.find((n) => n.id === id)!;
+      updateItems((items) => items.filter((n) => n.id !== id));
       try {
         await deleteNotification(id);
       } catch (e) {
         if (e instanceof ApiError && e.status === 404 && e.code === 'NOTIFICATION_NOT_FOUND')
           return;
-        setEntries((prev) => (prev ? reinsert(prev, entry) : prev));
+        updateItems((items, i) => (i === pageIndex ? reinsert(items, entry) : items));
         toast(i18n.t('notification.list.deleteFailed'), 'error');
       }
     },
-    [entriesRef, toast],
+    [snapshot, updateItems, toast],
   );
 
   /** 전체 삭제 (#1137) — 비우고 더보기도 닫는다. 실패하면 목록·페이지 상태를 되돌린다. */
   const removeAll = useCallback(async () => {
-    const before = entriesRef.current;
-    const beforeHasNext = hasNextRef.current;
-    const beforeCursor = cursorRef.current;
-    setEntries([]);
-    setHasNext(false);
-    cursorRef.current = undefined;
+    const before = snapshot();
+    restore(EMPTY_PAGES);
     try {
       await deleteAllNotifications();
     } catch {
-      setEntries(before);
-      setHasNext(beforeHasNext);
-      cursorRef.current = beforeCursor;
+      restore(before);
       toast(i18n.t('notification.list.deleteFailed'), 'error');
     }
-  }, [entriesRef, hasNextRef, toast]);
+  }, [snapshot, restore, toast]);
 
   return {
     entries,
