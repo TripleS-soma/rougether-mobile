@@ -1324,6 +1324,9 @@ const styles = StyleSheet.create({
   segment: {
     flex: 1,
     flexDirection: 'row',
+    // 넘치면 다음 줄로 — 한 줄 고정이면 좁은 화면(갤럭시 S25 384dp, 영어·큰 글꼴)에서 뒤쪽 탭
+    // (배경·거래소)이 화면 밖으로 잘려 누를 수 없었다.
+    flexWrap: 'wrap',
     gap: Spacing.one,
   },
   segBtn: {
