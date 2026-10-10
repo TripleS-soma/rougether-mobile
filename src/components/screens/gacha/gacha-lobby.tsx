@@ -181,6 +181,9 @@ export function GachaLobby({
             const ink = affordable ? (primary ? t.onPrimary : t.text) : t.textMuted;
             return (
               // 버튼 전체를 짚는다(글자만 재면 테두리가 라벨에만 뜬다) — flex는 래퍼로 옮긴다.
+              // 버튼 자체엔 flex를 주지 않는다: 세로 래퍼 안의 flex 1은 높이 기준을 0으로 만들어
+              // Android(Yoga)에서 줄 높이가 버튼(72)을 반영하지 못하고 18로 잡혀 아래가 잘렸다
+              // (갤럭시 S25 실측). 폭은 래퍼가 정하고 버튼은 늘어나기(stretch)로 채운다.
               <CoachTarget
                 key={count}
                 id={count === 1 ? 'gacha-draw' : `gacha-draw-${count}`}
@@ -206,7 +209,6 @@ export function GachaLobby({
                   style={[
                     styles.draw,
                     {
-                      flex: 1,
                       borderColor: primary ? 'transparent' : t.border,
                       backgroundColor: !affordable ? t.disabledBg : primary ? t.primary : t.surface,
                     },
