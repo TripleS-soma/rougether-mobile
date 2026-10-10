@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import * as auth from '@/api/auth';
 import { useHouses } from '@/hooks/use-houses';
+import { createQueryClient } from '@/lib/query-client';
 import { jsonRes as res } from '@/test-utils/fetch';
 import { queryWrapper } from '@/test-utils/query-wrapper';
 
@@ -344,5 +345,103 @@ describe('useHouses — 프로필 닉네임 반영 (#924)', () => {
     // 이름 하나 때문에 집을 다시 부르지 않는다 — 파생으로 끝낸다.
     expect(houseCalls).toBe(callsBefore);
     whoAmI.mockRestore();
+  });
+});
+
+describe('useHouses — 내 입주 신청 잠금 카드 (#648)', () => {
+  const REQUESTS = [
+    { requestId: 1, houseId: 3, houseName: '대기 집', status: 'PENDING' },
+    { requestId: 2, houseId: 4, houseName: '거절된 집', status: 'REJECTED' },
+  ];
+
+  /** 내 신청 목록 서버 — 취소·코드 입주 응답은 옵션으로. */
+  function mockServer(
+    opts: { cancel?: number; joinPending?: boolean; requests?: () => unknown } = {},
+  ) {
+    const calls: { url: string; method: string }[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      calls.push({ url, method });
+      if (url.endsWith('/me/join-requests')) {
+        return opts.requests ? (opts.requests() as Response) : res({ items: REQUESTS });
+      }
+      if (url.includes('/me/join-requests/') && method === 'DELETE') {
+        return opts.cancel && opts.cancel >= 400
+          ? res({ code: 'X' }, opts.cancel)
+          : { ok: true, status: 204, text: async () => '' };
+      }
+      if (url.includes('/houses/join-by-code') && method === 'POST') {
+        return res({ pendingApproval: !!opts.joinPending });
+      }
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+    return calls;
+  }
+
+  it('승인 대기(PENDING) 신청만 보여 준다', async () => {
+    mockServer();
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await waitFor(() =>
+      expect(result.current.pendingJoinRequests.map((r) => r.requestId)).toEqual([1]),
+    );
+  });
+
+  it('신청 목록이 실패해도 집 목록은 살아 있다', async () => {
+    mockServer({ requests: () => res({ code: 'X' }, 500) });
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.error).toBe(false);
+    expect(result.current.pendingJoinRequests).toEqual([]);
+  });
+
+  it('신청을 철회하면 목록에서 바로 빠지고 알린다', async () => {
+    const calls = mockServer();
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.pendingJoinRequests).toHaveLength(1));
+    await act(async () => {
+      await result.current.cancelJoinRequest(1);
+    });
+    await waitFor(() => expect(result.current.pendingJoinRequests).toEqual([]));
+    expect(calls.some((c) => c.method === 'DELETE' && c.url.endsWith('/me/join-requests/1'))).toBe(true); // prettier-ignore
+    expect(mockToast).toHaveBeenCalledWith('입주 신청을 취소했어요');
+  });
+
+  it('철회가 실패하면 목록을 그대로 두고 알린다', async () => {
+    mockServer({ cancel: 500 });
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.pendingJoinRequests).toHaveLength(1));
+    await act(async () => {
+      await result.current.cancelJoinRequest(1);
+    });
+    expect(result.current.pendingJoinRequests).toHaveLength(1);
+    expect(mockToast).toHaveBeenCalledWith(
+      '신청 취소에 실패했어요. 잠시 후 다시 시도해 주세요.',
+      'error',
+    );
+  });
+
+  it('부원 코드로 신청하면(승인 대기) 신청 목록을 다시 받는다', async () => {
+    let pending = false;
+    mockServer({
+      joinPending: true,
+      requests: () =>
+        res({ items: pending ? [{ requestId: 5, houseId: 9, status: 'PENDING' }] : [] }),
+    });
+    const { result } = await renderHook(() => useHouses(), {
+      // 운영 클라이언트(staleTime 30초) — 첫 로드 직후라 캐시가 신선해도 다시 받아야 한다.
+      wrapper: queryWrapper(createQueryClient()),
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.pendingJoinRequests).toEqual([]);
+    pending = true;
+    let out: unknown;
+    await act(async () => {
+      out = await result.current.joinByCode('MEMBER');
+    });
+    expect(out).toBe('pending');
+    await waitFor(() =>
+      expect(result.current.pendingJoinRequests.map((r) => r.requestId)).toEqual([5]),
+    );
   });
 });
