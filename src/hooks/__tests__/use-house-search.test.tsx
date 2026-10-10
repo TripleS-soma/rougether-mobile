@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 
 import { useHouses } from '@/hooks/use-houses';
 import { jsonRes as res } from '@/test-utils/fetch';
+import { queryWrapper } from '@/test-utils/query-wrapper';
 
 // 토스트 캡처 — 더 불러오기 실패(#975)·만석(#948) 문구 단언용.
 const mockToast = jest.fn();
@@ -53,7 +54,7 @@ describe('useHouses — 집 탐색 페이지네이션 (#975)', () => {
 
   it('첫 페이지가 꽉 차고 남은 게 있으면 다음 페이지를 이어 붙인다', async () => {
     const urls = pagedFetch({ total: 35 });
-    const { result } = await renderHook(useHousesOnSearchScreen);
+    const { result } = await renderHook(useHousesOnSearchScreen, { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.searchLoading).toBe(false));
 
     expect(result.current.searchHouses).toHaveLength(30);
@@ -75,7 +76,7 @@ describe('useHouses — 집 탐색 페이지네이션 (#975)', () => {
   it('아이콘·배경이 페이지 경계에서 다시 시작하지 않는다', async () => {
     // toSearchHouse의 index가 아이콘을 돌린다 — 0부터 다시 세면 경계에서 반복된다.
     pagedFetch({ total: 35 });
-    const { result } = await renderHook(useHousesOnSearchScreen);
+    const { result } = await renderHook(useHousesOnSearchScreen, { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.searchLoading).toBe(false));
     await act(async () => {
       await result.current.loadMoreSearch();
@@ -100,7 +101,7 @@ describe('useHouses — 집 탐색 페이지네이션 (#975)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(useHousesOnSearchScreen);
+    const { result } = await renderHook(useHousesOnSearchScreen, { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.searchLoading).toBe(false));
     await act(async () => {
       await result.current.loadMoreSearch();
@@ -126,7 +127,7 @@ describe('useHouses — 집 탐색 페이지네이션 (#975)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(useHousesOnSearchScreen);
+    const { result } = await renderHook(useHousesOnSearchScreen, { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.searchLoading).toBe(false));
     await act(async () => {
       await result.current.loadMoreSearch();
@@ -161,7 +162,7 @@ describe('useHouses — 집 탐색 페이지네이션 (#975)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(useHousesOnSearchScreen);
+    const { result } = await renderHook(useHousesOnSearchScreen, { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.searchLoading).toBe(false));
     await act(async () => {
       await result.current.loadMoreSearch();
@@ -171,6 +172,31 @@ describe('useHouses — 집 탐색 페이지네이션 (#975)', () => {
     expect(result.current.searchHouses).toHaveLength(31);
   });
 
+  it('입주 신청하면 탐색 목록을 첫 페이지부터 다시 받는다', async () => {
+    const urls = pagedFetch({ total: 35 });
+    const fetchPages = global.fetch;
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) =>
+      url.includes('/join-requests') && init?.method === 'POST' ? res({}) : fetchPages(url, init),
+    ) as unknown as typeof fetch;
+    const { result } = await renderHook(useHousesOnSearchScreen, { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.searchLoading).toBe(false));
+    await act(async () => {
+      await result.current.loadMoreSearch();
+    });
+    await waitFor(() => expect(result.current.searchHouses).toHaveLength(35));
+
+    let ok = false;
+    await act(async () => {
+      ok = await result.current.joinHouse(3);
+    });
+    expect(ok).toBe(true);
+    // 붙였던 2페이지는 접고 첫 페이지만 다시 받는다.
+    await waitFor(() => expect(result.current.searchHouses).toHaveLength(30));
+    expect(result.current.searchHasNext).toBe(true);
+    expect(urls.filter((u) => u.includes('page=0'))).toHaveLength(2);
+    expect(urls.filter((u) => u.includes('page=1'))).toHaveLength(1);
+  });
+
   it('첫 페이지가 안 찼으면 더 받을 게 없다', async () => {
     global.fetch = jest.fn(async (url: string) => {
       if (url.includes('/houses?')) return res({ items: [{ houseId: 1, name: '집1' }], size: 30, totalElements: 1 }); // prettier-ignore
@@ -178,7 +204,7 @@ describe('useHouses — 집 탐색 페이지네이션 (#975)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(useHousesOnSearchScreen);
+    const { result } = await renderHook(useHousesOnSearchScreen, { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.searchLoading).toBe(false));
     expect(result.current.searchHasNext).toBe(false);
   });
@@ -205,7 +231,7 @@ describe('useHouses — 집 탐색 filter (#578)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(useHousesOnSearchScreen);
+    const { result } = await renderHook(useHousesOnSearchScreen, { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.searchLoading).toBe(false));
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -236,7 +262,7 @@ describe('useHouses — 입주 신청 처리', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(useHousesOnSearchScreen);
+    const { result } = await renderHook(useHousesOnSearchScreen, { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     let succeeded = true;
@@ -268,7 +294,7 @@ describe('useHouses — 입주 신청 처리', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(useHousesOnSearchScreen);
+    const { result } = await renderHook(useHousesOnSearchScreen, { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(async () => {
       await result.current.joinHouse(2);
@@ -287,7 +313,7 @@ describe('useHouses — 입주 신청 처리', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(useHousesOnSearchScreen);
+    const { result } = await renderHook(useHousesOnSearchScreen, { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(async () => {
       await result.current.joinHouse(2);
@@ -314,7 +340,7 @@ describe('useHouses — 로드 실패 → error + 재시도 (#549)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(useHousesOnSearchScreen);
+    const { result } = await renderHook(useHousesOnSearchScreen, { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.searchLoading).toBe(false));
     expect(result.current.searchError).toBe(true);
 
@@ -352,7 +378,7 @@ describe('useHouses — 탐색 미리보기', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(useHousesOnSearchScreen);
+    const { result } = await renderHook(useHousesOnSearchScreen, { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     let preview = null;
@@ -380,7 +406,7 @@ describe('집 탐색은 화면이 요청할 때 받는다 (성능 장부 N3)', (
       text: async () => JSON.stringify(url.includes('/houses?') ? { items: [] } : { items: [] }),
     }));
     global.fetch = fetchMock as unknown as typeof fetch;
-    const { result } = await renderHook(() => useHouses());
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     const searchCalls = () =>
       fetchMock.mock.calls.filter(

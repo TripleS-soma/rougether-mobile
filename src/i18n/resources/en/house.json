@@ -477,6 +477,8 @@
       "retryA11y": "Resend",
       "unreadA11y": "{{n}} haven't read",
       "unknownSender": "Unknown",
+      "day": "{{weekday}}, {{date}}",
+      "dayWithYear": "{{weekday}}, {{date}}/{{year}}",
       "empty": "No messages yet. Say hi first!",
       "loadFailed": "Couldn't load the chat",
       "retry": "Try again",

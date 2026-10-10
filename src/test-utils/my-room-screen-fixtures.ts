@@ -42,16 +42,17 @@ export const TOMORROW = isoShift(1);
 
 /**
  * 오늘과 **같은 달·같은 주(일요일 시작)**인 이웃 날 — 월 격자와 접힌 주간 줄 양쪽에 셀이
- * 있어야 누를 수 있다. 내일을 우선하고, 월말이면 어제. 2026-09-30(KST) CI: 내일(10/1)이
- * 9월 격자에 없어 달력 주간 테스트가 깨졌다. 월말이 일요일이면(어제는 지난주) 둘 다 안 돼
- * 내일을 돌린다 — 그날은 격자 밖이라 드물게 다시 깨질 수 있다.
+ * 있어야 누를 수 있다. 내일을 우선하고, 안 되면 어제. 내일은 오늘이 토요일이 아니어야
+ * 같은 주(2026-10-10 토요일: 내일 10/11이 다음 주라 주간 줄에 없어 깨졌다), 어제는 오늘이
+ * 일요일이 아니어야 같은 주다. 2026-09-30(KST) CI: 내일(10/1)이 9월 격자에 없어 깨졌다.
+ * 1일이 토요일이면 둘 다 안 돼 내일을 돌린다 — 그날은 격자 밖이라 드물게 다시 깨질 수 있다.
  */
 export const NEIGHBOR_DAY = (() => {
   const sameMonth = (d: string) => d.slice(0, 7) === TODAY.slice(0, 7);
   const [y, m, d] = TODAY.split('-').map(Number);
-  const isSunday = new Date(Date.UTC(y, m - 1, d, 12)).getUTCDay() === 0;
-  if (sameMonth(TOMORROW)) return TOMORROW;
-  if (!isSunday && sameMonth(YESTERDAY)) return YESTERDAY;
+  const weekday = new Date(Date.UTC(y, m - 1, d, 12)).getUTCDay();
+  if (weekday !== 6 && sameMonth(TOMORROW)) return TOMORROW;
+  if (weekday !== 0 && sameMonth(YESTERDAY)) return YESTERDAY;
   return TOMORROW;
 })();
 
