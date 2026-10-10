@@ -43,6 +43,7 @@ Claude(또는 작업자)가 대화·작업 중 아래에 해당한다고 **스�
 
 ## 목록
 
+- [2026-10-10 · 안드로이드에서만 뽑기 버튼 아래가 잘리는 문제 — Yoga의 flex 1이 만든 높이 0 기준](2026-10-10-android-yoga-flex-footer-clip.md)
 - [2026-09-17 · 웹에서 체크 상태·진행 값이 사라지는 접근성 버그 — RN Web의 accessibility 객체 props 미매핑](2026-09-17-rn-web-aria-state-mapping.md)
 - [2026-09-16 · 튜토리얼 코치마크 좌표 어긋남과 재시작 시 튜토리얼 소실](2026-09-16-coach-mark-coordinates-tutorial-resume.md)
 - [2026-09-16 · 성능 추적을 켜면 웹 API가 막힐 뻔한 문제 — 트레이스 헤더 전파와 CORS](2026-09-16-observability-trace-headers-cors.md)
