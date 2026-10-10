@@ -53,6 +53,19 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
     expect(queryByText('위 왼쪽')).toBeNull();
   });
 
+  /**
+   * 갤럭시 S25(384dp, 영어) 실측: 탭 줄이 한 줄 고정이라 뒤쪽 탭(배경·거래소)이 화면 밖으로
+   * 잘려 거래소(신고 포함)에 들어갈 수 없었다. jest는 레이아웃을 계산하지 않으므로 줄바꿈을 잠근다.
+   */
+  it('wraps the category tabs so the trailing market tab stays reachable on narrow phones', async () => {
+    const { getByLabelText } = await render(<RoomDecorScreen renderMarket={() => null} />);
+    let node = getByLabelText('거래소 탭').parent;
+    while (node && StyleSheet.flatten(node.props.style)?.flexDirection !== 'row') {
+      node = node.parent;
+    }
+    expect(StyleSheet.flatten(node?.props.style)).toMatchObject({ flexWrap: 'wrap' });
+  });
+
   it('adds an item to the room center from 전체보기 and applies', async () => {
     const onApply = jest.fn();
     const { getByText, getByLabelText } = await render(

@@ -1,5 +1,6 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import type { ComponentProps } from 'react';
+import { StyleSheet } from 'react-native';
 
 import type { GachaMachine } from '@/api/adapters';
 import { GachaLobby } from '@/components/screens/gacha/gacha-lobby';
@@ -53,6 +54,20 @@ describe('GachaLobby', () => {
     expect(screen.queryByText(/5회 가격으로 6개/)).toBeNull();
     expect(screen.queryByText(/중복 아이템은 다이아로/)).toBeNull();
     expect(screen.getByLabelText('5+1회 뽑기, 185 코인')).toBeTruthy();
+  });
+
+  /**
+   * 갤럭시 S25(832dp) 실측: 버튼에 flex 1을 주면 세로 래퍼 안에서 높이 기준이 0이 돼 Android
+   * (Yoga)가 버튼 줄을 18dp로 잡고 72dp 버튼 아래가 화면 밖으로 잘렸다. 폭은 래퍼가 나눈다.
+   * jest는 레이아웃을 계산하지 않으므로 원인이 된 스타일을 직접 잠근다.
+   */
+  it('draw buttons carry no flex of their own — the wrapper splits the width', async () => {
+    const screen = await render(<GachaLobby {...lobbyProps()} />);
+    for (const label of ['1회 뽑기, 37 코인', '5+1회 뽑기, 185 코인']) {
+      const style = StyleSheet.flatten(screen.getByLabelText(label).props.style);
+      expect(style.flex).toBeUndefined();
+      expect(style.minHeight).toBeGreaterThan(0);
+    }
   });
 
   it('keeps category selection controlled and passes the original server machine to its owner', async () => {
