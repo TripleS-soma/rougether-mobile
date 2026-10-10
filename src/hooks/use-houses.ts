@@ -11,6 +11,7 @@
  * Every action is useCallback-wrapped and the return object is useMemo'd so
  * memoized consumers (#539 memo boundaries) get stable references.
  */
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -27,6 +28,7 @@ import {
   fetchMyHouses,
   updateHouseOrder,
   fetchMyJoinRequests,
+  getSessionUserId,
   joinHouseByCode,
   type MyJoinRequestSummary,
   kickHouseMember,
@@ -45,7 +47,14 @@ import { fetchHouseBundle } from '@/hooks/house-bundle';
 import { useHouseMissions } from '@/hooks/use-house-missions';
 import { useHouseSearch } from '@/hooks/use-house-search';
 import { track } from '@/lib/analytics';
+import { queryKeys } from '@/lib/query-keys';
 import type { HousePreview } from '@/components/screens/house-search-screen';
+
+const NO_REQUESTS: MyJoinRequestSummary[] = [];
+
+async function fetchPendingJoinRequests(): Promise<MyJoinRequestSummary[]> {
+  return (await fetchMyJoinRequests()).filter((r) => r.status === 'PENDING');
+}
 
 export function useHouses() {
   const [houses, setHouses] = useState<House[]>([]);
@@ -95,36 +104,55 @@ export function useHouses() {
   }, []);
 
   // 승인 대기 중인 내 입주 신청 (#648, 서버 #255) — 집 스위처의 잠금 카드.
-  const [pendingJoinRequests, setPendingJoinRequests] = useState<MyJoinRequestSummary[]>([]);
+  // react-query 캐시(#1027, 장부 16번) — 스스로 받지 않고 집 목록 사이클·코드 신청이 받는다.
+  const userId = getSessionUserId();
+  const queryClient = useQueryClient();
+  const { data: pendingJoinRequests = NO_REQUESTS } = useQuery({
+    queryKey: queryKeys.myJoinRequests(userId),
+    queryFn: fetchPendingJoinRequests,
+    enabled: false,
+  });
+  /** 신청 목록을 다시 받는다. 실패는 조용히 — 받아 둔 목록을 그대로 두고 집 목록까지 죽이지 않는다. */
+  const refreshJoinRequests = useCallback(
+    () =>
+      queryClient
+        .fetchQuery({
+          queryKey: queryKeys.myJoinRequests(userId),
+          queryFn: fetchPendingJoinRequests,
+          staleTime: 0,
+        })
+        .catch(() => null),
+    [queryClient, userId],
+  );
 
   const reloadMyHouses = useCallback(async () => {
     // My cell shows the profile nickname when the members API has none.
-    const [mine, nickname, requests] = await Promise.all([
+    const [mine, nickname] = await Promise.all([
       fetchMyHouses(),
       fetchMe()
         .then((me) => me.nickname ?? undefined)
         .catch(() => myNicknameRef.current),
-      // 신청 목록 실패는 조용히 — 집 목록까지 죽이지 않는다.
-      fetchMyJoinRequests().catch(() => null),
+      refreshJoinRequests(),
     ]);
     myNicknameRef.current = nickname;
-    if (requests) setPendingJoinRequests(requests.filter((r) => r.status === 'PENDING'));
     const detailed = await Promise.all(mine.map((h) => loadBundle(h.houseId ?? 0)));
     setHouses(detailed);
-  }, [loadBundle]);
+  }, [loadBundle, refreshJoinRequests]);
 
   /** 입주 신청 철회 (#648) — 성공 시 목록에서 즉시 제거. */
   const cancelJoinRequest = useCallback(
     async (requestId: number) => {
       try {
         await cancelMyJoinRequest(requestId);
-        setPendingJoinRequests((prev) => prev.filter((r) => r.requestId !== requestId));
+        queryClient.setQueryData<MyJoinRequestSummary[]>(queryKeys.myJoinRequests(userId), (prev) =>
+          prev?.filter((r) => r.requestId !== requestId),
+        );
         toast(i18n.t('house.toast.requestCancelled'));
       } catch {
         toast(i18n.t('house.toast.requestCancelFailed'), 'error');
       }
     },
-    [toast],
+    [queryClient, userId, toast],
   );
 
   /**
@@ -250,9 +278,7 @@ export function useHouses() {
         // 부원 개인 코드 — 신청만 생성되고 방장 승인 후 입주가 확정된다.
         // 집 탭 잠금 카드(#648)에 바로 보이도록 신청 목록을 갱신한다.
         if (res.pendingApproval) {
-          void fetchMyJoinRequests()
-            .then((rs) => setPendingJoinRequests(rs.filter((r) => r.status === 'PENDING')))
-            .catch(() => {});
+          void refreshJoinRequests();
           track('house_join_request', { via: 'code' });
           return 'pending';
         }
@@ -265,7 +291,7 @@ export function useHouses() {
         return isInvalidCodeError(e) ? false : 'network';
       }
     },
-    [toast, reloadMyHouses],
+    [toast, reloadMyHouses, refreshJoinRequests],
   );
 
   /** 신청 행을 목록에서 즉시 뺀다 (#534 낙관적 반영) — 실패 시 재동기화가 복원. */
