@@ -16,13 +16,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { weekdayLongLabelKey } from '@/constants/routines';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAndroidKeyboardHeight } from '@/hooks/use-android-keyboard-height';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
-import { useT } from '@/i18n';
-import { formatTime } from '@/utils/datetime';
+import { i18n, useT } from '@/i18n';
+import { formatTime, localDate, monthDayLabel, toIsoDate } from '@/utils/datetime';
 
 /** 서버 본문 상한 (spec chat/api.md) — 2,000 UTF-16 code unit = JS `length`. */
 export const CHAT_MAX_LENGTH = 2000;
@@ -80,12 +81,35 @@ function timeLabel(iso?: string): string | null {
 }
 
 /**
+ * 메시지가 오간 날 "YYYY-MM-DD" — 시각 라벨과 같은 **단말 시계** 기준이라 자정 직전·직후
+ * 메시지가 라벨과 다른 날로 묶이지 않는다. 없거나(보내는 중) 깨졌으면 null.
+ */
+function chatDayKey(iso?: string): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? null : toIsoDate(d);
+}
+
+/** 날짜 구분선 문구 — "10월 9일 목요일", 올해가 아니면 "2025년 12월 31일 수요일". */
+export function chatDayLabel(dayIso: string, now: Date = new Date()): string {
+  const d = localDate(dayIso);
+  const date = monthDayLabel(d);
+  const weekday = i18n.t(weekdayLongLabelKey(d.getDay()));
+  return d.getFullYear() === now.getFullYear()
+    ? i18n.t('house.chat.day', { date, weekday })
+    : i18n.t('house.chat.dayWithYear', { year: d.getFullYear(), date, weekday });
+}
+
+/**
  * 집 채팅 (#1408) — 집 구성원끼리의 텍스트 채팅. 내 말풍선은 오른쪽(`primary`), 다른
  * 구성원은 왼쪽(`surface`)에 닉네임과 함께. 내 말풍선 옆 숫자는 아직 안 읽은 구성원 수.
  *
  * 순수 화면: 메시지·전송·읽음은 전부 prop. 목록은 뒤집힌(inverted) FlatList라 최신이
  * 아래에 붙고, 위로 끝까지 올리면 `onLoadOlder`. 읽음은 **실제로 보인** 메시지의 최대
  * 순서를 `onVisible`로 알린다(스펙: 조회만으로는 읽음 처리하지 않는다).
+ *
+ * 날짜: 말풍선에는 시각만 붙고, 날이 바뀌는 첫 메시지 위에 날짜 구분선을 둔다(로드된 가장
+ * 오래된 메시지 위에도 — 그 위가 어느 날인지 늘 알 수 있게).
  *
  * 키보드: iOS는 KAV padding, 안드로이드는 엣지투엣지라 창이 안 줄어들어 키보드 높이를
  * 직접 아래 여백으로 준다 (#1326, use-android-keyboard-height).
@@ -147,10 +171,14 @@ export function HouseChatScreen({
       const mine = myUserId != null && item.senderUserId === myUserId;
       // 뒤집힌 목록에서 index+1이 바로 위(이전) 메시지 — 같은 사람이 이어 말하면 이름 생략.
       const prev = data[index + 1];
-      const showName = !mine && prev?.senderUserId !== item.senderUserId;
+      // 보내는 중(시각 없음)은 날짜 경계를 만들지 않는다 — 앞 메시지와 같은 날로 본다.
+      const day = chatDayKey(item.createdAt);
+      const newDay = day != null && (prev == null || day !== chatDayKey(prev.createdAt));
+      const showName = !mine && (newDay || prev?.senderUserId !== item.senderUserId);
       return (
         <ChatRow
           mine={mine}
+          dayLabel={newDay ? chatDayLabel(day) : undefined}
           showName={showName}
           content={item.content}
           senderNickname={item.senderNickname}
@@ -268,6 +296,8 @@ const SEND_SIZE = 44;
 
 type ChatRowProps = {
   mine: boolean;
+  /** 이 메시지가 그날의 첫 메시지면 위에 그릴 날짜 구분선 문구. */
+  dayLabel?: string;
   showName: boolean;
   content: string;
   senderNickname?: string;
@@ -280,6 +310,7 @@ type ChatRowProps = {
 
 const ChatRow = memo(function ChatRow({
   mine,
+  dayLabel,
   showName,
   content,
   senderNickname,
@@ -321,7 +352,7 @@ const ChatRow = memo(function ChatRow({
         {time ? <Text style={[Typography.supporting, { color: t.textMuted }]}>{time}</Text> : null}
       </View>
     );
-  return (
+  const row = (
     <View style={[styles.row, mine ? styles.rowMine : styles.rowOther]}>
       {showName ? (
         <Text
@@ -350,6 +381,20 @@ const ChatRow = memo(function ChatRow({
       </View>
     </View>
   );
+  if (!dayLabel) return row;
+  // 뒤집힌 목록도 셀 안의 순서는 그대로라 구분선이 말풍선 위에 온다.
+  return (
+    <View>
+      <View style={styles.dayDivider} accessibilityRole="header">
+        <View style={[styles.dayRule, { backgroundColor: t.border }]} />
+        <Text style={[Typography.supporting, emph('normal'), { color: t.textMuted }]}>
+          {dayLabel}
+        </Text>
+        <View style={[styles.dayRule, { backgroundColor: t.border }]} />
+      </View>
+      {row}
+    </View>
+  );
 });
 
 const styles = StyleSheet.create({
@@ -360,6 +405,14 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, flexGrow: 1 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.four },
   older: { paddingVertical: Spacing.two },
+  dayDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    marginTop: Spacing.three,
+    marginBottom: Spacing.one,
+  },
+  dayRule: { flex: 1, height: StyleSheet.hairlineWidth },
   row: { marginVertical: Spacing.half, gap: Spacing.half, maxWidth: '100%' },
   rowMine: { alignItems: 'flex-end' },
   rowOther: { alignItems: 'flex-start' },

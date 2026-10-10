@@ -2,7 +2,11 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 import { DeviceEventEmitter, Platform, StyleSheet } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
-import { type ChatMessageView, HouseChatScreen } from '@/components/screens/house-chat-screen';
+import {
+  type ChatMessageView,
+  chatDayLabel,
+  HouseChatScreen,
+} from '@/components/screens/house-chat-screen';
 
 const MESSAGES: ChatMessageView[] = [
   { key: 's1', sequence: 1, senderUserId: 2, senderNickname: '이웃', content: '안녕하세요', createdAt: '2026-09-21T12:58:00Z', unreadCount: 0, status: 'sent' }, // prettier-ignore
@@ -115,5 +119,66 @@ describe('HouseChatScreen 키보드 — Android', () => {
       });
     });
     expect(bottom()).toBe(closed + KEYBOARD);
+  });
+});
+
+describe('HouseChatScreen — 날짜 구분선', () => {
+  // UTC 03:00 = KST 정오 — 단말 시간대(KST/UTC)와 무관하게 같은 날짜로 묶인다.
+  const msg = (seq: number, sender: number, day: string, content: string): ChatMessageView => ({
+    key: `s${seq}`,
+    sequence: seq,
+    senderUserId: sender,
+    senderNickname: sender === 1 ? '나' : '이웃',
+    content,
+    createdAt: `${day}T03:00:00Z`,
+    unreadCount: 0,
+    status: 'sent',
+  });
+
+  it('날이 바뀌는 첫 메시지 위에 날짜를 한 번씩 그린다', async () => {
+    const screen = await render(
+      <HouseChatScreen
+        myUserId={1}
+        messages={[
+          msg(1, 2, '2026-09-20', '어제 첫 말'),
+          msg(2, 2, '2026-09-20', '어제 둘째 말'),
+          msg(3, 1, '2026-09-21', '오늘 말'),
+        ]}
+      />,
+    );
+    expect(screen.getAllByText('9월 20일 일요일')).toHaveLength(1);
+    expect(screen.getAllByText('9월 21일 월요일')).toHaveLength(1);
+  });
+
+  it('같은 사람이 이어 말해도 날이 바뀌면 닉네임을 다시 보여 준다', async () => {
+    const screen = await render(
+      <HouseChatScreen
+        myUserId={1}
+        messages={[
+          msg(1, 2, '2026-09-20', '어제 말'),
+          msg(2, 2, '2026-09-20', '어제 또'),
+          msg(3, 2, '2026-09-21', '오늘 말'),
+        ]}
+      />,
+    );
+    expect(screen.getAllByText('이웃')).toHaveLength(2);
+  });
+
+  it('보내는 중(시각 없음)인 메시지는 날짜 경계를 만들지 않는다', async () => {
+    const screen = await render(
+      <HouseChatScreen
+        myUserId={1}
+        messages={[
+          msg(1, 1, '2026-09-21', '보낸 말'),
+          { key: 'c1', content: '보내는 중', unreadCount: 0, status: 'pending', senderUserId: 1 },
+        ]}
+      />,
+    );
+    expect(screen.getAllByText(/9월 21일/)).toHaveLength(1);
+  });
+
+  it('올해가 아니면 연도까지 붙인다', () => {
+    expect(chatDayLabel('2025-12-31', new Date(2026, 9, 10))).toBe('2025년 12월 31일 수요일');
+    expect(chatDayLabel('2026-09-21', new Date(2026, 9, 10))).toBe('9월 21일 월요일');
   });
 });
