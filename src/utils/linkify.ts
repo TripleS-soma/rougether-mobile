@@ -8,7 +8,10 @@
 export type TextSegment =
   { kind: 'text'; text: string } | { kind: 'link'; text: string; url: string };
 
-const URL_PATTERN = /\b(?:https?:\/\/|www\.)[^\s<>"']+/gi;
+// 한글(완성형·자모)은 주소 문자로 보지 않는다 — 한국어 채팅은 `https://a.com/x에서`·`www.a.com도`처럼
+// 조사를 바로 붙이는 일이 흔하고, 그대로 삼키면 404 주소에 확인 창 도메인까지 틀린다(#1508 리뷰).
+// 대가로 경로에 한글이 그대로 든 주소(`namu.wiki/w/한글`)는 한글 앞에서 끊긴다 — 한글 도메인(IDN)도 범위 밖.
+const URL_PATTERN = /\b(?:https?:\/\/|www\.)[^\s<>"'\uAC00-\uD7A3\u3131-\u318E]+/gi;
 const TRAILING = /[.,!?;:'"…。、)\]}>]+$/;
 
 function trimTrailing(raw: string): string {

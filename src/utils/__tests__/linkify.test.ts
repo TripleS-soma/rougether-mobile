@@ -31,6 +31,19 @@ describe('splitLinks (#1507)', () => {
     expect(link).toMatchObject({ text: 'https://en.wikipedia.org/wiki/Foo_(bar)' });
   });
 
+  it('주소 바로 뒤에 붙은 한글 조사는 링크에 넣지 않는다 (#1508 리뷰)', () => {
+    expect(splitLinks('https://a.com/x에서 봐요')).toEqual([
+      { kind: 'link', text: 'https://a.com/x', url: 'https://a.com/x' },
+      { kind: 'text', text: '에서 봐요' },
+    ]);
+    expect(splitLinks('www.rougether.com도 봐').find((s) => s.kind === 'link')).toMatchObject({
+      text: 'www.rougether.com',
+    });
+    expect(splitLinks('https://a.com/xㅋㅋ').find((s) => s.kind === 'link')).toMatchObject({
+      url: 'https://a.com/x',
+    });
+  });
+
   it('맨 도메인·이메일은 링크로 보지 않는다', () => {
     expect(splitLinks('example.com 이나 me@example.com').every((s) => s.kind === 'text')).toBe(
       true,
