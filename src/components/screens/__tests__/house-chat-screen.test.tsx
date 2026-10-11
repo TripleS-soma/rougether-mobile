@@ -182,3 +182,18 @@ describe('HouseChatScreen — 날짜 구분선', () => {
     expect(chatDayLabel('2026-09-21', new Date(2026, 9, 10))).toBe('9월 21일 월요일');
   });
 });
+
+describe('HouseChatScreen — 링크 (#1507)', () => {
+  it('말풍선 속 주소는 링크로 보이고, 누르면 이동 확인을 묻는다', async () => {
+    const screen = await render(
+      <HouseChatScreen
+        myUserId={1}
+        messages={[
+          { key: 's1', sequence: 1, senderUserId: 2, senderNickname: '이웃', content: '여기 봐요 https://a.com/x', createdAt: '2026-09-21T03:00:00Z', unreadCount: 0, status: 'sent' }, // prettier-ignore
+        ]}
+      />,
+    );
+    await fireEvent.press(screen.getByLabelText('링크 https://a.com/x'));
+    expect(screen.getByText('외부 사이트로 이동할까요?')).toBeTruthy();
+  });
+});

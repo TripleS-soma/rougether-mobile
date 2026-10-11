@@ -50,9 +50,11 @@ describe('거래소 내비게이션 (#1427 → #1502 독립 화면)', () => {
     expect(setScreen).toHaveBeenCalledWith('market');
     await waitFor(() => expect(fetchMarketAssets).toHaveBeenCalled());
     expect(fetchMyMarketOrders).toHaveBeenCalledWith(expect.objectContaining({ status: 'OPEN' }));
-    // 판매 중 = 대기 중 판매(INVENTORY) 주문 — 구매 주문은 세지 않는다.
+    // 판매 중 = 대기 중 판매(INVENTORY) 주문 — 구매 주문은 세지 않는다. subScreen은 그 순간의
+    // 요소라 주문이 도착한 뒤에 꺼내야 한다(먼저 꺼내면 0개로 굳어 가끔 실패했다).
+    await waitFor(() => expect(result.current.subScreen?.props.sellingCount).toBe(1));
     const ui = await render(<>{result.current.subScreen}</>, { wrapper: queryWrapper() });
-    expect(await ui.findByText('판매 중인 가구 1개')).toBeTruthy();
+    expect(ui.getByText('판매 중인 가구 1개')).toBeTruthy();
   });
 
   it('전체 메뉴에서 "가구 거래소"는 방 꾸미기 바로 아래이고, 누르면 메뉴를 닫고 연다', async () => {

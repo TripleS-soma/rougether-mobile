@@ -46,6 +46,7 @@ import { ReportSheet } from '@/components/ui/report-sheet';
 import { SheetHandle } from '@/components/ui/sheet-handle';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { LinkifiedText } from '@/components/ui/linkified-text';
 import { FEED_MAX_COMMENT, FEED_MAX_CONTENT } from '@/constants/feed';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useAndroidKeyboardHeight } from '@/hooks/use-android-keyboard-height';
@@ -477,9 +478,12 @@ export function FeedPostScreen({
       ) : null}
       {post.images.length > 0 ? <PhotoPager post={post} loadImage={loadImage} /> : null}
       {post.content ? (
-        <Text selectable style={[Typography.body, { color: t.text }]}>
+        <LinkifiedText
+          selectable
+          style={[Typography.body, { color: t.text }]}
+          linkColor={t.primaryText}>
           {post.content}
-        </Text>
+        </LinkifiedText>
       ) : null}
       <FeedActionRow
         liked={post.likedByMe}
@@ -539,9 +543,12 @@ export function FeedPostScreen({
                     .filter(Boolean)
                     .join(' · ')}
                 </Text>
-                <Text selectable style={[Typography.body, { color: t.text }]}>
+                <LinkifiedText
+                  selectable
+                  style={[Typography.body, { color: t.text }]}
+                  linkColor={t.primaryText}>
                   {c.content}
-                </Text>
+                </LinkifiedText>
               </View>
               {c.mine && onDeleteComment ? (
                 <Pressable
