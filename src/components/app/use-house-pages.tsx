@@ -34,6 +34,7 @@ import {
 } from '@/hooks/use-member-room-previews';
 import type { OnboardingMissionStepId } from '@/hooks/use-onboarding-missions';
 import type { useRoomLayouts } from '@/hooks/use-room-layouts';
+import { useLatestRef } from '@/hooks/use-stable-value';
 import { useResolvedScheme } from '@/hooks/use-tokens';
 import { i18n } from '@/i18n';
 import { clearPendingInviteCode, subscribePendingInviteCode } from '@/lib/pending-invite';
@@ -359,6 +360,20 @@ export function useHousePages({
   // 집 채팅 (#1408) — 레일 '채팅'. 배지는 방 상태 캐시(POST chat-room)에서 파생하고,
   // 채팅 화면의 소켓·읽음 응답이 같은 캐시를 갱신한다. 집 탭·채팅에서만 조회한다.
   const openChat = useCallback(() => setScreen('houseChat'), [setScreen]);
+  /** 채팅 푸시(서버 #435) — 그 집을 고른 뒤 채팅방으로. 모르는 집이면(나간 집 등) 집 탭. */
+  const housesRef = useLatestRef(arrangedHouses);
+  const openChatFor = useCallback(
+    (houseId?: number) => {
+      const idx = houseId == null ? -1 : housesRef.current.findIndex((h) => h.houseId === houseId);
+      if (houseId != null && idx < 0) {
+        setScreen('house');
+        return;
+      }
+      if (idx >= 0) setHouseIndex(idx);
+      setScreen('houseChat');
+    },
+    [housesRef, setHouseIndex, setScreen],
+  );
   const closeChat = useCallback(() => setScreen('house'), [setScreen]);
   const chatUnread = useHouseChatUnread(
     currentHouse?.houseId,
@@ -564,5 +579,7 @@ export function useHousePages({
     noHouses,
     /** 구성원 화면 — 방장이면 입주 신청 목록을 새로 받는다(#526). 알림 카드 탭도 이 경로로. */
     openMembers,
+    /** 집 채팅 푸시 탭 (서버 #435) — 그 집을 골라 채팅방으로. */
+    openChatFor,
   };
 }

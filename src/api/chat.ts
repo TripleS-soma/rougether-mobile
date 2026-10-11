@@ -61,3 +61,16 @@ export function sendChatMessage(roomId: number, body: ChatSendRequest) {
 export function markChatRead(roomId: number, lastReadSequence: number) {
   return apiPut<ChatRoomResponse>(`/chat/rooms/${roomId}/read`, { lastReadSequence });
 }
+
+/** 내 방별 채팅 푸시 음소거 상태 (서버 #435) — 방 상태와 달리 사용자별 값이라 따로 받는다. */
+export type ChatNotificationState = { roomId: number; muted: boolean };
+
+/** GET /chat/rooms/{roomId}/notification. */
+export function fetchChatNotification(roomId: number) {
+  return apiGet<ChatNotificationState>(`/chat/rooms/${roomId}/notification`);
+}
+
+/** PUT /chat/rooms/{roomId}/notification `{ muted }` — 이 방 새 메시지 푸시를 끄고 켠다. */
+export function updateChatNotification(roomId: number, muted: boolean) {
+  return apiPut<ChatNotificationState>(`/chat/rooms/${roomId}/notification`, { muted });
+}

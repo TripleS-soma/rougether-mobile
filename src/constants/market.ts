@@ -17,6 +17,12 @@ import { UGC_AVAILABLE } from '@/constants/release-channel';
  */
 export const MARKET_ENABLED = UGC_AVAILABLE;
 
+/**
+ * 판매 수량 수정 (서버 #437 `POST /market/orders/{id}/amend`). 서버가 운영에 없으면 누를 때 404라
+ * 플래그로 두었다 — 2026-10-11 운영 /v3/api-docs에서 배포 확인 후 켬. 되돌릴 일이 생기면 false.
+ */
+export const MARKET_AMEND_ENABLED = true;
+
 /** 주문 가격 1~1,000 코인 정수 (POST /market/orders `price`). */
 export const MARKET_PRICE_MIN = 1;
 export const MARKET_PRICE_MAX = 1000;

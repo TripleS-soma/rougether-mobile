@@ -14,7 +14,7 @@ import { MarketAssetScreen, type MarketPlaceOrder } from '@/components/screens/m
 import { MarketOrdersScreen } from '@/components/screens/market-orders-screen';
 import { MarketScreen } from '@/components/screens/market-screen';
 import { useToast } from '@/components/ui/toast';
-import { MARKET_ENABLED } from '@/constants/market';
+import { MARKET_AMEND_ENABLED, MARKET_ENABLED } from '@/constants/market';
 import {
   useMarketActions,
   useMarketAsset,
@@ -134,6 +134,16 @@ export function useMarketPages({
     [issueAction, openAsset],
   );
 
+  const amendAction = actions.amendOrder;
+  /** 판매 수량 수정 (서버 #437) — 접수가 받아들여졌으면(체결·대기 등 결과와 무관) 시트를 닫는다. */
+  const amend = useCallback(
+    async (orderId: number, quantity: number) => {
+      const outcome = await amendAction(orderId, quantity);
+      return outcome.accepted && outcome.result !== 'rejected';
+    },
+    [amendAction],
+  );
+
   const cancelAction = actions.cancelOrder;
   const cancel = useCallback(
     async (orderId: number) => {
@@ -186,6 +196,7 @@ export function useMarketPages({
       onRefresh={orders.refresh}
       onLoadMore={orders.loadMore}
       onCancel={cancel}
+      onAmend={MARKET_AMEND_ENABLED ? amend : undefined}
       onOpenAsset={openAsset}
       onBack={goBack}
     />
@@ -197,6 +208,8 @@ export function useMarketPages({
     /** 스튜디오 "거래소에 올리기" — 꺼져 있으면 undefined(버튼이 안 생긴다). */
     onIssue: MARKET_ENABLED ? issue : undefined,
     openAsset,
+    /** 내 주문 — 거래소 체결 알림의 목적지 (서버 #432). */
+    openOrders: openOrdersScreen,
     subScreen,
   };
 }

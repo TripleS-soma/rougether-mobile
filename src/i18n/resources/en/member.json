@@ -414,6 +414,14 @@
         "feed": {
           "label": "Feed comments",
           "desc": "When someone comments on your post"
+        },
+        "chat": {
+          "label": "House chat",
+          "desc": "New messages in your house chat. To mute one room, tap the bell in that chat"
+        },
+        "market": {
+          "label": "Furniture market",
+          "desc": "When your order fills or someone places a bid on your furniture"
         }
       },
       "pushStep": {

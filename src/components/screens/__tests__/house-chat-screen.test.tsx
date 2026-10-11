@@ -197,3 +197,21 @@ describe('HouseChatScreen — 링크 (#1507)', () => {
     expect(screen.getByText('외부 사이트로 이동할까요?')).toBeTruthy();
   });
 });
+
+describe('HouseChatScreen — 방 알림 음소거 (서버 #435)', () => {
+  it('종 버튼은 알림 켜짐을 스위치로 알리고, 누르면 onToggleMute', async () => {
+    const onToggleMute = jest.fn();
+    const screen = await render(
+      <HouseChatScreen messages={[]} myUserId={1} muted onToggleMute={onToggleMute} />,
+    );
+    const bell = screen.getByLabelText('이 채팅방 알림');
+    expect(bell.props.accessibilityState).toMatchObject({ checked: false });
+    await fireEvent.press(bell);
+    expect(onToggleMute).toHaveBeenCalled();
+  });
+
+  it('음소거 상태를 모르면(콜백 없음) 종 버튼이 없다', async () => {
+    const screen = await render(<HouseChatScreen messages={[]} myUserId={1} />);
+    expect(screen.queryByLabelText('이 채팅방 알림')).toBeNull();
+  });
+});

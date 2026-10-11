@@ -68,6 +68,10 @@ export type HouseChatScreenProps = {
   onRetrySend?: (clientMessageId: string) => void;
   /** 실제로 화면에 보인 메시지 중 가장 큰 순서 — 읽음 처리에 쓴다. */
   onVisible?: (lastSequence: number) => void;
+  /** 이 방 새 메시지 푸시를 끈 상태 (서버 #435). */
+  muted?: boolean;
+  /** 헤더 종 버튼 — 없으면 버튼을 그리지 않는다(음소거 상태를 아직 모름 등). */
+  onToggleMute?: () => void;
   onBack?: () => void;
 };
 
@@ -128,6 +132,8 @@ export function HouseChatScreen({
   onSend,
   onRetrySend,
   onVisible,
+  muted = false,
+  onToggleMute,
   onBack,
 }: HouseChatScreenProps) {
   const t = useTokens();
@@ -286,7 +292,28 @@ export function HouseChatScreen({
           </View>
         </View>
       </KeyboardAvoidingView>
-      <ScreenHeader title={houseName ?? tr('house.chat.title')} onBack={onBack} />
+      <ScreenHeader
+        title={houseName ?? tr('house.chat.title')}
+        onBack={onBack}
+        right={
+          onToggleMute ? (
+            <Pressable
+              onPress={onToggleMute}
+              accessibilityRole="switch"
+              accessibilityLabel={tr('house.chat.muteA11y')}
+              accessibilityState={{ checked: !muted }}
+              aria-checked={!muted}
+              hitSlop={Spacing.two}
+              style={[styles.muteBtn, { backgroundColor: t.surface }]}>
+              <Icon
+                name={muted ? 'bell-off' : 'bell'}
+                size={20}
+                color={muted ? t.textMuted : t.text}
+              />
+            </Pressable>
+          ) : null
+        }
+      />
     </View>
   );
 }
@@ -405,6 +432,13 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.two },
   retry: { padding: Spacing.two },
+  muteBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   listContent: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, flexGrow: 1 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.four },
   older: { paddingVertical: Spacing.two },

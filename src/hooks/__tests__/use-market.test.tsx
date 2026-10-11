@@ -3,6 +3,7 @@ import { QueryClient } from '@tanstack/react-query';
 
 import { ApiError } from '@/api/http';
 import {
+  amendMarketOrder,
   cancelMarketOrder,
   fetchMarketCommand,
   issueMarketAsset,
@@ -17,6 +18,7 @@ jest.mock('@/api/market', () => ({
   ...jest.requireActual('@/api/market'),
   placeMarketOrder: jest.fn(),
   cancelMarketOrder: jest.fn(),
+  amendMarketOrder: jest.fn(),
   fetchMarketCommand: jest.fn(),
   issueMarketAsset: jest.fn(),
 }));
@@ -70,6 +72,7 @@ async function setup(client: QueryClient = createTestQueryClient()) {
 beforeEach(() => {
   jest.mocked(placeMarketOrder).mockReset().mockResolvedValue(pending);
   jest.mocked(cancelMarketOrder).mockReset().mockResolvedValue(pending);
+  jest.mocked(amendMarketOrder).mockReset().mockResolvedValue(pending);
   jest.mocked(fetchMarketCommand).mockReset();
   jest.mocked(issueMarketAsset).mockReset();
 });
@@ -264,6 +267,30 @@ describe('useMarketActions — 주문 흐름 (#1427)', () => {
     expect(cancelMarketOrder).toHaveBeenCalledWith(5, expect.any(String));
     expect(outcome).toEqual({ accepted: true, result: 'cancelled' });
     expect(toast).toHaveBeenCalledWith('주문을 취소했어요', 'success');
+  });
+
+  // 서버 #437 — 판매 수량 수정도 같은 접수·폴링 흐름.
+  it('수량 수정 — APPLIED면 "판매 수량을 바꿨어요", 거절은 거절 사유 문구', async () => {
+    jest.mocked(fetchMarketCommand).mockResolvedValue({ ...pending, status: 'APPLIED' });
+    const { result, toast } = await setup();
+    let outcome;
+    await act(async () => {
+      outcome = await result.current.amendOrder(5, 3);
+    });
+    expect(amendMarketOrder).toHaveBeenCalledWith(5, 3, expect.any(String));
+    expect(outcome).toEqual({ accepted: true, result: 'amended' });
+    expect(toast).toHaveBeenCalledWith('판매 수량을 바꿨어요', 'success');
+
+    jest.mocked(fetchMarketCommand).mockResolvedValue({
+      ...pending,
+      status: 'REJECTED',
+      rejectCode: 'MARKET_AMEND_BELOW_FILLED',
+    });
+    await act(async () => {
+      outcome = await result.current.amendOrder(5, 2);
+    });
+    expect(outcome).toMatchObject({ result: 'rejected', rejectCode: 'MARKET_AMEND_BELOW_FILLED' });
+    expect(toast).toHaveBeenLastCalledWith('그 사이 더 팔려서 그만큼 줄일 수 없었어요.', 'error');
   });
 
   it('발행 — 성공하면 종목을 돌려주고 상세 캐시에 심는다, 실패는 코드 문구', async () => {

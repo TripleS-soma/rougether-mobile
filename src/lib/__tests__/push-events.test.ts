@@ -4,7 +4,13 @@
  */
 import * as Notifications from 'expo-notifications';
 
-import { onNotificationReceived, onNotificationTap } from '@/lib/push-events';
+import {
+  initPushDisplay,
+  onNotificationReceived,
+  onNotificationTap,
+  pushTapFrom,
+  setForegroundPushFilter,
+} from '@/lib/push-events';
 
 type Received = { type?: string; title: string; body: string };
 
@@ -118,5 +124,46 @@ describe('onNotificationTap', () => {
     stop();
     getLast.mockRestore();
     subscribe.mockRestore();
+  });
+});
+
+describe('채팅 푸시 (서버 #435)', () => {
+  afterEach(() => setForegroundPushFilter(null));
+
+  it('data의 houseId·roomId·refId를 숫자로 읽는다(값은 문자열로 온다)', () => {
+    expect(pushTapFrom({ type: 'CHAT_MESSAGE', roomId: '7', houseId: '3' })).toMatchObject({
+      type: 'CHAT_MESSAGE',
+      roomId: 7,
+      houseId: 3,
+    });
+    expect(pushTapFrom({ type: 'MARKET_SELL_FILLED', refId: '55' })).toMatchObject({ refId: 55 });
+    expect(pushTapFrom({ roomId: 'x', houseId: '-1' })).toMatchObject({
+      roomId: undefined,
+      houseId: undefined,
+    });
+  });
+
+  it('보고 있는 방의 새 메시지는 인앱 배너로 올리지 않고, 다른 방은 올린다', () => {
+    setForegroundPushFilter((tap) => tap.type === 'CHAT_MESSAGE' && tap.roomId === 7);
+    expect(
+      emit({ title: '집', body: '나: 안녕', data: { type: 'CHAT_MESSAGE', roomId: '7' } }),
+    ).toEqual([]);
+    expect(
+      emit({ title: '집', body: '나: 안녕', data: { type: 'CHAT_MESSAGE', roomId: '8' } }),
+    ).toHaveLength(1);
+  });
+
+  it('보고 있는 방의 새 메시지는 소리·알림 목록도 남기지 않는다', async () => {
+    let handler: ((n: unknown) => Promise<Record<string, boolean>>) | undefined;
+    const spy = jest.spyOn(Notifications, 'setNotificationHandler').mockImplementation((h) => {
+      handler = h?.handleNotification as unknown as typeof handler;
+    });
+    initPushDisplay();
+    setForegroundPushFilter((tap) => tap.type === 'CHAT_MESSAGE' && tap.roomId === 7);
+    const show = (roomId: string) =>
+      handler?.({ request: { content: { data: { type: 'CHAT_MESSAGE', roomId } } } });
+    expect(await show('7')).toMatchObject({ shouldPlaySound: false, shouldShowList: false });
+    expect(await show('8')).toMatchObject({ shouldPlaySound: true, shouldShowList: true });
+    spy.mockRestore();
   });
 });

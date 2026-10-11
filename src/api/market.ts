@@ -240,6 +240,24 @@ export async function placeMarketOrder(input: PlaceOrderRequest): Promise<Market
   return toCommand(await apiPost<MarketCommandAcceptedResponse>('/market/orders', body));
 }
 
+/**
+ * POST /market/orders/{orderId}/amend `{ requestId, quantity }` — 202 접수(서버 #437). 대기 중인
+ * **발행 재고 판매 주문**만. `quantity`는 수정 후 전체 수량(팔린 수량 포함) 1~10. 줄이면 대기
+ * 순서 유지, 늘리면 같은 가격대 맨 뒤로.
+ */
+export async function amendMarketOrder(
+  orderId: number,
+  quantity: number,
+  requestId: string,
+): Promise<MarketCommand> {
+  return toCommand(
+    await apiPost<MarketCommandAcceptedResponse>(`/market/orders/${orderId}/amend`, {
+      requestId,
+      quantity,
+    }),
+  );
+}
+
 /** POST /market/orders/{orderId}/cancel — 202 접수. 환불은 엔진 처리 때. */
 export async function cancelMarketOrder(
   orderId: number,

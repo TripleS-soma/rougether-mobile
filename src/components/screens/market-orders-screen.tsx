@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { MarketOrder, MarketOrdersFilter } from '@/api/market';
 import { expiryLabel } from '@/components/screens/market/economics';
+import { MarketAmendSheet } from '@/components/screens/market/market-amend-sheet';
 import { MarketAssetImage } from '@/components/screens/market/market-asset-image';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -35,6 +36,11 @@ export type MarketOrdersScreenProps = {
   onLoadMore?: () => void;
   /** 대기 중 주문 취소 — 확인 다이얼로그를 거친 뒤 부른다. */
   onCancel?: (orderId: number) => Promise<unknown> | void;
+  /**
+   * 판매 수량 수정 (서버 #437) — 대기 중인 발행 재고 판매 주문에만 버튼이 생긴다. 결과가 나오면
+   * true면 시트를 닫는다(실패 안내는 부른 쪽이).
+   */
+  onAmend?: (orderId: number, quantity: number) => Promise<boolean> | boolean;
   onOpenAsset?: (assetId: number) => void;
   onBack?: () => void;
   /** 만료까지 남은 시간 기준 — 테스트 고정용. */
@@ -57,6 +63,7 @@ export function MarketOrdersScreen({
   onRefresh,
   onLoadMore,
   onCancel,
+  onAmend,
   onOpenAsset,
   onBack,
   now,
@@ -69,6 +76,19 @@ export function MarketOrdersScreen({
   const screenStyle = useScreenStyle([]);
   const [confirming, setConfirming] = useState<MarketOrder | null>(null);
   const [cancelling, setCancelling] = useState<number | null>(null);
+  const [amending, setAmending] = useState<MarketOrder | null>(null);
+  const [amendSubmitting, setAmendSubmitting] = useState(false);
+
+  const submitAmend = async (quantity: number) => {
+    const order = amending;
+    if (!order || !onAmend || amendSubmitting) return;
+    setAmendSubmitting(true);
+    try {
+      if (await Promise.resolve(onAmend(order.orderId, quantity))) setAmending(null);
+    } finally {
+      setAmendSubmitting(false);
+    }
+  };
 
   const confirmCancel = async () => {
     const order = confirming;
@@ -162,23 +182,39 @@ export function MarketOrdersScreen({
                     ) : null}
                   </View>
                 </Pressable>
-                {o.status === 'OPEN' && onCancel ? (
-                  <Pressable
-                    onPress={() => setConfirming(o)}
-                    disabled={cancelling != null}
-                    accessibilityRole="button"
-                    accessibilityLabel={tr('market.orders.cancelA11y', { name: o.name })}
-                    accessibilityState={{ disabled: cancelling != null }}
-                    style={[styles.cancelBtn, { backgroundColor: t.surfaceMuted }]}>
-                    <Text
-                      style={[
-                        Typography.supporting,
-                        { color: cancelling === o.orderId ? t.textDisabled : t.danger },
-                      ]}>
-                      {tr('market.orders.cancel')}
-                    </Text>
-                  </Pressable>
-                ) : null}
+                <View style={styles.actions}>
+                  {o.status === 'OPEN' &&
+                  o.side === 'SELL' &&
+                  o.source === 'ISSUANCE' &&
+                  onAmend ? (
+                    <Pressable
+                      onPress={() => setAmending(o)}
+                      accessibilityRole="button"
+                      accessibilityLabel={tr('market.orders.amendA11y', { name: o.name })}
+                      style={[styles.cancelBtn, { backgroundColor: t.surfaceMuted }]}>
+                      <Text style={[Typography.supporting, { color: t.primaryText }]}>
+                        {tr('market.orders.amend')}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                  {o.status === 'OPEN' && onCancel ? (
+                    <Pressable
+                      onPress={() => setConfirming(o)}
+                      disabled={cancelling != null}
+                      accessibilityRole="button"
+                      accessibilityLabel={tr('market.orders.cancelA11y', { name: o.name })}
+                      accessibilityState={{ disabled: cancelling != null }}
+                      style={[styles.cancelBtn, { backgroundColor: t.surfaceMuted }]}>
+                      <Text
+                        style={[
+                          Typography.supporting,
+                          { color: cancelling === o.orderId ? t.textDisabled : t.danger },
+                        ]}>
+                        {tr('market.orders.cancel')}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
               </View>
             );
           })
@@ -194,6 +230,12 @@ export function MarketOrdersScreen({
         ) : null}
       </PawRefreshScroll>
 
+      <MarketAmendSheet
+        order={amending}
+        submitting={amendSubmitting}
+        onSubmit={(q) => void submitAmend(q)}
+        onClose={() => setAmending(null)}
+      />
       <ConfirmDialog
         visible={confirming != null}
         title={tr('market.orders.cancelTitle')}
@@ -227,6 +269,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
   },
   rowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  actions: { gap: Spacing.one, alignItems: 'stretch' },
   cancelBtn: {
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
