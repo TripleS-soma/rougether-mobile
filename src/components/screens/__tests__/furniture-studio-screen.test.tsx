@@ -119,7 +119,7 @@ it('shows quality review details rather than the internal attempt budget', async
   expect(ui.queryByText('GENERATION_BUDGET_EXHAUSTED')).toBeNull();
 });
 
-it.each(['PROVIDER_REQUEST_FAILED', 'PROVIDER_RATE_LIMITED', 'UNKNOWN_FAILURE'])(
+it.each(['PROVIDER_REQUEST_FAILED', 'PROVIDER_RATE_LIMITED', 'UNKNOWN_FAILURE', null])(
   'allows later retry for %s without displaying stale review details',
   async (failureCode) => {
     const ui = await render(
@@ -160,6 +160,9 @@ it('preserves the completed furniture after a failed re-review without claiming 
   expect(ui.getByText('이번 검수를 마치지 못했어요')).toBeTruthy();
   expect(ui.getByText('수정한 배경이 깨끗하지 않아요.')).toBeTruthy();
   expect(ui.getByText('이전에 완성한 가구는 가구함에 그대로 있어요.')).toBeTruthy();
+  expect(
+    ui.queryByText('대상의 형태가 선명하고 배경이 단순한 사진으로 다시 시도해주세요.'),
+  ).toBeNull();
   expect(ui.queryByText('실패한 작업의 생성권은 돌려드렸어요.')).toBeNull();
   await fireEvent.press(ui.getByLabelText('방에 배치하기'));
   expect(place).toHaveBeenCalledTimes(1);
@@ -183,4 +186,27 @@ it('does not show failure information for a successful job', async () => {
   );
   expect(ui.getByText('내 가구함에 담았어요')).toBeTruthy();
   expect(ui.queryByRole('alert')).toBeNull();
+});
+
+it.each([
+  [
+    'SOURCE_UPLOAD_FAILED',
+    '사진을 불러오지 못해 만들기를 마치지 못했어요.',
+    '연결 상태를 확인하고 사진을 다시 선택해주세요.',
+  ],
+  [
+    'QUEUE_WAIT_EXCEEDED',
+    '처리가 제시간에 끝나지 않아 만들기를 중단했어요.',
+    '잠시 후 같은 사진으로 다시 시도할 수 있어요.',
+  ],
+])('explains %s and the appropriate retry action', async (failureCode, reason, hint) => {
+  const ui = await render(
+    <FurnitureStudioScreen
+      balance={{ available: 1, reserved: 0 }}
+      photo={null}
+      jobs={[{ ...failedJob, failureCode }]}
+    />,
+  );
+  expect(ui.getByText(reason)).toBeTruthy();
+  expect(ui.getByText(hint)).toBeTruthy();
 });

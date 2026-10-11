@@ -272,9 +272,11 @@ function FurnitureFailureNotice({ job }: { job: FurnitureJob }) {
       <Text style={[Typography.body, { color: t.text }]}>
         {detail || tr(`roomShop.studio.failure.${kind}.reason`)}
       </Text>
-      <Text style={[Typography.supporting, { color: t.textMuted }]}>
-        {tr(`roomShop.studio.failure.${kind}.hint`)}
-      </Text>
+      {job.userItemId == null ? (
+        <Text style={[Typography.supporting, { color: t.textMuted }]}>
+          {tr(`roomShop.studio.failure.${kind}.hint`)}
+        </Text>
+      ) : null}
       <Text style={[Typography.supporting, { color: t.textMuted }]}>
         {tr(
           job.userItemId != null
