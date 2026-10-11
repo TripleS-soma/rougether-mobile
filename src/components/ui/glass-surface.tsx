@@ -32,9 +32,9 @@ export type GlassSurfaceProps = Omit<ViewProps, 'style'> & {
    */
   tintColor?: string;
   /**
-   * 폴백(반투명 면)의 그림자로 "떠 있음"을 표현할지 (#1074). 배경 위에 촘촘히 놓인
-   * 카드 목록은 안드로이드 elevation 그림자가 뒤 배경과 섞여 회색 테두리처럼 보여서
-   * (#1328 미니게임 카드) 끈다. 글래스가 가능한 iOS 26에서는 영향 없음.
+   * 폴백(반투명 면)의 그림자로 "떠 있음"을 표현할지 (#1074). iOS(25 이하) 전용 —
+   * 안드로이드는 반투명 면의 elevation이 회색 테두리로 비쳐서 항상 그림자 없이 그린다.
+   * 글래스가 가능한 iOS 26에서는 영향 없음.
    */
   lift?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -78,7 +78,7 @@ export function GlassSurface({
         {...rest}
         style={[
           style,
-          translucent && lift && styles.lift,
+          translucent && lift && (Platform.OS === 'android' ? null : styles.lift),
           translucent && lift && glassEffectStyle === 'clear' && styles.clear,
           { backgroundColor: bg },
         ]}>
@@ -110,8 +110,10 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
+  // 안드로이드엔 elevation을 주지 않는다 — 반투명 면(알파 0.9) 아래에 그려진 그림자가 면을
+  // 통과해 비쳐 카드 가장자리에 회색 띠와 안쪽 사각형이 생겼다(#1328 미니게임 카드, 내 정보
+  // 카드 전부). iOS의 shadow* 는 면 바깥에만 그려져 반투명이어도 깨끗하다.
   lift: {
-    elevation: 3,
     shadowColor: ShadowColor,
     shadowOpacity: 0.12,
     shadowRadius: 6,
