@@ -49,10 +49,10 @@ describe('useDecorEntry', () => {
     expect(track).toHaveBeenLastCalledWith('decor_open', { from: 'direct' });
   });
 
-  it('거래소 상세·내 주문으로 갔다 오면 연 탭을 기억한다 (#1427)', async () => {
+  it('꾸미기를 떠나면 연 탭을 잊는다 — 거래소는 꾸미기로 돌아오지 않는 독립 화면 (#1502)', async () => {
     const { result, rerender } = await setup('decor');
-    await act(async () => result.current.setDecorInitialTab('market'));
+    await act(async () => result.current.setDecorInitialTab('floor'));
     await rerender({ screen: 'marketAsset' });
-    expect(result.current.decorInitialTab).toBe('market');
+    expect(result.current.decorInitialTab).toBeUndefined();
   });
 });

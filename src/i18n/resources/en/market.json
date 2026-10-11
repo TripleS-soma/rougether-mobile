@@ -146,6 +146,9 @@
       "MARKET_ENGINE_ERROR": "Processing failed. Your coins or furniture were returned.",
       "MARKET_ENGINE_ERROR_UNREFUNDED": "Processing failed. Please contact support.",
       "generic": "It couldn't be processed. Your coins or furniture were returned."
+    },
+    "screen": {
+      "title": "Furniture market"
     }
   }
 }
