@@ -57,4 +57,11 @@ describe('linkHost', () => {
     expect(linkHost('https://user:pw@evil.com/x')).toBe('evil.com');
     expect(linkHost('not a url')).toBe('not a url');
   });
+
+  // 확인 창이 보여 주는 도메인은 브라우저가 실제로 여는 곳이어야 한다 (#1508 리뷰).
+  it('백슬래시·여러 @로 다른 도메인인 척하는 주소도 실제 호스트를 보여 준다', () => {
+    expect(linkHost('https://evil.com\\@google.com/')).toBe('evil.com');
+    expect(linkHost('https://google.com@evil.com/x')).toBe('evil.com');
+    expect(linkHost('https://a@b@evil.com/')).toBe('evil.com');
+  });
 });

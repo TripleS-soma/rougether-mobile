@@ -47,10 +47,16 @@ export function splitLinks(text: string): TextSegment[] {
 }
 
 /**
- * 확인 창에 보여 줄 호스트 — RN의 `URL`은 `host` 등을 구현하지 않는 버전이 있어 직접 뽑는다.
+ * 확인 창에 보여 줄 호스트 — 피싱 방지용이라 **브라우저가 실제로 여는 곳**과 같아야 한다.
+ * RN의 `URL`은 `host` 등을 구현하지 않는 버전이 있어 직접 뽑되, WHATWG URL 규칙을 따른다:
+ * - http(s)에서 백슬래시는 슬래시와 같은 구분자다 — `https://evil.com\\@google.com/`은 evil.com을
+ *   연다(#1508 리뷰: 예전 정규식은 google.com을 보여 줬다).
+ * - 사용자 정보(`user:pw@`)는 **마지막** `@`까지다 — `a@b@evil.com`의 호스트는 evil.com.
  * 못 뽑으면 주소 그대로.
  */
 export function linkHost(url: string): string {
-  const m = /^https?:\/\/([^/?#\s]+)/i.exec(url);
-  return m ? m[1].replace(/^[^@]*@/, '') : url;
+  const m = /^https?:\/\/([^/\\?#\s]*)/i.exec(url);
+  if (!m) return url;
+  const authority = m[1];
+  return authority.slice(authority.lastIndexOf('@') + 1) || url;
 }
