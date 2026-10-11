@@ -26,6 +26,8 @@ export type NavMenuPopoverProps = {
   onOpenCharacterPicker?: () => void;
   /** 방 꾸미기. */
   onEditRoom?: () => void;
+  /** 가구 거래소 (#1502) — 꾸미기 바로 아래. 없으면 숨김(거래소 꺼짐). */
+  onOpenMarket?: () => void;
   /** 방 이미지 저장 (#245). 없으면 항목을 숨긴다 — 웹(view-shot 없음). */
   onSaveRoomImage?: () => void;
   /** 카테고리 관리 sheet 열기. */
@@ -49,6 +51,7 @@ export function NavMenuPopover({
   onClose,
   onOpenCharacterPicker,
   onEditRoom,
+  onOpenMarket,
   onSaveRoomImage,
   onOpenCategoryManager,
   onManageRoutines,
@@ -94,6 +97,15 @@ export function NavMenuPopover({
                 label: tr('app.navMenu.decorate'),
                 onPress: () => onEditRoom?.(),
               },
+              ...(onOpenMarket
+                ? [
+                    {
+                      icon: 'shop' as const,
+                      label: tr('app.navMenu.market'),
+                      onPress: () => onOpenMarket(),
+                    },
+                  ]
+                : []),
               ...(onSaveRoomImage
                 ? [
                     {

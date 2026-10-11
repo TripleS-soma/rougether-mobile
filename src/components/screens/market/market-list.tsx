@@ -20,7 +20,7 @@ export type MarketListProps = {
   hasNext?: boolean;
   loadingMore?: boolean;
   onRetry?: () => void;
-  /** 새로고침 — 꾸미기 패널은 바깥 스크롤 안이라 당겨서 새로고침 대신 버튼으로. */
+  /** 새로고침 버튼 — 웹처럼 당겨서 새로고침이 없는 곳에서도 쓸 수 있게. */
   onRefresh?: () => void;
   onLoadMore?: () => void;
   onOpenAsset?: (assetId: number) => void;
@@ -30,8 +30,8 @@ export type MarketListProps = {
 const NO_ASSETS: MarketAssetCard[] = [];
 
 /**
- * 거래소 목록 (#1427) — 꾸미기(상점) 패널의 "거래소" 탭 안에 들어가는 카드 격자. 스스로
- * 스크롤하지 않는다(꾸미기 화면의 스크롤 안에 산다) — 다음 페이지는 "더 보기" 버튼.
+ * 거래소 목록 (#1427) — 거래소 화면(#1502) 안의 카드 격자. 스스로
+ * 스크롤하지 않는다(거래소 화면의 스크롤 안에 산다) — 다음 페이지는 "더 보기" 버튼.
  * 카드: 그림·이름·제작자(탈퇴 시 "탈퇴한 회원")·최저 판매가("N코인부터"/"판매 대기 없음")·
  * 최근 거래가.
  */

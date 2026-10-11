@@ -146,6 +146,9 @@
       "MARKET_ENGINE_ERROR": "처리에 실패했어요. 맡긴 코인·가구는 돌려드렸어요.",
       "MARKET_ENGINE_ERROR_UNREFUNDED": "처리에 실패했어요. 고객센터로 문의해 주세요.",
       "generic": "처리하지 못했어요. 맡긴 코인·가구는 돌려드렸어요."
+    },
+    "screen": {
+      "title": "가구 거래소"
     }
   }
 }
