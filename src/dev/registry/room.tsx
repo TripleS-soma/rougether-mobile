@@ -186,6 +186,42 @@ export const roomEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'FurnitureStudioFailures',
+    description: '사진 거절·품질 검수·일시 오류의 사유와 재시도 안내 (#1503).',
+    render: () => (
+      <FurnitureStudioScreen
+        balance={{ available: 2, reserved: 0 }}
+        jobs={[
+          {
+            id: 'photo',
+            status: 'FAILED',
+            assetKey: null,
+            userItemId: null,
+            failureCode: 'PHOTO_REJECTED',
+            reason: '여러 대상이 비슷하게 보여 만들 대상을 하나로 고르기 어려워요.',
+          },
+          {
+            id: 'quality',
+            status: 'FAILED',
+            assetKey: null,
+            userItemId: null,
+            failureCode: 'GENERATION_BUDGET_EXHAUSTED',
+            reason: '배경에 흰색 잔상이 남아 방에 놓기 어려워요.',
+          },
+          {
+            id: 'temporary',
+            status: 'FAILED',
+            assetKey: null,
+            userItemId: null,
+            failureCode: 'PROVIDER_REQUEST_FAILED',
+          },
+        ]}
+        photo={null}
+        onChoosePhoto={() => {}}
+      />
+    ),
+  },
+  {
     name: 'Room · renderer contract v2 reference',
     description: '가로:세로 1:1.2 캔버스 · 폭 기준 가구·캐릭터 · 여름 바다 CDN fixture.',
     render: () => <RoomRenderReference />,
