@@ -1,11 +1,10 @@
 import { fireEvent, render, renderHook, waitFor } from '@testing-library/react-native';
-import { Text } from 'react-native';
 
-import { fetchMyMarketOrders } from '@/api/market';
+import { fetchMarketAssets, fetchMyMarketOrders } from '@/api/market';
+import { NavMenuPopover } from '@/components/app/nav-menu-popover';
 import { backTargetFor, TAB_FOR_SCREEN } from '@/components/app/navigation';
 import { useMarketPages } from '@/components/app/use-market-pages';
 import { FurnitureStudioScreen } from '@/components/screens/furniture-studio-screen';
-import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { DEMO_MARKET_ORDERS } from '@/mocks/fixtures';
 import { queryWrapper } from '@/test-utils/query-wrapper';
 
@@ -21,15 +20,17 @@ jest.mock('@/api/market', () => ({
   fetchMyMarketOrders: jest.fn(async () => ({ items: [], hasNext: false })),
 }));
 
-describe('거래소 내비게이션 (#1427)', () => {
-  it('상세·내 주문은 하단 탭 없는 서브화면, 뒤로는 꾸미기(상점)', () => {
-    expect(TAB_FOR_SCREEN.marketAsset).toBeNull();
-    expect(TAB_FOR_SCREEN.marketOrders).toBeNull();
-    expect(backTargetFor('marketAsset', 'myRoom', false)).toBe('decor');
-    expect(backTargetFor('marketOrders', 'myRoom', false)).toBe('decor');
+describe('거래소 내비게이션 (#1427 → #1502 독립 화면)', () => {
+  it('목록·상세·내 주문은 하단 탭 없는 서브화면 — 상세·내 주문의 뒤로는 거래소, 거래소의 뒤로는 방', () => {
+    for (const screen of ['market', 'marketAsset', 'marketOrders'] as const) {
+      expect(TAB_FOR_SCREEN[screen]).toBeNull();
+    }
+    expect(backTargetFor('market', 'myRoom', false)).toBe('myRoom');
+    expect(backTargetFor('marketAsset', 'myRoom', false)).toBe('market');
+    expect(backTargetFor('marketOrders', 'myRoom', false)).toBe('market');
   });
 
-  it('켜져 있으면 꾸미기 탭·판매 중 수·스튜디오 발행이 배선된다', async () => {
+  it('켜져 있으면 메뉴 진입·스튜디오 발행이 배선되고, 거래소 화면에 판매 중 수가 뜬다', async () => {
     jest.mocked(fetchMyMarketOrders).mockResolvedValue({
       items: DEMO_MARKET_ORDERS,
       hasNext: false,
@@ -37,42 +38,42 @@ describe('거래소 내비게이션 (#1427)', () => {
     const setScreen = jest.fn();
     const { result } = await renderHook(
       () =>
-        useMarketPages({ nav: { screen: 'decor', setScreen, goBack: jest.fn() }, coinBalance: 0 }),
+        useMarketPages({
+          nav: { screen: 'market', setScreen, goBack: jest.fn() },
+          coinBalance: 0,
+          diamondBalance: 0,
+        }),
       { wrapper: queryWrapper() },
     );
-    expect(result.current.renderMarket).toBeDefined();
     expect(result.current.onIssue).toBeDefined();
-    // 판매 중 = 대기 중 판매(INVENTORY) 주문 — 구매 주문은 세지 않는다.
-    await waitFor(() => expect(result.current.sellingCount).toBe(1));
+    result.current.openMarket?.();
+    expect(setScreen).toHaveBeenCalledWith('market');
+    await waitFor(() => expect(fetchMarketAssets).toHaveBeenCalled());
     expect(fetchMyMarketOrders).toHaveBeenCalledWith(expect.objectContaining({ status: 'OPEN' }));
-  });
-});
-
-describe('꾸미기의 거래소 탭 (#1427)', () => {
-  it('renderMarket을 넘기면 "거래소" 탭이 생기고, 누르면 내용이 뜬다', async () => {
-    const renderMarket = jest.fn((leave: (go: () => void) => void) => (
-      <Text onPress={() => leave(() => {})}>거래소 내용</Text>
-    ));
-    const ui = await render(<RoomDecorScreen renderMarket={renderMarket} />);
-    await fireEvent.press(ui.getByLabelText('거래소 탭'));
-    expect(ui.getByText('거래소 내용')).toBeTruthy();
-    // 거래소 탭에서는 보유중 필터가 의미 없어 숨긴다.
-    expect(ui.queryByText('보유중만 보기')).toBeNull();
+    // 판매 중 = 대기 중 판매(INVENTORY) 주문 — 구매 주문은 세지 않는다.
+    const ui = await render(<>{result.current.subScreen}</>, { wrapper: queryWrapper() });
+    expect(await ui.findByText('판매 중인 가구 1개')).toBeTruthy();
   });
 
-  it('씨앗 탭이 market이면 거래소 탭으로 열린다', async () => {
+  it('전체 메뉴에서 "가구 거래소"는 방 꾸미기 바로 아래이고, 누르면 메뉴를 닫고 연다', async () => {
+    const onClose = jest.fn();
+    const onOpenMarket = jest.fn();
     const ui = await render(
-      <RoomDecorScreen initialTab="market" renderMarket={() => <Text>거래소 내용</Text>} />,
+      <NavMenuPopover
+        visible
+        top={0}
+        onClose={onClose}
+        onEditRoom={jest.fn()}
+        onOpenMarket={onOpenMarket}
+        onOpenCategoryManager={jest.fn()}
+        onManageRoutines={jest.fn()}
+      />,
     );
-    expect(ui.getByText('거래소 내용')).toBeTruthy();
-  });
-
-  it('판매 중인 가구가 있으면 가구 탭 위에 안내 줄 + 내 주문 보기', async () => {
-    const onOpenSelling = jest.fn();
-    const ui = await render(<RoomDecorScreen sellingCount={2} onOpenSelling={onOpenSelling} />);
-    expect(ui.getByText('판매 중인 가구 2개')).toBeTruthy();
-    await fireEvent.press(ui.getByLabelText('내 주문 보기'));
-    expect(onOpenSelling).toHaveBeenCalled();
+    const labels = ui.getAllByRole('button').map((b) => b.props.accessibilityLabel);
+    expect(labels.indexOf('가구 거래소')).toBe(labels.indexOf('방 꾸미기') + 1);
+    await fireEvent.press(ui.getByLabelText('가구 거래소'));
+    expect(onClose).toHaveBeenCalled();
+    expect(onOpenMarket).toHaveBeenCalled();
   });
 });
 
@@ -111,19 +112,24 @@ describe('스튜디오 "거래소에 올리기" (#1427)', () => {
     expect(ui.queryByLabelText('거래소에 올리기')).toBeNull();
   });
 
-  it('상세·내 주문의 뒤로 버튼은 셸의 goBack을 부른다 — 뒤로 맵을 다시 적지 않는다 (장부 6번)', async () => {
-    for (const screen of ['marketOrders', 'marketAsset'] as const) {
+  it.each(['market', 'marketOrders', 'marketAsset'] as const)(
+    '%s의 뒤로 버튼은 셸의 goBack을 부른다 — 뒤로 맵을 다시 적지 않는다 (장부 6번)',
+    async (screen) => {
       const goBack = jest.fn();
       const setScreen = jest.fn();
       const { result } = await renderHook(
-        () => useMarketPages({ nav: { screen, setScreen, goBack }, coinBalance: 0 }),
+        () =>
+          useMarketPages({
+            nav: { screen, setScreen, goBack },
+            coinBalance: 0,
+            diamondBalance: 0,
+          }),
         { wrapper: queryWrapper() },
       );
       const ui = await render(<>{result.current.subScreen}</>, { wrapper: queryWrapper() });
       await fireEvent.press(await ui.findByLabelText('뒤로 가기'));
       expect(goBack).toHaveBeenCalledTimes(1);
       expect(setScreen).not.toHaveBeenCalled();
-      ui.unmount();
-    }
-  });
+    },
+  );
 });

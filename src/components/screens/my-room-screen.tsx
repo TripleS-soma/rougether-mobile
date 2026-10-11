@@ -226,6 +226,8 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     onAddRoutine?: () => void;
     /** 햄버거 메뉴의 루틴 관리 항목 (없으면 onAddRoutine으로 폴백). */
     onManageRoutines?: () => void;
+    /** 햄버거 메뉴의 가구 거래소 항목 (#1502) — 없으면 항목을 숨긴다(거래소 꺼짐). */
+    onOpenMarket?: () => void;
     /** Open the 알림 list (햄버거 메뉴 항목; hidden when unwired). */
     onOpenNotifications?: () => void;
     /** Unread notification count — >0 shows a dot on the menu button + item. */
@@ -374,6 +376,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   onEdit,
   onAddRoutine,
   onManageRoutines,
+  onOpenMarket,
   onOpenNotifications,
   unreadNotificationCount = 0,
   ownedCharacters,
@@ -1626,6 +1629,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             ownedCharacters && onSelectCharacter ? () => setCharacterSheetOpen(true) : undefined
           }
           onEditRoom={onEdit}
+          onOpenMarket={onOpenMarket}
           // 웹은 view-shot이 없어 항목을 숨긴다 — 눌러서 '지원 안 함' 토스트를 보이는 것보다 낫다.
           onSaveRoomImage={supportsRoomImageSave() ? () => void onSaveRoomImage() : undefined}
           onOpenCategoryManager={() => onManageCategories?.()}

@@ -577,14 +577,13 @@ export function AppShell({
   // 있으면 요청도 화면도 없다.
   const feedPages = useFeedPages({ nav: { screen, setScreen, goBack } });
 
-  // 가구 거래소 배선 (#1427) — 꾸미기의 거래소 탭·판매 중 줄, 상세·내 주문 서브화면, 스튜디오
-  // 발행. MARKET_ENABLED가 꺼져 있으면 요청도 화면도 없다.
-  const openDecorMarketTab = useCallback(() => setDecorInitialTab('market'), [setDecorInitialTab]);
+  // 가구 거래소 배선 (#1427) — 목록(전체 메뉴에서 여는 독립 화면, #1502)·상세·내 주문 서브화면,
+  // 스튜디오 발행. MARKET_ENABLED가 꺼져 있으면 요청도 화면도 없다.
   const marketPages = useMarketPages({
     nav: { screen, setScreen, goBack },
     coinBalance: wallet.coin,
+    diamondBalance: wallet.diamond,
     onWalletChanged: myRoomData.refreshWallet,
-    onLeaveDecorFromMarketTab: openDecorMarketTab,
   });
 
   // 코치마크 단계 (#1324) — noHouses를 읽으므로 그 아래에서 계산.
@@ -621,6 +620,7 @@ export function AppShell({
           <MyRoomScreen
             {...myRoomPages.tabProps}
             view="room"
+            onOpenMarket={marketPages.openMarket}
             onSpeakerPress={toggleSpeaker}
             onSpeakerLongPress={openSpeaker}
             speakerPlaying={speaker.playing}
@@ -713,9 +713,6 @@ export function AppShell({
             void retryShop();
           }}
           onBack={goBack}
-          renderMarket={marketPages.renderMarket}
-          sellingCount={marketPages.sellingCount}
-          onOpenSelling={marketPages.onOpenSelling}
         />
       ) : null}
 

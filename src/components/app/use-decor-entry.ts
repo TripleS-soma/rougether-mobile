@@ -57,9 +57,9 @@ export function useDecorEntry({
     if (screen !== 'decor') {
       // 이미 비어 있으면 같은 참조를 돌려 셸 렌더를 한 번 더 일으키지 않는다(성능 장부 R1).
       setNewDecorItemIds((prev) => (prev.length > 0 ? [] : prev));
-      // 다음에 꾸미기를 직접 열면 기본 탭이어야 한다 — 뽑기에서 온 게 아니다.
-      // 거래소 상세·내 주문(#1427)은 꾸미기로 돌아오는 서브화면이라 연 탭을 기억한다.
-      if (screen !== 'marketAsset' && screen !== 'marketOrders') setDecorInitialTab(undefined);
+      // 다음에 꾸미기를 직접 열면 기본 탭이어야 한다 — 뽑기에서 온 게 아니다. 예전엔 거래소
+      // 상세·내 주문이 꾸미기로 돌아와 연 탭을 기억했지만, 거래소는 독립 화면이 됐다(#1502).
+      setDecorInitialTab(undefined);
     }
   }, [screen, fromGachaRef]);
 

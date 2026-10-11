@@ -46,6 +46,7 @@ export type Screen =
   | 'feedPost'
   | 'feedCompose'
   // 가구 거래소 (#1427) — MARKET_ENABLED일 때만 도달한다(꾸미기의 거래소 탭·스튜디오 발행).
+  | 'market'
   | 'marketAsset'
   | 'marketOrders';
 
@@ -95,6 +96,7 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   feedPost: null,
   feedCompose: null,
   // 거래소 상세·내 주문 (#1427) — 꾸미기에서 미는 서브화면. 하단 탭 없음.
+  market: null,
   marketAsset: null,
   marketOrders: null,
 };
@@ -164,8 +166,10 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   feedPost: 'feed',
   feedCompose: 'feed',
   // 거래소는 꾸미기(상점)의 탭 — 상세·내 주문 모두 꾸미기로 돌아간다 (#1427).
-  marketAsset: 'decor',
-  marketOrders: 'decor',
+  // 거래소는 전체 메뉴(≡)에서 여는 독립 화면 (#1502) — 상세·내 주문은 거래소로 돌아간다.
+  market: 'myRoom',
+  marketAsset: 'market',
+  marketOrders: 'market',
 };
 
 /** 더블 백 종료 허용 창 (#522) — 토스트 표시와 체감이 맞는 2초. */

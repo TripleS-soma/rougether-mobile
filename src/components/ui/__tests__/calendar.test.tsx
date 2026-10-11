@@ -20,6 +20,22 @@ describe('Calendar', () => {
    * 줄바꿈 자체는 jest에서 못 재므로 **되돌아올 수 없는 구조**를 단언한다:
    * 주 단위로 줄이 나뉘고(7칸씩), 칸은 퍼센트가 아니라 flex를 쓴다.
    */
+  it('요일·날짜가 주 단위 줄로 나뉘고 칸 폭에 퍼센트를 쓰지 않는다 (#845)', async () => {
+    const { getByLabelText, getByTestId } = await render(
+      <Calendar value="2026-08-16" today="2026-08-16" onSelect={() => {}} />,
+    );
+
+    // 날짜 칸은 flex:1 — 퍼센트 폭이면 반올림 줄바꿈이 되돌아온다.
+    const cell = flattenStyle(getByLabelText('2026-08-16').props.style);
+    expect(cell.flex).toBe(1);
+    expect(typeof cell.width).not.toBe('string');
+
+    // grid는 가로 wrap이 아니라 세로 스택이어야 한다.
+    const grid = flattenStyle(getByTestId('calendar-grid').props.style);
+    expect(grid.flexWrap).toBeUndefined();
+    expect(grid.flexDirection).toBe('column');
+  });
+
   // 요일 머리글이 번역 문구가 아니라 내부 키(sun·mon…)를 그리던 버그 (2026-10-11 제보).
   it('요일 머리글은 현재 언어의 요일 이름을 그린다', async () => {
     const { getByText, queryByText } = await render(
@@ -42,22 +58,6 @@ describe('Calendar', () => {
     const digits = getByText('28');
     expect(digits.props.numberOfLines).toBe(1);
     expect(flattenStyle(digits.props.style).width).toBeGreaterThanOrEqual(30);
-  });
-
-  it('요일·날짜가 주 단위 줄로 나뉘고 칸 폭에 퍼센트를 쓰지 않는다 (#845)', async () => {
-    const { getByLabelText, getByTestId } = await render(
-      <Calendar value="2026-08-16" today="2026-08-16" onSelect={() => {}} />,
-    );
-
-    // 날짜 칸은 flex:1 — 퍼센트 폭이면 반올림 줄바꿈이 되돌아온다.
-    const cell = flattenStyle(getByLabelText('2026-08-16').props.style);
-    expect(cell.flex).toBe(1);
-    expect(typeof cell.width).not.toBe('string');
-
-    // grid는 가로 wrap이 아니라 세로 스택이어야 한다.
-    const grid = flattenStyle(getByTestId('calendar-grid').props.style);
-    expect(grid.flexWrap).toBeUndefined();
-    expect(grid.flexDirection).toBe('column');
   });
 
   /**

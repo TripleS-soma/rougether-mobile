@@ -47,6 +47,7 @@ import type {
 import { FeedRoutinePicker } from '@/components/feed/feed-routine';
 import { MarketAssetScreen } from '@/components/screens/market-asset-screen';
 import { MarketOrdersScreen } from '@/components/screens/market-orders-screen';
+import { MarketScreen } from '@/components/screens/market-screen';
 import { MarketList } from '@/components/screens/market/market-list';
 import { MarketIssueSheet } from '@/components/screens/market/market-issue-sheet';
 import { AnnouncementSection } from '@/components/notifications/announcement-section';
@@ -1348,8 +1349,18 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'MarketList',
     description:
-      '가구 거래소 목록 (#1427, MARKET_ENABLED로 숨김) — 꾸미기의 거래소 탭 안 카드 격자: 그림·이름·제작자(탈퇴 시 탈퇴한 회원)·최저 판매가/판매 대기 없음·최근 거래가, 내 주문·새로고침. 로컬 픽스처.',
+      '가구 거래소 목록 (#1427, MARKET_ENABLED로 숨김) — 거래소 화면 안 카드 격자: 그림·이름·제작자(탈퇴 시 탈퇴한 회원)·최저 판매가/판매 대기 없음·최근 거래가, 내 주문·새로고침. 로컬 픽스처.',
     render: () => <MarketList assets={DEMO_MARKET_ASSETS} hasNext />,
+  },
+  {
+    name: 'MarketScreen',
+    description:
+      '가구 거래소 화면 (#1502) — 방 화면 전체 메뉴(≡)에서 여는 독립 화면: 헤더(뒤로·코인), 판매 중 N개 · 내 주문 보기, 목록. 로컬 픽스처.',
+    render: () => (
+      <View style={{ height: 640 }}>
+        <MarketScreen assets={DEMO_MARKET_ASSETS} hasNext coinBalance={1200} sellingCount={2} />
+      </View>
+    ),
   },
   {
     name: 'MarketAssetScreen',

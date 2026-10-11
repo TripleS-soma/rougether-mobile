@@ -12,8 +12,7 @@ import type { ReportReason } from '@/api/types';
 import { type Screen } from '@/components/app/navigation';
 import { MarketAssetScreen, type MarketPlaceOrder } from '@/components/screens/market-asset-screen';
 import { MarketOrdersScreen } from '@/components/screens/market-orders-screen';
-import { MarketList } from '@/components/screens/market/market-list';
-import type { DecorLeave } from '@/components/screens/room-decor-screen';
+import { MarketScreen } from '@/components/screens/market-screen';
 import { useToast } from '@/components/ui/toast';
 import { MARKET_ENABLED } from '@/constants/market';
 import {
@@ -23,55 +22,20 @@ import {
   useMyMarketOrders,
 } from '@/hooks/use-market';
 import { useModeration } from '@/hooks/use-moderation';
-import { useLatestRef } from '@/hooks/use-stable-value';
 import { i18n } from '@/i18n';
 import { track } from '@/lib/analytics';
 
-type ListState = ReturnType<typeof useMarketAssets>;
-
-/** 꾸미기 거래소 탭 — 처음 그려질 때 목록을 받기 시작하고 진입을 센다. */
-function MarketTabPanel({
-  list,
-  onVisible,
-  onOpenAsset,
-  onOpenOrders,
-}: {
-  list: ListState;
-  onVisible: () => void;
-  onOpenAsset: (assetId: number) => void;
-  onOpenOrders: () => void;
-}) {
-  const onVisibleRef = useLatestRef(onVisible);
-  useEffect(() => {
-    onVisibleRef.current();
-    track('market_view', { screen: 'list' });
-  }, [onVisibleRef]);
-  return (
-    <MarketList
-      assets={list.assets}
-      loading={list.loading}
-      loadError={list.error}
-      hasNext={list.hasNext}
-      loadingMore={list.loadingMore}
-      onRetry={() => void list.refresh()}
-      onRefresh={() => void list.refresh()}
-      onLoadMore={list.loadMore}
-      onOpenAsset={onOpenAsset}
-      onOpenOrders={onOpenOrders}
-    />
-  );
-}
-
 /**
- * 가구 거래소 페이지 배선 (#1427) — 꾸미기의 거래소 탭 내용·판매 중 수, 서브화면 2종(상세·
- * 내 주문), 스튜디오 발행을 소유한다(use-feed-pages와 같은 결). MARKET_ENABLED가 꺼져
- * 있으면 요청도 화면도 없다 — `renderMarket`·`onIssue`가 undefined라 탭·버튼이 안 생긴다.
+ * 가구 거래소 페이지 배선 (#1427) — 서브화면 3종(목록·상세·내 주문), 판매 중 수, 스튜디오
+ * 발행을 소유한다(use-feed-pages와 같은 결). 목록은 방 화면 전체 메뉴(≡)에서 여는 독립 화면
+ * (#1502 — 예전엔 꾸미기 탭). MARKET_ENABLED가 꺼져 있으면 요청도 화면도 없다 —
+ * `openMarket`·`onIssue`가 undefined라 메뉴 항목·버튼이 안 생긴다.
  */
 export function useMarketPages({
   nav,
   coinBalance,
+  diamondBalance,
   onWalletChanged,
-  onLeaveDecorFromMarketTab,
 }: {
   nav: {
     screen: Screen;
@@ -80,22 +44,23 @@ export function useMarketPages({
     goBack: () => void;
   };
   coinBalance: number;
+  diamondBalance: number;
   /** 주문 결과가 나오면 셸 지갑을 다시 받는다(지갑은 아직 react-query가 아니다). */
   onWalletChanged?: () => void | Promise<unknown>;
-  /** 거래소 탭에서 상세·내 주문으로 나갈 때 — 돌아오면 거래소 탭이 다시 열리게. */
-  onLeaveDecorFromMarketTab?: () => void;
 }) {
   const { screen, setScreen, goBack } = nav;
   const { show: toast } = useToast();
 
+  // 목록은 거래소를 처음 열 때부터 받는다 — 셸에 상주하므로 앱 시작 요청을 늘리지 않게.
   const [listVisited, setListVisited] = useState(false);
-  const markListVisited = useCallback(() => setListVisited(true), []);
-  const list = useMarketAssets({ enabled: MARKET_ENABLED && listVisited });
+  useEffect(() => {
+    if (MARKET_ENABLED && screen === 'market') setListVisited(true);
+  }, [screen]);
+  const list = useMarketAssets({ enabled: MARKET_ENABLED && (listVisited || screen === 'market') });
 
-  // 판매 중 수 — 꾸미기·내 주문에 있을 때만. 내 주문의 대기 중 탭과 같은 캐시.
-  const decorOpen = screen === 'decor';
+  // 판매 중 수 — 거래소·내 주문에 있을 때만. 내 주문의 대기 중 탭과 같은 캐시.
   const openOrders = useMyMarketOrders('OPEN', {
-    enabled: MARKET_ENABLED && (decorOpen || screen === 'marketOrders'),
+    enabled: MARKET_ENABLED && (screen === 'market' || screen === 'marketOrders'),
   });
   const sellingCount = useMemo(
     () => openOrders.orders.filter((o) => o.side === 'SELL' && o.source === 'INVENTORY').length,
@@ -131,6 +96,7 @@ export function useMarketPages({
 
   useEffect(() => {
     if (!MARKET_ENABLED) return;
+    if (screen === 'market') track('market_view', { screen: 'list' });
     if (screen === 'marketAsset') track('market_view', { screen: 'asset' });
     if (screen === 'marketOrders') track('market_view', { screen: 'orders' });
   }, [screen]);
@@ -144,28 +110,8 @@ export function useMarketPages({
   );
   const openOrdersScreen = useCallback(() => setScreen('marketOrders'), [setScreen]);
 
-  const leaveRef = useLatestRef(onLeaveDecorFromMarketTab);
-  const renderMarket = useCallback(
-    (leave: DecorLeave) => (
-      <MarketTabPanel
-        list={list}
-        onVisible={markListVisited}
-        onOpenAsset={(id) =>
-          leave(() => {
-            leaveRef.current?.();
-            openAsset(id);
-          })
-        }
-        onOpenOrders={() =>
-          leave(() => {
-            leaveRef.current?.();
-            openOrdersScreen();
-          })
-        }
-      />
-    ),
-    [list, markListVisited, openAsset, openOrdersScreen, leaveRef],
-  );
+  /** 전체 메뉴(≡)의 "가구 거래소" (#1502). */
+  const openMarket = useCallback(() => setScreen('market'), [setScreen]);
 
   const placeOrderAction = actions.placeOrder;
   const placeOrder: MarketPlaceOrder = useCallback(
@@ -196,7 +142,24 @@ export function useMarketPages({
     [cancelAction],
   );
 
-  const subScreen = !MARKET_ENABLED ? null : screen === 'marketAsset' ? (
+  const subScreen = !MARKET_ENABLED ? null : screen === 'market' ? (
+    <MarketScreen
+      assets={list.assets}
+      loading={list.loading}
+      loadError={list.error}
+      hasNext={list.hasNext}
+      loadingMore={list.loadingMore}
+      onRetry={() => void list.refresh()}
+      onRefresh={list.refresh}
+      onLoadMore={list.loadMore}
+      onOpenAsset={openAsset}
+      onOpenOrders={openOrdersScreen}
+      coinBalance={coinBalance}
+      diamondBalance={diamondBalance}
+      sellingCount={sellingCount}
+      onBack={goBack}
+    />
+  ) : screen === 'marketAsset' ? (
     <MarketAssetScreen
       asset={detail.asset}
       trades={detail.trades}
@@ -229,10 +192,8 @@ export function useMarketPages({
   ) : null;
 
   return {
-    /** 꾸미기의 거래소 탭 — 꺼져 있으면 undefined(탭이 안 생긴다). */
-    renderMarket: MARKET_ENABLED ? renderMarket : undefined,
-    sellingCount: MARKET_ENABLED ? sellingCount : 0,
-    onOpenSelling: MARKET_ENABLED ? openOrdersScreen : undefined,
+    /** 전체 메뉴(≡)의 "가구 거래소" — 꺼져 있으면 undefined(항목이 안 생긴다). */
+    openMarket: MARKET_ENABLED ? openMarket : undefined,
     /** 스튜디오 "거래소에 올리기" — 꺼져 있으면 undefined(버튼이 안 생긴다). */
     onIssue: MARKET_ENABLED ? issue : undefined,
     openAsset,
