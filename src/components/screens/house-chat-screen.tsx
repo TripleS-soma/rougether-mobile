@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { LinkifiedText } from '@/components/ui/linkified-text';
 import { weekdayLongLabelKey } from '@/constants/routines';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAndroidKeyboardHeight } from '@/hooks/use-android-keyboard-height';
@@ -371,11 +372,13 @@ const ChatRow = memo(function ChatRow({
             mine ? null : styles.bubbleOther,
             status === 'pending' ? styles.pending : null,
           ]}>
-          <Text
+          <LinkifiedText
             style={[Typography.body, emph('normal'), { color: mine ? t.onPrimary : t.text }]}
+            // 내 말풍선(진한 바탕)은 글자색 그대로 밑줄만, 남의 말풍선은 강조색.
+            linkColor={mine ? undefined : t.primaryText}
             selectable>
             {content}
-          </Text>
+          </LinkifiedText>
         </View>
         {meta}
       </View>
