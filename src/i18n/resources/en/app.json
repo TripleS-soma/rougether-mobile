@@ -124,6 +124,12 @@
     "errorBoundary": {
       "title": "Something went wrong",
       "body": "This screen hit an error. Please try again. If it keeps happening, let us know in Settings > Report a bug."
+    },
+    "link": {
+      "a11y": "Link {{url}}",
+      "confirmTitle": "Open an external site?",
+      "confirmBody": "You're going to {{host}}. Don't open links you don't recognize.",
+      "open": "Open"
     }
   }
 }
