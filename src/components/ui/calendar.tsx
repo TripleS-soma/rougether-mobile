@@ -14,7 +14,7 @@ import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { horizontalFlingGesture } from '@/utils/gesture';
 import { useAnimatedValue, useAnimatedValueXY, useLatestRef } from '@/hooks/use-stable-value';
-import { WEEKDAY_KEYS } from '@/constants/routines';
+import { WEEKDAY_KEYS, weekdayLabelKey } from '@/constants/routines';
 import { NATIVE_DRIVER } from '@/utils/animation';
 import { useT } from '@/i18n';
 
@@ -384,7 +384,7 @@ function CalendarBase({
             />
             <View style={styles.week}>
               {/* 키는 인덱스 — 영어 요일 글자(S·T)가 겹쳐 라벨을 키로 쓰면 중복 키 경고 (#893). */}
-              {WEEKDAY_KEYS.map((w, i) => (
+              {WEEKDAY_KEYS.map((_, i) => (
                 <View key={i} style={styles.cell}>
                   <Text
                     style={[
@@ -399,7 +399,7 @@ function CalendarBase({
                               : t.textMuted,
                       },
                     ]}>
-                    {w}
+                    {tr(weekdayLabelKey(i))}
                   </Text>
                 </View>
               ))}
@@ -525,6 +525,9 @@ function CalendarBase({
                               />
                             ) : null}
                             <Text
+                              // 한 줄 고정 — 삼성 기기 글꼴(시스템·사용자 글꼴)은 RN이 글자 폭을
+                              // 좁게 재서 "10"의 두 번째 자리가 다음 줄로 밀려 "1"만 보였다.
+                              numberOfLines={1}
                               style={[
                                 Typography.body,
                                 styles.dayText,
@@ -687,6 +690,8 @@ const styles = StyleSheet.create({
   // 아래로 쏠려 원과 어긋나 보였다. 라인박스를 원 높이로 맞추고(iOS는
   // 라인박스 중앙 배치), 안드로이드는 폰트 패딩을 제거해 동일 규칙으로.
   dayText: {
+    // 폭을 원 크기로 고정 — 측정값에 맡기면 위 삼성 글꼴 문제로 두 자리가 잘린다.
+    width: SEL_SIZE,
     lineHeight: SEL_SIZE,
     textAlign: 'center',
     includeFontPadding: false,
