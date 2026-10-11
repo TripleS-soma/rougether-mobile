@@ -1,5 +1,5 @@
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
-import { Text } from 'react-native';
+import { Platform, Text } from 'react-native';
 import { render } from '@testing-library/react-native';
 
 import * as material from '@/hooks/use-liquid-glass';
@@ -22,7 +22,24 @@ describe('GlassSurface (#1050)', () => {
     const style = flat(getByTestId('face').props.style);
     expect(style.backgroundColor).toBe('#ABCDEFE6');
     expect(style.borderRadius).toBe(999);
-    expect(style.elevation).toBe(3);
+    // iOS 그림자(shadow*)로 떠 있음 — elevation은 안드로이드 전용 속성이라 쓰지 않는다.
+    expect(style.shadowOpacity).toBe(0.12);
+    expect(style.elevation).toBeUndefined();
+  });
+
+  it('안드로이드는 반투명 폴백에 그림자를 주지 않는다 — elevation이 면을 통과해 회색 테두리로 비쳤다', async () => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+    const { getByTestId } = await render(
+      <GlassSurface testID="face" fallbackColor="#ABCDEF">
+        <Text>x</Text>
+      </GlassSurface>,
+    );
+    const style = flat(getByTestId('face').props.style);
+    expect(style.elevation).toBeUndefined();
+    expect(style.shadowOpacity).toBeUndefined();
+    // 반투명 면 자체는 그대로(90% 알파).
+    expect(style.backgroundColor).toBe('#ABCDEFE6');
+    jest.restoreAllMocks();
   });
 
   it('lift={false}면 폴백에서 그림자(elevation)를 그리지 않는다 — 카드 목록의 회색 테두리 (#1328)', async () => {
