@@ -20,6 +20,30 @@ describe('Calendar', () => {
    * 줄바꿈 자체는 jest에서 못 재므로 **되돌아올 수 없는 구조**를 단언한다:
    * 주 단위로 줄이 나뉘고(7칸씩), 칸은 퍼센트가 아니라 flex를 쓴다.
    */
+  // 요일 머리글이 번역 문구가 아니라 내부 키(sun·mon…)를 그리던 버그 (2026-10-11 제보).
+  it('요일 머리글은 현재 언어의 요일 이름을 그린다', async () => {
+    const { getByText, queryByText } = await render(
+      <Calendar value="2026-10-11" today="2026-10-11" onSelect={() => {}} />,
+    );
+    for (const name of ['일', '월', '화', '수', '목', '금', '토'])
+      expect(getByText(name)).toBeTruthy();
+    expect(queryByText('sun')).toBeNull();
+  });
+
+  /**
+   * 삼성 기기 글꼴(시스템·사용자 글꼴)에서 RN이 글자 폭을 좁게 재 "10"의 두 번째 자리가 다음
+   * 줄로 밀려 "1"만 보였다(갤럭시 S25 제보). jest는 글자 폭을 재지 않으므로 줄바꿈이 생길 수 없는
+   * 구조(한 줄 고정 + 원 크기 고정 폭)를 잠근다.
+   */
+  it('날짜 숫자는 한 줄·고정 폭이라 두 자리가 꺾이지 않는다', async () => {
+    const { getByText } = await render(
+      <Calendar value="2026-10-11" today="2026-10-11" onSelect={() => {}} />,
+    );
+    const digits = getByText('28');
+    expect(digits.props.numberOfLines).toBe(1);
+    expect(flattenStyle(digits.props.style).width).toBeGreaterThanOrEqual(30);
+  });
+
   it('요일·날짜가 주 단위 줄로 나뉘고 칸 폭에 퍼센트를 쓰지 않는다 (#845)', async () => {
     const { getByLabelText, getByTestId } = await render(
       <Calendar value="2026-08-16" today="2026-08-16" onSelect={() => {}} />,
