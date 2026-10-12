@@ -1,6 +1,4 @@
 import { useT } from '@/i18n';
-import { useStarterGacha } from '@/hooks/use-starter-gacha';
-import { toGachaMachine } from '@/api/adapters';
 import { SpeakerSheet } from '@/components/room/speaker-sheet';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
@@ -19,7 +17,6 @@ import { useMarketPages } from '@/components/app/use-market-pages';
 import { useMissionLinks } from '@/components/app/use-mission-links';
 import { useMyRoomPages } from '@/components/app/use-my-room-pages';
 import { useSettingsSurface } from '@/components/app/use-settings-surface';
-import { GachaScreen } from '@/components/screens/gacha-screen';
 import { HouseScreen } from '@/components/screens/house-screen';
 import { FeedScreen } from '@/components/screens/feed-screen';
 import { FEED_ENABLED } from '@/constants/feed';
@@ -28,11 +25,11 @@ import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { useStableCallback } from '@/hooks/use-stable-value';
 import { useDecorEntry } from '@/components/app/use-decor-entry';
 import { useSpeakerSurface } from '@/components/app/use-speaker-surface';
+import { useGachaSurface } from '@/components/app/use-gacha-surface';
+import { useMissionSurface } from '@/components/app/use-mission-surface';
 import { MyPageScreen } from '@/components/screens/my-page-screen';
 import { FurnitureStudio } from '@/components/app/furniture-studio';
-import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
 import { BottomNav, type NavTab } from '@/components/ui/bottom-nav';
-import { MissionBanner } from '@/components/ui/mission-banner';
 import { NotificationBanner } from '@/components/ui/notification-banner';
 import { DEFAULT_CHARACTER_ID, type CharacterId } from '@/constants/characters';
 import { screenView, track } from '@/lib/analytics';
@@ -40,11 +37,6 @@ import { todayIso } from '@/utils/datetime';
 import { useAttendanceSurface } from '@/components/app/use-attendance-surface';
 import { useWidgetSync } from '@/components/app/use-widget-sync';
 import { useDiagnosticsRecorder } from '@/hooks/use-diagnostics-recorder';
-import { useGacha } from '@/hooks/use-gacha';
-import {
-  type OnboardingMissionStepId,
-  useOnboardingMissions,
-} from '@/hooks/use-onboarding-missions';
 import { useHouses } from '@/hooks/use-houses';
 import { useRoomLayouts } from '@/hooks/use-room-layouts';
 import { useMyCharacters } from '@/hooks/use-my-characters';
@@ -52,11 +44,9 @@ import { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useMemberRoomPreviews } from '@/hooks/use-member-room-previews';
 import { useShop } from '@/hooks/use-shop';
 import { useResolvedScheme } from '@/hooks/use-tokens';
-import { fetchGachaRewards } from '@/api';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
 import { usePagerLock } from '@/components/app/use-pager-lock';
 import { tutorialCoachStep } from '@/components/app/use-tutorial-coach';
-import { calendarToday } from '@/utils/calendar-progress';
 import { CoachMarkOverlay } from '@/components/ui/coach-mark';
 import { useTabScroll } from '@/components/app/use-tab-scroll';
 import { MinigameActiveContext, useMinigameSurface } from '@/components/app/use-minigame-surface';
@@ -92,26 +82,6 @@ export type AppShellProps = {
 /** 프레임 맵 기본값 — 인라인 `{}`은 매 렌더 새 객체라 소비자의 메모가 깨진다. */
 const NO_CHARACTER_FRAMES: Partial<Record<CharacterId, string[]>> = {};
 
-/** 각 미션의 진입 화면 (#571) — 배너 탭·완료 시트 '하러 가기'의 목적지. */
-const MISSION_TARGET_SCREEN: Record<OnboardingMissionStepId, Screen> = {
-  'complete-routine': 'myRoom',
-  'first-draw': 'gacha',
-  'place-furniture': 'decor',
-  'invite-house': 'houseMembers',
-};
-
-/** 미션 진행 배너를 얹는 화면들 — 미션과 관련된 탭·서브화면 상단. */
-const MISSION_BANNER_SCREENS: ReadonlySet<Screen> = new Set<Screen>([
-  'myRoom',
-  'addRoutine',
-  'decor',
-  'gacha',
-  'house',
-  'houseSearch',
-  // 초대 미션의 목적지 (#1324) — 링크 공유 버튼이 여기 있다.
-  'houseMembers',
-]);
-
 /**
  * The app shell that wires every non-auth screen together with shared state:
  * 나의 방 / 집 / 설정 tabs plus the pushed sub-screens (decor, routine manage/add,
@@ -142,10 +112,6 @@ export function AppShell({
     setScreen('weeklyReport');
   }, []);
 
-  // 온보딩 미션 체인 (#571) — 온보딩 완주 직후 시작, 완료/스킵 플래그가
-  // 있으면 시작하지 않는다. 단계 완료는 아래 액션 지점들이 complete로 쏜다.
-  const missions = useOnboardingMissions(startMissions);
-  const completeMission = missions.complete;
   // 튜토리얼 코치마크 (#1324) — 미션 진행 중 (현재 미션, 현재 화면)에 맞는 대상을 짚고
   // 나머지를 잠근다. 완료 시트(Modal)가 떠 있는 동안은 그 시트가 유일한 조작이라 접는다.
   const [coachFrame, setCoachFrame] = useState({ w: 0, h: 0 });
@@ -175,6 +141,15 @@ export function AppShell({
     deleteCategoryCascade,
   } = myRoomData;
 
+  // 온보딩 미션 체인 (#571) — 진행·진입 이동·배너·완료 시트는 use-mission-surface (장부 5번).
+  // 단계 완료는 아래 액션 지점들이 complete로 쏜다.
+  const {
+    missions,
+    completeMission,
+    banner: missionBanner,
+    sheet: missionSheet,
+  } = useMissionSurface({ startMissions, missionSkipEnabled, screen, setScreen, completions });
+
   // 루틴 추가 — 추가 화면과 공동미션 연동 추가 공용. (첫 루틴 등록 미션은 뺐다 —
   // 온보딩 직후 추천 루틴 게이트(#1149)가 그 역할. 이름은 호출부 안정을 위해 유지.)
   const addRoutineWithMission = useCallback(
@@ -193,39 +168,6 @@ export function AppShell({
     sheets: attendanceSheets,
   } = useAttendanceSurface({ setWallet, setScreen });
 
-  // 뽑기 카탈로그는 뽑기 화면에 처음 들어갈 때 받는다 (성능 장부 N3) — 한 번 켜면 유지.
-  const gachaWanted = useRef(false);
-  if (screen === 'gacha') gachaWanted.current = true;
-  // Gacha machines + draw (spend + dupe→diamond handled server-side; wallet synced
-  // from the draw response).
-  const {
-    gachas,
-    loading: gachasLoading,
-    error: gachasError,
-    retry: retryGachas,
-    draw: drawGachaMachine,
-  } = useGacha(setWallet, { enabled: gachaWanted.current });
-
-  const starterFlow = missions.step?.id === 'first-draw' && !missionSkipEnabled;
-  const starterGacha = useStarterGacha(starterFlow);
-  const starterAllowed =
-    starterFlow && !starterGacha.unavailable && starterGacha.state?.state !== 'CLOSED';
-  const tr = useT();
-  // 언어가 바뀌면 tr 참조가 바뀌어 이름이 다시 계산된다 (#893) — i18n.t를 빈 deps로 굳히지 않는다.
-  const starterMachines = useMemo(
-    () => [
-      toGachaMachine({
-        gachaId: -1,
-        code: 'onboarding_starter',
-        category: 'FURNITURE',
-        name: tr('roomShop.gacha.starterMachineName'),
-        costCurrencyType: 'COIN',
-        costAmount: 0,
-        drawCount: 1,
-      }),
-    ],
-    [tr],
-  );
   // Owned characters + worn one (GET /me/characters). Once loaded, the worn
   // character overrides the onboarding pick everywhere but friend rooms.
   const {
@@ -403,6 +345,19 @@ export function AppShell({
     // 첫 온보딩 직후 1회만 (#1007) — 온보딩 다시 보기는 미션 건너뛰기가 켜진 쪽이다.
     offerInvitePaste: startMissions && !missionSkipEnabled,
   });
+  // 뽑기 화면 (장부 5번) — 카탈로그·스타터 기계 전환·JSX는 use-gacha-surface.
+  const completeFirstDraw = useCallback(() => completeMission('first-draw'), [completeMission]);
+  const gachaSurface = useGachaSurface({
+    screen,
+    wallet,
+    setWallet,
+    starterFlow: missions.step?.id === 'first-draw' && !missionSkipEnabled,
+    soundEffectsEnabled: settingsSurface.soundSettings.effects,
+    goBack,
+    placeableFurnitureIds,
+    goPlaceDrawn,
+    onFirstDrawConfirmed: completeFirstDraw,
+  });
   // 방 스피커 (#1325) — 재생·시트·소리 설정 연동. use-speaker-surface.ts (장부 5번).
   const { speaker, speakerOpen, playSpeaker, toggleSpeaker, openSpeaker, closeSpeaker } =
     useSpeakerSurface({
@@ -418,17 +373,6 @@ export function AppShell({
     completeMission('complete-routine');
     openAttendanceAfterFirstCompletion();
   }, [completeMission, openAttendanceAfterFirstCompletion]);
-  // 미션이 '루틴 완료'인데 오늘 이미 완료한 루틴이 있으면(다시 보기·늦은 시작) 바로 넘긴다 —
-  // 대상(미완료 행)이 없어 코치마크가 짚을 곳이 없다.
-  const completedTodayAlready = useMemo(() => {
-    const today = calendarToday();
-    return Object.values(completions).some((dates) => dates.includes(today));
-  }, [completions]);
-  useEffect(() => {
-    if (missions.step?.id === 'complete-routine' && completedTodayAlready) {
-      completeMission('complete-routine');
-    }
-  }, [missions.step?.id, completedTodayAlready, completeMission]);
 
   // 알림 카드 탭 → 그 알림의 화면 (2026-10-08). 목적지가 피드·집·나의 방 페이지 훅에 흩어져 있어
   // 셸이 모은다 — 뒤에 서는 페이지 훅의 값은 누를 때 읽는다(useStableCallback).
@@ -502,11 +446,6 @@ export function AppShell({
   useEffect(() => {
     screenView(screen);
   }, [screen]);
-
-  /** 미션 배너 탭·완료 시트 '하러 가기' — 해당 미션의 진입 화면으로 (#571). */
-  const openMissionScreen = useCallback((id: OnboardingMissionStepId) => {
-    setScreen(MISSION_TARGET_SCREEN[id]);
-  }, []);
 
   // 멤버 방 프리뷰 (#775) — 집 좌석 타일과 친구 방문이 함께 쓴다. 훅 호출이
   // use-house-pages 안에 있으면 그보다 먼저 서는 use-friend-visit이 거미줄
@@ -593,6 +532,7 @@ export function AppShell({
       ? tutorialCoachStep(missions.step.id, screen, { noHouses: noHouses })
       : null;
   const coachSteps = useMemo(() => (coachStep ? [coachStep] : []), [coachStep]);
+  const tr = useT();
   useEffect(() => {
     setTutorialLocked(coachStep != null);
   }, [coachStep, setTutorialLocked]);
@@ -720,37 +660,8 @@ export function AppShell({
       {/* 나의 방 서브화면 4종 (#692 5단계) — use-my-room-pages가 그린다. */}
       {myRoomPages.subScreen}
 
-      {screen === 'gacha' ? (
-        <GachaScreen
-          gachas={starterAllowed ? starterMachines : gachas}
-          starterDrawState={
-            starterAllowed
-              ? starterGacha.state?.state === 'CLAIMED'
-                ? 'CLAIMED'
-                : 'PENDING'
-              : undefined
-          }
-          loading={starterAllowed ? starterGacha.loading : gachasLoading}
-          loadError={starterAllowed ? starterGacha.error : gachasError}
-          onRetry={starterAllowed ? starterGacha.retry : retryGachas}
-          coinBalance={wallet.coin}
-          diamondBalance={wallet.diamond}
-          soundEffectsEnabled={settingsSurface.soundSettings.effects}
-          onBack={goBack}
-          // 뽑은 아이템·캐릭터의 재조회는 useGacha가 인벤토리·캐릭터 쿼리를
-          // 무효화해 처리한다 (#1027) — 셸이 손으로 꿰던 재조회 두 줄이 사라졌다.
-          onDraw={starterAllowed ? starterGacha.draw : drawGachaMachine}
-          placeableItemIds={placeableFurnitureIds}
-          // 보상 목록 (#620) — 시트가 자체 재시도를 가지므로 실패는 null로.
-          onLoadRewards={
-            starterAllowed ? undefined : (gachaId) => fetchGachaRewards(gachaId).catch(() => null)
-          }
-          onGoPlace={goPlaceDrawn}
-          // 뽑기 성공 = 미션 2 완료 (#571) — 연출이 끝나고 확인을 누른
-          // 순간에. 뽑기 직후 완료시키면 미션 시트가 연출을 덮는다.
-          onResultsConfirmed={() => completeMission('first-draw')}
-        />
-      ) : null}
+      {/* 뽑기 (장부 5번) — use-gacha-surface가 그린다. */}
+      {gachaSurface.subScreen}
 
       {/* 친구 방 (#149) — use-friend-visit이 그린다 (#692 4단계). */}
       {friendRoomSubScreen}
@@ -776,11 +687,6 @@ export function AppShell({
     // 집이 없으면 집 탭은 빈 상태 대신 집 탐색으로 직행 (#571).
     setScreen(tab === 'house' && noHouses ? 'houseSearch' : SCREEN_FOR_TAB[tab]),
   );
-  const goToNextMission = useStableCallback(() => {
-    const id = missions.step?.id;
-    missions.dismissCompleted();
-    if (id) openMissionScreen(id);
-  });
 
   return (
     <View
@@ -842,31 +748,9 @@ export function AppShell({
         />
       ) : null}
 
-      {/* 온보딩 미션 진행 배너 (#571) — 관련 화면 상단에만 얹는다. */}
-      {missions.step && MISSION_BANNER_SCREENS.has(screen) ? (
-        <MissionBanner
-          stepIndex={missions.stepIndex}
-          totalSteps={missions.totalSteps}
-          label={missions.step.label}
-          onPress={() => {
-            const id = missions.step?.id;
-            if (id) openMissionScreen(id);
-          }}
-          onSkip={missions.skip}
-          canSkip={missionSkipEnabled}
-        />
-      ) : null}
-
-      {/* 미션 완료 전환 시트 (#571) — 다음 미션 안내 / 마지막 축하. */}
-      <MissionSheet
-        visible={missions.completedIndex != null}
-        completedStep={(missions.completedIndex ?? 0) + 1}
-        totalSteps={missions.totalSteps}
-        nextLabel={missions.step?.label ?? null}
-        nextHint={missions.step?.hint ?? null}
-        onGo={goToNextMission}
-        onClose={missions.dismissCompleted}
-      />
+      {/* 온보딩 미션 진행 배너·완료 전환 시트 (#571) — use-mission-surface가 그린다. */}
+      {missionBanner}
+      {missionSheet}
 
       {/* 출석·재화 내역 시트 (#851·#1089) — use-attendance-surface가 그린다. */}
       {attendanceSheets}
