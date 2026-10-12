@@ -54,6 +54,7 @@ function record(step: PushRegistrationStep, extra: Omit<PushDiagnostic, 'step'> 
   diagnostic = { step, ...extra };
   if (__DEV__) {
     // 개발 빌드에서만 — 실기기에서 로그로 바로 가릴 수 있게 (#903).
+    // eslint-disable-next-line no-console -- __DEV__ 전용 진단 로그
     console.log('[push]', step, extra.tokenPrefix ?? '', extra.error ?? '');
   }
 }
