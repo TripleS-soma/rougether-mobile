@@ -9,7 +9,7 @@ import { useFontEmphasis, useTypography } from '@/hooks/use-tokens';
 
 /**
  * Component gallery — the visual half of the dev/test harness. Lists every
- * entry from `src/dev/registry.tsx` so components can be previewed in isolation.
+ * entry from `src/dev/registry/` so components can be previewed in isolation.
  * Lives under src/dev/ (not the route file) so the production bundle can drop
  * it together with the registry; the /dev route lazy-requires it behind __DEV__.
  */
@@ -35,7 +35,7 @@ export function DevGallery() {
           <View style={styles.header}>
             <Text style={[Typography.h2, { color: theme.text }]}>Component gallery</Text>
             <Text style={[Typography.supporting, { color: theme.textSecondary }]}>
-              {entries.length} entries · edit src/dev/registry.tsx to add more
+              {entries.length} entries · edit src/dev/registry/ to add more
             </Text>
           </View>
 

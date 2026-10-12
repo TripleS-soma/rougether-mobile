@@ -133,12 +133,12 @@ export const On: Story = { name: '켜짐', args: { value: true } };
 넣지 않습니다.
 
 새 **앱 컴포넌트**를 만들면 [AGENTS.md](../AGENTS.md)에 따라
-`src/dev/registry.tsx` 등록과 형제 테스트를 함께 작성합니다. Storybook 캔버스나 예시를 위한
+`src/dev/registry/` 등록과 형제 테스트를 함께 작성합니다. Storybook 캔버스나 예시를 위한
 도우미만 추가하는 경우에는 Dev 갤러리 등록이 필요 없습니다.
 
 ## 기기 확인과 검증
 
-기존 **Dev 탭**(`/dev`, `src/dev/registry.tsx`)도 계속 사용합니다. Storybook은 브라우저에서
+기존 **Dev 탭**(`/dev`, `src/dev/registry/`)도 계속 사용합니다. Storybook은 브라우저에서
 색상·레이아웃·문구·상태 전환을 빠르게 비교하는 곳이고, 실제 기기의 햅틱과 네이티브 제스처,
 플랫폼별 렌더링(iOS 26 리퀴드 글래스 등)은 Dev 갤러리와 앱에서 확인합니다.
 

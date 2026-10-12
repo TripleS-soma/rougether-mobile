@@ -18,7 +18,7 @@
 - `src/resources/` — 이미지/에셋 레이어. `assetSource(key)`가 `*_key`를 `<Image>` source로 변환합니다(실제 CDN이 생기기 전까지는 더미 플레이스홀더). `furniture.ts`는 가구 카탈로그입니다.
 - `src/api/` — 비즈니스 API 클라이언트. `API_BASE`(`/api/v1` 접두사, 리스트 응답은 `{ items: [...] }`로 감쌈)에 대해 `apiGet` / `apiGetList` 사용.
 - `src/mocks/` — 컴포넌트 기본 prop용 **픽스처만** 남아 있습니다(`fixtures.ts`). MSW는 제거됐습니다 — **개발 웹/앱은 항상 실서버(`src/config/shared-endpoints.json`의 CloudFront)를 봅니다.** 화면을 웹으로 확인하면 그건 실데이터입니다.
-- `src/dev/registry.tsx` — `/dev` 탭에 표시되는 컴포넌트 갤러리.
+- `src/dev/registry/` — `/dev` 탭에 표시되는 컴포넌트 갤러리(도메인별 파일 `room.tsx`·`house.tsx`… + `index.ts`).
 
 ## 규칙
 
@@ -40,7 +40,7 @@
 - **기능 동결 (2026-10-08~)**: 1.5.4 출시 후 **새 기능은 추가하지 않는다**(제품 오너 결정). 이후 작업은 버그 수정·유지 보수(리팩토링·의존성·접근성·빌드/배포)만. 기능 요청이 오면 착수 전에 동결 중임을 먼저 짚을 것. 동결 때 닫은 기능 이슈("계획 없음", 2026-10-08 코멘트)·팀원 PR은 지우지 않았으니 재개하면 다시 연다.
 - **작업 시작 전 열린 PR·브랜치 확인** (2026-08-16): 기능에 착수하기 전에 `gh pr list --state open`과 원격 브랜치를 먼저 보세요. 스웨거에 새 엔드포인트가 있다고 해서 앱이 안 하고 있는 게 아닙니다 — 방 거미줄(서버 #277)은 팀원이 #781로 **4일 전부터 열어둔 상태**였는데, 스웨거만 보고 "미연동"이라 판단해 #832·#833·#834로 통째로 중복 구현했습니다. 되돌리는 비용보다 `gh pr list` 한 번이 훨씬 쌉니다.
 - **작업 시작 전 스펙 확인**: 기능 작업을 시작하기 전에 상위 폴더의 공유 계약 저장소 `../rougether-spec`를 읽으세요 — 루트의 `product.md` / `erd.md` / `api.md` / `open-questions.md`와 해당 도메인의 `domains/<도메인>/{prd,features,api}.md`(member / routine-todo / room / shop / gacha / house). 스웨거는 "지금 서버에 있는 것", 스펙은 "팀이 합의한 의도"입니다.
-- 컴포넌트를 만든 뒤에는 **`src/dev/registry.tsx`에 등록**해 Dev 탭에 노출시키고, 형제 `__tests__/*.test.tsx`를 작성하세요(React Native Testing Library; 스냅샷이 아니라 `getByText` / `getByLabelText`로 단언). `ui/bear-check.tsx`(+ 형제 테스트)가 참고 패턴입니다.
+- 컴포넌트를 만든 뒤에는 **`src/dev/registry/<도메인>.tsx`에 등록**해 Dev 탭에 노출시키고, 형제 `__tests__/*.test.tsx`를 작성하세요(React Native Testing Library; 스냅샷이 아니라 `getByText` / `getByLabelText`로 단언). `ui/bear-check.tsx`(+ 형제 테스트)가 참고 패턴입니다.
 - **공용 UI는 스토리 필수** (2026-09-16): `src/components/ui/`에 컴포넌트를 추가하거나 동작·상태를 바꾸면 `stories/components/<이름>.stories.tsx`도 추가·갱신합니다(Dev 갤러리 등록과 별개 — 스토리는 브라우저 카탈로그·CI 렌더/접근성/시각 회귀 테스트의 입력). 작성법·검증 명령은 [`docs/storybook.md`](docs/storybook.md).
 - 커밋 전: `npm run typecheck && npm run lint && npm run format:check && npm test` 실행. CI가 `main` 푸시와 모든 PR에서 이 네 가지를 돌리므로, 항상 통과 상태로 유지하세요.
 - 기능 하나당 `feat/<기능>` 브랜치, **`dev`로 PR** (2026-07-19부터 — main 직행 금지, 2026-07-28부터 룰셋이 강제). **PR 스택 금지** — 브랜치는 항상 `dev`에서 직접 분기하세요(중간 브랜치가 먼저 머지되면 자식 PR이 표류합니다).
