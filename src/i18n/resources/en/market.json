@@ -96,7 +96,15 @@
       "cancelConfirm": "Cancel order",
       "cancelKeep": "Keep it",
       "more": "Load more",
-      "rowA11y": "View {{name}}"
+      "rowA11y": "View {{name}}",
+      "amend": "Edit quantity",
+      "amendTitle": "Change sale quantity",
+      "amendHint": "Total including the {{sold}} already sold. Increasing moves you to the back of sellers at this price.",
+      "amendSave": "Change",
+      "amendA11y": "Edit sale quantity of {{name}}",
+      "decrease": "Decrease quantity",
+      "increase": "Increase quantity",
+      "quantityA11y": "Sale quantity {{n}}"
     },
     "selling": {
       "row": "{{n}} furniture for sale",
@@ -119,7 +127,8 @@
       "buyOpen": "Your buy order is waiting",
       "sellOpen": "Your sell order is waiting",
       "cancelled": "Order cancelled",
-      "pending": "Still processing. Check My orders."
+      "pending": "Still processing. Check My orders.",
+      "amended": "Sale quantity updated"
     },
     "error": {
       "MARKET_INSUFFICIENT_COIN": "Not enough coins.",
@@ -137,6 +146,8 @@
       "MARKET_ASSET_ALREADY_LISTED": "This furniture is already listed.",
       "MARKET_ITEM_REVIEW_IN_PROGRESS": "This furniture is being made or re-reviewed. List it when that's done.",
       "VALIDATION_FAILED": "Please check your input.",
+      "MARKET_ORDER_NOT_AMENDABLE": "Only sale orders for furniture you issued can change quantity.",
+      "MARKET_AMEND_BELOW_FILLED": "You can't go below the quantity already sold.",
       "generic": "Something went wrong. Please try again shortly."
     },
     "reject": {
@@ -145,6 +156,8 @@
       "MARKET_ORDER_NOT_OPEN": "This order is already filled or cancelled.",
       "MARKET_ENGINE_ERROR": "Processing failed. Your coins or furniture were returned.",
       "MARKET_ENGINE_ERROR_UNREFUNDED": "Processing failed. Please contact support.",
+      "MARKET_AMEND_BELOW_FILLED": "More sold in the meantime, so it could not be reduced that far.",
+      "MARKET_INSUFFICIENT_SUPPLY": "Not enough issued stock left to increase.",
       "generic": "It couldn't be processed. Your coins or furniture were returned."
     },
     "screen": {

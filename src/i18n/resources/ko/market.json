@@ -96,7 +96,15 @@
       "cancelConfirm": "주문 취소",
       "cancelKeep": "그대로 두기",
       "more": "더 보기",
-      "rowA11y": "{{name}} 상세 보기"
+      "rowA11y": "{{name}} 상세 보기",
+      "amend": "수량 수정",
+      "amendTitle": "판매 수량 바꾸기",
+      "amendHint": "이미 팔린 {{sold}}개를 포함한 전체 수량이에요. 늘리면 같은 가격의 판매 대기 맨 뒤로 가요.",
+      "amendSave": "바꾸기",
+      "amendA11y": "{{name}} 판매 수량 수정",
+      "decrease": "수량 줄이기",
+      "increase": "수량 늘리기",
+      "quantityA11y": "판매 수량 {{n}}개"
     },
     "selling": {
       "row": "판매 중인 가구 {{n}}개",
@@ -119,7 +127,8 @@
       "buyOpen": "구매 대기 중이에요",
       "sellOpen": "판매 대기 중이에요",
       "cancelled": "주문을 취소했어요",
-      "pending": "처리 중이에요. 내 주문에서 확인해 주세요."
+      "pending": "처리 중이에요. 내 주문에서 확인해 주세요.",
+      "amended": "판매 수량을 바꿨어요"
     },
     "error": {
       "MARKET_INSUFFICIENT_COIN": "코인이 부족해요.",
@@ -137,6 +146,8 @@
       "MARKET_ASSET_ALREADY_LISTED": "이미 거래소에 올린 가구예요.",
       "MARKET_ITEM_REVIEW_IN_PROGRESS": "가구를 만들거나 다시 검수하는 중이에요. 끝난 뒤에 올려 주세요.",
       "VALIDATION_FAILED": "입력값을 확인해 주세요.",
+      "MARKET_ORDER_NOT_AMENDABLE": "발행한 가구의 판매 주문만 수량을 바꿀 수 있어요.",
+      "MARKET_AMEND_BELOW_FILLED": "이미 팔린 수량보다 적게 줄일 수 없어요.",
       "generic": "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요."
     },
     "reject": {
@@ -145,6 +156,8 @@
       "MARKET_ORDER_NOT_OPEN": "이미 체결되었거나 취소된 주문이에요.",
       "MARKET_ENGINE_ERROR": "처리에 실패했어요. 맡긴 코인·가구는 돌려드렸어요.",
       "MARKET_ENGINE_ERROR_UNREFUNDED": "처리에 실패했어요. 고객센터로 문의해 주세요.",
+      "MARKET_AMEND_BELOW_FILLED": "그 사이 더 팔려서 그만큼 줄일 수 없었어요.",
+      "MARKET_INSUFFICIENT_SUPPLY": "남은 발행 재고가 부족해 늘리지 못했어요.",
       "generic": "처리하지 못했어요. 맡긴 코인·가구는 돌려드렸어요."
     },
     "screen": {

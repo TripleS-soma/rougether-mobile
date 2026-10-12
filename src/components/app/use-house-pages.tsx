@@ -34,6 +34,7 @@ import {
 } from '@/hooks/use-member-room-previews';
 import type { OnboardingMissionStepId } from '@/hooks/use-onboarding-missions';
 import type { useRoomLayouts } from '@/hooks/use-room-layouts';
+import { useLatestRef } from '@/hooks/use-stable-value';
 import { useResolvedScheme } from '@/hooks/use-tokens';
 import { i18n } from '@/i18n';
 import { clearPendingInviteCode, subscribePendingInviteCode } from '@/lib/pending-invite';
@@ -359,6 +360,36 @@ export function useHousePages({
   // 집 채팅 (#1408) — 레일 '채팅'. 배지는 방 상태 캐시(POST chat-room)에서 파생하고,
   // 채팅 화면의 소켓·읽음 응답이 같은 캐시를 갱신한다. 집 탭·채팅에서만 조회한다.
   const openChat = useCallback(() => setScreen('houseChat'), [setScreen]);
+  /**
+   * 채팅 푸시(서버 #435) — 그 집을 고른 뒤 채팅방으로. 모르는 집이면(나간 집 등) 집 탭.
+   * 꺼진 앱을 푸시로 켜면 집 목록이 아직 없다 — 그땐 집 id를 기억했다가 목록이 오면 연다
+   * (#1511 리뷰: 안 그러면 채팅방 대신 집 탭으로 떨어졌다).
+   */
+  const housesRef = useLatestRef(arrangedHouses);
+  const housesLoadingRef = useLatestRef(housesLoading);
+  const [pendingChatHouseId, setPendingChatHouseId] = useState<number | null>(null);
+  const openChatFor = useCallback(
+    (houseId?: number) => {
+      if (houseId != null && housesLoadingRef.current) {
+        setPendingChatHouseId(houseId);
+        setScreen('house');
+        return;
+      }
+      const idx = houseId == null ? -1 : housesRef.current.findIndex((h) => h.houseId === houseId);
+      if (houseId != null && idx < 0) {
+        setScreen('house');
+        return;
+      }
+      if (idx >= 0) setHouseIndex(idx);
+      setScreen('houseChat');
+    },
+    [housesRef, housesLoadingRef, setHouseIndex, setScreen],
+  );
+  useEffect(() => {
+    if (pendingChatHouseId == null || housesLoading) return;
+    setPendingChatHouseId(null);
+    openChatFor(pendingChatHouseId);
+  }, [pendingChatHouseId, housesLoading, openChatFor]);
   const closeChat = useCallback(() => setScreen('house'), [setScreen]);
   const chatUnread = useHouseChatUnread(
     currentHouse?.houseId,
@@ -564,5 +595,7 @@ export function useHousePages({
     noHouses,
     /** 구성원 화면 — 방장이면 입주 신청 목록을 새로 받는다(#526). 알림 카드 탭도 이 경로로. */
     openMembers,
+    /** 집 채팅 푸시 탭 (서버 #435) — 그 집을 골라 채팅방으로. */
+    openChatFor,
   };
 }

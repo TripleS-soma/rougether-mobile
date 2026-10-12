@@ -17,6 +17,7 @@ import { getSessionUserId } from '@/api/auth';
 import { ErrorCode } from '@/api/error-codes';
 import { ApiError } from '@/api/http';
 import {
+  amendMarketOrder,
   cancelMarketOrder,
   fetchMarketAsset,
   fetchMarketAssets,
@@ -314,7 +315,7 @@ export type MarketOrderInput = {
  * 네트워크 실패는 접수됐을 수도 있어서, 같은 내용으로 다시 누르면 같은 requestId를 보낸다.
  */
 export type MarketOrderOutcome =
-  | { accepted: true; result: 'filled' | 'open' | 'cancelled' | 'pending' }
+  | { accepted: true; result: 'filled' | 'open' | 'cancelled' | 'amended' | 'pending' }
   | { accepted: true; result: 'rejected'; rejectCode: string | null }
   | { accepted: false; result: 'error'; code?: string };
 
@@ -361,6 +362,17 @@ export function useMarketActions({
     mutationFn: ({ orderId, requestId }: { orderId: number; requestId: string }) =>
       cancelMarketOrder(orderId, requestId),
   });
+  const { mutateAsync: amendAsync } = useMutation({
+    mutationFn: ({
+      orderId,
+      quantity,
+      requestId,
+    }: {
+      orderId: number;
+      quantity: number;
+      requestId: string;
+    }) => amendMarketOrder(orderId, quantity, requestId),
+  });
   const { mutateAsync: issueAsync } = useMutation({
     mutationFn: (input: { userItemId: number; totalSupply: number }) => issueMarketAsset(input),
   });
@@ -378,7 +390,7 @@ export function useMarketActions({
   const settle = useCallback(
     async (
       accepted: MarketCommand,
-      kind: { side: MarketSide | 'CANCEL'; source?: MarketSource },
+      kind: { side: MarketSide | 'CANCEL' | 'AMEND'; source?: MarketSource },
     ): Promise<MarketOrderOutcome> => {
       const final = await pollMarketCommand(accepted, pollRef.current);
       invalidateAfterTrade();
@@ -393,6 +405,9 @@ export function useMarketActions({
       } else if (kind.side === 'CANCEL') {
         say?.(i18n.t('market.toast.cancelled'), 'success');
         outcome = { accepted: true, result: 'cancelled' };
+      } else if (kind.side === 'AMEND') {
+        say?.(i18n.t('market.toast.amended'), 'success');
+        outcome = { accepted: true, result: 'amended' };
       } else {
         const filled = final.order?.status === 'FILLED';
         const buy = kind.side === 'BUY';
@@ -424,7 +439,7 @@ export function useMarketActions({
   );
 
   const fail = useCallback(
-    (err: unknown, kind: { side: MarketSide | 'CANCEL'; source?: MarketSource }) => {
+    (err: unknown, kind: { side: MarketSide | 'CANCEL' | 'AMEND'; source?: MarketSource }) => {
       toastRef.current?.(marketErrorMessage(err), 'error');
       const code = err instanceof ApiError ? err.code : undefined;
       track('market_order', {
@@ -494,6 +509,32 @@ export function useMarketActions({
     [cancelAsync, settle, fail, qc, userId, requestIdFor, settleRequest],
   );
 
+  /**
+   * 판매 수량 수정 (서버 #437) — 대기 중인 발행 재고 판매 주문만. 취소와 같은 접수·폴링 흐름.
+   * 같은 주문·수량의 재시도는 같은 requestId(멱등).
+   */
+  const amendOrder = useCallback(
+    async (orderId: number, quantity: number): Promise<MarketOrderOutcome> => {
+      const kind = { side: 'AMEND' as const, source: 'ISSUANCE' as const };
+      let accepted: MarketCommand;
+      try {
+        accepted = await sendWithRetry(
+          requestIdFor(JSON.stringify(['amend', orderId, quantity])),
+          (requestId) => amendAsync({ orderId, quantity, requestId }),
+        );
+      } catch (err) {
+        settleRequest(err);
+        if (err instanceof ApiError && err.code === ErrorCode.MARKET_ORDER_NOT_OPEN) {
+          void qc.invalidateQueries({ queryKey: queryKeys.market.all(userId) });
+        }
+        return fail(err, kind);
+      }
+      settleRequest();
+      return settle(accepted, kind);
+    },
+    [amendAsync, settle, fail, qc, userId, requestIdFor, settleRequest],
+  );
+
   /** 발행 — 성공하면 새 종목 상세(캐시에도 심는다), 실패하면 null. */
   const issueAsset = useCallback(
     async (userItemId: number, totalSupply: number): Promise<MarketAsset | null> => {
@@ -523,7 +564,7 @@ export function useMarketActions({
   );
 
   return useMemo(
-    () => ({ placeOrder, cancelOrder, issueAsset }),
-    [placeOrder, cancelOrder, issueAsset],
+    () => ({ placeOrder, cancelOrder, amendOrder, issueAsset }),
+    [placeOrder, cancelOrder, amendOrder, issueAsset],
   );
 }
