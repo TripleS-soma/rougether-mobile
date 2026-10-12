@@ -286,6 +286,28 @@ describe('useHouses — 집 순서 변경 (#820)', () => {
     expect(mockToast).toHaveBeenCalledWith('집 목록이 바뀌었어요. 다시 불러올게요.');
   });
 
+  it('연달아 옮기다 두 번째가 실패하면 첫 번째 결과로 되돌린다 — 렌더 값이 아니라 캐시 스냅샷', async () => {
+    setUp({ status: 204 });
+    const base = global.fetch;
+    let orders = 0;
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/me/houses/order') && ++orders === 2)
+        return { ok: false, status: 500, text: async () => '{}' };
+      return base(url, init);
+    }) as unknown as typeof fetch;
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.houses.length).toBe(2));
+
+    // 같은 렌더의 함수로 두 번 — 사이에 다시 그려지지 않는다(빠른 연속 드래그).
+    const reorder = result.current.reorderHouses;
+    await act(async () => {
+      await reorder([2, 1]);
+      await reorder([1, 2]);
+    });
+
+    await waitFor(() => expect(result.current.houses.map((h) => h.houseId)).toEqual([2, 1]));
+  });
+
   it('그 밖의 실패는 이전 순서로 되돌린다', async () => {
     setUp({ status: 500, body: {} });
     const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });

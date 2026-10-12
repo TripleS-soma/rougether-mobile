@@ -207,14 +207,15 @@ export function useHouses() {
    */
   const reorderHouses = useCallback(
     async (houseIds: number[]) => {
-      const before = houses;
-      const byId = new Map(houses.map((h) => [h.houseId, h] as const));
+      // 스냅샷은 캐시에서 — 렌더 값은 배칭으로 한 박자 늦어 직전 낙관 반영을 놓칠 수 있다.
+      const before = queryClient.getQueryData<House[]>(queryKeys.myHouses(userId)) ?? [];
+      const byId = new Map(before.map((h) => [h.houseId, h] as const));
       const next = houseIds.flatMap((id) => {
         const hit = byId.get(id);
         return hit ? [hit] : [];
       });
       // 서버 계약이 전량 전송이라, 우리가 가진 집을 다 못 채우면 보내지 않는다.
-      if (next.length !== houses.length) return;
+      if (next.length !== before.length) return;
       setHouses(next);
       try {
         await updateHouseOrder(houseIds);
@@ -233,7 +234,7 @@ export function useHouses() {
         toast(i18n.t('house.toast.orderSaveFailed'), 'error');
       }
     },
-    [houses, setHouses, reloadMyHouses, toast],
+    [queryClient, userId, setHouses, reloadMyHouses, toast],
   );
 
   /**
