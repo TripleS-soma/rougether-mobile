@@ -11,6 +11,17 @@ describe('CreateHouseScreen', () => {
     expect(getByText(/초대코드가 자동으로 발급돼요/)).toBeTruthy();
   });
 
+  it('이름 16자·소개 40자 상한을 입력창에 걸고 카운터도 같은 값을 쓴다', async () => {
+    const { getByPlaceholderText, getByText } = await render(<CreateHouseScreen />);
+    const name = getByPlaceholderText('우리 집 이름을 정해주세요');
+    const desc = getByPlaceholderText('어떤 루틴을 함께 할까요?');
+    expect(name.props.maxLength).toBe(16);
+    expect(desc.props.maxLength).toBe(40);
+    await fireEvent.changeText(name, '햇살');
+    expect(getByText('2/16')).toBeTruthy();
+    expect(getByText('0/40')).toBeTruthy();
+  });
+
   it('정원 선택은 선택 상태를 accessibilityState로 전달한다 (#550)', async () => {
     const { getByRole } = await render(<CreateHouseScreen />);
     await fireEvent.press(getByRole('button', { name: '3' }));
