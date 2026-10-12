@@ -149,8 +149,6 @@ export function withAlpha(hex: string, alphaHex: string): string {
   return `${hex}${alphaHex}`;
 }
 
-type SoftTintKey = 'primarySoft' | 'warningSoft' | 'dangerSoft';
-
 /**
  * soft 자리 표시 — 테마 리터럴에서 soft 키의 **자리(키 순서)** 만 잡고, 값은 `withSoftTints`가
  * 기본색에서 채운다. 순서를 지키는 이유: 토큰 스와치·Storybook 색 표가 `Object.entries` 순서로
