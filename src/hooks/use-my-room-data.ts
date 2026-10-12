@@ -88,14 +88,11 @@ export function useMyRoomData() {
   const [nickname, setNickname] = useState<string | null>(null);
   const [bio, setBio] = useState<string | null>(null);
   const [streak, setStreak] = useState(0);
-  const [loadingCycle, setLoadingCycle] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { show: toast } = useToast();
   // 지갑 — react-query 캐시 (장부 16번). 첫 잔액은 아래 부트 묶음이 넣는다.
-  const { wallet, walletReady, setWallet, refreshWallet } = useWallet();
-  // 캐시 반영은 notifyManager가 배칭해 로딩 플래그보다 늦을 수 있다 — 부트가 끝났어도 잔액이
-  // 캐시에 닿기 전엔 로딩으로 둔다(집 목록 #1514에서 실제로 빈 상태가 비쳤다). 로드 실패면 에러가 먼저.
-  const loading = loadingCycle || (error === null && !walletReady);
+  const { wallet, setWallet, refreshWallet } = useWallet();
 
   // 건너뛴 발생분 로컬 사본 (#189) — 계정별로 읽고, 옮길 때마다 갱신·저장한다.
   const skipsRef = useRef<RoutineSkips>({});
@@ -137,14 +134,14 @@ export function useMyRoomData() {
 
   // Initial load + retry share the same load cycle (spinner → data | error).
   const load = useCallback(async () => {
-    setLoadingCycle(true);
+    setLoading(true);
     setError(null);
     try {
       await reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'load failed');
     } finally {
-      setLoadingCycle(false);
+      setLoading(false);
     }
   }, [reload]);
 

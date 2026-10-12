@@ -989,6 +989,8 @@ describe('useMyRoomData — 지갑 슬라이스', () => {
       expect(result.current.refreshWallet).toBe(refreshWallet);
       expect(result.current.reload).toBe(reload);
       expect(boots).toHaveLength(1);
+      // 로딩이 지갑 캐시 키에 묶이지 않는다 — 읽는 키가 바뀌어도 스피너에 갇히지 않는다(#1515 재리뷰).
+      expect(result.current.loading).toBe(false);
     } finally {
       who.mockRestore();
     }

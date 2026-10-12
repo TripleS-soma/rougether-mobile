@@ -50,8 +50,6 @@ export function useWallet() {
 
   return {
     wallet: data ?? DEFAULT_WALLET,
-    /** 부트 묶음에서 받은 잔액이 캐시에 들어갔는지 — 로딩 판정이 캐시 반영(배칭)을 기다리는 데 쓴다. */
-    walletReady: data !== undefined,
     setWallet,
     refreshWallet,
   };
