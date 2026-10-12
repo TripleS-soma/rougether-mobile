@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onlineManager } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
+import * as authModule from '@/api/auth';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
 import { calendarToday } from '@/utils/calendar-progress';
 import type { NewRoutine } from '@/constants/routines';
@@ -963,6 +964,34 @@ describe('useMyRoomData — 지갑 슬라이스', () => {
       await result.current.refreshWallet();
     });
     expect(result.current.wallet.coin).toBe(150);
+  });
+
+  it('세션 id가 바뀌어도 지갑 함수·부트 로드는 다시 돌지 않는다 (#1515 리뷰)', async () => {
+    setUp();
+    const boots: string[] = [];
+    const base = global.fetch;
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/today')) boots.push(url);
+      return base(url, init);
+    }) as unknown as typeof fetch;
+    let sessionId: number | undefined = undefined;
+    const who = jest.spyOn(authModule, 'getSessionUserId').mockImplementation(() => sessionId);
+    try {
+      const { result, rerender } = await renderHook(() => useMyRoomData(), {
+        wrapper: queryWrapper(),
+      });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      const { setWallet, refreshWallet, reload } = result.current;
+
+      sessionId = 1;
+      await rerender({});
+      expect(result.current.setWallet).toBe(setWallet);
+      expect(result.current.refreshWallet).toBe(refreshWallet);
+      expect(result.current.reload).toBe(reload);
+      expect(boots).toHaveLength(1);
+    } finally {
+      who.mockRestore();
+    }
   });
 
   it('setWallet 함수형 갱신은 직전 값 위에 쌓인다 (뽑기·상점·출석이 쓰는 경로)', async () => {
