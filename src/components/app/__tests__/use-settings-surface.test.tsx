@@ -7,6 +7,7 @@ import { ToastProvider } from '@/components/ui/toast';
 import { AuthProvider } from '@/hooks/use-auth';
 import { DEFAULT_HAPTIC_STRENGTH, getHapticStrength, setHapticStrength } from '@/utils/haptics';
 import { BrandThemeProvider } from '@/hooks/use-tokens';
+import { jsonRes } from '@/test-utils/fetch';
 import { QueryProvider } from '@/test-utils/query-wrapper';
 
 // 이 파일은 피드(=신고·차단)가 꺼진 설정 화면을 본다 — 켠 상태의 차단 목록은 피드 탭 테스트.
@@ -157,11 +158,9 @@ jest.mock('@/hooks/use-invites', () => ({
 function GapHarness({
   screen,
   onRoutinesImported,
-  onWalletChanged,
 }: {
   screen: 'calendarImport' | 'inviteFriends';
   onRoutinesImported?: () => void;
-  onWalletChanged?: () => void;
 }) {
   const { subScreen } = useSettingsSurface({
     screen,
@@ -169,7 +168,6 @@ function GapHarness({
     profile: PROFILE,
     stats: STATS,
     onRoutinesImported,
-    onWalletChanged,
   });
   return <>{subScreen}</>;
 }
@@ -210,24 +208,35 @@ describe('가져오기·초대 보상 뒤 재조회 콜백', () => {
     expect(onRoutinesImported).toHaveBeenCalledTimes(1);
   });
 
-  it('초대 코드 보상이 들어오면 onWalletChanged를 부른다', async () => {
-    const onWalletChanged = jest.fn();
+  // 지갑은 react-query 캐시(useWallet)라 표면이 직접 다시 받는다 — GET /me/wallets 요청으로 본다.
+  const realFetch = global.fetch;
+  let walletFetches: () => number;
+  beforeEach(() => {
+    global.fetch = jest.fn(async () => jsonRes({ items: [] })) as unknown as typeof fetch;
+    walletFetches = () =>
+      (global.fetch as jest.Mock).mock.calls.filter(([url]) => String(url).includes('/me/wallets'))
+        .length;
+  });
+  afterEach(() => {
+    global.fetch = realFetch;
+  });
+
+  it('초대 코드 보상이 들어오면 지갑을 다시 받는다', async () => {
     mockRedeem.mockResolvedValueOnce({ rewardCoin: 100 });
-    const ui = await showGap({ screen: 'inviteFriends', onWalletChanged });
+    const ui = await showGap({ screen: 'inviteFriends' });
     await fireEvent.changeText(ui.getByLabelText('초대코드 입력'), 'ABCD12');
     await fireEvent.press(ui.getByText('사용하기'));
-    await waitFor(() => expect(onWalletChanged).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(walletFetches()).toBe(1));
     // 화면도 보상 상태로 — 입력란이 결과 문구로 바뀐다.
     expect(ui.getByText('코인 100개를 받았어요!')).toBeTruthy();
   });
 
   it('초대 코드 사용이 실패(null)면 지갑을 건드리지 않는다', async () => {
-    const onWalletChanged = jest.fn();
     mockRedeem.mockResolvedValueOnce(null);
-    const ui = await showGap({ screen: 'inviteFriends', onWalletChanged });
+    const ui = await showGap({ screen: 'inviteFriends' });
     await fireEvent.changeText(ui.getByLabelText('초대코드 입력'), 'ZZZZ99');
     await fireEvent.press(ui.getByText('사용하기'));
     await waitFor(() => expect(mockRedeem).toHaveBeenCalledTimes(1));
-    expect(onWalletChanged).not.toHaveBeenCalled();
+    expect(walletFetches()).toBe(0);
   });
 });

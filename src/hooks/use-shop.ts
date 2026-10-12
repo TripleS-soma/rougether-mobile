@@ -15,7 +15,7 @@
  *
  * 반환 계약은 종전과 같다 — 호출부(`app-shell`)를 건드리지 않는다.
  */
-import { type Dispatch, type SetStateAction, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
@@ -41,8 +41,8 @@ import type { RoomWithLayout } from '@/api/rooms';
 import type { ItemResponse, MyItemSummary } from '@/api/types';
 import { useToast } from '@/components/ui/toast';
 import { i18n } from '@/i18n';
-import { type Wallet } from '@/constants/currency';
 import { useLatestRef } from '@/hooks/use-stable-value';
+import { useWallet } from '@/hooks/use-wallet';
 import { track } from '@/lib/analytics';
 import { queryKeys } from '@/lib/query-keys';
 import type { RoomCobweb } from '@/components/room/room';
@@ -64,8 +64,10 @@ export type RoomPlacement = {
   cobweb: RoomCobweb | null;
 };
 
-export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
+export function useShop() {
   const qc = useQueryClient();
+  // 지갑 캐시 (장부 16번) — 구매·청소 응답의 잔액을 셸을 거치지 않고 직접 반영한다.
+  const { setWallet } = useWallet();
   const { show: toast } = useToast();
   // 키는 userId로 메모 — 매 렌더 새 배열이면 콜백 참조가 흔들린다 (#539).
   const userId = getSessionUserId();

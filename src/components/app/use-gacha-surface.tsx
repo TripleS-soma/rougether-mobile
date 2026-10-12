@@ -1,4 +1,4 @@
-import { type ComponentProps, type Dispatch, type SetStateAction, useMemo, useRef } from 'react';
+import { type ComponentProps, useMemo, useRef } from 'react';
 
 import { fetchGachaRewards } from '@/api';
 import { toGachaMachine } from '@/api/adapters';
@@ -18,7 +18,6 @@ type GachaScreenProps = ComponentProps<typeof GachaScreen>;
 export function useGachaSurface({
   screen,
   wallet,
-  setWallet,
   starterFlow,
   soundEffectsEnabled,
   goBack,
@@ -28,7 +27,6 @@ export function useGachaSurface({
 }: {
   screen: Screen;
   wallet: Wallet;
-  setWallet: Dispatch<SetStateAction<Wallet>>;
   /** 온보딩 미션이 '첫 뽑기' 단계인지 (스킵 허용 계정 제외) — 무료 스타터 기계를 띄운다. */
   starterFlow: boolean;
   soundEffectsEnabled: boolean;
@@ -41,15 +39,15 @@ export function useGachaSurface({
   // 뽑기 카탈로그는 뽑기 화면에 처음 들어갈 때 받는다 (성능 장부 N3) — 한 번 켜면 유지.
   const gachaWanted = useRef(false);
   if (screen === 'gacha') gachaWanted.current = true;
-  // Gacha machines + draw (spend + dupe→diamond handled server-side; wallet synced
-  // from the draw response).
+  // Gacha machines + draw (spend + dupe→diamond handled server-side; useGacha writes the
+  // returned wallet into the wallet cache itself).
   const {
     gachas,
     loading: gachasLoading,
     error: gachasError,
     retry: retryGachas,
     draw: drawGachaMachine,
-  } = useGacha(setWallet, { enabled: gachaWanted.current });
+  } = useGacha({ enabled: gachaWanted.current });
 
   const starterGacha = useStarterGacha(starterFlow);
   const starterAllowed =
