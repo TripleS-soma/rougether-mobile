@@ -29,7 +29,6 @@ import {
   deleteRoutine as apiDeleteRoutine,
   deleteTodo,
   fetchCategories,
-  fetchWallets,
   skipRoutineOccurrence,
   uncompleteRoutine,
   uncompleteTodo,
@@ -55,7 +54,6 @@ import {
   todayCompletions,
 } from '@/api/adapters';
 import { useToast } from '@/components/ui/toast';
-import { DEFAULT_WALLET, type Wallet } from '@/constants/currency';
 import {
   type NewRoutine,
   ROUTINE_OCCURRENCE_SKIP_ENABLED,
@@ -68,6 +66,7 @@ import { loadRoutineSkips, saveRoutineSkips, type RoutineSkips } from '@/lib/rou
 import { identifyUser, track } from '@/lib/analytics';
 import { setErrorUser } from '@/lib/error-reporting';
 import { useCalendarData } from '@/hooks/use-calendar-data';
+import { useWallet } from '@/hooks/use-wallet';
 import { fetchMyRoomBootData, takeMyRoomPrefetch } from '@/lib/my-room-prefetch';
 import { i18n } from '@/i18n';
 
@@ -85,7 +84,6 @@ export function useMyRoomData() {
   const [categories, setCategories] = useState<RoutineCategoryMeta[]>([]);
   // Active + deleted categories — past records resolve their original meta here.
   const [allCategories, setAllCategories] = useState<RoutineCategoryMeta[]>([]);
-  const [wallet, setWallet] = useState<Wallet>(DEFAULT_WALLET);
   // Identity + streak, surfaced in the my-room header / profile edit.
   const [nickname, setNickname] = useState<string | null>(null);
   const [bio, setBio] = useState<string | null>(null);
@@ -93,6 +91,8 @@ export function useMyRoomData() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { show: toast } = useToast();
+  // 지갑 — react-query 캐시 (장부 16번). 첫 잔액은 아래 부트 묶음이 넣는다.
+  const { wallet, setWallet, refreshWallet } = useWallet();
 
   // 건너뛴 발생분 로컬 사본 (#189) — 계정별로 읽고, 옮길 때마다 갱신·저장한다.
   const skipsRef = useRef<RoutineSkips>({});
@@ -130,7 +130,7 @@ export function useMyRoomData() {
       // 에러도 같은 사용자로 묶는다 (#801) — 가명 식별자(서버 회원 id)만.
       setErrorUser(me.userId);
     }
-  }, []);
+  }, [setWallet]);
 
   // Initial load + retry share the same load cycle (spinner → data | error).
   const load = useCallback(async () => {
@@ -148,14 +148,6 @@ export function useMyRoomData() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  const refreshWallet = useCallback(async () => {
-    try {
-      setWallet(toWallet(await fetchWallets()));
-    } catch {
-      // Non-fatal; keep the last known balance.
-    }
-  }, []);
 
   // 달력 탭 (GET /calendar · /calendar/month) — react-query 캐시 (#1027).
   // 루틴·투두를 바꾸는 액션은 `invalidateCalendar()`로 방문한 날짜·달을 재조회한다.
@@ -248,7 +240,7 @@ export function useMyRoomData() {
         return null;
       }
     },
-    [completions, findItem, refreshWallet, toast],
+    [completions, findItem, refreshWallet, setWallet, toast],
   );
 
   // Report offline failures immediately instead of queueing a locked composer.
@@ -792,6 +784,7 @@ export function useMyRoomData() {
       loadCalendarMonth,
       markedTodoDates,
       wallet,
+      setWallet,
       nickname,
       bio,
       streak,

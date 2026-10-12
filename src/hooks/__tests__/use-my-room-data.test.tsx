@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onlineManager } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
+import * as authModule from '@/api/auth';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
 import { calendarToday } from '@/utils/calendar-progress';
 import type { NewRoutine } from '@/constants/routines';
@@ -904,6 +905,108 @@ describe('useMyRoomData — 완료 후 지갑 (성능 장부 N2)', () => {
     });
     expect(walletGets.length).toBe(initialGets + 1);
     expect(result.current.wallet.coin).toBe(100);
+  });
+});
+
+// 지갑 슬라이스 이관(장부 16번) 안전망 — 첫 로드·되받기·직접 고치기가 캐시 아래서도 그대로인지.
+describe('useMyRoomData — 지갑 슬라이스', () => {
+  const setUp = () => {
+    const state = { coin: 120, diamond: 3, broken: false, gets: 0 };
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/wallets')) {
+        state.gets += 1;
+        if (state.broken)
+          return { ok: false, status: 500, text: async (): Promise<string> => '{}' };
+        return res({
+          items: [
+            { currencyType: 'COIN', balance: state.coin },
+            { currencyType: 'DIAMOND', balance: state.diamond },
+          ],
+        });
+      }
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1 });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+    return state;
+  };
+
+  it('로딩이 끝나는 렌더에 잔액이 이미 있다 — 0코인이 한 틱도 비치지 않는다', async () => {
+    setUp();
+    const seen: { loading: boolean; coin: number }[] = [];
+    const { result } = await renderHook(
+      () => {
+        const d = useMyRoomData();
+        seen.push({ loading: d.loading, coin: d.wallet.coin });
+        return d;
+      },
+      { wrapper: queryWrapper() },
+    );
+    await waitFor(() => expect(result.current.wallet.coin).toBe(120));
+    expect(seen.filter((r) => !r.loading && r.coin !== 120)).toEqual([]);
+    expect(result.current.wallet.diamond).toBe(3);
+  });
+
+  it('refreshWallet은 서버 값을 다시 받고, 실패하면 마지막 잔액을 지킨다', async () => {
+    const state = setUp();
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.wallet.coin).toBe(120));
+
+    state.coin = 150;
+    await act(async () => {
+      await result.current.refreshWallet();
+    });
+    await waitFor(() => expect(result.current.wallet.coin).toBe(150));
+
+    state.broken = true;
+    state.coin = 999;
+    await act(async () => {
+      await result.current.refreshWallet();
+    });
+    expect(result.current.wallet.coin).toBe(150);
+  });
+
+  it('세션 id가 바뀌어도 지갑 함수·부트 로드는 다시 돌지 않는다 (#1515 리뷰)', async () => {
+    setUp();
+    const boots: string[] = [];
+    const base = global.fetch;
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/today')) boots.push(url);
+      return base(url, init);
+    }) as unknown as typeof fetch;
+    let sessionId: number | undefined = undefined;
+    const who = jest.spyOn(authModule, 'getSessionUserId').mockImplementation(() => sessionId);
+    try {
+      const { result, rerender } = await renderHook(() => useMyRoomData(), {
+        wrapper: queryWrapper(),
+      });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      const { setWallet, refreshWallet, reload } = result.current;
+
+      sessionId = 1;
+      await rerender({});
+      expect(result.current.setWallet).toBe(setWallet);
+      expect(result.current.refreshWallet).toBe(refreshWallet);
+      expect(result.current.reload).toBe(reload);
+      expect(boots).toHaveLength(1);
+      // 로딩이 지갑 캐시 키에 묶이지 않는다 — 읽는 키가 바뀌어도 스피너에 갇히지 않는다(#1515 재리뷰).
+      expect(result.current.loading).toBe(false);
+    } finally {
+      who.mockRestore();
+    }
+  });
+
+  it('setWallet 함수형 갱신은 직전 값 위에 쌓인다 (뽑기·상점·출석이 쓰는 경로)', async () => {
+    setUp();
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.wallet.coin).toBe(120));
+
+    const setWallet = result.current.setWallet;
+    await act(async () => {
+      setWallet((w) => ({ ...w, coin: w.coin - 20 }));
+      setWallet((w) => ({ ...w, diamond: w.diamond + 1 }));
+    });
+    await waitFor(() => expect(result.current.wallet).toEqual({ coin: 100, diamond: 4 }));
   });
 });
 
