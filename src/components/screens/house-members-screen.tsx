@@ -7,6 +7,7 @@ import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover
 import type { House, HouseEditInput, RoomCell } from '@/components/screens/house/types';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Icon } from '@/components/ui/icon';
+import { ModalCard } from '@/components/ui/modal-card';
 import { CrownPictogram, DoorPictogram, PencilPictogram } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
 import { CoachTarget } from '@/components/ui/coach-mark';
@@ -16,7 +17,7 @@ import type { CharacterId } from '@/constants/characters';
 import { HOUSE_PRIVATE_ACCENT, houseCapacityOptions } from '@/constants/house-themes';
 import { houseInviteLink } from '@/constants/links';
 import { PrivacyCard } from '@/components/screens/house/privacy-card';
-import { Overlay, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -568,164 +569,150 @@ export function HouseMembersScreen({
       />
 
       {showEditHouse ? (
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modal, { backgroundColor: t.surface }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>{tr('house.members.edit.title')}</Text>
-            <ScrollView style={styles.editScroll} contentContainerStyle={styles.missionForm}>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                {tr('house.members.edit.nameLabel')}
-              </Text>
-              <TextInput
-                value={editName}
-                onChangeText={(v) => setEditName(v.slice(0, 30))}
-                accessibilityLabel={tr('house.members.edit.nameA11y')}
-                placeholder={tr('house.members.edit.namePlaceholder')}
-                placeholderTextColor={t.textMuted}
-                style={[
-                  styles.missionInput,
-                  emph('normal'),
-                  { backgroundColor: t.surfaceMuted, color: t.text },
-                ]}
-              />
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                {tr('house.members.edit.descLabel')}
-              </Text>
-              <TextInput
-                value={editDesc}
-                onChangeText={setEditDesc}
-                accessibilityLabel={tr('house.members.edit.descA11y')}
-                placeholder={tr('house.members.edit.descPlaceholder')}
-                placeholderTextColor={t.textMuted}
-                style={[
-                  styles.missionInput,
-                  emph('normal'),
-                  { backgroundColor: t.surfaceMuted, color: t.text },
-                ]}
-              />
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                {currentHouse.memberCount
-                  ? tr('house.members.edit.capacityWithCurrent', { n: currentHouse.memberCount })
-                  : tr('house.members.edit.capacity')}
-              </Text>
-              <View style={styles.missionTypeRow}>
-                {houseCapacityOptions(currentHouse.maxMembers).map((n) => {
-                  const selected = n === editMax;
-                  // The server rejects a capacity below the current headcount.
-                  const tooSmall = !!currentHouse.memberCount && n < currentHouse.memberCount;
-                  return (
-                    <Pressable
-                      key={n}
-                      onPress={() =>
-                        tooSmall
-                          ? toast(tr('house.members.edit.capacityTooSmall'), 'error')
-                          : setEditMax(n)
-                      }
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected, disabled: tooSmall }}
-                      accessibilityLabel={tr('house.members.edit.capacityOptionA11y', { n })}
+        <ModalCard
+          title={tr('house.members.edit.title')}
+          cancel={{
+            label: tr('common.cancel'),
+            accessibilityLabel: tr('house.members.edit.cancelA11y'),
+            onPress: () => setShowEditHouse(false),
+          }}
+          confirm={{
+            label: tr('house.members.edit.save'),
+            accessibilityLabel: tr('house.members.edit.saveA11y'),
+            onPress: submitEditHouse,
+            disabled: !editNameValid,
+          }}>
+          <ScrollView style={styles.editScroll} contentContainerStyle={styles.missionForm}>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {tr('house.members.edit.nameLabel')}
+            </Text>
+            <TextInput
+              value={editName}
+              onChangeText={(v) => setEditName(v.slice(0, 30))}
+              accessibilityLabel={tr('house.members.edit.nameA11y')}
+              placeholder={tr('house.members.edit.namePlaceholder')}
+              placeholderTextColor={t.textMuted}
+              style={[
+                styles.missionInput,
+                emph('normal'),
+                { backgroundColor: t.surfaceMuted, color: t.text },
+              ]}
+            />
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {tr('house.members.edit.descLabel')}
+            </Text>
+            <TextInput
+              value={editDesc}
+              onChangeText={setEditDesc}
+              accessibilityLabel={tr('house.members.edit.descA11y')}
+              placeholder={tr('house.members.edit.descPlaceholder')}
+              placeholderTextColor={t.textMuted}
+              style={[
+                styles.missionInput,
+                emph('normal'),
+                { backgroundColor: t.surfaceMuted, color: t.text },
+              ]}
+            />
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {currentHouse.memberCount
+                ? tr('house.members.edit.capacityWithCurrent', { n: currentHouse.memberCount })
+                : tr('house.members.edit.capacity')}
+            </Text>
+            <View style={styles.missionTypeRow}>
+              {houseCapacityOptions(currentHouse.maxMembers).map((n) => {
+                const selected = n === editMax;
+                // The server rejects a capacity below the current headcount.
+                const tooSmall = !!currentHouse.memberCount && n < currentHouse.memberCount;
+                return (
+                  <Pressable
+                    key={n}
+                    onPress={() =>
+                      tooSmall
+                        ? toast(tr('house.members.edit.capacityTooSmall'), 'error')
+                        : setEditMax(n)
+                    }
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected, disabled: tooSmall }}
+                    accessibilityLabel={tr('house.members.edit.capacityOptionA11y', { n })}
+                    style={[
+                      styles.capacityBtn,
+                      {
+                        backgroundColor: selected
+                          ? t.primary
+                          : tooSmall
+                            ? t.disabledBg
+                            : t.surfaceMuted,
+                      },
+                    ]}>
+                    <Text
                       style={[
-                        styles.capacityBtn,
+                        Typography.supporting,
                         {
-                          backgroundColor: selected
-                            ? t.primary
-                            : tooSmall
-                              ? t.disabledBg
-                              : t.surfaceMuted,
+                          color: selected ? t.onPrimary : tooSmall ? t.textDisabled : t.textMuted,
                         },
                       ]}>
-                      <Text
-                        style={[
-                          Typography.supporting,
-                          {
-                            color: selected ? t.onPrimary : tooSmall ? t.textDisabled : t.textMuted,
-                          },
-                        ]}>
-                        {n}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-              {/* 공개 범위 (#1266) — 서버가 현재 값을 안 주면 둘 다 미선택으로 열린다. */}
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                {tr('house.members.edit.visibility')}
-              </Text>
-              <View style={styles.privacyRow}>
-                <PrivacyCard
-                  selected={editPublic === true}
-                  accent={t.primary}
-                  title={tr('house.members.edit.public')}
-                  subtitle={tr('house.members.edit.publicHint')}
-                  onPress={() => setEditPublic(true)}
-                  t={t}
-                />
-                <PrivacyCard
-                  selected={editPublic === false}
-                  accent={HOUSE_PRIVATE_ACCENT}
-                  title={tr('house.members.edit.private')}
-                  subtitle={tr('house.members.edit.privateHint')}
-                  onPress={() => setEditPublic(false)}
-                  t={t}
-                />
-              </View>
-              {/* 온보딩 자동 입주 허용 (#1407) — 공개 집에만 실제 적용된다. */}
-              <View style={styles.autoJoinRow}>
-                <View style={styles.autoJoinCopy}>
-                  <Text style={[Typography.body, { color: t.text }]}>
-                    {tr('house.members.edit.autoJoin')}
-                  </Text>
-                  <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                    {editPublic === false
-                      ? tr('house.members.edit.autoJoinPrivateHint')
-                      : tr('house.members.edit.autoJoinHint')}
-                  </Text>
-                </View>
-                <ToggleSwitch
-                  value={editAutoJoin ?? autoJoinEnabled ?? false}
-                  onToggle={() => setEditAutoJoin(!(editAutoJoin ?? autoJoinEnabled ?? false))}
-                  accessibilityLabel={tr('house.members.edit.autoJoinA11y')}
-                />
-              </View>
-              {covers.length > 0 ? (
-                <>
-                  {/* 커버는 집의 겉모습 자체라 "집 테마"로 (#1112). */}
-                  <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                    {tr('house.members.edit.theme')}
-                  </Text>
-                  <HouseCoverPicker
-                    covers={covers}
-                    selectedKey={editCover}
-                    maxMembers={editMax}
-                    onSelect={setEditCover}
-                  />
-                </>
-              ) : null}
-            </ScrollView>
-            <View style={styles.modalActions}>
-              <Pressable
-                onPress={() => setShowEditHouse(false)}
-                accessibilityRole="button"
-                accessibilityLabel={tr('house.members.edit.cancelA11y')}
-                style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>{tr('common.cancel')}</Text>
-              </Pressable>
-              <Pressable
-                onPress={submitEditHouse}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: !editNameValid }}
-                accessibilityLabel={tr('house.members.edit.saveA11y')}
-                style={[
-                  styles.modalBtn,
-                  { backgroundColor: editNameValid ? t.primary : t.disabledBg },
-                ]}>
-                <Text
-                  style={[Typography.label, { color: editNameValid ? t.onPrimary : t.textMuted }]}>
-                  {tr('house.members.edit.save')}
-                </Text>
-              </Pressable>
+                      {n}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
-          </View>
-        </View>
+            {/* 공개 범위 (#1266) — 서버가 현재 값을 안 주면 둘 다 미선택으로 열린다. */}
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {tr('house.members.edit.visibility')}
+            </Text>
+            <View style={styles.privacyRow}>
+              <PrivacyCard
+                selected={editPublic === true}
+                accent={t.primary}
+                title={tr('house.members.edit.public')}
+                subtitle={tr('house.members.edit.publicHint')}
+                onPress={() => setEditPublic(true)}
+                t={t}
+              />
+              <PrivacyCard
+                selected={editPublic === false}
+                accent={HOUSE_PRIVATE_ACCENT}
+                title={tr('house.members.edit.private')}
+                subtitle={tr('house.members.edit.privateHint')}
+                onPress={() => setEditPublic(false)}
+                t={t}
+              />
+            </View>
+            {/* 온보딩 자동 입주 허용 (#1407) — 공개 집에만 실제 적용된다. */}
+            <View style={styles.autoJoinRow}>
+              <View style={styles.autoJoinCopy}>
+                <Text style={[Typography.body, { color: t.text }]}>
+                  {tr('house.members.edit.autoJoin')}
+                </Text>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  {editPublic === false
+                    ? tr('house.members.edit.autoJoinPrivateHint')
+                    : tr('house.members.edit.autoJoinHint')}
+                </Text>
+              </View>
+              <ToggleSwitch
+                value={editAutoJoin ?? autoJoinEnabled ?? false}
+                onToggle={() => setEditAutoJoin(!(editAutoJoin ?? autoJoinEnabled ?? false))}
+                accessibilityLabel={tr('house.members.edit.autoJoinA11y')}
+              />
+            </View>
+            {covers.length > 0 ? (
+              <>
+                {/* 커버는 집의 겉모습 자체라 "집 테마"로 (#1112). */}
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  {tr('house.members.edit.theme')}
+                </Text>
+                <HouseCoverPicker
+                  covers={covers}
+                  selectedKey={editCover}
+                  maxMembers={editMax}
+                  onSelect={setEditCover}
+                />
+              </>
+            ) : null}
+          </ScrollView>
+        </ModalCard>
       ) : null}
     </View>
   );
@@ -864,38 +851,9 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     alignItems: 'center',
   },
-  modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: Overlay.dim,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.four,
-  },
-  modal: {
-    width: '100%',
-    maxWidth: 360,
-    maxHeight: '85%',
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-  },
   // The edit form scrolls (cover grid makes it taller than small screens).
   editScroll: {
     flexGrow: 0,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-    marginTop: Spacing.four,
-  },
-  modalBtn: {
-    flex: 1,
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.three,
-    alignItems: 'center',
   },
   missionForm: {
     marginTop: Spacing.three,

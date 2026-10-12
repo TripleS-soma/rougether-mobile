@@ -19,6 +19,7 @@ import { CharacterAvatar } from '@/components/room/character-avatar';
 import { Room, type RoomSceneProps } from '@/components/room/room';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { type Routine, type RoutineCategoryMeta, weekdayLabelKey } from '@/constants/routines';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Loading } from '@/components/ui/loading';
 import { BearCheck } from '@/components/ui/bear-check';
 import { CategoryIcon } from '@/components/ui/category-icon';
@@ -32,7 +33,7 @@ import { RetryState } from '@/components/ui/retry-state';
 import { FriendWeekStrip } from '@/components/screens/house/friend-week-strip';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { BookOpenPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
-import { Overlay, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
@@ -611,39 +612,21 @@ export function FriendRoomScreen({
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {confirmCheer ? (
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modal, { backgroundColor: t.surface }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>
-              {tr('roomShop.friendRoom.recheerTitle')}
-            </Text>
-            <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
-              {tr('roomShop.friendRoom.recheerBody')}
-            </Text>
-            <View style={styles.modalActions}>
-              <Pressable
-                onPress={() => setConfirmCheer(null)}
-                accessibilityRole="button"
-                accessibilityLabel={tr('roomShop.friendRoom.recheerCancelA11y')}
-                style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>{tr('common.cancel')}</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  sendCheer(confirmCheer);
-                  setConfirmCheer(null);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={tr('roomShop.friendRoom.recheerConfirmA11y')}
-                style={[styles.modalBtn, { backgroundColor: t.primary }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>
-                  {tr('roomShop.friendRoom.send')}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      ) : null}
+      {/* 응원 재전송 확인 (장부 7번) — 본문이 문자열뿐이라 공용 확인 창으로. */}
+      <ConfirmDialog
+        visible={confirmCheer != null}
+        title={tr('roomShop.friendRoom.recheerTitle')}
+        body={tr('roomShop.friendRoom.recheerBody')}
+        confirmLabel={tr('roomShop.friendRoom.send')}
+        confirmAccessibilityLabel={tr('roomShop.friendRoom.recheerConfirmA11y')}
+        cancelLabel={tr('common.cancel')}
+        cancelAccessibilityLabel={tr('roomShop.friendRoom.recheerCancelA11y')}
+        onConfirm={() => {
+          if (confirmCheer) sendCheer(confirmCheer);
+          setConfirmCheer(null);
+        }}
+        onCancel={() => setConfirmCheer(null)}
+      />
     </View>
   );
 }
@@ -695,33 +678,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: Spacing.six,
     gap: Spacing.two,
-  },
-  modalOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: Overlay.dim,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.four,
-  },
-  modal: {
-    width: '100%',
-    maxWidth: 360,
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-  },
-  modalBody: {
-    marginTop: Spacing.two,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-    marginTop: Spacing.four,
-  },
-  modalBtn: {
-    flex: 1,
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.three,
-    alignItems: 'center',
   },
   pendingNotice: {
     marginHorizontal: Spacing.four,

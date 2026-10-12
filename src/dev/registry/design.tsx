@@ -19,6 +19,7 @@ import { Pill } from '@/components/ui/pill';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ModalCard } from '@/components/ui/modal-card';
 import { ReportSheet } from '@/components/ui/report-sheet';
 import { SheetHandle } from '@/components/ui/sheet-handle';
 import { MissionBanner } from '@/components/ui/mission-banner';
@@ -117,6 +118,24 @@ function ConfirmDialogDemo() {
         onConfirm={() => setVisible(false)}
         onCancel={() => setVisible(false)}
       />
+    </View>
+  );
+}
+
+/** Opens the form-holding modal card over a fixed-height area (장부 7번). */
+function ModalCardDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <View style={{ alignSelf: 'stretch', height: 260 }}>
+      <Button label="모달 카드 열기" onPress={() => setOpen(true)} />
+      {open ? (
+        <ModalCard
+          title="미션 만들기"
+          cancel={{ label: '취소', onPress: () => setOpen(false) }}
+          confirm={{ label: '만들기', onPress: () => setOpen(false) }}>
+          <Text style={{ marginTop: 12 }}>폼 본문이 여기에 들어가요.</Text>
+        </ModalCard>
+      ) : null}
     </View>
   );
 }
@@ -430,6 +449,11 @@ export const designEntries: GalleryEntry[] = [
     name: 'UI · ConfirmDialog',
     description: '백드롭+카드 확인 다이얼로그 (#557) — 버튼으로 열어보기.',
     render: () => <ConfirmDialogDemo />,
+  },
+  {
+    name: 'UI · ModalCard',
+    description: '폼을 담는 화면 위 모달 카드 (장부 7번) — 집 정보 수정·미션 만들기가 쓴다.',
+    render: () => <ModalCardDemo />,
   },
   {
     name: 'UI · NotificationBanner',

@@ -5,6 +5,7 @@ import type { House, HouseMission, NewHouseMission } from '@/components/screens/
 import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Icon } from '@/components/ui/icon';
+import { ModalCard } from '@/components/ui/modal-card';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Pictogram, type PictogramName, TrashPictogram } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
@@ -572,135 +573,116 @@ export function HouseMissionsScreen({
       )}
 
       {showCreateMission ? (
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modal, { backgroundColor: t.surface }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>
-              {tr('house.missions.form.title')}
+        <ModalCard
+          title={tr('house.missions.form.title')}
+          cancel={{
+            label: tr('common.cancel'),
+            accessibilityLabel: tr('house.missions.form.cancelA11y'),
+            onPress: () => setShowCreateMission(false),
+          }}
+          confirm={{
+            label: tr('house.missions.form.submit'),
+            accessibilityLabel: tr('house.missions.form.submitA11y'),
+            onPress: submitMission,
+            disabled: !canSubmitMission,
+          }}>
+          <View style={styles.missionForm}>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {tr('house.missions.form.titleLabel')}
             </Text>
-            <View style={styles.missionForm}>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                {tr('house.missions.form.titleLabel')}
-              </Text>
+            <TextInput
+              value={missionTitle}
+              onChangeText={(v) => setMissionTitle(v.slice(0, 160))}
+              placeholder={tr('house.missions.form.titlePlaceholder')}
+              placeholderTextColor={t.textMuted}
+              accessibilityLabel={tr('house.missions.form.titleA11y')}
+              style={[
+                styles.missionInput,
+                emph('normal'),
+                { backgroundColor: t.surfaceMuted, color: t.text },
+              ]}
+            />
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {tr('house.missions.form.type')}
+            </Text>
+            <View style={styles.missionTypeRow}>
+              {MISSION_TYPE_OPTIONS.map((opt) => {
+                const selected = opt.type === missionType;
+                return (
+                  <Pressable
+                    key={opt.type}
+                    onPress={() => setMissionType(opt.type)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}
+                    style={[
+                      styles.missionTypeBtn,
+                      { backgroundColor: selected ? t.primary : t.surfaceMuted },
+                    ]}>
+                    <Pictogram
+                      name={opt.icon}
+                      size={14}
+                      color={selected ? t.onPrimary : t.textMuted}
+                    />
+                    <Text
+                      style={[
+                        Typography.supporting,
+                        { color: selected ? t.onPrimary : t.textMuted },
+                      ]}>
+                      {tr(opt.labelKey)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {tr('house.missions.form.target', {
+                max: targetRule.max,
+                unit: tr(targetRule.unitKey),
+              })}
+            </Text>
+            {/* 단위를 입력칸 안에 붙인다 — 달성률에 500을 적어도 통과하던
+                시절엔 이 값이 %인지 횟수인지 화면 어디에도 없었다. */}
+            <View style={[styles.missionInputRow, { backgroundColor: t.surfaceMuted }]}>
               <TextInput
-                value={missionTitle}
-                onChangeText={(v) => setMissionTitle(v.slice(0, 160))}
-                placeholder={tr('house.missions.form.titlePlaceholder')}
-                placeholderTextColor={t.textMuted}
-                accessibilityLabel={tr('house.missions.form.titleA11y')}
+                value={missionTarget}
+                onChangeText={setMissionTarget}
+                keyboardType="number-pad"
+                accessibilityLabel={tr('house.missions.form.targetA11y')}
                 style={[
                   styles.missionInput,
+                  styles.missionInputField,
                   emph('normal'),
-                  { backgroundColor: t.surfaceMuted, color: t.text },
+                  { color: t.text },
                 ]}
               />
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                {tr('house.missions.form.type')}
+              <Text style={[Typography.label, styles.missionUnit, { color: t.textMuted }]}>
+                {tr(targetRule.unitKey)}
               </Text>
-              <View style={styles.missionTypeRow}>
-                {MISSION_TYPE_OPTIONS.map((opt) => {
-                  const selected = opt.type === missionType;
-                  return (
-                    <Pressable
-                      key={opt.type}
-                      onPress={() => setMissionType(opt.type)}
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected }}
-                      style={[
-                        styles.missionTypeBtn,
-                        { backgroundColor: selected ? t.primary : t.surfaceMuted },
-                      ]}>
-                      <Pictogram
-                        name={opt.icon}
-                        size={14}
-                        color={selected ? t.onPrimary : t.textMuted}
-                      />
-                      <Text
-                        style={[
-                          Typography.supporting,
-                          { color: selected ? t.onPrimary : t.textMuted },
-                        ]}>
-                        {tr(opt.labelKey)}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                {tr('house.missions.form.target', {
-                  max: targetRule.max,
-                  unit: tr(targetRule.unitKey),
-                })}
-              </Text>
-              {/* 단위를 입력칸 안에 붙인다 — 달성률에 500을 적어도 통과하던
-                  시절엔 이 값이 %인지 횟수인지 화면 어디에도 없었다. */}
-              <View style={[styles.missionInputRow, { backgroundColor: t.surfaceMuted }]}>
-                <TextInput
-                  value={missionTarget}
-                  onChangeText={setMissionTarget}
-                  keyboardType="number-pad"
-                  accessibilityLabel={tr('house.missions.form.targetA11y')}
-                  style={[
-                    styles.missionInput,
-                    styles.missionInputField,
-                    emph('normal'),
-                    { color: t.text },
-                  ]}
-                />
-                <Text style={[Typography.label, styles.missionUnit, { color: t.textMuted }]}>
-                  {tr(targetRule.unitKey)}
-                </Text>
-              </View>
-              <View style={styles.periodRow}>
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  {tr('house.missions.form.period')}
-                </Text>
-                <ToggleSwitch
-                  value={missionHasPeriod}
-                  onToggle={toggleMissionPeriod}
-                  accessibilityLabel={tr('house.missions.form.periodA11y')}
-                />
-              </View>
-              {missionHasPeriod ? (
-                <Pressable
-                  onPress={() => setShowPeriodSheet(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel={tr('house.missions.form.periodPickA11y')}
-                  style={[styles.missionInput, { backgroundColor: t.surfaceMuted }]}>
-                  <Text style={[Typography.supporting, { color: t.text }]}>
-                    {formatDate(missionStart)} ~{' '}
-                    {missionEnd ? formatDate(missionEnd) : tr('house.missions.form.openEnded')}
-                  </Text>
-                </Pressable>
-              ) : null}
             </View>
-            <View style={styles.modalActions}>
+            <View style={styles.periodRow}>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                {tr('house.missions.form.period')}
+              </Text>
+              <ToggleSwitch
+                value={missionHasPeriod}
+                onToggle={toggleMissionPeriod}
+                accessibilityLabel={tr('house.missions.form.periodA11y')}
+              />
+            </View>
+            {missionHasPeriod ? (
               <Pressable
-                onPress={() => setShowCreateMission(false)}
+                onPress={() => setShowPeriodSheet(true)}
                 accessibilityRole="button"
-                accessibilityLabel={tr('house.missions.form.cancelA11y')}
-                style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>{tr('common.cancel')}</Text>
-              </Pressable>
-              <Pressable
-                onPress={submitMission}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: !canSubmitMission }}
-                accessibilityLabel={tr('house.missions.form.submitA11y')}
-                style={[
-                  styles.modalBtn,
-                  { backgroundColor: canSubmitMission ? t.primary : t.disabledBg },
-                ]}>
-                <Text
-                  style={[
-                    Typography.label,
-                    { color: canSubmitMission ? t.onPrimary : t.textMuted },
-                  ]}>
-                  {tr('house.missions.form.submit')}
+                accessibilityLabel={tr('house.missions.form.periodPickA11y')}
+                style={[styles.missionInput, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.supporting, { color: t.text }]}>
+                  {formatDate(missionStart)} ~{' '}
+                  {missionEnd ? formatDate(missionEnd) : tr('house.missions.form.openEnded')}
                 </Text>
               </Pressable>
-            </View>
+            ) : null}
           </View>
-        </View>
+        </ModalCard>
       ) : null}
 
       {/* Mission period picker — its overlay (zIndex 100) sits above the modal. */}
@@ -723,29 +705,6 @@ const styles = StyleSheet.create({
   body: { flex: 1, paddingHorizontal: Spacing.four, paddingTop: Spacing.three, gap: Spacing.two },
   // 아래 넷은 **미션 만들기 폼**의 모달용이다 (#875에서 목록은 화면이 됐지만
   // 폼은 화면 위 모달로 남는다 — 화면 위 모달은 겹이 하나라 정상이다).
-  modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: Overlay.dim,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.four,
-  },
-  modal: {
-    width: '100%',
-    maxWidth: 360,
-    maxHeight: '85%',
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-    marginTop: Spacing.three,
-  },
   choiceBackdrop: {
     flex: 1,
     backgroundColor: Overlay.dim,
@@ -763,12 +722,6 @@ const styles = StyleSheet.create({
   choiceBtns: { alignSelf: 'stretch', gap: Spacing.two, marginTop: Spacing.one },
   choiceBtn: { paddingVertical: Spacing.three, borderRadius: Radius.pill, alignItems: 'center' },
   choiceCancel: { paddingVertical: Spacing.two, alignItems: 'center' },
-  modalBtn: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: Spacing.two,
-    borderRadius: Radius.md,
-  },
   flex: {
     flex: 1,
   },
