@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
 import { HouseCoverArt } from '@/components/room/house-cover-art';
+import { Field } from '@/components/ui/field';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { CrownPictogram, Pictogram } from '@/components/ui/pictograms';
 import { PrivacyCard } from '@/components/screens/house/privacy-card';
@@ -17,6 +18,10 @@ import {
   HOUSE_THEME_PRESETS,
   HOUSE_CAPACITY_OPTIONS,
 } from '@/constants/house-themes';
+
+/** 집 이름·소개 글자 수 상한 — 입력창 `maxLength`와 카운터가 같은 값을 쓴다. */
+const HOUSE_NAME_MAX = 16;
+const HOUSE_DESC_MAX = 40;
 
 export type CreateHouseInput = {
   name: string;
@@ -109,34 +114,30 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
 
         {/* Basic info */}
         <View style={[styles.card, { backgroundColor: t.surface }]}>
-          <Labeled label={tr('house.create.nameLabel')} t={t}>
-            <View style={[styles.inputBox, { backgroundColor: t.surfaceMuted }]}>
-              <TextInput
-                style={[styles.input, emph('normal'), { color: t.text }]}
-                value={name}
-                onChangeText={(v) => setName(v.slice(0, 16))}
-                placeholder={tr('house.create.namePlaceholder')}
-                placeholderTextColor={t.textMuted}
-              />
+          <Field
+            label={tr('house.create.nameLabel')}
+            value={name}
+            onChangeText={setName}
+            maxLength={HOUSE_NAME_MAX}
+            placeholder={tr('house.create.namePlaceholder')}
+            trailing={
               <Text style={[styles.counter, emph('normal'), { color: t.textDisabled }]}>
-                {name.length}/16
+                {name.length}/{HOUSE_NAME_MAX}
               </Text>
-            </View>
-          </Labeled>
-          <Labeled label={tr('house.create.descLabel')} t={t}>
-            <View style={[styles.inputBox, { backgroundColor: t.surfaceMuted }]}>
-              <TextInput
-                style={[styles.input, emph('normal'), { color: t.text }]}
-                value={description}
-                onChangeText={(v) => setDescription(v.slice(0, 40))}
-                placeholder={tr('house.create.descPlaceholder')}
-                placeholderTextColor={t.textMuted}
-              />
+            }
+          />
+          <Field
+            label={tr('house.create.descLabel')}
+            value={description}
+            onChangeText={setDescription}
+            maxLength={HOUSE_DESC_MAX}
+            placeholder={tr('house.create.descPlaceholder')}
+            trailing={
               <Text style={[styles.counter, emph('normal'), { color: t.textDisabled }]}>
-                {description.length}/40
+                {description.length}/{HOUSE_DESC_MAX}
               </Text>
-            </View>
-          </Labeled>
+            }
+          />
         </View>
 
         {/* Cover image (server catalog) — hidden while the catalog is empty */}
@@ -310,33 +311,6 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
   );
 }
 
-function Labeled({
-  label,
-  t,
-  children,
-}: {
-  label: string;
-  t: ReturnType<typeof useTokens>;
-  children: React.ReactNode;
-}) {
-  const emph = useFontEmphasis();
-  const Typography = useTypography();
-  return (
-    <View style={styles.labeled}>
-      <Text
-        style={[
-          Typography.supporting,
-          emph('semibold'),
-          styles.fieldLabel,
-          { color: t.textMuted },
-        ]}>
-        {label}
-      </Text>
-      {children}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   flex: { flex: 1 },
@@ -376,18 +350,7 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
   },
   meta: { fontSize: 13, marginTop: Spacing.half },
-  labeled: { gap: Spacing.one },
-  fieldLabel: { marginLeft: Spacing.one },
   sectionLabel: { marginLeft: Spacing.one },
-  inputBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-  },
-  input: { flex: 1, fontSize: 16, paddingVertical: Spacing.half },
   counter: { fontSize: 12 },
   themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   themeCell: {

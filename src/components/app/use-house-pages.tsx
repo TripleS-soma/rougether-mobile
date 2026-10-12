@@ -23,7 +23,6 @@ import { useToast } from '@/components/ui/toast';
 import { manageableMembers } from '@/components/screens/house/members';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { type CharacterId } from '@/constants/characters';
-import { type Wallet } from '@/constants/currency';
 import { useHouseChatUnread } from '@/hooks/use-house-chat';
 import { useHouseCovers } from '@/hooks/use-house-covers';
 import type { useHouses } from '@/hooks/use-houses';
@@ -86,9 +85,7 @@ export function useHousePages({
   completeMission,
   catalogue,
   shopLoading,
-  wallet,
   nickname,
-  streak,
   selectedCharacterId,
   wornCharacterId,
   onPagerLockChange,
@@ -164,10 +161,7 @@ export function useHousePages({
   /** 상점 카탈로그 — 방 미리보기·집 미리보기의 assetKey 해석. */
   catalogue: ShopCatalogue;
   shopLoading: boolean;
-  wallet: Wallet;
-  /** 집 하늘 연출용 현재 비 여부 (#360). */
   nickname: string;
-  streak: number;
   /** 서버 확정 착용 캐릭터 id — 프리뷰 내 좌석 파생(#282)은 미로드(undefined)
    * 를 구분해야 해서 폴백 없는 원본을 받는다. */
   selectedCharacterId: CharacterId | undefined;
