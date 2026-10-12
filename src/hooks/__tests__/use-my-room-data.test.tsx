@@ -907,6 +907,78 @@ describe('useMyRoomData — 완료 후 지갑 (성능 장부 N2)', () => {
   });
 });
 
+// 지갑 슬라이스 이관(장부 16번) 안전망 — 첫 로드·되받기·직접 고치기가 캐시 아래서도 그대로인지.
+describe('useMyRoomData — 지갑 슬라이스', () => {
+  const setUp = () => {
+    const state = { coin: 120, diamond: 3, broken: false, gets: 0 };
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/wallets')) {
+        state.gets += 1;
+        if (state.broken)
+          return { ok: false, status: 500, text: async (): Promise<string> => '{}' };
+        return res({
+          items: [
+            { currencyType: 'COIN', balance: state.coin },
+            { currencyType: 'DIAMOND', balance: state.diamond },
+          ],
+        });
+      }
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1 });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+    return state;
+  };
+
+  it('로딩이 끝나는 렌더에 잔액이 이미 있다 — 0코인이 한 틱도 비치지 않는다', async () => {
+    setUp();
+    const seen: { loading: boolean; coin: number }[] = [];
+    const { result } = await renderHook(
+      () => {
+        const d = useMyRoomData();
+        seen.push({ loading: d.loading, coin: d.wallet.coin });
+        return d;
+      },
+      { wrapper: queryWrapper() },
+    );
+    await waitFor(() => expect(result.current.wallet.coin).toBe(120));
+    expect(seen.filter((r) => !r.loading && r.coin !== 120)).toEqual([]);
+    expect(result.current.wallet.diamond).toBe(3);
+  });
+
+  it('refreshWallet은 서버 값을 다시 받고, 실패하면 마지막 잔액을 지킨다', async () => {
+    const state = setUp();
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.wallet.coin).toBe(120));
+
+    state.coin = 150;
+    await act(async () => {
+      await result.current.refreshWallet();
+    });
+    await waitFor(() => expect(result.current.wallet.coin).toBe(150));
+
+    state.broken = true;
+    state.coin = 999;
+    await act(async () => {
+      await result.current.refreshWallet();
+    });
+    expect(result.current.wallet.coin).toBe(150);
+  });
+
+  it('setWallet 함수형 갱신은 직전 값 위에 쌓인다 (뽑기·상점·출석이 쓰는 경로)', async () => {
+    setUp();
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.wallet.coin).toBe(120));
+
+    const setWallet = result.current.setWallet;
+    await act(async () => {
+      setWallet((w) => ({ ...w, coin: w.coin - 20 }));
+      setWallet((w) => ({ ...w, diamond: w.diamond + 1 }));
+    });
+    await waitFor(() => expect(result.current.wallet).toEqual({ coin: 100, diamond: 4 }));
+  });
+});
+
 describe('useMyRoomData — 연동 해제 (루틴↔미션, 카테고리↔집)', () => {
   /** 해제 요청을 붙잡아 두고 낙관적 반영을 본 뒤 성공/실패로 풀어준다. */
   function serve(missionId: number | null = 6) {
