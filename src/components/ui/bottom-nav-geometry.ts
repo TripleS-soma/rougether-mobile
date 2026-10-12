@@ -1,3 +1,4 @@
+import { floatingBottomOffset } from '@/components/ui/floating-geometry';
 import { Spacing } from '@/constants/theme';
 
 /**
@@ -24,13 +25,8 @@ export function navPillHeight(labelLineHeight: number): number {
   return NAV_PILL_PAD_V * 2 + NAV_ICON_SIZE + NAV_ICON_LABEL_GAP + labelLineHeight;
 }
 
-/**
- * 알약 아래 가장자리에서 화면 바닥까지 — 홈 인디케이터 위에 살짝 띄우고,
- * 인셋이 없는 기기(홈 버튼)에서는 최소 여백을 보장한다.
- */
-export function navPillBottomOffset(insetBottom: number): number {
-  return Math.max(insetBottom + Spacing.one, Spacing.three);
-}
+/** 알약 아래 가장자리에서 화면 바닥까지 — 떠 있는 요소 공용 규칙(floating-geometry). */
+export const navPillBottomOffset = floatingBottomOffset;
 
 /** 알약 밑으로 지나가는 스크롤 콘텐츠가 가져야 할 하단 패딩. */
 export function navUnderlapInset(insetBottom: number, labelLineHeight: number): number {

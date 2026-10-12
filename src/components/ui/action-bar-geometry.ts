@@ -1,3 +1,4 @@
+import { floatingBottomOffset } from '@/components/ui/floating-geometry';
 import { Spacing } from '@/constants/theme';
 
 /**
@@ -8,10 +9,8 @@ import { Spacing } from '@/constants/theme';
 /** 버튼 한 줄 높이 — 라벨(≈22) + 상하 패딩 16·16. */
 export const ACTION_BAR_HEIGHT = 54;
 
-/** 바 아래 가장자리에서 화면 바닥까지 — 바텀바 알약(bottom-nav-geometry)과 같은 규칙. */
-export function actionBarBottomOffset(insetBottom: number): number {
-  return Math.max(insetBottom + Spacing.one, Spacing.three);
-}
+/** 바 아래 가장자리에서 화면 바닥까지 — 바텀바 알약과 같은 규칙(floating-geometry). */
+export const actionBarBottomOffset = floatingBottomOffset;
 
 /** 떠 있는 바 밑으로 지나가는 스크롤 콘텐츠가 가져야 할 하단 패딩. */
 export function actionBarUnderlapInset(insetBottom: number): number {

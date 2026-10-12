@@ -138,7 +138,37 @@ export type SemanticColors = {
   grass: string;
 };
 
-export const Themes: Record<ThemeId, SemanticColors> = {
+/**
+ * soft 틴트의 알파 접미 — 8자리 hex의 마지막 두 자리(0x22 ≈ 13%).
+ * soft 색은 기본색에 이 알파만 붙여 파생한다(기본색을 바꾸면 따라간다).
+ */
+export const SOFT_TINT_ALPHA = '22';
+
+/** 6자리 hex(`#RRGGBB`)에 알파 두 자리를 붙인 8자리 hex. */
+export function withAlpha(hex: string, alphaHex: string): string {
+  return `${hex}${alphaHex}`;
+}
+
+type SoftTintKey = 'primarySoft' | 'warningSoft' | 'dangerSoft';
+
+/** 테마별 기본색에서 `primarySoft`·`warningSoft`·`dangerSoft`를 파생해 채운다. */
+function withSoftTints(
+  themes: Record<ThemeId, Omit<SemanticColors, SoftTintKey>>,
+): Record<ThemeId, SemanticColors> {
+  const out = {} as Record<ThemeId, SemanticColors>;
+  for (const id of Object.keys(themes) as ThemeId[]) {
+    const c = themes[id];
+    out[id] = {
+      ...c,
+      primarySoft: withAlpha(c.primary, SOFT_TINT_ALPHA),
+      warningSoft: withAlpha(c.warning, SOFT_TINT_ALPHA),
+      dangerSoft: withAlpha(c.danger, SOFT_TINT_ALPHA),
+    };
+  }
+  return out;
+}
+
+export const Themes: Record<ThemeId, SemanticColors> = withSoftTints({
   cozy: {
     appShell: '#E8DCC8',
     screen: '#FBF8F3',
@@ -160,9 +190,6 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     warningText: '#9D6014',
     danger: '#D67878',
     info: '#6E93C4',
-    primarySoft: '#7FA87F22',
-    warningSoft: '#E8A24A22',
-    dangerSoft: '#D6787822',
     dangerText: '#C43D3D',
     disabledBg: '#D9D2C5',
     sky: '#C3E0F5',
@@ -189,9 +216,6 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     warningText: '#9D6014',
     danger: '#D67878',
     info: '#6E93C4',
-    primarySoft: '#5F9B6A22',
-    warningSoft: '#E8A24A22',
-    dangerSoft: '#D6787822',
     dangerText: '#C43D3D',
     disabledBg: '#CBD8C4',
     sky: '#C3E0F5',
@@ -218,9 +242,6 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     warningText: '#886226',
     danger: '#C77A6A',
     info: '#6A86A8',
-    primarySoft: '#9A7B4F22',
-    warningSoft: '#C9943F22',
-    dangerSoft: '#C77A6A22',
     dangerText: '#AD5341',
     disabledBg: '#DCCFB9',
     sky: '#C3E0F5',
@@ -249,9 +270,6 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     warningText: '#9D6014',
     danger: '#D67878',
     info: '#6E93C4',
-    primarySoft: '#DDB28722',
-    warningSoft: '#E8A24A22',
-    dangerSoft: '#D6787822',
     dangerText: '#C43D3D',
     disabledBg: '#D6CCC2',
     sky: '#C3E0F5',
@@ -278,9 +296,6 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     warningText: '#9D6014',
     danger: '#D67878',
     info: '#6E93C4',
-    primarySoft: '#B5D08622',
-    warningSoft: '#E8A24A22',
-    dangerSoft: '#D6787822',
     dangerText: '#C43D3D',
     disabledBg: '#CED6C2',
     sky: '#C3E0F5',
@@ -307,9 +322,6 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     warningText: '#9D6014',
     danger: '#D67878',
     info: '#6E93C4',
-    primarySoft: '#F79B8D22',
-    warningSoft: '#E8A24A22',
-    dangerSoft: '#D6787822',
     dangerText: '#C43D3D',
     disabledBg: '#D6C4C2',
     sky: '#C3E0F5',
@@ -336,15 +348,12 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     warningText: '#9D6014',
     danger: '#D67878',
     info: '#6E93C4',
-    primarySoft: '#7FC2DE22',
-    warningSoft: '#E8A24A22',
-    dangerSoft: '#D6787822',
     dangerText: '#C43D3D',
     disabledBg: '#C2D0D6',
     sky: '#C3E0F5',
     grass: '#B5D89A',
   },
-};
+});
 
 /**
  * Dark variants of the brand themes — same semantic roles, same hue identity
@@ -374,7 +383,7 @@ const DarkNeutrals = {
   grass: '#33422E',
 } as const;
 
-export const DarkThemes: Record<ThemeId, SemanticColors> = {
+export const DarkThemes: Record<ThemeId, SemanticColors> = withSoftTints({
   cozy: {
     ...DarkNeutrals,
     // 고정 파스텔 타일 잉크 — 다크에서도 라이트 text와 동일 (통일 대상 아님).
@@ -383,14 +392,11 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     primaryActive: '#7FA87F',
     onPrimary: '#1E2A1E',
     primaryText: '#93BE93',
-    primarySoft: '#93BE9322',
     success: '#7CB98A',
     warning: '#EDB061',
     warningText: '#EDB061',
     danger: '#E08D8D',
     info: '#8FB0DA',
-    warningSoft: '#EDB06122',
-    dangerSoft: '#E08D8D22',
     dangerText: '#E08D8D',
   },
   forest: {
@@ -401,14 +407,11 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     primaryActive: '#6BAA78',
     onPrimary: '#14251A',
     primaryText: '#7FBC8B',
-    primarySoft: '#7FBC8B22',
     success: '#7CB98A',
     warning: '#EDB061',
     warningText: '#EDB061',
     danger: '#E08D8D',
     info: '#8FB0DA',
-    warningSoft: '#EDB06122',
-    dangerSoft: '#E08D8D22',
     dangerText: '#E08D8D',
   },
   hanok: {
@@ -419,14 +422,11 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     primaryActive: '#B08D5B',
     onPrimary: '#2A2113',
     primaryText: '#C4A16F',
-    primarySoft: '#C4A16F22',
     success: '#96B37F',
     warning: '#DCA855',
     warningText: '#DCA855',
     danger: '#DA9384',
     info: '#93A9C4',
-    warningSoft: '#DCA85522',
-    dangerSoft: '#DA938422',
     dangerText: '#DA9384',
   },
   // 신규 4종 다크 (#459) — 라이트와 같은 hue, 다크 표면 위로 primary를 밝혀
@@ -440,14 +440,11 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     primaryActive: '#B98E62',
     onPrimary: '#2D2623',
     primaryText: '#C4A07B',
-    primarySoft: '#C4A07B22',
     success: '#7CB98A',
     warning: '#EDB061',
     warningText: '#EDB061',
     danger: '#E08D8D',
     info: '#8FB0DA',
-    warningSoft: '#EDB06122',
-    dangerSoft: '#E08D8D22',
     dangerText: '#E08D8D',
   },
   citrus: {
@@ -458,14 +455,11 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     primaryActive: '#7EA83E',
     onPrimary: '#2D2623',
     primaryText: '#93B65D',
-    primarySoft: '#93B65D22',
     success: '#7CB98A',
     warning: '#EDB061',
     warningText: '#EDB061',
     danger: '#E08D8D',
     info: '#8FB0DA',
-    warningSoft: '#EDB06122',
-    dangerSoft: '#E08D8D22',
     dangerText: '#E08D8D',
   },
   pastel: {
@@ -476,14 +470,11 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     primaryActive: '#F79B8D',
     onPrimary: '#2D2623',
     primaryText: '#F8AB9F',
-    primarySoft: '#F8AB9F22',
     success: '#7CB98A',
     warning: '#EDB061',
     warningText: '#EDB061',
     danger: '#E08D8D',
     info: '#8FB0DA',
-    warningSoft: '#EDB06122',
-    dangerSoft: '#E08D8D22',
     dangerText: '#E08D8D',
   },
   indigo: {
@@ -494,17 +485,14 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     primaryActive: '#0E86B8',
     onPrimary: '#2D2623',
     primaryText: '#65B2D2',
-    primarySoft: '#65B2D222',
     success: '#7CB98A',
     warning: '#EDB061',
     warningText: '#EDB061',
     danger: '#E08D8D',
     info: '#8FB0DA',
-    warningSoft: '#EDB06122',
-    dangerSoft: '#E08D8D22',
     dangerText: '#E08D8D',
   },
-};
+});
 
 /** Prototype default is "cozy" (포근). Theme switching arrives with the settings screen. */
 export const DEFAULT_THEME_ID: ThemeId = 'cozy';
