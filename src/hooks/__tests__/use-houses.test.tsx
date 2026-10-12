@@ -179,8 +179,8 @@ describe('useHouses — 로드 실패 → error + 재시도 (#549)', () => {
     await act(async () => {
       await result.current.retry();
     });
+    await waitFor(() => expect(result.current.houses.map((h) => h.name)).toEqual(['내집']));
     expect(result.current.error).toBe(false);
-    expect(result.current.houses.map((h) => h.name)).toEqual(['내집']);
   });
 });
 
@@ -271,7 +271,7 @@ describe('useHouses — 집 순서 변경 (#820)', () => {
     const put = calls.find((c) => c.url.includes('/me/houses/order'));
     expect(put?.body).toBe(JSON.stringify({ houseIds: [2, 1] }));
     // 낙관적 반영 — 응답 본문이 없으므로 화면 순서는 우리가 쥔다.
-    expect(result.current.houses.map((h) => h.houseId)).toEqual([2, 1]);
+    await waitFor(() => expect(result.current.houses.map((h) => h.houseId)).toEqual([2, 1]));
   });
 
   it('400 HOUSE_ORDER_INVALID면 되돌리지 않고 다시 불러온다', async () => {
@@ -296,7 +296,7 @@ describe('useHouses — 집 순서 변경 (#820)', () => {
       await result.current.reorderHouses([2, 1]);
     });
 
-    expect(result.current.houses.map((h) => h.houseId)).toEqual(before);
+    await waitFor(() => expect(result.current.houses.map((h) => h.houseId)).toEqual(before));
     expect(mockToast).toHaveBeenCalledWith(
       '집 순서를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.',
       'error',
@@ -339,7 +339,7 @@ describe('useHouses — 프로필 닉네임 반영 (#924)', () => {
     });
 
     // 내 좌석만 바뀌고, 이웃은 그대로다.
-    expect(names()).toContain('새이름');
+    await waitFor(() => expect(names()).toContain('새이름'));
     expect(names()).not.toContain('옛이름');
     expect(names()).toContain('이웃');
     // 이름 하나 때문에 집을 다시 부르지 않는다 — 파생으로 끝낸다.
@@ -443,5 +443,111 @@ describe('useHouses — 내 입주 신청 잠금 카드 (#648)', () => {
     await waitFor(() =>
       expect(result.current.pendingJoinRequests.map((r) => r.requestId)).toEqual([5]),
     );
+  });
+});
+
+// 집 목록 캐시 이관(장부 16번) 안전망 — 재조회·낙관 반영·폴백이 캐시 아래서도 그대로인지.
+describe('useHouses — 집 목록 재조회 의미론', () => {
+  const setUp = () => {
+    const state = {
+      houses: [
+        { houseId: 1, name: '가' },
+        { houseId: 2, name: '나' },
+      ],
+      bundleBroken: false,
+      calls: [] as string[],
+    };
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      state.calls.push(`${method} ${url}`);
+      if (url.includes('/me/houses')) return res({ items: state.houses });
+      if (url.includes('/me/join-requests')) return res({ items: [] });
+      if (url.endsWith('/me')) return res({ nickname: '나' });
+      if (method === 'DELETE' && /\/members\/(\d+|me)$/.test(url))
+        return { ok: true, status: 204, text: async () => '' };
+      if (method === 'PUT' && /\/houses\/\d+$/.test(url)) return res({ houseId: 1, name: '가' });
+      const detail = url.match(/\/houses\/(\d+)(?:\?|$)/);
+      if (detail) {
+        if (state.bundleBroken) return { ok: false, status: 500, text: async () => '{}' };
+        return res({ houseId: Number(detail[1]), name: `집${detail[1]}` });
+      }
+      if (url.includes('/houses/')) return res({ items: [] });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+    return state;
+  };
+  const listCalls = (calls: string[]) =>
+    calls.filter((c) => c.startsWith('GET ') && c.endsWith('/me/houses'));
+
+  it('로딩이 끝나는 렌더에 목록이 이미 있다 — 빈 상태가 한 틱도 비치지 않는다', async () => {
+    setUp();
+    const seen: { loading: boolean; count: number }[] = [];
+    const { result } = await renderHook(
+      () => {
+        const h = useHouses();
+        seen.push({ loading: h.loading, count: h.houses.length });
+        return h;
+      },
+      { wrapper: queryWrapper() },
+    );
+    await waitFor(() => expect(result.current.houses.length).toBe(2));
+    expect(seen.filter((r) => !r.loading && r.count === 0)).toEqual([]);
+  });
+
+  it('운영 클라이언트(staleTime 30초)에서도 refreshHouses는 서버를 다시 친다', async () => {
+    const state = setUp();
+    const { result } = await renderHook(() => useHouses(), {
+      wrapper: queryWrapper(createQueryClient()),
+    });
+    await waitFor(() => expect(result.current.houses.length).toBe(2));
+
+    state.houses = [{ houseId: 1, name: '가' }];
+    state.calls.length = 0;
+    await act(async () => {
+      await result.current.refreshHouses();
+    });
+    expect(listCalls(state.calls).length).toBe(1);
+    await waitFor(() => expect(result.current.houses.map((h) => h.houseId)).toEqual([1]));
+  });
+
+  it('단건 갱신이 실패하면 전체 목록을 다시 받는다 (#534 폴백)', async () => {
+    const state = setUp();
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.houses.length).toBe(2));
+
+    state.bundleBroken = true;
+    state.calls.length = 0;
+    await act(async () => {
+      await result.current.kickMember(1, 5).catch(() => undefined);
+    });
+    expect(listCalls(state.calls).length).toBe(1);
+  });
+
+  it('공개 범위 수정은 재조회가 값을 안 실어 와도 저장한 값을 남긴다 (#1266)', async () => {
+    setUp();
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.houses.length).toBe(2));
+
+    await act(async () => {
+      await result.current.updateHouse(1, { isPublic: false } as never);
+    });
+    await waitFor(() =>
+      expect(result.current.houses.find((h) => h.houseId === 1)?.isPublic).toBe(false),
+    );
+    expect(result.current.houses.find((h) => h.houseId === 2)?.isPublic).not.toBe(false);
+  });
+
+  it('집을 나가면 목록을 다시 받아 그 집이 빠진다', async () => {
+    const state = setUp();
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.houses.length).toBe(2));
+
+    state.houses = [{ houseId: 1, name: '가' }];
+    let ok = false;
+    await act(async () => {
+      ok = await result.current.leaveHouse(2);
+    });
+    expect(ok).toBe(true);
+    await waitFor(() => expect(result.current.houses.map((h) => h.houseId)).toEqual([1]));
   });
 });
