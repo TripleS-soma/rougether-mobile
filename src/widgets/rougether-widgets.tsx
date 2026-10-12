@@ -15,6 +15,7 @@ import { Appearance } from 'react-native';
 import {
   FlexWidget,
   ImageWidget,
+  requestWidgetUpdate,
   TextWidget,
   type WidgetTaskHandlerProps,
 } from 'react-native-android-widget';
@@ -307,18 +308,12 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps): Promise<
 
 /**
  * 앱 안의 변화(완료 토글·방 꾸미기)를 위젯에 즉시 반영. 안드로이드 전용 —
- * 그 외 플랫폼/모듈 부재(웹 하니스)는 no-op.
+ * 그 외 플랫폼/모듈 부재(웹 하니스)는 no-op. 라이브러리는 이 파일 상단에서
+ * 이미 정적으로 임포트되고, 안드로이드가 아니면 스스로 no-op 네이티브
+ * 모듈로 떨어진다 — 여기서 따로 require할 이유가 없다.
  */
 export function refreshWidgets(): void {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { requestWidgetUpdate } = require('react-native-android-widget') as {
-      requestWidgetUpdate: (opts: {
-        widgetName: string;
-        renderWidget: () => Promise<React.JSX.Element>;
-        widgetNotFound?: () => void;
-      }) => Promise<void>;
-    };
     for (const widgetName of ['RougetherToday', 'RougetherRoom']) {
       void requestWidgetUpdate({
         widgetName,
