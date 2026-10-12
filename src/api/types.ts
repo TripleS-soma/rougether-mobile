@@ -783,6 +783,10 @@ export type NotificationSettingResponse = {
   house?: boolean;
   /** 피드 댓글 푸시 (#1409) — 기본 true. */
   feed?: boolean;
+  /** 거래소 체결·구매 대기 푸시 (서버 #432) — 기본 true. */
+  market?: boolean;
+  /** 집 채팅 새 메시지 푸시 (서버 #435) — 기본 true. 방별 음소거는 채팅 알림 API. */
+  chat?: boolean;
 };
 
 export type NotificationSettingUpdateRequest = {
@@ -790,6 +794,8 @@ export type NotificationSettingUpdateRequest = {
   reminder?: boolean;
   house?: boolean;
   feed?: boolean;
+  market?: boolean;
+  chat?: boolean;
 };
 
 export type OnboardingCharacterRequest = {

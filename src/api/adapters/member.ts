@@ -117,6 +117,8 @@ export function toNotificationSettings(res: NotificationSettingResponse): Notifi
     reminder: res.reminder ?? true,
     house: res.house ?? true,
     feed: res.feed ?? true,
+    market: res.market ?? true,
+    chat: res.chat ?? true,
   };
 }
 

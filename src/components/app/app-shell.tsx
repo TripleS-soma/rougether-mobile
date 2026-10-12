@@ -434,12 +434,15 @@ export function AppShell({
   // 셸이 모은다 — 뒤에 서는 페이지 훅의 값은 누를 때 읽는다(useStableCallback).
   // 푸시 탭·인앱 배너도 같은 경로 (#1409). 갈 곳을 모르면 false — 부른 쪽이 알림함으로.
   const openNotification = useStableCallback(
-    (target: Pick<NotificationEntry, 'type' | 'refId'>): boolean => {
-      const dest = notificationDestination(target.type, target.refId);
+    (target: Pick<NotificationEntry, 'type' | 'refId'> & { houseId?: number }): boolean => {
+      const dest = notificationDestination(target.type, target.refId, target.houseId);
       if (!dest) return false;
       if (dest.kind === 'feedPost') feedPages.openPost(dest.postId);
       else if (dest.kind === 'weeklyReport') myRoomPages.openWeeklyReport(screen);
       else if (dest.kind === 'houseMembers') housePages.openMembers();
+      else if (dest.kind === 'marketOrders') marketPages.openOrders();
+      else if (dest.kind === 'marketAsset') marketPages.openAsset(dest.assetId);
+      else if (dest.kind === 'houseChat') housePages.openChatFor(dest.houseId);
       else setScreen(dest.screen);
       return true;
     },

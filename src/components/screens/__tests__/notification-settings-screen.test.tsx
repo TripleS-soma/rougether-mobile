@@ -28,11 +28,19 @@ describe('NotificationSettingsScreen', () => {
     expect(onToggle).toHaveBeenCalledWith('house', false);
   });
 
+  // 서버 #435(채팅 푸시)·#432(거래소 알림) — 그룹 토글 두 줄.
+  it('집 채팅 줄은 늘 보이고, 누르면 chat 키로 알린다', async () => {
+    const onToggle = jest.fn();
+    const { getByLabelText } = await render(<NotificationSettingsScreen onToggle={onToggle} />);
+    await fireEvent.press(getByLabelText('집 채팅'));
+    expect(onToggle).toHaveBeenCalledWith('chat', false);
+  });
+
   it('ignores group toggles while the master is off (server keeps their values)', async () => {
     const onToggle = jest.fn();
     const { getByLabelText } = await render(
       <NotificationSettingsScreen
-        settings={{ all: false, reminder: true, house: true, feed: true }}
+        settings={{ all: false, reminder: true, house: true, feed: true, market: true, chat: true }}
         onToggle={onToggle}
       />,
     );

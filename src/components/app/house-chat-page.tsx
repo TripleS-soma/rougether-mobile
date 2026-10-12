@@ -2,9 +2,11 @@ import { useCallback, useEffect } from 'react';
 
 import { HouseChatScreen } from '@/components/screens/house-chat-screen';
 import { useToast } from '@/components/ui/toast';
+import { useChatMute } from '@/hooks/use-chat-mute';
 import { type HouseChatError, useHouseChat } from '@/hooks/use-house-chat';
 import { useT } from '@/i18n';
 import { track } from '@/lib/analytics';
+import { setForegroundPushFilter } from '@/lib/push-events';
 
 /**
  * 집 채팅 셸 화면 (#1408) — 데이터 훅(소켓·전송·읽음)과 순수 화면을 잇는다. 채팅
@@ -30,10 +32,21 @@ export function HouseChatPage({
     [toast, tr, onBack],
   );
   const chat = useHouseChat({ houseId, onError: handleError });
+  // 방별 음소거 (서버 #435) — 상태를 받기 전엔 버튼을 그리지 않는다(켜짐으로 잘못 보이지 않게).
+  const muteFailed = useCallback(() => toast(tr('house.chat.muteFailed'), 'error'), [toast, tr]);
+  const mute = useChatMute({ roomId: chat.roomId, onError: muteFailed });
 
   useEffect(() => {
     track('house_chat_view');
   }, []);
+
+  // 이 방을 보는 동안 그 방 새 메시지 푸시는 배너·소리·알림 목록 모두 숨긴다(이미 화면에 있다).
+  const roomId = chat.roomId;
+  useEffect(() => {
+    if (roomId == null) return;
+    setForegroundPushFilter((tap) => tap.type === 'CHAT_MESSAGE' && tap.roomId === roomId);
+    return () => setForegroundPushFilter(null);
+  }, [roomId]);
 
   return (
     <HouseChatScreen
@@ -49,6 +62,8 @@ export function HouseChatPage({
       onSend={chat.send}
       onRetrySend={chat.retrySend}
       onVisible={chat.reportVisible}
+      muted={mute.muted}
+      onToggleMute={mute.loaded ? () => void mute.toggle() : undefined}
       onBack={onBack}
     />
   );

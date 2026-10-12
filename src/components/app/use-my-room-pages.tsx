@@ -345,7 +345,7 @@ export function useMyRoomPages({
           key: pushBannerSeq.current,
           ...n,
           // 배너 탭도 같은 목적지 표 (#1409) — 갈 곳이 없으면(undefined) 알림함.
-          onPress: notificationDestination(n.type, n.refId)
+          onPress: notificationDestination(n.type, n.refId, n.houseId)
             ? () => void onOpenNotificationRef.current?.(n)
             : undefined,
         });

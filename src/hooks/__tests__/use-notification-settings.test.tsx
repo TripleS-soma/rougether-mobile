@@ -26,6 +26,8 @@ describe('useNotificationSettings', () => {
       reminder: true,
       house: false,
       feed: true,
+      market: true,
+      chat: true,
     });
 
     await act(async () => {
@@ -37,6 +39,8 @@ describe('useNotificationSettings', () => {
         reminder: false,
         house: true,
         feed: true,
+        market: true,
+        chat: true,
       }),
     );
     const patch = calls.find((c) => c.method === 'PATCH');
@@ -58,7 +62,14 @@ describe('useNotificationSettings', () => {
     });
     expect(result.current.loadError).toBe(true);
     // 실패 시엔 기본값 유지.
-    expect(result.current.settings).toEqual({ all: true, reminder: true, house: true, feed: true });
+    expect(result.current.settings).toEqual({
+      all: true,
+      reminder: true,
+      house: true,
+      feed: true,
+      market: true,
+      chat: true,
+    });
 
     broken = false;
     await act(async () => {
@@ -70,6 +81,8 @@ describe('useNotificationSettings', () => {
       reminder: false,
       house: true,
       feed: true,
+      market: true,
+      chat: true,
     });
   });
 

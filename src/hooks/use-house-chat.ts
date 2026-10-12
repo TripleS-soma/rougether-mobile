@@ -467,6 +467,8 @@ export function useHouseChat({
 
   return useMemo(
     () => ({
+      /** 방 id — 음소거(서버 #435)·보고 있는 방의 포그라운드 푸시 숨김에 쓴다. */
+      roomId,
       messages,
       myUserId: userId,
       loading: loading && !error,
@@ -480,6 +482,7 @@ export function useHouseChat({
       retryLoad: stableRetryLoad,
     }),
     [
+      roomId,
       messages,
       userId,
       loading,

@@ -1,4 +1,5 @@
 import type { Screen } from '@/components/app/navigation';
+import { MARKET_ENABLED } from '@/constants/market';
 
 /**
  * 알림 카드를 눌렀을 때의 목적지 (2026-10-08) — 서버 알림의 `type`·`refId`(spec notification
@@ -12,13 +13,29 @@ export type NotificationDestination =
   /** 주간 회고 — 연 곳(알림함)으로 돌아오게 셸의 openWeeklyReport로. */
   | { kind: 'weeklyReport' }
   /** 집 구성원 — 방장이면 입주 신청 목록을 새로 받는 셸 경로로. */
-  | { kind: 'houseMembers' };
+  | { kind: 'houseMembers' }
+  /** 거래소 체결 (서버 #432) — refId는 주문 id. 내 주문(대기 중)으로. */
+  | { kind: 'marketOrders' }
+  /** 거래소 구매 대기 등록 — refId = 종목 id. */
+  | { kind: 'marketAsset'; assetId: number }
+  /** 집 채팅 새 메시지 (서버 #435, 푸시 전용) — 그 집을 골라 채팅방으로. */
+  | { kind: 'houseChat'; houseId?: number };
 
 export function notificationDestination(
   type: string | undefined,
   refId?: number,
+  houseId?: number,
 ): NotificationDestination | null {
   switch (type) {
+    case 'MARKET_SELL_FILLED':
+    case 'MARKET_BUY_FILLED':
+      // 거래소가 숨어 있는 설치본이면 갈 화면이 없다 — 알림함에 머문다.
+      return MARKET_ENABLED ? { kind: 'marketOrders' } : null;
+    case 'MARKET_BID_PLACED':
+      if (!MARKET_ENABLED) return null;
+      return refId ? { kind: 'marketAsset', assetId: refId } : { kind: 'screen', screen: 'market' };
+    case 'CHAT_MESSAGE':
+      return { kind: 'houseChat', houseId };
     case 'FEED_COMMENT':
       return refId ? { kind: 'feedPost', postId: refId } : { kind: 'screen', screen: 'feed' };
     case 'ROUTINE_REMINDER':

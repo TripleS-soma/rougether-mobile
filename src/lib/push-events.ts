@@ -24,15 +24,23 @@ export const DEFAULT_CHANNEL_ID = 'default';
 export function initPushDisplay(): void {
   if (!supportsPushNotifications()) return;
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      // 포그라운드 배너는 **앱이 전담해 그린다** (#902, ui/notification-banner).
-      // 여기를 true로 두면 같은 알림이 시스템 배너와 인앱 배너로 두 번 뜬다.
-      shouldShowBanner: false,
-      // 트레이(알림 목록)에는 그대로 남는다 — 못 보고 지나쳐도 되찾을 수 있어야 한다.
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
+    handleNotification: async (notification) =>
+      suppressedNow(notification.request.content.data)
+        ? {
+            shouldShowBanner: false,
+            shouldShowList: false,
+            shouldPlaySound: false,
+            shouldSetBadge: false,
+          }
+        : {
+            // 포그라운드 배너는 **앱이 전담해 그린다** (#902, ui/notification-banner).
+            // 여기를 true로 두면 같은 알림이 시스템 배너와 인앱 배너로 두 번 뜬다.
+            shouldShowBanner: false,
+            // 트레이(알림 목록)에는 그대로 남는다 — 못 보고 지나쳐도 되찾을 수 있어야 한다.
+            shouldShowList: true,
+            shouldPlaySound: true,
+            shouldSetBadge: false,
+          },
   });
   if (Platform.OS === 'android') {
     void Notifications.setNotificationChannelAsync(DEFAULT_CHANNEL_ID, {
@@ -54,17 +62,39 @@ export type PushTap = {
    * 다른 알림은 data에 id를 싣지 않아 비어 있다(앞으로 `refId`를 실으면 그것도 읽는다).
    */
   refId?: number;
+  /** 집 채팅 새 메시지(CHAT_MESSAGE, 서버 #435) — 어느 집·방인지. 알림함에는 안 쌓이는 푸시 전용. */
+  houseId?: number;
+  roomId?: number;
 };
 
+/** 문자열(spec)·숫자 id → 양의 정수, 아니면 undefined. */
+function idFrom(raw: unknown): number | undefined {
+  const n = typeof raw === 'string' || typeof raw === 'number' ? Number(raw) : NaN;
+  return Number.isInteger(n) && n > 0 ? n : undefined;
+}
+
 /** FCM data → 탭 정보. 값은 문자열로 온다(spec) — 숫자로 못 바꾸면 버린다. */
-function pushTapFrom(data: Record<string, unknown> | undefined): PushTap {
+export function pushTapFrom(data: Record<string, unknown> | undefined): PushTap {
   const type = data?.type;
-  const raw = data?.postId ?? data?.refId;
-  const refId = typeof raw === 'string' || typeof raw === 'number' ? Number(raw) : NaN;
   return {
     type: typeof type === 'string' ? type : undefined,
-    refId: Number.isInteger(refId) && refId > 0 ? refId : undefined,
+    refId: idFrom(data?.postId ?? data?.refId),
+    houseId: idFrom(data?.houseId),
+    roomId: idFrom(data?.roomId),
   };
+}
+
+/**
+ * 지금 화면이 이미 보여 주는 내용의 푸시를 거르는 필터 — 채팅방을 보는 중에 그 방 새 메시지가
+ * 배너·소리·알림 목록으로 또 뜨지 않게(서버 #435는 소켓 구독 중이면 안 보내지만, 연결이 잠깐
+ * 끊긴 사이에 온 것까지). 화면이 마운트될 때 등록하고 언마운트 때 null로 푼다.
+ */
+let foregroundFilter: ((tap: PushTap) => boolean) | null = null;
+export function setForegroundPushFilter(filter: ((tap: PushTap) => boolean) | null): void {
+  foregroundFilter = filter;
+}
+function suppressedNow(data: unknown): boolean {
+  return foregroundFilter?.(pushTapFrom(data as Record<string, unknown> | undefined)) ?? false;
 }
 
 export function onNotificationTap(cb: (notification?: PushTap) => void): () => void {
@@ -107,6 +137,8 @@ export function onNotificationReceived(
     const body = content.body ?? '';
     // 제목·본문이 모두 비면 그릴 게 없다 (data-only 메시지 등) — 조용히 넘긴다.
     if (!title && !body) return;
+    // 지금 보고 있는 화면의 내용(그 채팅방 새 메시지)이면 인앱 배너도 띄우지 않는다.
+    if (suppressedNow(content.data)) return;
     cb({ ...pushTapFrom(content.data as Record<string, unknown> | undefined), title, body });
   });
   return () => sub.remove();

@@ -484,7 +484,9 @@
       "retry": "Try again",
       "banned": "Your message contains a word that isn't allowed",
       "forbidden": "You can't join this house's chat",
-      "invalid": "Couldn't send the message. Please check the content."
+      "invalid": "Couldn't send the message. Please check the content.",
+      "muteA11y": "Notifications for this chat",
+      "muteFailed": "Couldn't change chat notifications"
     },
     "friendWeek": {
       "range": "{{sm}}/{{sd}} – {{em}}/{{ed}}",
