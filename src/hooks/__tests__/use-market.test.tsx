@@ -12,6 +12,7 @@ import {
 } from '@/api/market';
 import { useMarketActions, type MarketOrderInput } from '@/hooks/use-market';
 import { DEMO_MARKET_ASSET } from '@/mocks/fixtures';
+import { jsonRes } from '@/test-utils/fetch';
 import { createTestQueryClient, queryWrapper } from '@/test-utils/query-wrapper';
 
 jest.mock('@/api/market', () => ({
@@ -60,13 +61,22 @@ const SELL: MarketOrderInput = {
 };
 const noWait = { sleep: () => Promise.resolve(), intervalMs: 0, tries: 3 };
 
+const realFetch = global.fetch;
+afterEach(() => {
+  global.fetch = realFetch;
+});
+
 async function setup(client: QueryClient = createTestQueryClient()) {
   const toast = jest.fn();
-  const onWalletChanged = jest.fn();
-  const hook = await renderHook(() => useMarketActions({ toast, onWalletChanged, poll: noWait }), {
+  // 체결·에스크로 뒤 지갑 캐시(useWallet)를 다시 받는다 — GET /me/wallets 요청 수로 본다.
+  global.fetch = jest.fn(async () => jsonRes({ items: [] })) as unknown as typeof fetch;
+  const walletFetches = () =>
+    (global.fetch as jest.Mock).mock.calls.filter(([url]) => String(url).includes('/me/wallets'))
+      .length;
+  const hook = await renderHook(() => useMarketActions({ toast, poll: noWait }), {
     wrapper: queryWrapper(client),
   });
-  return { ...hook, toast, onWalletChanged, client };
+  return { ...hook, toast, walletFetches, client };
 }
 
 beforeEach(() => {
@@ -85,7 +95,7 @@ describe('useMarketActions — 주문 흐름 (#1427)', () => {
       .mockResolvedValueOnce(applied('FILLED'));
     const client = createTestQueryClient();
     const invalidate = jest.spyOn(client, 'invalidateQueries');
-    const { result, toast, onWalletChanged } = await setup(client);
+    const { result, toast, walletFetches } = await setup(client);
 
     let outcome;
     await act(async () => {
@@ -94,7 +104,7 @@ describe('useMarketActions — 주문 흐름 (#1427)', () => {
     expect(outcome).toEqual({ accepted: true, result: 'filled' });
     expect(fetchMarketCommand).toHaveBeenCalledTimes(2);
     expect(toast).toHaveBeenCalledWith('구매 완료', 'success');
-    expect(onWalletChanged).toHaveBeenCalled();
+    await waitFor(() => expect(walletFetches()).toBeGreaterThan(0));
     const keys = invalidate.mock.calls.map((c) => c[0]?.queryKey);
     expect(keys).toEqual(
       expect.arrayContaining([
@@ -146,7 +156,7 @@ describe('useMarketActions — 주문 흐름 (#1427)', () => {
 
   it('폴링 끝까지 PENDING → "처리 중이에요. 내 주문에서 확인해 주세요."', async () => {
     jest.mocked(fetchMarketCommand).mockResolvedValue(pending);
-    const { result, toast, onWalletChanged } = await setup();
+    const { result, toast, walletFetches } = await setup();
     let outcome;
     await act(async () => {
       outcome = await result.current.placeOrder(BUY);
@@ -155,7 +165,7 @@ describe('useMarketActions — 주문 흐름 (#1427)', () => {
     expect(fetchMarketCommand).toHaveBeenCalledTimes(noWait.tries);
     expect(toast).toHaveBeenCalledWith('처리 중이에요. 내 주문에서 확인해 주세요.');
     // 접수 순간 에스크로가 일어났으니 PENDING이어도 지갑을 다시 받는다.
-    expect(onWalletChanged).toHaveBeenCalled();
+    await waitFor(() => expect(walletFetches()).toBeGreaterThan(0));
   });
 
   it('네트워크 재시도는 같은 requestId, 새 탭은 새 requestId', async () => {
@@ -245,7 +255,7 @@ describe('useMarketActions — 주문 흐름 (#1427)', () => {
           JSON.stringify({ code: 'MARKET_INSUFFICIENT_COIN' }),
         ),
       );
-    const { result, toast, onWalletChanged } = await setup();
+    const { result, toast, walletFetches } = await setup();
     let outcome;
     await act(async () => {
       outcome = await result.current.placeOrder(BUY);
@@ -254,7 +264,7 @@ describe('useMarketActions — 주문 흐름 (#1427)', () => {
     expect(outcome).toEqual({ accepted: false, result: 'error', code: 'MARKET_INSUFFICIENT_COIN' });
     expect(toast).toHaveBeenCalledWith('코인이 부족해요.', 'error');
     expect(fetchMarketCommand).not.toHaveBeenCalled();
-    expect(onWalletChanged).not.toHaveBeenCalled();
+    expect(walletFetches()).toBe(0);
   });
 
   it('취소도 같은 접수 흐름 — APPLIED면 "주문을 취소했어요"', async () => {

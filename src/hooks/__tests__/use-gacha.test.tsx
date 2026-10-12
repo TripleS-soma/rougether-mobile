@@ -3,8 +3,10 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useGacha } from '@/hooks/use-gacha';
 import { useMyCharacters } from '@/hooks/use-my-characters';
 import { useShop } from '@/hooks/use-shop';
+import { useWallet } from '@/hooks/use-wallet';
 import { jsonRes as res } from '@/test-utils/fetch';
-import { queryWrapper } from '@/test-utils/query-wrapper';
+import { createTestQueryClient, queryWrapper } from '@/test-utils/query-wrapper';
+import { walletInCache } from '@/test-utils/wallet';
 
 const MACHINES = {
   items: [
@@ -30,7 +32,7 @@ describe('useGacha', () => {
   it('loads the machine list on mount', async () => {
     global.fetch = jest.fn(async () => res(MACHINES)) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useGacha(jest.fn()), { wrapper: queryWrapper() });
+    const { result } = await renderHook(() => useGacha(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.error).toBe(false);
@@ -45,7 +47,7 @@ describe('useGacha', () => {
       return res(MACHINES);
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useGacha(jest.fn()), { wrapper: queryWrapper() });
+    const { result } = await renderHook(() => useGacha(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.error).toBe(true);
     expect(result.current.gachas).toEqual([]);
@@ -62,7 +64,7 @@ describe('useGacha', () => {
     global.fetch = jest.fn(async () =>
       res({ items: [{ gachaId: 2, code: 'forest_sage', themeId: 1, costAmount: 300 }] }),
     ) as unknown as typeof fetch;
-    const { result } = await renderHook(() => useGacha(jest.fn()), { wrapper: queryWrapper() });
+    const { result } = await renderHook(() => useGacha(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.error).toBe(false);
     expect(result.current.gachas).toEqual([]);
@@ -72,7 +74,7 @@ describe('useGacha', () => {
     'sends count %s to the real server machine ID and syncs the returned wallet',
     async (count) => {
       const rewards = [{ rewardType: 'ITEM', itemId: 32, name: '새 벽지' }];
-      const onWallet = jest.fn();
+      const client = createTestQueryClient();
       global.fetch = jest.fn(async (url: string) =>
         url.endsWith('/draw')
           ? res({
@@ -84,7 +86,7 @@ describe('useGacha', () => {
             })
           : res(MACHINES),
       ) as unknown as typeof fetch;
-      const { result } = await renderHook(() => useGacha(onWallet), { wrapper: queryWrapper() });
+      const { result } = await renderHook(() => useGacha(), { wrapper: queryWrapper(client) });
       await waitFor(() => expect(result.current.gachas).toHaveLength(1));
       await act(async () => {
         expect(await result.current.draw(result.current.gachas[0].id, count)).toEqual(rewards);
@@ -94,7 +96,8 @@ describe('useGacha', () => {
         expect.stringMatching(/\/gacha\/81\/draw$/),
         expect.objectContaining({ method: 'POST', body: JSON.stringify({ count }) }),
       );
-      expect(onWallet).toHaveBeenCalledWith({ coin: 500, diamond: 8 });
+      // 응답 잔액을 지갑 캐시에 직접 쓴다 (장부 16번 — 예전엔 셸이 넘긴 콜백).
+      expect(walletInCache(client)).toEqual({ coin: 500, diamond: 8 });
     },
   );
 
@@ -108,7 +111,7 @@ describe('useGacha', () => {
       await responseReady;
       return res({ results: [{ itemId: 32 }] });
     }) as unknown as typeof fetch;
-    const { result } = await renderHook(() => useGacha(jest.fn()), { wrapper: queryWrapper() });
+    const { result } = await renderHook(() => useGacha(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.gachas).toHaveLength(1));
     await act(async () => {
       const firstDraw = result.current.draw(81);
@@ -130,14 +133,14 @@ describe('useGacha', () => {
     global.fetch = jest.fn(async (url: string) =>
       url.endsWith('/draw') ? { ok: false, status: 500, text: async () => '{}' } : res(MACHINES),
     ) as unknown as typeof fetch;
-    const onWallet = jest.fn();
-    const { result } = await renderHook(() => useGacha(onWallet), { wrapper: queryWrapper() });
+    const client = createTestQueryClient();
+    const { result } = await renderHook(() => useGacha(), { wrapper: queryWrapper(client) });
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(async () => {
       expect(await result.current.draw(81)).toBeNull();
     });
     expect(global.fetch).toHaveBeenCalledTimes(2);
-    expect(onWallet).not.toHaveBeenCalled();
+    expect(walletInCache(client)).toBeUndefined();
     await act(async () => {
       expect(await result.current.draw(81)).toBeNull();
     });
@@ -145,31 +148,41 @@ describe('useGacha', () => {
     expect(global.fetch).toHaveBeenCalledTimes(3);
   });
 
-  it('keeps returned references stable while invoking the latest wallet callback', async () => {
+  it('뽑기 응답 잔액이 다른 훅의 지갑(셸 헤더가 읽는 값)에 바로 보인다 — 셸이 꿰지 않는다', async () => {
+    global.fetch = jest.fn(async (url: string) =>
+      url.endsWith('/draw')
+        ? res({ results: [], wallets: [{ currencyType: 'COIN', balance: 42 }] })
+        : res(MACHINES),
+    ) as unknown as typeof fetch;
+    const { result } = await renderHook(() => ({ gacha: useGacha(), wallet: useWallet().wallet }), {
+      wrapper: queryWrapper(),
+    });
+    await waitFor(() => expect(result.current.gacha.loading).toBe(false));
+    await act(async () => {
+      await result.current.gacha.draw(81);
+    });
+    await waitFor(() => expect(result.current.wallet).toEqual({ coin: 42, diamond: 0 }));
+  });
+
+  it('keeps returned references stable across renders and writes the drawn wallet', async () => {
     global.fetch = jest.fn(async (url: string) =>
       url.endsWith('/draw')
         ? res({ results: [], wallets: [{ currencyType: 'COIN', balance: 90 }] })
         : res(MACHINES),
     ) as unknown as typeof fetch;
-    const originalCallback = jest.fn();
-    const latestCallback = jest.fn();
-    const { result, rerender } = await renderHook(
-      ({ onWallet }: { onWallet: typeof originalCallback }) => useGacha(onWallet),
-      {
-        initialProps: { onWallet: originalCallback },
-        wrapper: queryWrapper(),
-      },
-    );
+    const client = createTestQueryClient();
+    const { result, rerender } = await renderHook(() => useGacha(), {
+      wrapper: queryWrapper(client),
+    });
     await waitFor(() => expect(result.current.loading).toBe(false));
     const initial = result.current;
-    await rerender({ onWallet: latestCallback });
+    await rerender({});
     expect(result.current).toBe(initial);
     await act(async () => {
       await initial.draw(81);
     });
     await flushQueryNotifications();
-    expect(latestCallback).toHaveBeenCalledWith({ coin: 90, diamond: 0 });
-    expect(originalCallback).not.toHaveBeenCalled();
+    expect(walletInCache(client)).toEqual({ coin: 90, diamond: 0 });
     expect(result.current.draw).toBe(initial.draw);
     expect(result.current.retry).toBe(initial.retry);
   });
@@ -214,8 +227,8 @@ describe('useGacha', () => {
     };
     // 셸처럼 세 훅이 같은 캐시를 본다 — 셸은 뽑기 결과를 넘길 뿐 아무것도 재조회하지 않는다.
     const useShell = () => ({
-      gacha: useGacha(jest.fn()),
-      shop: useShop(jest.fn()),
+      gacha: useGacha(),
+      shop: useShop(),
       characters: useMyCharacters(),
     });
     const settled = async (result: { current: ReturnType<typeof useShell> }) => {

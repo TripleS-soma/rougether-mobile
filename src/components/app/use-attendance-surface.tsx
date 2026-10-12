@@ -10,10 +10,10 @@ import {
 import type { Screen } from '@/components/app/navigation';
 import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
 import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-sheet';
-import type { Wallet } from '@/constants/currency';
 import { useAttendance } from '@/hooks/use-attendance';
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { REVIEW_PROMPT_DELAY_MS } from '@/hooks/use-store-review';
+import { useWallet } from '@/hooks/use-wallet';
 import { useWalletHistory } from '@/hooks/use-wallet-history';
 import { calendarToday } from '@/utils/calendar-progress';
 
@@ -36,12 +36,12 @@ export const AUTO_ATTENDANCE_DELAY_MS = REVIEW_PROMPT_DELAY_MS;
  * 돌려주는 콜백은 전부 useCallback — 내 정보 화면(memo 경계 #539)까지 내려간다.
  */
 export function useAttendanceSurface({
-  setWallet,
   setScreen,
 }: {
-  setWallet: Dispatch<SetStateAction<Wallet>>;
   setScreen: Dispatch<SetStateAction<Screen>>;
 }) {
+  // 지갑 캐시 (장부 16번) — 출석 보상 뒤 잔액을 셸을 거치지 않고 직접 반영한다.
+  const { setWallet } = useWallet();
   const [attendanceOpen, setAttendanceOpen] = useState(false);
   // 이번 열림이 그날 첫 완료로 연 것인가 — 시트가 열리자마자 출석을 보낸다.
   const [autoCheckIn, setAutoCheckIn] = useState(false);

@@ -35,7 +35,6 @@ export function useMarketPages({
   nav,
   coinBalance,
   diamondBalance,
-  onWalletChanged,
 }: {
   nav: {
     screen: Screen;
@@ -45,8 +44,6 @@ export function useMarketPages({
   };
   coinBalance: number;
   diamondBalance: number;
-  /** 주문 결과가 나오면 셸 지갑을 다시 받는다(지갑은 아직 react-query가 아니다). */
-  onWalletChanged?: () => void | Promise<unknown>;
 }) {
   const { screen, setScreen, goBack } = nav;
   const { show: toast } = useToast();
@@ -77,10 +74,7 @@ export function useMarketPages({
   const [assetId, setAssetId] = useState<number | null>(null);
   const detail = useMarketAsset(MARKET_ENABLED ? assetId : null);
 
-  const actions = useMarketActions({
-    toast,
-    onWalletChanged,
-  });
+  const actions = useMarketActions({ toast });
 
   // 가구 신고 (#1428) — 접수 안내만. 숨김은 운영자 검토 뒤 서버가 한다.
   const showError = useCallback((message: string) => toast(message, 'error'), [toast]);

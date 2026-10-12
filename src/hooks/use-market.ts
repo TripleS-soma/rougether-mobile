@@ -42,6 +42,7 @@ import {
   MARKET_TRADES_SIZE,
 } from '@/constants/market';
 import { useLatestRef } from '@/hooks/use-stable-value';
+import { useWallet } from '@/hooks/use-wallet';
 import { i18n } from '@/i18n';
 import { track } from '@/lib/analytics';
 import { queryKeys } from '@/lib/query-keys';
@@ -322,22 +323,20 @@ export type MarketOrderOutcome =
 type ToastFn = (message: string, type?: 'error' | 'success') => void;
 
 /**
- * 주문·취소·발행. `toast`로 결과를 알리고, `onWalletChanged`로 셸의 지갑을 다시 받게 한다
- * (지갑은 아직 react-query가 아니다 — use-my-room-data의 useState).
+ * 주문·취소·발행. `toast`로 결과를 알리고, 체결·에스크로 뒤엔 지갑 캐시(`useWallet`)를
+ * 다시 받는다(장부 16번 — 예전엔 셸이 `onWalletChanged`로 꿰었다).
  */
 export function useMarketActions({
   toast,
-  onWalletChanged,
   poll,
 }: {
   toast?: ToastFn;
-  onWalletChanged?: () => void | Promise<unknown>;
   poll?: MarketPollOptions;
 } = {}) {
   const qc = useQueryClient();
   const userId = getSessionUserId();
   const toastRef = useLatestRef(toast);
-  const walletRef = useLatestRef(onWalletChanged);
+  const { refreshWallet } = useWallet();
   const pollRef = useLatestRef(poll);
   // 접수 여부를 모르는 채 끝난 요청(네트워크·5xx·응답 파싱 실패) — 같은 내용으로 다시 누르면
   // 같은 requestId를 보내 서버 멱등을 탄다. 응답을 잃었을 뿐 접수됐을 수 있어서다.
@@ -383,8 +382,8 @@ export function useMarketActions({
     void qc.invalidateQueries({ queryKey: queryKeys.myItems.all });
     void qc.invalidateQueries({ queryKey: queryKeys.myRoom.all });
     void qc.invalidateQueries({ queryKey: queryKeys.walletHistory(userId) });
-    void walletRef.current?.();
-  }, [qc, userId, walletRef]);
+    void refreshWallet();
+  }, [qc, userId, refreshWallet]);
 
   /** 접수 이후 공통 — 폴링, 결과 토스트, 무효화. */
   const settle = useCallback(

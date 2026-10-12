@@ -126,7 +126,6 @@ export function AppShell({
     completions,
     categories,
     wallet,
-    setWallet,
     nickname: apiNickname,
     bio: apiBio,
     streak,
@@ -166,7 +165,7 @@ export function AppShell({
     openFurnitureStudio,
     openWalletHistory,
     sheets: attendanceSheets,
-  } = useAttendanceSurface({ setWallet, setScreen });
+  } = useAttendanceSurface({ setScreen });
 
   // Owned characters + worn one (GET /me/characters). Once loaded, the worn
   // character overrides the onboarding pick everywhere but friend rooms.
@@ -240,7 +239,7 @@ export function AppShell({
     cleanCobweb,
     refreshOwned,
     saveLayout,
-  } = useShop(setWallet);
+  } = useShop();
 
   const [placedItems, setPlacedItems] = useState<PlacedFurniture[]>([]);
   const [wallpaperId, setWallpaperId] = useState(DEFAULT_WALLPAPER_ID);
@@ -341,7 +340,6 @@ export function AppShell({
     },
     // 무효화 누락 2건 (리팩토링 3묶음): 가져온 루틴·초대 보상이 즉시 보이게.
     onRoutinesImported: myRoomData.reload,
-    onWalletChanged: myRoomData.refreshWallet,
     // 첫 온보딩 직후 1회만 (#1007) — 온보딩 다시 보기는 미션 건너뛰기가 켜진 쪽이다.
     offerInvitePaste: startMissions && !missionSkipEnabled,
   });
@@ -350,7 +348,6 @@ export function AppShell({
   const gachaSurface = useGachaSurface({
     screen,
     wallet,
-    setWallet,
     starterFlow: missions.step?.id === 'first-draw' && !missionSkipEnabled,
     soundEffectsEnabled: settingsSurface.soundSettings.effects,
     goBack,
@@ -523,7 +520,6 @@ export function AppShell({
     nav: { screen, setScreen, goBack },
     coinBalance: wallet.coin,
     diamondBalance: wallet.diamond,
-    onWalletChanged: myRoomData.refreshWallet,
   });
 
   // 코치마크 단계 (#1324) — noHouses를 읽으므로 그 아래에서 계산.
