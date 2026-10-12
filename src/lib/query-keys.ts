@@ -52,6 +52,8 @@ export const queryKeys = {
   notifications: (userId: number | null | undefined) => ['notifications', userId] as const,
   /** 집 탐색 목록 (#975) — 페이지 번호 방식, excludeJoined(#578)라 사용자별. */
   houseSearch: (userId: number | null | undefined) => ['house-search', userId] as const,
+  /** 내 프로필 (GET·PUT /me) — 닉네임·소개만, 화면 모델(MyProfile)로 캐시. */
+  myProfile: (userId: number | null | undefined) => ['my-profile', userId] as const,
   /** 내 지갑 (GET /me/wallets) — 코인·다이아 잔액, 화면 모델(Wallet)로 캐시. */
   wallet: (userId: number | null | undefined) => ['wallet', userId] as const,
   /** 내 집 목록 (GET /me/houses + 집마다 번들) — 집 탭 스위처·셸이 읽는 화면 모델(House[]). */

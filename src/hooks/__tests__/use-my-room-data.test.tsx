@@ -281,6 +281,64 @@ describe('useMyRoomData — profile save (PUT /me)', () => {
   });
 });
 
+// 프로필 슬라이스 이관(장부 16번) 안전망 — 다시 받을 때 빈 값이 받아 둔 값을 지우지 않는다.
+describe('useMyRoomData — 프로필 슬라이스', () => {
+  it('reload 응답에 닉네임·소개가 없으면 받아 둔 값을 그대로 둔다', async () => {
+    let me: Record<string, unknown> = { userId: 1, nickname: '테스터', bio: '소개' };
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res(me);
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.nickname).toBe('테스터'));
+
+    me = { userId: 1, nickname: null, bio: null };
+    await act(async () => {
+      await result.current.reload();
+    });
+    expect(result.current.nickname).toBe('테스터');
+    expect(result.current.bio).toBe('소개');
+
+    // 빈 문자열 소개는 "지웠다"는 뜻이라 반영한다(null만 "모름").
+    me = { userId: 1, nickname: '테스터', bio: '' };
+    await act(async () => {
+      await result.current.reload();
+    });
+    await waitFor(() => expect(result.current.bio).toBe(''));
+  });
+
+  it('연달아 저장하다 두 번째가 실패하면 첫 번째 저장값으로 되돌리고, 함수 참조는 그대로다', async () => {
+    let puts = 0;
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      if (method === 'PUT' && url.endsWith('/me')) {
+        puts += 1;
+        if (puts === 2) return { ok: false, status: 500, text: async (): Promise<string> => '{}' };
+        return res({ userId: 1 });
+      }
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1, nickname: '테스터', bio: '소개' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.nickname).toBe('테스터'));
+
+    // 같은 렌더의 함수로 두 번 — 사이에 다시 그려지지 않는다(빠른 연속 저장).
+    const save = result.current.saveProfile;
+    await act(async () => {
+      await save('첫째', '하나');
+      await save('둘째', '둘');
+    });
+    await waitFor(() => expect(result.current.nickname).toBe('첫째'));
+    expect(result.current.bio).toBe('하나');
+    // 저장할 때마다 새 함수가 생기면 나의 방 memo 경계(#539)가 뚫린다.
+    expect(result.current.saveProfile).toBe(save);
+  });
+});
+
 describe('useMyRoomData — uncategorized adoption', () => {
   it('미분류 투두는 생성 후 새로고침해도 카테고리를 만들거나 강제 이동하지 않는다', async () => {
     const calls: { url: string; method: string; body?: string }[] = [];
