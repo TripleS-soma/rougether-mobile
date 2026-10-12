@@ -151,10 +151,15 @@ export function withAlpha(hex: string, alphaHex: string): string {
 
 type SoftTintKey = 'primarySoft' | 'warningSoft' | 'dangerSoft';
 
-/** 테마별 기본색에서 `primarySoft`·`warningSoft`·`dangerSoft`를 파생해 채운다. */
-function withSoftTints(
-  themes: Record<ThemeId, Omit<SemanticColors, SoftTintKey>>,
-): Record<ThemeId, SemanticColors> {
+/**
+ * soft 자리 표시 — 테마 리터럴에서 soft 키의 **자리(키 순서)** 만 잡고, 값은 `withSoftTints`가
+ * 기본색에서 채운다. 순서를 지키는 이유: 토큰 스와치·Storybook 색 표가 `Object.entries` 순서로
+ * 그려 시각 회귀 스냅샷이 키 순서에 묶여 있다(#1521).
+ */
+const DERIVED = '';
+
+/** 테마별 기본색에서 `primarySoft`·`warningSoft`·`dangerSoft`를 채운다(기존 키 자리 그대로). */
+function withSoftTints(themes: Record<ThemeId, SemanticColors>): Record<ThemeId, SemanticColors> {
   const out = {} as Record<ThemeId, SemanticColors>;
   for (const id of Object.keys(themes) as ThemeId[]) {
     const c = themes[id];
@@ -190,6 +195,9 @@ export const Themes: Record<ThemeId, SemanticColors> = withSoftTints({
     warningText: '#9D6014',
     danger: '#D67878',
     info: '#6E93C4',
+    primarySoft: DERIVED,
+    warningSoft: DERIVED,
+    dangerSoft: DERIVED,
     dangerText: '#C43D3D',
     disabledBg: '#D9D2C5',
     sky: '#C3E0F5',
@@ -216,6 +224,9 @@ export const Themes: Record<ThemeId, SemanticColors> = withSoftTints({
     warningText: '#9D6014',
     danger: '#D67878',
     info: '#6E93C4',
+    primarySoft: DERIVED,
+    warningSoft: DERIVED,
+    dangerSoft: DERIVED,
     dangerText: '#C43D3D',
     disabledBg: '#CBD8C4',
     sky: '#C3E0F5',
@@ -242,6 +253,9 @@ export const Themes: Record<ThemeId, SemanticColors> = withSoftTints({
     warningText: '#886226',
     danger: '#C77A6A',
     info: '#6A86A8',
+    primarySoft: DERIVED,
+    warningSoft: DERIVED,
+    dangerSoft: DERIVED,
     dangerText: '#AD5341',
     disabledBg: '#DCCFB9',
     sky: '#C3E0F5',
@@ -270,6 +284,9 @@ export const Themes: Record<ThemeId, SemanticColors> = withSoftTints({
     warningText: '#9D6014',
     danger: '#D67878',
     info: '#6E93C4',
+    primarySoft: DERIVED,
+    warningSoft: DERIVED,
+    dangerSoft: DERIVED,
     dangerText: '#C43D3D',
     disabledBg: '#D6CCC2',
     sky: '#C3E0F5',
@@ -296,6 +313,9 @@ export const Themes: Record<ThemeId, SemanticColors> = withSoftTints({
     warningText: '#9D6014',
     danger: '#D67878',
     info: '#6E93C4',
+    primarySoft: DERIVED,
+    warningSoft: DERIVED,
+    dangerSoft: DERIVED,
     dangerText: '#C43D3D',
     disabledBg: '#CED6C2',
     sky: '#C3E0F5',
@@ -322,6 +342,9 @@ export const Themes: Record<ThemeId, SemanticColors> = withSoftTints({
     warningText: '#9D6014',
     danger: '#D67878',
     info: '#6E93C4',
+    primarySoft: DERIVED,
+    warningSoft: DERIVED,
+    dangerSoft: DERIVED,
     dangerText: '#C43D3D',
     disabledBg: '#D6C4C2',
     sky: '#C3E0F5',
@@ -348,6 +371,9 @@ export const Themes: Record<ThemeId, SemanticColors> = withSoftTints({
     warningText: '#9D6014',
     danger: '#D67878',
     info: '#6E93C4',
+    primarySoft: DERIVED,
+    warningSoft: DERIVED,
+    dangerSoft: DERIVED,
     dangerText: '#C43D3D',
     disabledBg: '#C2D0D6',
     sky: '#C3E0F5',
@@ -392,11 +418,14 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = withSoftTints({
     primaryActive: '#7FA87F',
     onPrimary: '#1E2A1E',
     primaryText: '#93BE93',
+    primarySoft: DERIVED,
     success: '#7CB98A',
     warning: '#EDB061',
     warningText: '#EDB061',
     danger: '#E08D8D',
     info: '#8FB0DA',
+    warningSoft: DERIVED,
+    dangerSoft: DERIVED,
     dangerText: '#E08D8D',
   },
   forest: {
@@ -407,11 +436,14 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = withSoftTints({
     primaryActive: '#6BAA78',
     onPrimary: '#14251A',
     primaryText: '#7FBC8B',
+    primarySoft: DERIVED,
     success: '#7CB98A',
     warning: '#EDB061',
     warningText: '#EDB061',
     danger: '#E08D8D',
     info: '#8FB0DA',
+    warningSoft: DERIVED,
+    dangerSoft: DERIVED,
     dangerText: '#E08D8D',
   },
   hanok: {
@@ -422,11 +454,14 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = withSoftTints({
     primaryActive: '#B08D5B',
     onPrimary: '#2A2113',
     primaryText: '#C4A16F',
+    primarySoft: DERIVED,
     success: '#96B37F',
     warning: '#DCA855',
     warningText: '#DCA855',
     danger: '#DA9384',
     info: '#93A9C4',
+    warningSoft: DERIVED,
+    dangerSoft: DERIVED,
     dangerText: '#DA9384',
   },
   // 신규 4종 다크 (#459) — 라이트와 같은 hue, 다크 표면 위로 primary를 밝혀
@@ -440,11 +475,14 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = withSoftTints({
     primaryActive: '#B98E62',
     onPrimary: '#2D2623',
     primaryText: '#C4A07B',
+    primarySoft: DERIVED,
     success: '#7CB98A',
     warning: '#EDB061',
     warningText: '#EDB061',
     danger: '#E08D8D',
     info: '#8FB0DA',
+    warningSoft: DERIVED,
+    dangerSoft: DERIVED,
     dangerText: '#E08D8D',
   },
   citrus: {
@@ -455,11 +493,14 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = withSoftTints({
     primaryActive: '#7EA83E',
     onPrimary: '#2D2623',
     primaryText: '#93B65D',
+    primarySoft: DERIVED,
     success: '#7CB98A',
     warning: '#EDB061',
     warningText: '#EDB061',
     danger: '#E08D8D',
     info: '#8FB0DA',
+    warningSoft: DERIVED,
+    dangerSoft: DERIVED,
     dangerText: '#E08D8D',
   },
   pastel: {
@@ -470,11 +511,14 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = withSoftTints({
     primaryActive: '#F79B8D',
     onPrimary: '#2D2623',
     primaryText: '#F8AB9F',
+    primarySoft: DERIVED,
     success: '#7CB98A',
     warning: '#EDB061',
     warningText: '#EDB061',
     danger: '#E08D8D',
     info: '#8FB0DA',
+    warningSoft: DERIVED,
+    dangerSoft: DERIVED,
     dangerText: '#E08D8D',
   },
   indigo: {
@@ -485,11 +529,14 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = withSoftTints({
     primaryActive: '#0E86B8',
     onPrimary: '#2D2623',
     primaryText: '#65B2D2',
+    primarySoft: DERIVED,
     success: '#7CB98A',
     warning: '#EDB061',
     warningText: '#EDB061',
     danger: '#E08D8D',
     info: '#8FB0DA',
+    warningSoft: DERIVED,
+    dangerSoft: DERIVED,
     dangerText: '#E08D8D',
   },
 });
