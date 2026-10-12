@@ -292,7 +292,7 @@ describe('useHouses — 집 순서 변경 (#820)', () => {
     let orders = 0;
     global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
       if (url.includes('/me/houses/order') && ++orders === 2)
-        return { ok: false, status: 500, text: async () => '{}' };
+        return { ok: false, status: 500, text: async (): Promise<string> => '{}' };
       return base(url, init);
     }) as unknown as typeof fetch;
     const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
