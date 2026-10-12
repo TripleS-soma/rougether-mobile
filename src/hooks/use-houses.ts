@@ -12,7 +12,7 @@
  * memoized consumers (#539 memo boundaries) get stable references.
  */
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 import {
   ApiError,
@@ -51,18 +51,28 @@ import { queryKeys } from '@/lib/query-keys';
 import type { HousePreview } from '@/components/screens/house-search-screen';
 
 const NO_REQUESTS: MyJoinRequestSummary[] = [];
+const NO_HOUSES: House[] = [];
 
 async function fetchPendingJoinRequests(): Promise<MyJoinRequestSummary[]> {
   return (await fetchMyJoinRequests()).filter((r) => r.status === 'PENDING');
 }
 
 export function useHouses() {
-  const [houses, setHouses] = useState<House[]>([]);
-  const [loading, setLoading] = useState(true);
-  // 초기 로드 실패 플래그 (#549) — 빈 상태('집 없음' 가입 유도)로 위장하지
-  // 않도록 화면이 에러+다시 시도를 보여준다. 재시도 성공 시 해제.
-  const [error, setError] = useState(false);
   const { show: toast } = useToast();
+  const userId = getSessionUserId();
+  const queryClient = useQueryClient();
+
+  /**
+   * 내 집 목록 캐시를 고친다 (낙관 반영·되돌리기·단건 끼워넣기). 함수형이면 아직 받은 게
+   * 없을 때(캐시 비어 있음) 아무것도 하지 않는다 — 예전 `useState([])`의 `[].map`과 같은 결과.
+   */
+  const setHouses = useCallback(
+    (next: House[] | ((prev: House[]) => House[])) =>
+      queryClient.setQueryData<House[]>(queryKeys.myHouses(userId), (prev) =>
+        typeof next === 'function' ? prev && next(prev) : next,
+      ),
+    [queryClient, userId],
+  );
 
   // 내 셀 라벨용 닉네임 캐시 — 단일 집 갱신(#534)이 fetchMe를 반복하지 않게.
   const myNicknameRef = useRef<string | undefined>(undefined);
@@ -81,32 +91,33 @@ export function useHouses() {
    * `withMyCharacter`(use-member-room-previews)가 캐릭터에 쓰는 것과 같은 결.
    * ref도 같이 갱신해야 이후의 단건 갱신(#534)이 옛 이름으로 되돌리지 않는다.
    */
-  const applyMyNickname = useCallback((nickname: string) => {
-    const next = nickname || undefined;
-    if (myNicknameRef.current === next) return;
-    myNicknameRef.current = next;
-    if (!next) return;
-    setHouses((prev) => {
-      let changed = false;
-      const patched = prev.map((h) => ({
-        ...h,
-        floors: h.floors.map((f) => ({
-          ...f,
-          rooms: f.rooms.map((r) => {
-            if (!r.isMine || r.name === next) return r;
-            changed = true;
-            return { ...r, name: next };
-          }),
-        })),
-      }));
-      return changed ? patched : prev;
-    });
-  }, []);
+  const applyMyNickname = useCallback(
+    (nickname: string) => {
+      const next = nickname || undefined;
+      if (myNicknameRef.current === next) return;
+      myNicknameRef.current = next;
+      if (!next) return;
+      setHouses((prev) => {
+        let changed = false;
+        const patched = prev.map((h) => ({
+          ...h,
+          floors: h.floors.map((f) => ({
+            ...f,
+            rooms: f.rooms.map((r) => {
+              if (!r.isMine || r.name === next) return r;
+              changed = true;
+              return { ...r, name: next };
+            }),
+          })),
+        }));
+        return changed ? patched : prev;
+      });
+    },
+    [setHouses],
+  );
 
   // 승인 대기 중인 내 입주 신청 (#648, 서버 #255) — 집 스위처의 잠금 카드.
   // react-query 캐시(#1027, 장부 16번) — 스스로 받지 않고 집 목록 사이클·코드 신청이 받는다.
-  const userId = getSessionUserId();
-  const queryClient = useQueryClient();
   const { data: pendingJoinRequests = NO_REQUESTS } = useQuery({
     queryKey: queryKeys.myJoinRequests(userId),
     queryFn: fetchPendingJoinRequests,
@@ -125,7 +136,8 @@ export function useHouses() {
     [queryClient, userId],
   );
 
-  const reloadMyHouses = useCallback(async () => {
+  // 내 집 목록 (장부 16번) — react-query 캐시.
+  const fetchHouseList = useCallback(async (): Promise<House[]> => {
     // My cell shows the profile nickname when the members API has none.
     const [mine, nickname] = await Promise.all([
       fetchMyHouses(),
@@ -135,9 +147,38 @@ export function useHouses() {
       refreshJoinRequests(),
     ]);
     myNicknameRef.current = nickname;
-    const detailed = await Promise.all(mine.map((h) => loadBundle(h.houseId ?? 0)));
-    setHouses(detailed);
+    return Promise.all(mine.map((h) => loadBundle(h.houseId ?? 0)));
   }, [loadBundle, refreshJoinRequests]);
+  // 마운트마다 새로 받고(예전 로드 사이클과 같다), 포커스 재조회는 끈다 — 집마다 번들 N개라 비싸고,
+  // 집 안 변화는 행동 뒤 재조회·단건 갱신(#534)이 맡는다. 재시도도 끈다: 실패는 바로 에러 화면으로.
+  const housesQuery = useQuery({
+    queryKey: queryKeys.myHouses(userId),
+    queryFn: fetchHouseList,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+  const houses = housesQuery.data ?? NO_HOUSES;
+  // 상태와 데이터를 한 관찰자 결과에서 읽는다 — 따로 든 플래그는 캐시 반영(배칭)보다 먼저 꺼져
+  // '집 없음' 빈 상태가 한 틱 비쳤다. 이미 받은 목록이 있으면 재조회 중에도 스피너를 띄우지 않는다.
+  const hasHouses = housesQuery.data !== undefined;
+  const loading = !hasHouses && (housesQuery.isPending || housesQuery.isFetching);
+  // 초기 로드 실패 (#549) — 빈 상태('집 없음' 가입 유도)로 위장하지 않도록 화면이 에러+다시 시도를
+  // 보여준다. 받은 목록이 있는 뒤의 재조회 실패는 목록을 그대로 둔다(예전과 같다).
+  const error = !hasHouses && housesQuery.isError && !housesQuery.isFetching;
+  const { refetch: refetchHouses } = housesQuery;
+  /** 실패한 초기 로드를 다시 돈다 (#549). 던지지 않는다 — 결과는 loading/error로. */
+  const retryHouses = useCallback(async () => {
+    await refetchHouses();
+  }, [refetchHouses]);
+  /** 내 집 목록을 다시 받는다 — staleTime 0: 행동 직후엔 30초 캐시가 아니라 서버 값이어야 한다. */
+  const reloadMyHouses = useCallback(async () => {
+    await queryClient.fetchQuery({
+      queryKey: queryKeys.myHouses(userId),
+      queryFn: fetchHouseList,
+      staleTime: 0,
+    });
+  }, [queryClient, userId, fetchHouseList]);
 
   /** 입주 신청 철회 (#648) — 성공 시 목록에서 즉시 제거. */
   const cancelJoinRequest = useCallback(
@@ -166,14 +207,15 @@ export function useHouses() {
    */
   const reorderHouses = useCallback(
     async (houseIds: number[]) => {
-      const before = houses;
-      const byId = new Map(houses.map((h) => [h.houseId, h] as const));
+      // 스냅샷은 캐시에서 — 렌더 값은 배칭으로 한 박자 늦어 직전 낙관 반영을 놓칠 수 있다.
+      const before = queryClient.getQueryData<House[]>(queryKeys.myHouses(userId)) ?? [];
+      const byId = new Map(before.map((h) => [h.houseId, h] as const));
       const next = houseIds.flatMap((id) => {
         const hit = byId.get(id);
         return hit ? [hit] : [];
       });
       // 서버 계약이 전량 전송이라, 우리가 가진 집을 다 못 채우면 보내지 않는다.
-      if (next.length !== houses.length) return;
+      if (next.length !== before.length) return;
       setHouses(next);
       try {
         await updateHouseOrder(houseIds);
@@ -192,7 +234,7 @@ export function useHouses() {
         toast(i18n.t('house.toast.orderSaveFailed'), 'error');
       }
     },
-    [houses, reloadMyHouses, toast],
+    [queryClient, userId, setHouses, reloadMyHouses, toast],
   );
 
   /**
@@ -209,25 +251,8 @@ export function useHouses() {
         await reloadMyHouses();
       }
     },
-    [loadBundle, reloadMyHouses],
+    [loadBundle, setHouses, reloadMyHouses],
   );
-
-  /** 내 집 목록 로드 사이클 (스피너 → 데이터 | 에러) — 초기 로드·재시도 공용. */
-  const loadMyHouses = useCallback(async () => {
-    setLoading(true);
-    setError(false);
-    try {
-      await reloadMyHouses();
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [reloadMyHouses]);
-
-  useEffect(() => {
-    void loadMyHouses();
-  }, [loadMyHouses]);
 
   // 집 탐색 — 자체 로드 사이클을 돈다. 내 집 목록과는 서버 필터로만 엮인다.
   const {
@@ -304,7 +329,7 @@ export function useHouses() {
             : h,
         ),
       ),
-    [],
+    [setHouses],
   );
 
   const acceptJoinRequest = useCallback(
@@ -461,7 +486,7 @@ export function useHouses() {
         toast(i18n.t('house.toast.updateFailed'), 'error');
       }
     },
-    [toast, reloadHouse],
+    [toast, setHouses, reloadHouse],
   );
 
   const transferOwnership = useCallback(
@@ -517,7 +542,7 @@ export function useHouses() {
       error,
       searchError,
       /** Re-run the failed initial load (에러 상태의 다시 시도, #549). */
-      retry: loadMyHouses,
+      retry: retryHouses,
       retrySearch,
       ensureSearch,
       refreshHouses: reloadMyHouses,
@@ -555,7 +580,7 @@ export function useHouses() {
       searchLoading,
       error,
       searchError,
-      loadMyHouses,
+      retryHouses,
       retrySearch,
       ensureSearch,
       reloadMyHouses,

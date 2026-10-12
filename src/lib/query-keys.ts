@@ -52,6 +52,8 @@ export const queryKeys = {
   notifications: (userId: number | null | undefined) => ['notifications', userId] as const,
   /** 집 탐색 목록 (#975) — 페이지 번호 방식, excludeJoined(#578)라 사용자별. */
   houseSearch: (userId: number | null | undefined) => ['house-search', userId] as const,
+  /** 내 집 목록 (GET /me/houses + 집마다 번들) — 집 탭 스위처·셸이 읽는 화면 모델(House[]). */
+  myHouses: (userId: number | null | undefined) => ['my-houses', userId] as const,
   /** 승인 대기 중인 내 입주 신청 (#648) — 집 스위처의 잠금 카드. PENDING만 담는다. */
   myJoinRequests: (userId: number | null | undefined) => ['my-join-requests', userId] as const,
   /** 내 채팅방 푸시 음소거 (서버 #435) — 사용자별 값. */
