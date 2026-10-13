@@ -1,5 +1,6 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
+import type { Recommendation } from '@/api';
 import {
   RecommendationSection,
   dayLabels,
@@ -15,7 +16,7 @@ const ITEM = {
   routineTitle: '아침 러닝',
   proposal: { repeatType: 'WEEKLY', daysOfWeek: ['FRI', 'MON'] },
   expiresAt: '2026-09-05T00:00:00',
-};
+} satisfies Recommendation;
 
 const NOW = new Date('2026-08-31T09:00:00');
 

@@ -17,9 +17,42 @@ export type AccessoryRenderProfileResponse = {
   zIndex?: number;
 };
 
+export type AmendOrderRequest = {
+  requestId: string;
+  quantity: number;
+};
+
+export type AppIconResponse = {
+  state?: 'NORMAL' | 'MISSING_YOU' | 'TEARY' | 'SOBBING' | 'DAILY_SUCCESS' | 'STREAK_CHAMPION';
+  message?: string;
+  evaluatedAt?: string;
+  lastForegroundAt?: string;
+  nextEvaluationAt?: string;
+  currentStreak?: number;
+  completedToday?: boolean;
+};
+
 export type AppleLoginRequest = {
   idToken: string;
   authorizationCode: string;
+  allowNewAccount?: boolean;
+};
+
+export type AppleNotification = {
+  signedPayload: string;
+};
+
+export type AssetCard = {
+  assetId?: number;
+  itemId?: number;
+  name?: string;
+  assetKey?: string;
+  creatorNickname?: string | null;
+  totalSupply?: number;
+  bestAskPrice?: number | null;
+  askQuantity?: number;
+  lastTradePrice?: number | null;
+  status?: 'ACTIVE' | 'SUSPENDED';
 };
 
 export type AttendanceCheckInResponse = {
@@ -45,8 +78,33 @@ export type AttendanceEventStatusResponse = {
   reward?: Reward;
 };
 
+export type Balance = {
+  available?: number;
+  reserved?: number;
+  purchaseAdjustmentPending?: boolean;
+  accountToken?: string;
+};
+
+export type BlockedUserPageResponse = {
+  items?: BlockedUserResponse[];
+  nextCursor?: number | null;
+  hasNext?: boolean;
+};
+
+export type BlockedUserResponse = {
+  userId?: number;
+  nickname?: string | null;
+  profileImageKey?: string | null;
+  blockedAt?: string;
+};
+
 export type BugReportListResponse = {
   items?: BugReportResponse[];
+};
+
+export type BugReportReplyItem = {
+  content?: string;
+  createdAt?: string;
 };
 
 export type BugReportResponse = {
@@ -55,6 +113,7 @@ export type BugReportResponse = {
   content?: string;
   status?: 'RECEIVED' | 'IN_PROGRESS' | 'RESOLVED';
   screenshotKeys?: string[];
+  replies?: BugReportReplyItem[];
   createdAt?: string;
 };
 
@@ -75,6 +134,10 @@ export type CalendarDayResponse = {
 export type CalendarMonthResponse = {
   yearMonth?: string;
   days?: CalendarDayCount[];
+};
+
+export type CancelOrderRequest = {
+  requestId: string;
 };
 
 export type CategoryCreateRequest = {
@@ -155,6 +218,52 @@ export type CharacterSelectResponse = {
   selectedCharacterId?: number;
 };
 
+export type ChatMessageListResponse = {
+  items?: ChatMessageResponse[];
+  nextCursor?: number;
+  hasNext?: boolean;
+  room?: ChatRoomResponse;
+};
+
+export type ChatMessageResponse = {
+  messageId?: number;
+  roomId?: number;
+  sequence?: number;
+  clientMessageId?: string;
+  senderUserId?: number;
+  senderNickname?: string;
+  senderProfileImageKey?: string;
+  content?: string;
+  createdAt?: string;
+  unreadCount?: number;
+};
+
+export type ChatNotificationRequest = {
+  muted: boolean;
+};
+
+export type ChatNotificationResponse = {
+  roomId?: number;
+  muted?: boolean;
+};
+
+export type ChatReadRequest = {
+  lastReadSequence: number;
+};
+
+export type ChatRoomResponse = {
+  roomId?: number;
+  roomType?: 'HOUSE';
+  houseId?: number;
+  lastSequence?: number;
+  readers?: Reader[];
+};
+
+export type ChatSendRequest = {
+  clientMessageId: string;
+  content: string;
+};
+
 export type CompletionSummary = {
   routineDate?: string;
   completedAt?: string;
@@ -164,11 +273,22 @@ export type CompletionSummary = {
   categoryId?: number;
 };
 
+export type ContentReportRequest = {
+  reason: 'SPAM' | 'ABUSE' | 'SEXUAL' | 'VIOLENCE' | 'PERSONAL_INFO' | 'COPYRIGHT' | 'OTHER';
+  detail?: string | null;
+};
+
+export type ContentReportResponse = {
+  reportId?: number;
+  status?: 'RECEIVED' | 'ACTIONED' | 'DISMISSED';
+};
+
 export type DailyReward = {
   day?: number;
   coinAmount?: number;
   furnitureReward?: boolean;
   claimed?: boolean;
+  generationCreditAmount?: number;
 };
 
 export type DevLoginRequest = {
@@ -192,6 +312,13 @@ export type DrawResult = {
   refundAmount?: number;
 };
 
+export type Entry = {
+  rank?: number;
+  userId?: number;
+  nickname?: string;
+  score?: number;
+};
+
 export type EquippedAccessoryResponse = {
   userItemId?: number;
   itemId?: number;
@@ -200,6 +327,107 @@ export type EquippedAccessoryResponse = {
   characterSlotType?: string;
   renderProfiles?: AccessoryRenderProfileResponse[];
   equippedAt?: string;
+};
+
+export type FeedAuthorResponse = {
+  userId?: number;
+  nickname?: string;
+  profileImageKey?: string;
+};
+
+export type FeedCommentRequest = {
+  clientCommentId: string;
+  content: string;
+};
+
+export type FeedCommentResponse = {
+  commentId?: number;
+  postId?: number;
+  author?: FeedAuthorResponse;
+  content?: string;
+  mine?: boolean;
+  createdAt?: string;
+};
+
+export type FeedCreateRequest = {
+  clientPostId: string;
+  content?: string;
+  imageIds?: number[];
+  boardType?: 'FREE' | 'VERIFICATION';
+  routineCompletion?: FeedRoutineCompletionRequest;
+};
+
+export type FeedImageResponse = {
+  imageId?: number;
+  storageKey?: string;
+  width?: number;
+  height?: number;
+  contentType?: string;
+};
+
+export type FeedPageResponseFeedCommentResponse = {
+  items?: FeedCommentResponse[];
+  nextCursor?: number;
+  hasNext?: boolean;
+};
+
+export type FeedPageResponseFeedPostResponse = {
+  items?: FeedPostResponse[];
+  nextCursor?: number;
+  hasNext?: boolean;
+};
+
+export type FeedPostResponse = {
+  postId?: number;
+  author?: FeedAuthorResponse;
+  content?: string;
+  images?: FeedImageResponse[];
+  likeCount?: number;
+  commentCount?: number;
+  likedByMe?: boolean;
+  mine?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  boardType?: 'FREE' | 'VERIFICATION';
+  routine?: FeedRoutineResponse;
+};
+
+export type FeedRoutineCompletionRequest = {
+  routineId: number;
+  date: string;
+};
+
+export type FeedRoutineResponse = {
+  routineId?: number;
+  title?: string;
+  date?: string;
+};
+
+export type FeedUpdateRequest = {
+  content?: string;
+  boardType?: 'FREE' | 'VERIFICATION';
+  routineCompletion?: FeedRoutineCompletionRequest;
+};
+
+export type FurnitureFeedbackRequest = {
+  requestId: string;
+  feedback: string;
+};
+
+export type FurnitureGenerationResponse = {
+  id?: string;
+  status?: 'UPLOADING' | 'QUEUED' | 'PROCESSING' | 'SUCCEEDED' | 'FAILED';
+  action?: 'EXTRACT' | 'GENERATE' | 'EDIT' | 'REGENERATE' | 'REVIEW';
+  assetKey?: string;
+  userItemId?: number;
+  imageAttempts?: number;
+  reviewAttempts?: number;
+  decision?: string;
+  reason?: string;
+  failureCode?: string;
+  expiresAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type GachaDrawRequest = {
@@ -215,15 +443,13 @@ export type GachaListResponse = {
   items?: GachaResponse[];
 };
 
-export type GachaCategory = 'WALLPAPER' | 'FLOOR' | 'FURNITURE';
-
 export type GachaResponse = {
   gachaId?: number;
   code?: string;
   name?: string;
+  category?: 'WALLPAPER' | 'FLOOR' | 'FURNITURE';
+  // 스펙 미표기 nullable (#733): 테마 없는 뽑기(서버 #370 통합 뽑기)는 null.
   themeId?: number | null;
-  /** Theme-independent decoration box; legacy machines may omit it. */
-  category?: GachaCategory | null;
   giftBoxAssetKey?: string;
   costCurrencyType?: 'COIN' | 'DIAMOND';
   costAmount?: number;
@@ -274,6 +500,15 @@ export type GoalSummary = {
 
 export type GoogleLoginRequest = {
   idToken: string;
+  allowNewAccount?: boolean;
+};
+
+export type GoogleMessage = {
+  data: string;
+};
+
+export type GoogleNotification = {
+  message: GoogleMessage;
 };
 
 export type GuestbookCreateRequest = {
@@ -305,6 +540,15 @@ export type GuestbookListResponse = {
   hasNext?: boolean;
 };
 
+export type HouseAutoJoinRequest = {
+  enabled: boolean;
+};
+
+export type HouseAutoJoinResponse = {
+  houseId?: number;
+  enabled?: boolean;
+};
+
 export type HouseCheerRequest = {
   type: string;
 };
@@ -334,8 +578,8 @@ export type HouseCreateRequest = {
   coverImageKey?: string;
   maxMembers?: number;
   goalIds: number[];
-  /** 공개 범위 (#1266, 서버 PR 후 유효 — 그 전엔 무시되고 공개로 생성). */
   isPublic?: boolean;
+  publicOrDefault?: boolean;
 };
 
 export type HouseCreateResponse = {
@@ -351,7 +595,6 @@ export type HouseDetailResponse = {
   description?: string;
   coverImageKey?: string;
   maxMembers?: number;
-  /** 공개 범위 — 서버 PR 후 실림(#1266). 없으면 앱은 '알 수 없음'으로 둔다. */
   isPublic?: boolean;
   currentMemberCount?: number;
   level?: number;
@@ -508,7 +751,6 @@ export type HouseUpdateRequest = {
   description?: string;
   coverImageKey?: string;
   maxMembers?: number;
-  /** 공개 범위 (#1266) — true: 탐색·미리보기 노출, false: 초대코드로만 참여. 미지정 시 유지. */
   isPublic?: boolean;
 };
 
@@ -524,6 +766,12 @@ export type HouseUpdateResponse = {
 export type InviteCodeResponse = {
   inviteCode?: string;
   inviteExpiresAt?: string;
+};
+
+export type InvitePreviewResponse = {
+  inviterNickname?: string | null;
+  inviteeRewardCoin?: number;
+  alreadyRedeemed?: boolean;
 };
 
 export type InviteRedeemRequest = {
@@ -564,8 +812,13 @@ export type ItemResponse = {
   owned?: boolean;
 };
 
+export type JobList = {
+  items?: FurnitureGenerationResponse[];
+};
+
 export type KakaoLoginRequest = {
   accessToken: string;
+  allowNewAccount?: boolean;
 };
 
 export type LoginResponse = {
@@ -579,6 +832,68 @@ export type LogoutRequest = {
   refreshToken: string;
 };
 
+export type MarketAssetIssueRequest = {
+  userItemId: number;
+  totalSupply: number;
+};
+
+export type MarketAssetListResponse = {
+  items?: AssetCard[];
+  page?: number;
+  size?: number;
+  totalElements?: number;
+};
+
+export type MarketAssetResponse = {
+  assetId?: number;
+  itemId?: number;
+  name?: string;
+  assetKey?: string;
+  creatorNickname?: string | null;
+  isCreator?: boolean;
+  totalSupply?: number;
+  unissuedQuantity?: number;
+  status?: 'ACTIVE' | 'SUSPENDED';
+  lastTradePrice?: number | null;
+  owned?: boolean;
+  asks?: PriceLevel[];
+  bids?: PriceLevel[];
+};
+
+export type MarketCommandAcceptedResponse = {
+  commandId?: number;
+  status?: 'PENDING' | 'APPLIED' | 'REJECTED';
+};
+
+export type MarketCommandResponse = {
+  commandId?: number;
+  status?: 'PENDING' | 'APPLIED' | 'REJECTED';
+  rejectCode?: string | null;
+  order?: MarketOrderResponse;
+};
+
+export type MarketOrderResponse = {
+  orderId?: number;
+  assetId?: number;
+  name?: string;
+  assetKey?: string;
+  side?: 'BUY' | 'SELL';
+  source?: 'INVENTORY' | 'ISSUANCE' | null;
+  price?: number;
+  quantity?: number;
+  filledQuantity?: number;
+  status?: 'OPEN' | 'FILLED' | 'CANCELLED' | 'EXPIRED';
+  expiresAt?: string;
+  createdAt?: string;
+};
+
+export type MarketTradeListResponse = {
+  items?: TradeItem[];
+  page?: number;
+  size?: number;
+  totalElements?: number;
+};
+
 export type MeResponse = {
   userId?: number;
   nickname?: string;
@@ -586,18 +901,7 @@ export type MeResponse = {
   profileImageKey?: string;
   lastAccessedAt?: string;
   onboarding?: OnboardingSummary;
-  /** 계정 언어 (서버 #396). 설정 미전송 계정은 `ko`. */
-  language?: 'ko' | 'en';
-  /** 개인 리마인드 시간대, IANA ID (서버 #396). 기본 `Asia/Seoul`. */
-  timeZone?: string;
-};
-
-/**
- * PATCH /me (#1410, 서버 #396) — 언어·시간대 부분 수정. 둘 다 선택이되 하나는 있어야 한다.
- * `timeZone`은 Java TZDB의 IANA ID만(고정 오프셋 `+09:00`은 400 `VALIDATION_FAILED`).
- */
-export type MemberPreferencesRequest = {
-  language?: 'ko' | 'en';
+  language?: string;
   timeZone?: string;
 };
 
@@ -606,6 +910,13 @@ export type MemberCategoryItem = {
   name?: string;
   colorHex?: string;
   iconKey?: string;
+};
+
+export type MemberPreferencesRequest = {
+  language?: string;
+  timeZone?: string;
+  notEmpty?: boolean;
+  timeZoneValid?: boolean;
 };
 
 export type MemberRoomSummary = {
@@ -649,6 +960,44 @@ export type MemberUpdateRequest = {
   bio?: string;
 };
 
+export type MinigameAction = {
+  tick: number;
+  direction: 'LEFT' | 'RIGHT' | 'UP' | 'DOWN';
+};
+
+export type MinigameFinishRequest = {
+  ticks: number;
+  jumpTicks?: number[];
+  actions?: MinigameAction[];
+};
+
+export type MinigameFinishResponse = {
+  runId?: string;
+  score?: number;
+  bestScore?: number;
+  personalBest?: boolean;
+  rank?: number;
+};
+
+export type MinigameLeaderboardResponse = {
+  items?: Entry[];
+  myEntry?: Entry;
+  totalPlayers?: number;
+};
+
+export type MinigameListResponse = {
+  items?: Item[];
+};
+
+export type MinigameRunStartResponse = {
+  runId?: string;
+  gameCode?: string;
+  rulesVersion?: number;
+  seed?: number;
+  maxTicks?: number;
+  expiresAt?: string;
+};
+
 export type MissionSummary = {
   missionId?: number;
   title?: string;
@@ -659,10 +1008,9 @@ export type MissionSummary = {
   startsAt?: string;
   endsAt?: string;
   todayClaimed?: boolean;
-  createdAt?: string;
-  // 서버 #388 (mobile #373-②): 목록에도 내 기여 — 카드마다 상세를 부르지 않게. 미리보기(미가입)엔 없음.
   myContribution?: number;
   contributedToday?: boolean;
+  createdAt?: string;
 };
 
 export type MyCharacterItem = {
@@ -700,17 +1048,11 @@ export type MyHouseSummary = {
 
 export type MyInviteCodeResponse = {
   code?: string;
+  shareUrl?: string | null;
   rewardedCount?: number;
   inviterRewardCoin?: number;
   inviteeRewardCoin?: number;
   maxRewardedCount?: number;
-  shareUrl?: string | null;
-};
-
-export type InvitePreviewResponse = {
-  inviterNickname?: string | null;
-  inviteeRewardCoin?: number;
-  alreadyRedeemed?: boolean;
 };
 
 export type MyItemListResponse = {
@@ -748,26 +1090,41 @@ export type MyJoinRequestSummary = {
   requestedAt?: string;
 };
 
+export type MyMarketOrderListResponse = {
+  items?: MarketOrderResponse[];
+  page?: number;
+  size?: number;
+  totalElements?: number;
+};
+
 export type NotificationItem = {
   notificationId?: number;
   type?:
+    | 'FEED_COMMENT'
     | 'HOUSE_KICK'
     | 'ROUTINE_REMINDER'
     | 'TODO_REMINDER'
+    | 'DAILY_INCOMPLETE_DIGEST'
+    | 'APP_INACTIVITY_REMINDER'
+    | 'WEEKLY_REPORT'
     | 'FRIEND_CHEER'
     | 'HOUSE_MISSION_ACHIEVED'
     | 'HOUSE_MEMBER_JOINED'
     | 'HOUSE_MEMBER_LEFT'
+    | 'HOUSE_JOIN_REQUEST_CREATED'
     | 'HOUSE_JOIN_REQUEST_REJECTED'
     | 'HOUSE_JOIN_REQUEST_ACCEPTED'
+    | 'ROOM_COBWEB_APPEARED'
     | 'ROOM_COBWEB_CLEANED'
-    // 피드 댓글 (#1409) — refId = 게시물 ID.
-    | 'FEED_COMMENT';
+    | 'BUG_REPORT_REPLY'
+    | 'MARKET_SELL_FILLED'
+    | 'MARKET_BUY_FILLED'
+    | 'MARKET_BID_PLACED'
+    | 'CHAT_MESSAGE';
   title?: string;
   body?: string;
   isRead?: boolean;
   createdAt?: string;
-  /** 알림 대상 ID — FEED_COMMENT는 게시물 ID (#1409). */
   refId?: number;
 };
 
@@ -781,11 +1138,8 @@ export type NotificationSettingResponse = {
   all?: boolean;
   reminder?: boolean;
   house?: boolean;
-  /** 피드 댓글 푸시 (#1409) — 기본 true. */
   feed?: boolean;
-  /** 거래소 체결·구매 대기 푸시 (서버 #432) — 기본 true. */
   market?: boolean;
-  /** 집 채팅 새 메시지 푸시 (서버 #435) — 기본 true. 방별 음소거는 채팅 알림 API. */
   chat?: boolean;
 };
 
@@ -816,6 +1170,18 @@ export type OnboardingGoalsResponse = {
   primaryGoalId?: number;
 };
 
+export type OnboardingHouseRequest = {
+  choice: 'AUTO_JOIN' | 'PERSONAL';
+};
+
+export type OnboardingHouseResponse = {
+  completed?: boolean;
+  choice?: 'AUTO_JOIN' | 'PERSONAL';
+  result?: 'JOINED' | 'PERSONAL' | 'NO_MATCH';
+  houseId?: number;
+  membershipId?: number;
+};
+
 export type OnboardingResponse = {
   goals?: GoalSelection[];
   primaryGoalId?: number;
@@ -823,74 +1189,19 @@ export type OnboardingResponse = {
   completed?: boolean;
 };
 
-/** 온보딩 집 선택 (#1407, 서버 #389) — `GET/PUT /onboarding/house`. 손으로 추가(#1412). */
-export type OnboardingHouseChoice = 'AUTO_JOIN' | 'PERSONAL';
-export type OnboardingHouseResponse = {
-  /** 집 선택 처리 여부. 기존 온보딩 completed와 별개. */
-  completed?: boolean;
-  choice?: OnboardingHouseChoice;
-  /** JOINED: 자동 합류, PERSONAL: 개인집 선택, NO_MATCH: 후보 없음으로 개인집 시작(공개·자동 입주 허용 전환). */
-  result?: 'JOINED' | 'PERSONAL' | 'NO_MATCH';
-  /** 선택 처리 당시 시작할 집. 이후 탈퇴·해체 여부는 내 집 목록으로. */
-  houseId?: number;
-  membershipId?: number;
-};
-
-/** 집 자동 입주 허용 (#1407, 서버 #389) — `GET/PUT /houses/{id}/auto-join`, 소유자 전용. */
-export type HouseAutoJoinResponse = {
-  houseId?: number;
-  enabled?: boolean;
-};
-
-/**
- * 집 채팅 (#1408, 서버 채팅 도메인) — `POST /houses/{id}/chat-room`, `/chat/rooms/{roomId}/…`.
- * 손으로 추가(#1412). 스펙: rougether-spec domains/chat/api.md.
- */
-export type ChatReader = {
-  userId?: number;
-  membershipId?: number;
-  /** 이 순서까지 읽음 — 0부터, 낮아지지 않는다. */
-  lastReadSequence?: number;
-};
-
-export type ChatRoomResponse = {
-  roomId?: number;
-  roomType?: 'HOUSE';
-  houseId?: number;
-  /** 방의 마지막 메시지 순서 — 방별 1부터. 메시지가 없으면 0. */
-  lastSequence?: number;
-  /** 현재 읽음 집계 대상(봇·탈퇴 제외 ACTIVE 구성원). */
-  readers?: ChatReader[];
-};
-
-export type ChatMessageResponse = {
-  messageId?: number;
-  roomId?: number;
-  sequence?: number;
-  clientMessageId?: string;
-  senderUserId?: number;
-  /** 탈퇴한 발신자는 비어 온다. */
-  senderNickname?: string;
-  senderProfileImageKey?: string;
-  content?: string;
-  createdAt?: string;
-  unreadCount?: number;
-};
-
-export type ChatSendRequest = { clientMessageId: string; content: string };
-
-/** `GET /chat/rooms/{roomId}/messages` — 커서 페이지 + 최신 방 상태. */
-export type ChatMessagePage = {
-  items?: ChatMessageResponse[];
-  nextCursor?: number;
-  hasNext?: boolean;
-  room?: ChatRoomResponse;
-};
-
 export type OnboardingSummary = {
   completed?: boolean;
   primaryGoalId?: number;
   selectedCharacterId?: number;
+};
+
+export type PlaceOrderRequest = {
+  requestId: string;
+  assetId: number;
+  side: 'BUY' | 'SELL';
+  price: number;
+  quantity: number;
+  source?: 'INVENTORY' | 'ISSUANCE' | null;
 };
 
 export type PlacementItem = {
@@ -903,8 +1214,28 @@ export type PlacementItem = {
   flipped?: boolean;
 };
 
+export type PriceLevel = {
+  price?: number;
+  quantity?: number;
+};
+
+export type Product = {
+  productId?: string;
+  credits?: number;
+};
+
+export type Products = {
+  available?: boolean;
+  items?: Product[];
+};
+
 export type ProfileImageResponse = {
   profileImageKey?: string;
+};
+
+export type PurchaseRequest = {
+  store: 'APPLE' | 'GOOGLE';
+  reference: string;
 };
 
 export type PurchaseResponse = {
@@ -912,6 +1243,43 @@ export type PurchaseResponse = {
   itemId?: number;
   acquiredAt?: string;
   wallet?: WalletSummary;
+};
+
+export type Reader = {
+  userId?: number;
+  membershipId?: number;
+  lastReadSequence?: number;
+};
+
+export type Receipt = {
+  id?: string;
+  credits?: number;
+  revokedCredits?: number;
+  storeConsumed?: boolean;
+  balance?: Balance;
+};
+
+export type RecommendationItem = {
+  recommendationId?: number;
+  type?: 'ADJUST_DAYS';
+  message?: string;
+  messageCode?: string;
+  messageParams?: Record<string, unknown>;
+  routineId?: number;
+  originRoutineId?: number;
+  routineTitle?: string;
+  proposal?: RecommendationProposalResponse;
+  createdAt?: string;
+  expiresAt?: string;
+};
+
+export type RecommendationListResponse = {
+  items?: RecommendationItem[];
+};
+
+export type RecommendationProposalResponse = {
+  repeatType?: string;
+  daysOfWeek?: string[];
 };
 
 export type RefreshRequest = {
@@ -963,6 +1331,8 @@ export type Reward = {
   assetKey?: string;
   userItemId?: number;
   received?: boolean;
+  type?: string;
+  generationCreditAmount?: number;
 };
 
 export type RoomCharacterResponse = {
@@ -1066,12 +1436,14 @@ export type RoutineListResponse = {
 
 export type RoutineLogCreateRequest = {
   routineDate?: string;
+  status?: 'PENDING' | 'COMPLETED' | 'FAILED' | 'SKIPPED';
+  skip?: boolean;
 };
 
 export type RoutineLogResponse = {
   id?: number;
   routineDate?: string;
-  status?: 'PENDING' | 'COMPLETED' | 'FAILED';
+  status?: 'PENDING' | 'COMPLETED' | 'FAILED' | 'SKIPPED';
   completedAt?: string;
   rewardCurrencyType?: 'COIN' | 'DIAMOND';
   rewardAmount?: number;
@@ -1250,6 +1622,13 @@ export type TokenResponse = {
   refreshToken?: string;
 };
 
+export type TradeItem = {
+  tradeId?: number;
+  price?: number;
+  quantity?: number;
+  tradedAt?: string;
+};
+
 export type TransferOwnershipRequest = {
   targetMembershipId: number;
 };
@@ -1279,8 +1658,12 @@ export type WalletHistoryResponse = {
     | 'INVITE_REWARD'
     | 'COBWEB_CLEAN'
     | 'ATTENDANCE_REWARD'
+    | 'MARKET_ESCROW_REFUND'
+    | 'MARKET_SALE'
+    | 'MARKET_ROYALTY'
     | 'GACHA_DRAW'
-    | 'SHOP_PURCHASE';
+    | 'SHOP_PURCHASE'
+    | 'MARKET_ORDER_ESCROW';
   balanceAfter?: number;
   createdAt?: string;
 };
@@ -1315,6 +1698,7 @@ export type WeeklyReportDetailResponse = {
   scheduledCount?: number;
   summary?: string;
   generatedAt?: string;
+  viewedAt?: string;
   stats?: WeeklyStatsResponse;
   highlights?: string[];
   failurePatterns?: string[];
@@ -1335,6 +1719,7 @@ export type WeeklyReportSummaryItem = {
   scheduledCount?: number;
   summary?: string;
   generatedAt?: string;
+  viewedAt?: string | null;
 };
 
 export type WeeklyStatsResponse = {
@@ -1347,222 +1732,16 @@ export type WeeklyStatsResponse = {
   streak?: StreakResponse;
 };
 
-// --- 공개 SNS 피드 (#1409) — 타입 재생성이 깨져 있어(#1412) 운영 /v3/api-docs를 보고 손으로 옮겼다.
-
-export type FeedAuthorResponse = {
-  userId?: number;
-  nickname?: string | null;
-  profileImageKey?: string | null;
-};
-
-export type FeedImageResponse = {
-  imageId?: number;
-  /** 비공개 객체 식별자 — **CDN 주소로 조합하지 않는다**. 표시는 GET /feed/images/{imageId}. */
-  storageKey?: string;
-  width?: number;
-  height?: number;
-  contentType?: string;
-};
-
-/**
- * 게시판 종류 (서버 #428, spec feed/api.md) — `FREE` 자유게시판(사진 0–10장, 사진이 없으면
- * 본문 필수) · `VERIFICATION` 인증게시판(사진 1–10장 + 루틴 완료 연결, 서버 #430). 수정에서
- * 바꿀 수 있다(서버 #430).
- */
-export type FeedBoardType = 'FREE' | 'VERIFICATION';
-
-/**
- * 인증글이 연결한 루틴 완료 (서버 #430, spec feed/api.md "루틴 완료 연결") — `title`은 연결
- * 시점 스냅샷, `date`는 KST 달력 날짜.
- */
-export type FeedRoutineResponse = {
-  routineId?: number;
-  title?: string | null;
-  date?: string;
-};
-
-/** 인증글에 연결할 루틴 완료 하나 — 요청 body의 `routineCompletion`. */
-export type FeedRoutineCompletionRequest = {
-  routineId: number;
-  /** KST 오늘과 이전 6일 중 그 루틴을 COMPLETED한 날(`YYYY-MM-DD`). */
-  date: string;
-};
-
-export type FeedPostResponse = {
-  postId?: number;
-  author?: FeedAuthorResponse;
-  /** 기존 글은 서버가 `VERIFICATION`으로 돌려준다. */
-  boardType?: FeedBoardType;
-  content?: string | null;
-  /**
-   * 연결 루틴 (서버 #430) — 자유글·연결 없는 옛 인증글은 null. **#430 배포 전 서버는 필드
-   * 자체가 없다** — 어댑터가 null로 본다.
-   */
-  routine?: FeedRoutineResponse | null;
-  images?: FeedImageResponse[];
-  likeCount?: number;
-  commentCount?: number;
-  likedByMe?: boolean;
-  mine?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-export type FeedCommentResponse = {
-  commentId?: number;
-  postId?: number;
-  author?: FeedAuthorResponse;
-  content?: string;
-  mine?: boolean;
-  createdAt?: string;
-};
-
-export type FeedCreateRequest = {
-  clientPostId: string;
-  /** 서버는 생략 시 `VERIFICATION`으로 받지만, 앱은 항상 명시해서 보낸다. */
-  boardType: FeedBoardType;
-  content?: string;
-  /** 자유게시판은 빈 배열 가능, 인증게시판은 1–10장. */
-  imageIds: number[];
-  /** 인증게시판 필수·자유게시판 금지 (서버 #430). */
-  routineCompletion?: FeedRoutineCompletionRequest;
-};
-
-/**
- * PATCH /feed/posts/{id} (서버 #430) — 전부 선택, **생략 = 유지**. 인증으로 바꾸려면 사진이
- * 있는 글 + `routineCompletion`, 자유로 바꾸면 연결이 풀린다(자유 결과에 연결을 보내면 400).
- */
-export type FeedUpdateRequest = {
-  content?: string;
-  boardType?: FeedBoardType;
-  routineCompletion?: FeedRoutineCompletionRequest;
-};
-
-export type FeedCommentRequest = {
-  clientCommentId: string;
-  content: string;
-};
-
-// --- 신고·차단 (#1428, 서버 #399 / spec domains/feed/api.md "신고·차단") — 서버 미배포라 계약을 보고 손으로 옮겼다(#1412).
-
-/** 신고 사유 — 서버 enum `ContentReportReason`과 같은 순서. */
-export type ReportReason =
-  'SPAM' | 'ABUSE' | 'SEXUAL' | 'VIOLENCE' | 'PERSONAL_INFO' | 'COPYRIGHT' | 'OTHER';
-
-/** POST …/reports 본문. `detail`은 선택·최대 500자(서버가 앞뒤 공백을 떼고 빈 값은 null). */
-export type ContentReportRequest = {
-  reason: ReportReason;
-  detail?: string;
-};
-
-/** RECEIVED(검토 대기) · ACTIONED(숨김 조치) · DISMISSED(조치 없음 종료). */
-export type ContentReportStatus = 'RECEIVED' | 'ACTIONED' | 'DISMISSED';
-
-/** 201 Report — 같은 대상 재신고도 처음 신고를 201로 돌려준다(멱등). */
-export type ContentReportResponse = {
-  reportId?: number;
-  status?: ContentReportStatus;
-};
-
-/** GET /me/blocks 항목. */
-export type BlockedUserResponse = {
-  userId?: number;
-  nickname?: string | null;
-  profileImageKey?: string | null;
-  /** 차단 시각(ISO-8601 UTC). */
-  blockedAt?: string;
-};
-
-// --- 가구 거래소 (#1427) — 타입 재생성이 깨져 있어(#1412) 운영 /v3/api-docs를 보고 손으로 옮겼다.
-
-export type MarketSide = 'BUY' | 'SELL';
-export type MarketSource = 'INVENTORY' | 'ISSUANCE';
-export type MarketAssetStatus = 'ACTIVE' | 'SUSPENDED';
-export type MarketOrderStatus = 'OPEN' | 'FILLED' | 'CANCELLED' | 'EXPIRED';
-export type MarketCommandStatus = 'PENDING' | 'APPLIED' | 'REJECTED';
-
-export type AssetCard = {
-  assetId?: number;
-  itemId?: number;
-  name?: string;
-  assetKey?: string;
-  creatorNickname?: string | null;
-  totalSupply?: number;
-  bestAskPrice?: number | null;
-  askQuantity?: number;
-  lastTradePrice?: number | null;
-  status?: MarketAssetStatus;
-};
-
-export type PriceLevel = {
-  price?: number;
-  quantity?: number;
-};
-
-export type MarketAssetResponse = {
-  assetId?: number;
-  itemId?: number;
-  name?: string;
-  assetKey?: string;
-  creatorNickname?: string | null;
-  isCreator?: boolean;
-  totalSupply?: number;
-  unissuedQuantity?: number;
-  status?: MarketAssetStatus;
-  lastTradePrice?: number | null;
-  owned?: boolean;
-  asks?: PriceLevel[];
-  bids?: PriceLevel[];
-};
-
-export type TradeItem = {
-  tradeId?: number;
-  price?: number;
-  quantity?: number;
-  tradedAt?: string;
-};
-
-export type MarketAssetIssueRequest = {
-  userItemId: number;
-  totalSupply: number;
-};
-
-export type PlaceOrderRequest = {
-  requestId: string;
-  assetId: number;
-  side: MarketSide;
-  price: number;
-  quantity: number;
-  source?: MarketSource | null;
-};
-
-export type CancelOrderRequest = {
-  requestId: string;
-};
-
-export type MarketCommandAcceptedResponse = {
-  commandId?: number;
-  status?: MarketCommandStatus;
-};
-
-export type MarketOrderResponse = {
-  orderId?: number;
-  assetId?: number;
-  name?: string;
-  assetKey?: string;
-  side?: MarketSide;
-  source?: MarketSource | null;
-  price?: number;
-  quantity?: number;
-  filledQuantity?: number;
-  status?: MarketOrderStatus;
-  expiresAt?: string;
-  createdAt?: string;
-};
-
-export type MarketCommandResponse = {
-  commandId?: number;
-  status?: MarketCommandStatus;
-  rejectCode?: string | null;
-  order?: MarketOrderResponse | null;
-};
+// 앱 별칭 — scripts/gen-api-types.js의 NAMED_ALIASES에서 생성 (#1412).
+export type ChatMessagePage = ChatMessageListResponse;
+export type ChatReader = Reader;
+export type ContentReportStatus = NonNullable<ContentReportResponse['status']>;
+export type FeedBoardType = NonNullable<FeedPostResponse['boardType']>;
+export type GachaCategory = NonNullable<GachaResponse['category']>;
+export type MarketAssetStatus = NonNullable<MarketAssetResponse['status']>;
+export type MarketCommandStatus = NonNullable<MarketCommandResponse['status']>;
+export type MarketOrderStatus = NonNullable<MarketOrderResponse['status']>;
+export type MarketSide = PlaceOrderRequest['side'];
+export type MarketSource = NonNullable<PlaceOrderRequest['source']>;
+export type OnboardingHouseChoice = OnboardingHouseRequest['choice'];
+export type ReportReason = ContentReportRequest['reason'];

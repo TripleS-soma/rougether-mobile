@@ -2,8 +2,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { NULLABLE_OVERRIDES } = require('../../../scripts/gen-api-types.js') as {
+const { NULLABLE_OVERRIDES, NAMED_ALIASES } = require('../../../scripts/gen-api-types.js') as {
   NULLABLE_OVERRIDES: Record<string, Record<string, string>>;
+  NAMED_ALIASES: Record<string, string>;
 };
 
 /**
@@ -36,5 +37,18 @@ describe('스펙 미표기 nullable 오버라이드 (#733)', () => {
 
   it('오버라이드가 비어 있지 않다 — 목록째 사라지는 회귀 방지', () => {
     expect(cases.length).toBeGreaterThanOrEqual(8);
+  });
+});
+
+/**
+ * 앱 별칭 (#1412) — 서버가 인라인으로 둔 enum·바뀐 응답 이름을 앱이 쓰던 이름으로
+ * 생성 스키마에서 파생한다. 손으로 types.ts에 적었다가 재생성 때 사라져 tsc가
+ * 34건 깨졌던 자리라, 생성물에 별칭이 그대로 실렸는지 확인한다.
+ */
+describe('생성기 앱 별칭 (#1412)', () => {
+  const source = readFileSync(join(__dirname, '..', 'types.ts'), 'utf8');
+
+  it.each(Object.entries(NAMED_ALIASES))('%s 별칭이 생성물에 있다', (alias, target) => {
+    expect(source).toContain(`export type ${alias} = ${target};`);
   });
 });
