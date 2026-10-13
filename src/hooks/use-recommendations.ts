@@ -22,7 +22,7 @@ import {
   acceptRecommendation,
   dismissRecommendation,
   fetchRecommendations,
-  type RecommendationItem,
+  type Recommendation,
 } from '@/api';
 import { useToast } from '@/components/ui/toast';
 import { i18n } from '@/i18n';
@@ -33,7 +33,7 @@ import { i18n } from '@/i18n';
  * 빈 목록 기본값 — 인라인 `[]`는 매 렌더 새 배열이라 소비자의 memo가 깨진다
  * (`app-shell`의 `NO_CHARACTER_FRAMES`와 같은 이유).
  */
-const NO_ITEMS: RecommendationItem[] = [];
+const NO_ITEMS: Recommendation[] = [];
 
 export type UseRecommendationsOptions = {
   /**
@@ -79,7 +79,7 @@ export function useRecommendations({ onAccepted, enabled = true }: UseRecommenda
   /** 처리한 카드를 캐시에서 즉시 걷는다 — 같은 제안이 다시 눌리지 않게. */
   const dropFromCache = useCallback(
     (recommendationId: number) => {
-      qc.setQueryData<RecommendationItem[]>(queryKeys.recommendations, (prev) =>
+      qc.setQueryData<Recommendation[]>(queryKeys.recommendations, (prev) =>
         (prev ?? []).filter((r) => r.recommendationId !== recommendationId),
       );
     },

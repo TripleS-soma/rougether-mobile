@@ -6,35 +6,14 @@
  * 않고 그대로 노출한다.
  */
 import { apiGetList, apiPost } from './client';
-import type { RoutineResponse } from './types';
-
-/** 제안 스케줄 — 수락하면 이 값이 루틴 반복에 그대로 적용된다. */
-export type RecommendationProposal = {
-  /** MVP 조정 추천은 항상 WEEKLY. */
-  repeatType?: string;
-  /** 루틴 등록의 `repeatDays.daysOfWeek`와 같은 요일 토큰(MON~SUN). */
-  daysOfWeek?: string[];
-};
+import type { RecommendationItem, RoutineResponse } from './types';
 
 /**
- * 스웨거 `RecommendationItem` — 다음 `gen:api-types` 때 types.ts로 흡수한다
- * (`rooms.ts`의 `RoomWithLayout` 선례).
+ * 스웨거 `RecommendationItem` — 목록 항목에는 id가 항상 있어 필수로 좁힌다.
+ * 스키마 이름은 types.ts가 내보내므로 앱 별칭은 이름을 달리한다 (#1412).
  */
-export type RecommendationItem = {
+export type Recommendation = Omit<RecommendationItem, 'recommendationId'> & {
   recommendationId: number;
-  /** MVP는 ADJUST_DAYS 1종 (ADJUST_TIME은 후속 예약). */
-  type?: string;
-  /** 사용자에게 그대로 보여줄 제안 문구. */
-  message?: string;
-  /** 대상 루틴의 현재 버전 id. */
-  routineId?: number;
-  /** 계보 id — 수락으로 버전이 분기해도 유지된다. */
-  originRoutineId?: number;
-  routineTitle?: string;
-  proposal?: RecommendationProposal;
-  createdAt?: string;
-  /** 생성 + 7일. 지나면 서버가 목록에서 빼고 수락도 거부한다. */
-  expiresAt?: string;
 };
 
 /**
@@ -44,7 +23,7 @@ export type RecommendationItem = {
  * 서버가 걸러준다. 빈 배열은 "보여줄 제안 없음"이다.
  */
 export function fetchRecommendations() {
-  return apiGetList<RecommendationItem>('/recommendations');
+  return apiGetList<Recommendation>('/recommendations');
 }
 
 /**

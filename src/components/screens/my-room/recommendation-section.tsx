@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { RecommendationItem } from '@/api';
+import type { Recommendation } from '@/api';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DAY_CODES, getWeekdayLabels } from '@/constants/routines';
 import { i18n, useT } from '@/i18n';
@@ -42,7 +42,7 @@ export function daysLeftLabel(expiresAt?: string, now: Date = new Date()): strin
 }
 
 export type RecommendationSectionProps = {
-  items: RecommendationItem[];
+  items: Recommendation[];
   /** 처리 중인 추천 id — 그동안 버튼을 잠근다. */
   pendingId?: number | null;
   onAccept: (recommendationId: number) => void;
@@ -89,7 +89,7 @@ export function RecommendationSection({
 
   if (items.length === 0) return null;
 
-  const changeLine = (r: RecommendationItem) => {
+  const changeLine = (r: Recommendation) => {
     const after = dayLabels(r.proposal?.daysOfWeek);
     if (!after) return null;
     const before = dayLabelsFromNums(currentDaysById?.[r.routineId ?? -1]);

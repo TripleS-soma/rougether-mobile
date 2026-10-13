@@ -24,6 +24,9 @@ const NULLABLE_OVERRIDES = {
   CategoryResponse: {
     houseId: '미연동은 null (#578).',
   },
+  GachaResponse: {
+    themeId: '테마 없는 뽑기(서버 #370 통합 뽑기)는 null.',
+  },
   MemberRoomSummary: {
     room: '방을 아직 만들지 않은 구성원은 null — 기본 빈 방으로 렌더.',
   },
@@ -45,6 +48,26 @@ const NULLABLE_OVERRIDES = {
       '(2026-08-19 스웨거 확인, #907) — 연동 해제는 DELETE /routines/{id}/house-mission-link 로만 된다. ' +
       '카테고리의 houseId도 같은 규칙.',
   },
+};
+
+/**
+ * 앱이 이름으로 쓰는 별칭 (#1412). 서버 스펙은 enum을 필드에 인라인으로 두고
+ * 목록 응답 이름도 바뀌므로, 손으로 types.ts에 적던 이름을 여기서 생성 스키마로부터
+ * 파생한다 — 서버 값이 바뀌면 별칭도 같이 따라가고, 참조 스키마가 사라지면 tsc가 깨진다.
+ */
+const NAMED_ALIASES = {
+  ChatMessagePage: 'ChatMessageListResponse',
+  ChatReader: 'Reader',
+  ContentReportStatus: "NonNullable<ContentReportResponse['status']>",
+  FeedBoardType: "NonNullable<FeedPostResponse['boardType']>",
+  GachaCategory: "NonNullable<GachaResponse['category']>",
+  MarketAssetStatus: "NonNullable<MarketAssetResponse['status']>",
+  MarketCommandStatus: "NonNullable<MarketCommandResponse['status']>",
+  MarketOrderStatus: "NonNullable<MarketOrderResponse['status']>",
+  MarketSide: "PlaceOrderRequest['side']",
+  MarketSource: "NonNullable<PlaceOrderRequest['source']>",
+  OnboardingHouseChoice: "OnboardingHouseRequest['choice']",
+  ReportReason: "ContentReportRequest['reason']",
 };
 
 function tsType(v, includeNull = true) {
@@ -119,6 +142,15 @@ async function main() {
     out += `};\n\n`;
   }
 
+  out += `// 앱 별칭 — scripts/gen-api-types.js의 NAMED_ALIASES에서 생성 (#1412).\n`;
+  for (const [alias, target] of Object.entries(NAMED_ALIASES).sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
+    if (schemas[alias])
+      throw new Error(`별칭 ${alias}가 서버 스키마 이름과 겹친다 — NAMED_ALIASES에서 지울 것`);
+    out += `export type ${alias} = ${target};\n`;
+  }
+
   fs.writeFileSync(OUT, out);
   console.log(`Wrote ${names.length} types to ${path.relative(process.cwd(), OUT)}`);
 }
@@ -130,4 +162,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { tsType, NULLABLE_OVERRIDES };
+module.exports = { tsType, NULLABLE_OVERRIDES, NAMED_ALIASES };
