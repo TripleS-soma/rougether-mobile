@@ -2,7 +2,8 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useShop } from '@/hooks/use-shop';
 import { jsonRes as res } from '@/test-utils/fetch';
-import { queryWrapper } from '@/test-utils/query-wrapper';
+import { createTestQueryClient, queryWrapper } from '@/test-utils/query-wrapper';
+import { walletInCache } from '@/test-utils/wallet';
 
 const ITEMS = {
   items: [
@@ -47,7 +48,7 @@ describe('useShop — refreshOwned (가챠 획득 동기화)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useShop(jest.fn()), { wrapper: queryWrapper() });
+    const { result } = await renderHook(() => useShop(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.ownedIds).toEqual(['1']);
 
@@ -75,7 +76,7 @@ describe('useShop — refreshOwned (가챠 획득 동기화)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useShop(jest.fn()), { wrapper: queryWrapper() });
+    const { result } = await renderHook(() => useShop(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.placement.items).toEqual([]);
@@ -98,7 +99,7 @@ describe('useShop — refreshOwned (가챠 획득 동기화)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useShop(jest.fn()), { wrapper: queryWrapper() });
+    const { result } = await renderHook(() => useShop(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     // 예전엔 여기서 슬롯을 앵커 좌표로 프리필했다. 이제 가구는 placements가 정본이다.
@@ -127,8 +128,8 @@ describe('useShop — 구매·배치 저장은 캐시에 쓴다 (#1027)', () => 
 
   it('구매 → 보유중이 되고, 재조회 없이 그 아이템을 배치 저장할 수 있다', async () => {
     setUp({ ok: true, status: 200, body: { layoutRevision: 4 } });
-    const setWallet = jest.fn();
-    const { result } = await renderHook(() => useShop(setWallet), { wrapper: queryWrapper() });
+    const client = createTestQueryClient();
+    const { result } = await renderHook(() => useShop(), { wrapper: queryWrapper(client) });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.ownedIds).toEqual(['1']);
 
@@ -136,7 +137,8 @@ describe('useShop — 구매·배치 저장은 캐시에 쓴다 (#1027)', () => 
       expect(await result.current.purchase('2')).toBe(true);
     });
     await waitFor(() => expect(result.current.ownedIds).toEqual(['1', '2']));
-    expect(setWallet).toHaveBeenCalled();
+    // 구매 응답의 잔액을 지갑 캐시에 직접 쓴다 (장부 16번 — 예전엔 셸의 setWallet).
+    await waitFor(() => expect(walletInCache(client)?.diamond).toBe(5));
     // 인벤토리는 구매 응답으로 채웠다 — /me/items를 다시 받지 않는다.
     const myItemsCalls = (global.fetch as jest.Mock).mock.calls.filter(([url]) =>
       (url as string).includes('/me/items'),
@@ -164,7 +166,7 @@ describe('useShop — 구매·배치 저장은 캐시에 쓴다 (#1027)', () => 
 
   it('409(리비전 충돌) → conflict, placement는 그대로', async () => {
     setUp({ ok: false, status: 409, body: { code: 'ROOM_LAYOUT_REVISION_CONFLICT' } });
-    const { result } = await renderHook(() => useShop(jest.fn()), { wrapper: queryWrapper() });
+    const { result } = await renderHook(() => useShop(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
     const before = result.current.placement;
 
@@ -200,8 +202,8 @@ describe('useShop — 거미줄 청소 (#830)', () => {
       status: 200,
       body: { rewardCurrencyType: 'COIN', rewardAmount: 3, balance: 128 },
     });
-    const setWallet = jest.fn();
-    const { result } = await renderHook(() => useShop(setWallet), { wrapper: queryWrapper() });
+    const client = createTestQueryClient();
+    const { result } = await renderHook(() => useShop(), { wrapper: queryWrapper(client) });
     await waitFor(() => expect(result.current.placement.cobweb).not.toBeNull());
 
     let reward: number | null = null;
@@ -211,7 +213,7 @@ describe('useShop — 거미줄 청소 (#830)', () => {
 
     expect(reward).toBe(3);
     await waitFor(() => expect(result.current.placement.cobweb).toBeNull());
-    expect(setWallet).toHaveBeenCalled();
+    await waitFor(() => expect(walletInCache(client)?.coin).toBe(128));
   });
 
   /**
@@ -221,8 +223,8 @@ describe('useShop — 거미줄 청소 (#830)', () => {
    */
   it('409(이미 청소됨) → null을 돌려주고 거미줄만 걷는다', async () => {
     setUp({ ok: false, status: 409, body: { code: 'ROOM_COBWEB_NOT_ACTIVE' } });
-    const setWallet = jest.fn();
-    const { result } = await renderHook(() => useShop(setWallet), { wrapper: queryWrapper() });
+    const client = createTestQueryClient();
+    const { result } = await renderHook(() => useShop(), { wrapper: queryWrapper(client) });
     await waitFor(() => expect(result.current.placement.cobweb).not.toBeNull());
 
     let reward: number | null = 999;
@@ -232,12 +234,12 @@ describe('useShop — 거미줄 청소 (#830)', () => {
 
     expect(reward).toBeNull();
     await waitFor(() => expect(result.current.placement.cobweb).toBeNull());
-    expect(setWallet).not.toHaveBeenCalled();
+    expect(walletInCache(client)).toBeUndefined();
   });
 
   it('그 밖의 실패 → null, 거미줄은 그대로 남는다', async () => {
     setUp({ ok: false, status: 500, body: {} });
-    const { result } = await renderHook(() => useShop(jest.fn()), { wrapper: queryWrapper() });
+    const { result } = await renderHook(() => useShop(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.placement.cobweb).not.toBeNull());
 
     let reward: number | null = 999;
@@ -274,7 +276,7 @@ it('loads and refreshes personal AI furniture that is not sold in the public sho
     if (url.includes('/items')) return res(ITEMS);
     return res({ items: [] });
   }) as unknown as typeof fetch;
-  const first = await renderHook(() => useShop(jest.fn()), { wrapper: queryWrapper() });
+  const first = await renderHook(() => useShop(), { wrapper: queryWrapper() });
   await waitFor(() => expect(first.result.current.loading).toBe(false));
   created = true;
   await act(async () => {
@@ -289,7 +291,7 @@ it('loads and refreshes personal AI furniture that is not sold in the public sho
   );
   expect(first.result.current.ownedIds).toContain('99');
   await first.unmount();
-  const reopened = await renderHook(() => useShop(jest.fn()), { wrapper: queryWrapper() });
+  const reopened = await renderHook(() => useShop(), { wrapper: queryWrapper() });
   await waitFor(() => expect(reopened.result.current.loading).toBe(false));
   expect(reopened.result.current.catalogue.furniture.map((item) => item.id)).toContain('99');
 });

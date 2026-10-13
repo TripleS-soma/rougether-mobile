@@ -305,10 +305,16 @@
         "description": "같은 숫자의 고양이를 합쳐 더 큰 숫자를 만들어요.",
         "instructions": "밀어서 같은 숫자 합치기"
       },
+      "tower": {
+        "name": "고양이 탑 쌓기",
+        "description": "흔들리는 상자를 딱 맞춰 쌓아 올려요.",
+        "instructions": "탭해서 상자 떨어뜨리기"
+      },
       "frame": {
         "runner": "러너 게임",
         "stairs": "고양이 계단 오르기",
-        "merge": "고양이 합치기"
+        "merge": "고양이 합치기",
+        "tower": "고양이 탑 쌓기"
       },
       "title": "미니게임",
       "practice": "연습",

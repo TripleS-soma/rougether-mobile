@@ -81,7 +81,7 @@ export type AnalyticsEvent =
   | 'invite_referrer_result'
   // 미니게임 (#1315) — 시작→완료 전환과 이탈 지점, 게임별 인기·점수 분포.
   // 전부 `useMinigameRun`/서피스 한 곳에서 — 화면·WebView는 모른다.
-  /** 세션 시작 — game: room-runner|cat-stairs|cat-merge, mode: ranked|practice, via: picker|retry. */
+  /** 세션 시작 — game: room-runner|cat-stairs|cat-merge|cat-tower, mode: ranked|practice, via: picker|retry. */
   | 'minigame_start'
   /** 게임 종료 — ticks(플레이 길이). 랭킹전은 서버 저장 성공 시점에 score·personal_best·rank 포함. */
   | 'minigame_finish'

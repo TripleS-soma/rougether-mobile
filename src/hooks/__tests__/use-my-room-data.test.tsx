@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onlineManager } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
+import * as authModule from '@/api/auth';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
 import { calendarToday } from '@/utils/calendar-progress';
 import type { NewRoutine } from '@/constants/routines';
@@ -277,6 +278,64 @@ describe('useMyRoomData — profile save (PUT /me)', () => {
     expect(ok).toBe(false);
     expect(result.current.nickname).toBe('테스터');
     expect(result.current.bio).toBe('기존 소개');
+  });
+});
+
+// 프로필 슬라이스 이관(장부 16번) 안전망 — 다시 받을 때 빈 값이 받아 둔 값을 지우지 않는다.
+describe('useMyRoomData — 프로필 슬라이스', () => {
+  it('reload 응답에 닉네임·소개가 없으면 받아 둔 값을 그대로 둔다', async () => {
+    let me: Record<string, unknown> = { userId: 1, nickname: '테스터', bio: '소개' };
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res(me);
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.nickname).toBe('테스터'));
+
+    me = { userId: 1, nickname: null, bio: null };
+    await act(async () => {
+      await result.current.reload();
+    });
+    expect(result.current.nickname).toBe('테스터');
+    expect(result.current.bio).toBe('소개');
+
+    // 빈 문자열 소개는 "지웠다"는 뜻이라 반영한다(null만 "모름").
+    me = { userId: 1, nickname: '테스터', bio: '' };
+    await act(async () => {
+      await result.current.reload();
+    });
+    await waitFor(() => expect(result.current.bio).toBe(''));
+  });
+
+  it('연달아 저장하다 두 번째가 실패하면 첫 번째 저장값으로 되돌리고, 함수 참조는 그대로다', async () => {
+    let puts = 0;
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      if (method === 'PUT' && url.endsWith('/me')) {
+        puts += 1;
+        if (puts === 2) return { ok: false, status: 500, text: async (): Promise<string> => '{}' };
+        return res({ userId: 1 });
+      }
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1, nickname: '테스터', bio: '소개' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.nickname).toBe('테스터'));
+
+    // 같은 렌더의 함수로 두 번 — 사이에 다시 그려지지 않는다(빠른 연속 저장).
+    const save = result.current.saveProfile;
+    await act(async () => {
+      await save('첫째', '하나');
+      await save('둘째', '둘');
+    });
+    await waitFor(() => expect(result.current.nickname).toBe('첫째'));
+    expect(result.current.bio).toBe('하나');
+    // 저장할 때마다 새 함수가 생기면 나의 방 memo 경계(#539)가 뚫린다.
+    expect(result.current.saveProfile).toBe(save);
   });
 });
 
@@ -904,6 +963,108 @@ describe('useMyRoomData — 완료 후 지갑 (성능 장부 N2)', () => {
     });
     expect(walletGets.length).toBe(initialGets + 1);
     expect(result.current.wallet.coin).toBe(100);
+  });
+});
+
+// 지갑 슬라이스 이관(장부 16번) 안전망 — 첫 로드·되받기·직접 고치기가 캐시 아래서도 그대로인지.
+describe('useMyRoomData — 지갑 슬라이스', () => {
+  const setUp = () => {
+    const state = { coin: 120, diamond: 3, broken: false, gets: 0 };
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/wallets')) {
+        state.gets += 1;
+        if (state.broken)
+          return { ok: false, status: 500, text: async (): Promise<string> => '{}' };
+        return res({
+          items: [
+            { currencyType: 'COIN', balance: state.coin },
+            { currencyType: 'DIAMOND', balance: state.diamond },
+          ],
+        });
+      }
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1 });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+    return state;
+  };
+
+  it('로딩이 끝나는 렌더에 잔액이 이미 있다 — 0코인이 한 틱도 비치지 않는다', async () => {
+    setUp();
+    const seen: { loading: boolean; coin: number }[] = [];
+    const { result } = await renderHook(
+      () => {
+        const d = useMyRoomData();
+        seen.push({ loading: d.loading, coin: d.wallet.coin });
+        return d;
+      },
+      { wrapper: queryWrapper() },
+    );
+    await waitFor(() => expect(result.current.wallet.coin).toBe(120));
+    expect(seen.filter((r) => !r.loading && r.coin !== 120)).toEqual([]);
+    expect(result.current.wallet.diamond).toBe(3);
+  });
+
+  it('refreshWallet은 서버 값을 다시 받고, 실패하면 마지막 잔액을 지킨다', async () => {
+    const state = setUp();
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.wallet.coin).toBe(120));
+
+    state.coin = 150;
+    await act(async () => {
+      await result.current.refreshWallet();
+    });
+    await waitFor(() => expect(result.current.wallet.coin).toBe(150));
+
+    state.broken = true;
+    state.coin = 999;
+    await act(async () => {
+      await result.current.refreshWallet();
+    });
+    expect(result.current.wallet.coin).toBe(150);
+  });
+
+  it('세션 id가 바뀌어도 지갑 함수·부트 로드는 다시 돌지 않는다 (#1515 리뷰)', async () => {
+    setUp();
+    const boots: string[] = [];
+    const base = global.fetch;
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/today')) boots.push(url);
+      return base(url, init);
+    }) as unknown as typeof fetch;
+    let sessionId: number | undefined = undefined;
+    const who = jest.spyOn(authModule, 'getSessionUserId').mockImplementation(() => sessionId);
+    try {
+      const { result, rerender } = await renderHook(() => useMyRoomData(), {
+        wrapper: queryWrapper(),
+      });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      const { setWallet, refreshWallet, reload } = result.current;
+
+      sessionId = 1;
+      await rerender({});
+      expect(result.current.setWallet).toBe(setWallet);
+      expect(result.current.refreshWallet).toBe(refreshWallet);
+      expect(result.current.reload).toBe(reload);
+      expect(boots).toHaveLength(1);
+      // 로딩이 지갑 캐시 키에 묶이지 않는다 — 읽는 키가 바뀌어도 스피너에 갇히지 않는다(#1515 재리뷰).
+      expect(result.current.loading).toBe(false);
+    } finally {
+      who.mockRestore();
+    }
+  });
+
+  it('setWallet 함수형 갱신은 직전 값 위에 쌓인다 (뽑기·상점·출석이 쓰는 경로)', async () => {
+    setUp();
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.wallet.coin).toBe(120));
+
+    const setWallet = result.current.setWallet;
+    await act(async () => {
+      setWallet((w) => ({ ...w, coin: w.coin - 20 }));
+      setWallet((w) => ({ ...w, diamond: w.diamond + 1 }));
+    });
+    await waitFor(() => expect(result.current.wallet).toEqual({ coin: 100, diamond: 4 }));
   });
 });
 

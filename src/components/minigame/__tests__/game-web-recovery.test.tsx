@@ -4,6 +4,7 @@ import { act, type ReactNode } from 'react';
 import { RunnerGame } from '@/components/minigame/runner-game.web';
 import { StairsGame } from '@/components/minigame/stairs-game.web';
 import { MergeGame } from '@/components/minigame/merge-game.web';
+import { TowerGame } from '@/components/minigame/tower-game.web';
 
 type Root = { render: (children: ReactNode) => void; unmount: () => void };
 const { createRoot } = jest.requireActual('react-dom/client') as {
@@ -33,14 +34,25 @@ jest.mock('@/features/minigame/stairs-html', () => ({
 jest.mock('@/features/minigame/merge-html', () => ({
   createMergeHtml: (config: unknown) => JSON.stringify(config),
 }));
+jest.mock('@/features/minigame/tower-html', () => ({
+  createTowerHtml: (config: unknown) => JSON.stringify(config),
+}));
 
 const games = [
   { name: 'runner', Component: RunnerGame, result: { ticks: 10, jumpTicks: [] } },
   { name: 'stairs', Component: StairsGame, result: { ticks: 10, actions: [] } },
   { name: 'merge', Component: MergeGame, result: { ticks: 10, actions: [] } },
+  // 탑 쌓기 문서는 dropTicks를 보내고, 앱은 서버 형식(jumpTicks)으로 바꿔 넘긴다.
+  {
+    name: 'tower',
+    Component: TowerGame,
+    result: { ticks: 10, dropTicks: [3] },
+    expected: { ticks: 10, jumpTicks: [3] },
+  },
 ];
 
-describe.each(games)('$name web recovery', ({ Component, result }) => {
+describe.each(games)('$name web recovery', ({ Component, result, ...rest }) => {
+  const expected = 'expected' in rest ? rest.expected : result;
   let container: HTMLDivElement;
   let root: Root;
   beforeEach(() => {
@@ -93,6 +105,6 @@ describe.each(games)('$name web recovery', ({ Component, result }) => {
       send(restarted.contentWindow, next.channelId, result);
     });
     expect(onFinish).toHaveBeenCalledTimes(1);
-    expect(onFinish).toHaveBeenCalledWith(result);
+    expect(onFinish).toHaveBeenCalledWith(expected);
   });
 });

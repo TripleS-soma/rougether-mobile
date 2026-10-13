@@ -3,6 +3,7 @@ import { render } from '@testing-library/react-native';
 import { MergeGame } from '@/components/minigame/merge-game';
 import { RunnerGame } from '@/components/minigame/runner-game';
 import { StairsGame } from '@/components/minigame/stairs-game';
+import { TowerGame } from '@/components/minigame/tower-game';
 
 jest.mock('react-native-webview', () => {
   const React = jest.requireActual('react');
@@ -17,6 +18,7 @@ jest.mock('react-native-webview', () => {
 jest.mock('@/features/minigame/runner-html', () => ({ createRunnerHtml: () => '<html/>' }));
 jest.mock('@/features/minigame/stairs-html', () => ({ createStairsHtml: () => '<html/>' }));
 jest.mock('@/features/minigame/merge-html', () => ({ createMergeHtml: () => '<html/>' }));
+jest.mock('@/features/minigame/tower-html', () => ({ createTowerHtml: () => '<html/>' }));
 
 /**
  * Fabric casts every prop against the RNCWebView codegen spec while creating the shadow
@@ -31,6 +33,7 @@ describe.each([
   ['runner', 'runner-game', () => <RunnerGame seed={42} onFinish={jest.fn()} />],
   ['stairs', 'stairs-game', () => <StairsGame seed={42} onFinish={jest.fn()} />],
   ['merge', 'merge-game', () => <MergeGame seed={42} onFinish={jest.fn()} />],
+  ['tower', 'tower-game', () => <TowerGame seed={42} onFinish={jest.fn()} />],
 ])('%s game WebView props are Android-safe', (_name, testID, renderGame) => {
   it.each(ARRAY_TYPED_PROPS)('never passes a scalar as %s', async (prop) => {
     const { getByTestId } = await render(renderGame());

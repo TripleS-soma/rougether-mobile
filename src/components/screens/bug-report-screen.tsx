@@ -21,6 +21,8 @@ export const MAX_BUG_REPORT_IMAGES = 3;
  * 클램프(Tomcat URL 한도)는 #567에서 multipart 폼 필드 전환으로 해제.
  */
 export const MAX_BUG_REPORT_CONTENT = 2000;
+/** 제목 글자 수 상한. */
+export const MAX_BUG_REPORT_TITLE = 100;
 
 export type BugReportStatus = 'RECEIVED' | 'IN_PROGRESS' | 'RESOLVED';
 
@@ -161,7 +163,7 @@ export function BugReportScreen({
             placeholder={tr('member.bugReport.titlePlaceholder')}
             value={title}
             onChangeText={setTitle}
-            maxLength={100}
+            maxLength={MAX_BUG_REPORT_TITLE}
           />
           <View style={styles.contentWrap}>
             <Text style={[styles.contentLabel, emph('semibold'), { color: t.textMuted }]}>

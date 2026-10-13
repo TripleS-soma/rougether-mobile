@@ -1,5 +1,7 @@
 import { act, render } from '@testing-library/react-native';
 
+import { QueryProvider } from '@/test-utils/query-wrapper';
+
 import type { AttendanceStatus } from '@/api/events';
 import {
   AUTO_ATTENDANCE_DELAY_MS,
@@ -47,7 +49,7 @@ const PENDING = {
 
 let surface: ReturnType<typeof useAttendanceSurface>;
 function Harness() {
-  surface = useAttendanceSurface({ setWallet: jest.fn(), setScreen: jest.fn() });
+  surface = useAttendanceSurface({ setScreen: jest.fn() });
   return surface.sheets;
 }
 const lastSheet = () => mockSheetProps[mockSheetProps.length - 1];
@@ -67,7 +69,7 @@ describe('useAttendanceSurface — 그날 첫 완료 자동 출석 (#1294)', () 
   });
 
   it('보상 알약이 끝난 뒤에야 시트를 자동 출석 모드로 연다', async () => {
-    await render(<Harness />);
+    await render(<Harness />, { wrapper: QueryProvider });
     await act(() => surface.openAttendanceAfterFirstCompletion());
     await wait(AUTO_ATTENDANCE_DELAY_MS - 1);
     expect(lastSheet().visible).toBe(false);
@@ -77,13 +79,13 @@ describe('useAttendanceSurface — 그날 첫 완료 자동 출석 (#1294)', () 
 
   it('오늘 이미 출석했거나 완주했으면 열지 않는다', async () => {
     mockStatus = { ...PENDING, checkedInToday: true };
-    await render(<Harness />);
+    await render(<Harness />, { wrapper: QueryProvider });
     await act(() => surface.openAttendanceAfterFirstCompletion());
     await wait(AUTO_ATTENDANCE_DELAY_MS);
     expect(lastSheet().visible).toBe(false);
 
     mockStatus = { ...PENDING, completed: true };
-    await render(<Harness />);
+    await render(<Harness />, { wrapper: QueryProvider });
     await act(() => surface.openAttendanceAfterFirstCompletion());
     await wait(AUTO_ATTENDANCE_DELAY_MS);
     expect(lastSheet().visible).toBe(false);
@@ -91,14 +93,14 @@ describe('useAttendanceSurface — 그날 첫 완료 자동 출석 (#1294)', () 
 
   it('진행 중인 이벤트가 없으면 시트 자체가 없다', async () => {
     mockStatus = null;
-    await render(<Harness />);
+    await render(<Harness />, { wrapper: QueryProvider });
     await act(() => surface.openAttendanceAfterFirstCompletion());
     await wait(AUTO_ATTENDANCE_DELAY_MS);
     expect(mockSheetProps).toHaveLength(0);
   });
 
   it('같은 날 두 번째 완료는 다시 열지 않는다 — 자동 출석이 실패해 미출석이어도', async () => {
-    await render(<Harness />);
+    await render(<Harness />, { wrapper: QueryProvider });
     await act(() => surface.openAttendanceAfterFirstCompletion());
     await wait(AUTO_ATTENDANCE_DELAY_MS);
     expect(lastSheet().visible).toBe(true);
@@ -115,7 +117,7 @@ describe('useAttendanceSurface — 그날 첫 완료 자동 출석 (#1294)', () 
    * 자동 모드로 바뀌어 **누르지 않은 출석이 나가거나**, 이미 출석했는데 시트가 다시 튄다.
    */
   it('기다리는 동안 버튼으로 시트를 열었으면 자동 출석 모드로 바꾸지 않는다', async () => {
-    await render(<Harness />);
+    await render(<Harness />, { wrapper: QueryProvider });
     await act(() => surface.openAttendanceAfterFirstCompletion());
     await wait(1000);
     await act(() => surface.openAttendance());
@@ -125,7 +127,7 @@ describe('useAttendanceSurface — 그날 첫 완료 자동 출석 (#1294)', () 
   });
 
   it('기다리는 동안 오늘 출석이 끝났으면 시트를 열지 않는다', async () => {
-    const ui = await render(<Harness />);
+    const ui = await render(<Harness />, { wrapper: QueryProvider });
     await act(() => surface.openAttendanceAfterFirstCompletion());
     await wait(1000);
     mockStatus = { ...PENDING, checkedInToday: true };
@@ -135,7 +137,7 @@ describe('useAttendanceSurface — 그날 첫 완료 자동 출석 (#1294)', () 
   });
 
   it('버튼으로 연 시트는 자동 출석 모드가 아니다', async () => {
-    await render(<Harness />);
+    await render(<Harness />, { wrapper: QueryProvider });
     await act(() => surface.openAttendance());
     expect(lastSheet()).toMatchObject({ visible: true, autoCheckIn: false });
   });

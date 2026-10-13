@@ -237,6 +237,7 @@ describe('minigame runs', () => {
   it.each([
     { gameCode: 'cat-stairs', maxTicks: 7200 },
     { gameCode: 'cat-merge', maxTicks: 18000 },
+    { gameCode: 'cat-tower', maxTicks: 18000 },
   ])('starts $gameCode with its own server tick limit', async ({ gameCode, maxTicks }) => {
     const run = { ...RUN, runId: `${gameCode}-run`, gameCode, maxTicks };
     startRequest.mockResolvedValue(run);

@@ -8,7 +8,7 @@ import { DEFAULT_LANGUAGE, i18n } from '@/i18n';
  *
  * 문구만 다룬다: 규칙·점수·`rulesVersion` 같은 서버 검증 계약과 무관하다.
  */
-export type MinigameName = 'merge' | 'runner' | 'stairs';
+export type MinigameName = 'merge' | 'runner' | 'stairs' | 'tower';
 export type MinigameCopy = Record<string, string>;
 
 type Bundle = { minigame?: Record<string, Record<string, string>> };

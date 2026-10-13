@@ -35,6 +35,7 @@ import { SUPPORT_EMAIL } from '@/constants/policy';
 import { useAuth } from '@/hooks/use-auth';
 import { previewDiagnostics, useBugReports } from '@/hooks/use-bug-reports';
 import { type InviteVia, useInvites } from '@/hooks/use-invites';
+import { useWallet } from '@/hooks/use-wallet';
 import { useBlockedUsers, useModeration } from '@/hooks/use-moderation';
 import { useNotificationSettings } from '@/hooks/use-notification-settings';
 import { useBrandTheme } from '@/hooks/use-tokens';
@@ -66,7 +67,6 @@ export function useSettingsSurface({
   stats,
   shortcuts,
   onRoutinesImported,
-  onWalletChanged,
   offerInvitePaste = false,
 }: {
   screen: Screen;
@@ -93,8 +93,6 @@ export function useSettingsSurface({
   };
   /** 캘린더 가져오기가 루틴·투두를 만든 뒤 — 나의 방 목록을 다시 받는다(없으면 당겨서 새로고침 전까지 안 보였다). */
   onRoutinesImported?: () => void;
-  /** 초대 코드 보상이 들어온 뒤 — 지갑을 서버값으로 다시 받는다(없으면 헤더 코인이 그대로였다). */
-  onWalletChanged?: () => void;
   /** 첫 온보딩 직후 1회 '친구에게 초대받아 오셨나요?' 붙여넣기 시트 (#1007). */
   offerInvitePaste?: boolean;
 }) {
@@ -177,14 +175,16 @@ export function useSettingsSurface({
     preview: previewInvite,
     redeem: redeemInvite,
   } = useInvites();
-  // 보상이 실제로 들어왔을 때만 지갑 갱신 — 실패(null)·0코인은 그대로.
+  // 보상이 실제로 들어왔을 때만 지갑 갱신 — 실패(null)·0코인은 그대로. 지갑 캐시(useWallet)를
+  // 직접 다시 받는다(장부 16번 — 예전엔 셸이 onWalletChanged로 꿰었다).
+  const { refreshWallet } = useWallet();
   const redeemInviteCode = useCallback(
     async (code: string, via: InviteVia = 'manual') => {
       const result = await redeemInvite(code, via);
-      if (result && result.rewardCoin > 0) onWalletChanged?.();
+      if (result && result.rewardCoin > 0) void refreshWallet();
       return result;
     },
-    [redeemInvite, onWalletChanged],
+    [redeemInvite, refreshWallet],
   );
   // 친구 초대 링크·붙여넣기 (#667 → #1007) — 설정 화면으로 튀지 않고 앱 위 확인
   // 시트로 받는다. [나중에]면 코드를 친구 초대 화면 입력란 프리필로 남긴다.

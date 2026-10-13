@@ -61,6 +61,20 @@
       "right": "Right",
       "timeout": "Time's up",
       "wrong": "Wrong way"
+    },
+    "tower": {
+      "mainA11y": "Cat Tower",
+      "canvasA11y": "A cat tower game where you tap the screen or press Space to drop the swinging box onto the stack",
+      "canvasFallback": "Cat Tower game",
+      "startA11y": "Start stacking",
+      "title": "Cat Tower",
+      "titlePractice": "Cat Tower · Practice",
+      "layers": "{{layers}} floors",
+      "hint": "Tap · Space",
+      "perfect": "Perfect!",
+      "combo": "{{n}} in a row",
+      "miss": "The box missed",
+      "timeUp": "Time's up"
     }
   }
 }

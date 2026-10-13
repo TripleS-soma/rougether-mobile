@@ -98,7 +98,13 @@ export function useMinigameSurface({
   const runner = useMinigameRun('room-runner');
   const stairs = useMinigameRun('cat-stairs');
   const merge = useMinigameRun('cat-merge');
-  const runs = { 'room-runner': runner, 'cat-stairs': stairs, 'cat-merge': merge };
+  const tower = useMinigameRun('cat-tower');
+  const runs = {
+    'room-runner': runner,
+    'cat-stairs': stairs,
+    'cat-merge': merge,
+    'cat-tower': tower,
+  };
   const runsRef = useLatestRef(runs);
   const run = runs[gameCode];
   const { abandonUnfinished, finish, session } = run;

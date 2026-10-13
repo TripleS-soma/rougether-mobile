@@ -34,7 +34,7 @@ npm start        # Expo dev 서버 — i / a / w 로 iOS / Android / web
 | [`.storybook/`](.storybook)                         | 웹 Storybook 설정과 테마·글꼴 도구 모음                                       |
 | [`stories/`](stories)                               | 디자인 토큰과 실제 앱 컴포넌트의 상태별 스토리                                |
 
-**컴포넌트 갤러리** — `Dev` 탭(`/dev` 라우트)이 [`src/dev/registry.tsx`](src/dev/registry.tsx)에
+**컴포넌트 갤러리** — `Dev` 탭(`/dev` 라우트)이 [`src/dev/registry/`](src/dev/registry/)에
 등록된 컴포넌트를 격리 상태로 렌더합니다. 새 컴포넌트를 만들면 여기 등록하세요.
 
 ## 디자인 Storybook

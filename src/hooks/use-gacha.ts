@@ -7,8 +7,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { type GachaMachine, toGachaMachine, toWallet } from '@/api/adapters';
 import { getCategoryGachas } from '@/constants/gacha';
 import type { DrawResult, GachaResponse } from '@/api/types';
-import type { Wallet } from '@/constants/currency';
-import { useLatestRef } from '@/hooks/use-stable-value';
+import { useWallet } from '@/hooks/use-wallet';
 import { track } from '@/lib/analytics';
 
 const NO_GACHAS: GachaMachine[] = [];
@@ -19,9 +18,10 @@ const selectGachas = (list: GachaResponse[]) =>
  * `enabled` — 뽑기 화면에 처음 들어갈 때 켠다 (성능 장부 N3). 예전엔 앱 시작마다 카탈로그를
  * 받았다. 뽑기(draw)는 enabled와 무관하게 동작한다.
  */
-export function useGacha(onWallet: (wallet: Wallet) => void, { enabled = true } = {}) {
+export function useGacha({ enabled = true } = {}) {
   const qc = useQueryClient();
-  const walletRef = useLatestRef(onWallet);
+  // 지갑 캐시 (장부 16번) — 뽑기 응답의 잔액을 셸을 거치지 않고 직접 반영한다.
+  const { setWallet } = useWallet();
   // A synchronous lock also covers two taps before React renders isPending.
   const drawingRef = useRef(false);
   const { data, isPending, isFetching, isError, refetch } = useQuery({
@@ -65,7 +65,7 @@ export function useGacha(onWallet: (wallet: Wallet) => void, { enabled = true } 
       drawingRef.current = true;
       try {
         const response = await mutateAsync({ gachaId, count });
-        if (response.wallets?.length) walletRef.current(toWallet(response.wallets));
+        if (response.wallets?.length) setWallet(toWallet(response.wallets));
         track('gacha_draw', { gachaId, count });
         return response.results ?? [];
       } catch {
@@ -74,7 +74,7 @@ export function useGacha(onWallet: (wallet: Wallet) => void, { enabled = true } 
         drawingRef.current = false;
       }
     },
-    [mutateAsync, walletRef],
+    [mutateAsync, setWallet],
   );
 
   const gachas = data ?? NO_GACHAS;

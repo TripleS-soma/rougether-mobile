@@ -1,6 +1,7 @@
 import { ScrollViewStyleReset } from 'expo-router/html';
 import type { PropsWithChildren } from 'react';
 
+import { Themes } from '@/constants/theme';
 import { SERVICE_WORKER_REGISTER_SCRIPT } from '@/lib/web-service-worker';
 
 const WEB_GA_ID = 'G-P8V3RCKCD5';
@@ -23,7 +24,7 @@ export default function Root({ children }: PropsWithChildren) {
           name="description"
           content="내 캐릭터와, 친구들과 한 집에서 함께 크는 할 일 관리 앱"
         />
-        <meta name="theme-color" content="#7FA87F" />
+        <meta name="theme-color" content={Themes.cozy.primary} />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="루게더" />
         <meta name="robots" content="noindex" />
@@ -31,7 +32,9 @@ export default function Root({ children }: PropsWithChildren) {
         <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <ScrollViewStyleReset />
-        <style dangerouslySetInnerHTML={{ __html: 'html,body{background:#FBF8F3}' }} />
+        <style
+          dangerouslySetInnerHTML={{ __html: `html,body{background:${Themes.cozy.screen}}` }}
+        />
         <script dangerouslySetInnerHTML={{ __html: SERVICE_WORKER_REGISTER_SCRIPT }} />
         {/* GA4 — 웹앱 전용 속성 "루게더 웹앱"(랜딩·네이티브 앱과 분리). 네이티브 빌드에는
             포함되지 않는다. 배포 도메인에서만 켠다 — 로컬 expo start·로컬 export 미리보기가

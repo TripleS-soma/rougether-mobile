@@ -24,13 +24,10 @@ afterEach(() => {
 
 it('뽑기 카탈로그: enabled=false면 받지 않고, 켜면 받는다', async () => {
   const wrapper = queryWrapper();
-  const view = await renderHook(
-    ({ enabled }: { enabled: boolean }) => useGacha(jest.fn(), { enabled }),
-    {
-      wrapper,
-      initialProps: { enabled: false },
-    },
-  );
+  const view = await renderHook(({ enabled }: { enabled: boolean }) => useGacha({ enabled }), {
+    wrapper,
+    initialProps: { enabled: false },
+  });
   await new Promise((r) => setTimeout(r, 30));
   expect(calls.some((u) => u.includes('/gacha?'))).toBe(false);
   await view.rerender({ enabled: true });
