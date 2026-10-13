@@ -5,19 +5,25 @@
  * 계약(`getGoogleIdToken` → 서버 `/auth/google`)을 지킨다 — aud는 같은 웹
  * 클라이언트 ID라 서버 allowlist를 그대로 통과한다.
  *
- * 왜 숨은 공식 버튼인가: GIS가 id token(credential)을 주는 경로는 One Tap
- * `prompt()`와 공식 버튼뿐이고, One Tap은 쿨다운·FedCM 사정으로 안 뜨는 경우가
- * 많다. 화면의 버튼은 우리 디자인이므로, 보이지 않는 곳에 공식 버튼을 그려
- * 두고 사용자의 탭 안에서 그 버튼을 눌러 팝업을 연다(사용자 제스처 안이어야
- * 팝업 차단을 피한다 — 첫 await 전에 클릭해야 하므로 스크립트는 모듈 로드 시
- * 미리 받아 둔다).
+ * 공식 버튼을 화면에 그대로 둔다(#1532). 예전엔 공식 버튼을 화면 밖에 숨겨 두고
+ * 우리 디자인 버튼을 누르면 JS로 그 버튼을 클릭했는데, GIS가 버튼을 **구글 도메인
+ * iframe** 안에 그리도록 바뀌면서(2026-10 확인) 우리 페이지가 버튼을 찾지도
+ * 누르지도 못해 웹 구글 로그인이 통째로 막혔다. 사용자가 공식 버튼을 직접 누르면
+ * GIS가 `callback`으로 credential을 주고, 그 순간 화면이 평소 로그인 흐름
+ * (`getGoogleIdToken` → 서버)을 시작한다 — 받아 둔 credential을 돌려주는 식.
  */
 import { GOOGLE_WEB_CLIENT_ID } from './oauth-client-ids';
 
 type CredentialResponse = { credential?: string };
+type PromptMoment = {
+  isSkippedMoment?: () => boolean;
+  isDismissedMoment?: () => boolean;
+  getDismissedReason?: () => string;
+};
 type GoogleId = {
   initialize(config: Record<string, unknown>): void;
   renderButton(parent: HTMLElement, options: Record<string, unknown>): void;
+  prompt(listener?: (moment: PromptMoment) => void): void;
   disableAutoSelect(): void;
 };
 declare global {
@@ -27,18 +33,22 @@ declare global {
 }
 
 const GSI_SRC = 'https://accounts.google.com/gsi/client';
-/** 팝업이 닫힌 뒤(창에 포커스 복귀) 이만큼 기다려도 credential이 없으면 취소로 본다. */
-export const CANCEL_GRACE_MS = 1500;
-/**
- * 버튼을 누른 뒤 이만큼 안에 본 창이 포커스를 잃지 않으면(팝업이 안 뜸) 차단으로
- * 본다 — 사파리 팝업 정책이나 끊긴 사용자 제스처 체인. 이 판정이 없으면 focus도
- * credential 콜백도 영영 안 와 Promise가 pending으로 남고 로그인 버튼이 잠긴다.
- */
-export const POPUP_OPEN_TIMEOUT_MS = 2000;
+/** One Tap 대체 경로가 아무 응답 없이 머무를 수 있는 최대 시간 — 로그인 버튼이 잠기지 않게. */
+export const PROMPT_TIMEOUT_MS = 60_000;
 
-let host: HTMLDivElement | null = null;
+export type GoogleButtonOptions = {
+  /** px, GIS 허용 범위 200~400. */
+  width: number;
+  theme: 'outline' | 'filled_black';
+  /** BCP 47 — 버튼 문구 언어("Google로 계속하기"/"Continue with Google"). */
+  locale: string;
+};
+
 let ready: Promise<GoogleId> | null = null;
-let pending: ((token: string | null) => void) | null = null;
+/** 공식 버튼으로 받아 두고 아직 로그인 흐름이 가져가지 않은 credential. */
+let held: string | null = null;
+let promptResolve: ((token: string | null) => void) | null = null;
+const listeners = new Set<() => void>();
 
 function loadScript(): Promise<GoogleId> {
   return new Promise((resolve, reject) => {
@@ -58,6 +68,19 @@ function loadScript(): Promise<GoogleId> {
   });
 }
 
+function onCredential(res: CredentialResponse) {
+  const token = res.credential ?? null;
+  // One Tap 대체 경로가 기다리는 중이면 그쪽이 가져간다.
+  // (정리는 finish가 한다 — 여기서 먼저 비우면 finish가 자기 차례가 아니라고 보고 버린다.)
+  if (promptResolve) {
+    promptResolve(token);
+    return;
+  }
+  if (!token) return;
+  held = token;
+  listeners.forEach((listener) => listener());
+}
+
 function ensureReady(): Promise<GoogleId> {
   ready ??= loadScript().then((id) => {
     id.initialize({
@@ -66,84 +89,74 @@ function ensureReady(): Promise<GoogleId> {
       // 자동 선택 없이 매번 계정 선택 — 최근 로그인 배지가 "누구로" 안내한다.
       auto_select: false,
       itp_support: true,
-      callback: (res: CredentialResponse) => {
-        const resolve = pending;
-        pending = null;
-        resolve?.(res.credential ?? null);
-      },
+      callback: onCredential,
     });
-    host = document.createElement('div');
-    host.setAttribute('aria-hidden', 'true');
-    host.style.cssText =
-      'position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
-    document.body.appendChild(host);
-    id.renderButton(host, { type: 'standard', size: 'large', theme: 'outline' });
     return id;
   });
   return ready;
 }
 
-// 첫 탭에서 스크립트를 기다리지 않도록 로그인 화면이 뜨기 전에 미리 받아 둔다.
+// 로그인 화면이 버튼을 그리기 전에 스크립트를 미리 받아 둔다.
 if (typeof document !== 'undefined') {
   void ensureReady().catch(() => {
-    // 실패는 실제 로그인 시도에서 다시 드러난다(그때 throw → 'failed').
+    // 실패는 버튼을 그릴 때·로그인 시도에서 다시 드러난다.
     ready = null;
   });
 }
 
-function hiddenButton(): HTMLElement | null {
-  return host?.querySelector<HTMLElement>('div[role="button"]') ?? null;
+/** 공식 구글 버튼을 `parent` 안에 그린다. 스크립트 로드 실패는 throw. */
+export async function mountGoogleButton(
+  parent: HTMLElement,
+  { width, theme, locale }: GoogleButtonOptions,
+): Promise<void> {
+  const id = await ensureReady();
+  parent.replaceChildren();
+  id.renderButton(parent, {
+    type: 'standard',
+    size: 'large',
+    theme,
+    shape: 'rectangular',
+    text: 'continue_with',
+    logo_alignment: 'left',
+    width: Math.round(Math.max(200, Math.min(400, width))),
+    locale,
+  });
+}
+
+/** 공식 버튼으로 credential을 받았을 때 — 화면이 로그인 흐름을 시작한다. 구독 해제 함수를 돌려준다. */
+export function onGoogleCredential(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
 }
 
 /**
- * 구글 계정 선택 팝업을 띄우고 id token을 반환한다.
- * - 사용자가 팝업을 닫으면 null (에러 아님 — 조용히 로그인 화면 유지).
- * - 스크립트 로드 실패 등은 throw — 호출부가 실패 메시지를 띄운다.
+ * id token을 반환한다. 공식 버튼으로 받아 둔 credential이 있으면 그것(1회용)을,
+ * 없으면(예: 계정 충돌 안내의 [Google로 로그인]) One Tap을 띄워 기다린다.
+ * - 받은 것이 없거나 사용자가 닫으면 null (에러 아님 — 조용히 로그인 화면 유지).
+ * - 스크립트 로드 실패는 throw — 호출부가 실패 메시지를 띄운다.
  */
 export async function getGoogleIdToken(): Promise<string | null> {
-  await ensureReady();
-  const button = hiddenButton();
-  if (!button) throw new Error('google sign-in button not rendered');
-  return new Promise<string | null>((resolve, reject) => {
-    let settled = false;
-    let opened = false;
-    let openTimer = 0;
-    const cleanup = () => {
-      settled = true;
-      pending = null;
-      window.clearTimeout(openTimer);
-      window.removeEventListener('blur', onBlur);
-      window.removeEventListener('focus', onFocus);
-    };
+  if (held) {
+    const token = held;
+    held = null;
+    return token;
+  }
+  const id = await ensureReady();
+  return new Promise<string | null>((resolve) => {
     const finish = (token: string | null) => {
-      if (settled) return;
-      cleanup();
+      if (promptResolve !== finish) return;
+      promptResolve = null;
+      window.clearTimeout(timer);
       resolve(token);
     };
-    const fail = (reason: string) => {
-      if (settled) return;
-      cleanup();
-      reject(new Error(reason));
-    };
-    // 팝업이 뜨면 본 창이 포커스를 잃는다. 제한 시간 안에 안 잃으면 팝업 차단.
-    const onBlur = () => {
-      opened = true;
-      window.clearTimeout(openTimer);
-    };
-    // 팝업이 닫히면 본 창이 포커스를 되찾는다 — credential 콜백이 곧 따라오지
-    // 않으면 사용자가 창을 닫은 것(취소). 성공 시엔 콜백이 먼저 finish한다.
-    // 팝업이 뜨기 전의 포커스 이벤트(클릭 직후 잔여 포커스)는 세지 않는다.
-    const onFocus = () => {
-      if (!opened) return;
-      window.setTimeout(() => finish(null), CANCEL_GRACE_MS);
-    };
-    pending = finish;
-    window.addEventListener('blur', onBlur);
-    window.addEventListener('focus', onFocus);
-    openTimer = window.setTimeout(() => {
-      if (!opened) fail('google sign-in popup blocked');
-    }, POPUP_OPEN_TIMEOUT_MS);
-    button.click();
+    const timer = window.setTimeout(() => finish(null), PROMPT_TIMEOUT_MS);
+    promptResolve = finish;
+    id.prompt((moment) => {
+      // 'credential_returned'로 닫히는 건 성공 — callback이 토큰을 넘긴다.
+      const dismissed =
+        moment.isDismissedMoment?.() && moment.getDismissedReason?.() !== 'credential_returned';
+      if (moment.isSkippedMoment?.() || dismissed) finish(null);
+    });
   });
 }
 
