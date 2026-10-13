@@ -7,7 +7,7 @@ import { MISSION_TYPE_FALLBACK, MISSION_TYPE_RULES } from '@/constants/missions'
 import { HouseBgs, HouseBorders, MyRoomTint, RoomTints } from '@/constants/theme';
 import { CATEGORY_COLORS, type Routine, type RoutineCategoryMeta } from '@/constants/routines';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
-import { monthDayLabel, toIsoDate } from '@/utils/datetime';
+import { monthDayLabel, toKstDate } from '@/utils/datetime';
 import { i18n } from '@/i18n';
 import type { HouseCover } from '@/components/room/house-cover-picker';
 import type {
@@ -194,10 +194,14 @@ export function toHouseCover(c: HouseCoverImage): HouseCover | null {
 }
 
 /** House-mission card model from the API mission summary. */
-/** Server date-time → device-local "YYYY-MM-DD" (mission period display). */
-function localDateOf(dateTime: string): string | undefined {
+/**
+ * Server date-time → KST "YYYY-MM-DD" (mission period display). 공동 미션 기간은 KST 달력
+ * 날짜다(spec api.md 타임존) — 기기 시간대로 바꾸면 UTC+10 이상(호주·뉴질랜드)에서 마감
+ * `T23:59:59+09:00`이 다음 날로 넘어가 하루 늦게 보였다.
+ */
+function kstDateOf(dateTime: string): string | undefined {
   const d = new Date(dateTime);
-  return Number.isNaN(d.getTime()) ? undefined : toIsoDate(d);
+  return Number.isNaN(d.getTime()) ? undefined : toKstDate(d);
 }
 
 export function toHouseMission(m: MissionSummary): HouseMission {
@@ -216,7 +220,7 @@ export function toHouseMission(m: MissionSummary): HouseMission {
     target: Math.max(1, target),
     status: m.status ?? 'ACTIVE',
     achieved: target > 0 && (m.currentValue ?? 0) >= target,
-    endsOn: m.endsAt ? localDateOf(m.endsAt) : undefined,
+    endsOn: m.endsAt ? kstDateOf(m.endsAt) : undefined,
     myContribution: m.myContribution ?? undefined,
     contributedToday: m.contributedToday ?? undefined,
   };
