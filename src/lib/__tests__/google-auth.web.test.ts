@@ -1,173 +1,112 @@
 /**
  * @jest-environment jsdom
  *
- * 구글 웹 로그인 배선 (#1225 → #1532) — GIS 스크립트는 로드하지 않고
- * `window.google.accounts.id` 스텁을 모듈 로드 전에 심는다(모듈이 로드 시점에
- * `ensureReady()`를 미리 부른다).
+ * 구글 웹 로그인 브라우저 배선 (#1532) — 카카오 웹처럼 페이지 리다이렉트다. 순수
+ * 조각(`google-web-oauth`)은 따로 검증되고, 여기서는 sessionStorage·location을
+ * 잇는 부분을 본다.
  *
- * 스텁의 `renderButton`은 **지금의 GIS처럼 iframe만** 그린다. 예전 스텁은
- * `div[role=button]`을 그려, GIS가 iframe으로 바뀌어 웹 구글 로그인이 통째로 막힌
- * 것(#1532)을 테스트가 못 잡았다.
+ * 예전(GIS 숨은 버튼 클릭) 방식은 GIS가 버튼을 iframe에 그리면서 막혔고, 그때의
+ * 테스트 스텁은 `div[role=button]`을 그려 그 변화를 못 잡았다.
  */
 import { URL as NodeURL, URLSearchParams as NodeURLSearchParams } from 'node:url';
 
-// jest-expo 프리셋이 RN의 URL·URLSearchParams 스텁을 전역에 심는다(객체 인자를
-// 받으면 throw). 브라우저 배선 테스트는 실제 구현이 필요해 Node 것으로 되돌린다.
+import { GOOGLE_WEB_CLIENT_ID } from '@/lib/oauth-client-ids';
+
 beforeAll(() => {
   Object.assign(globalThis, { URL: NodeURL, URLSearchParams: NodeURLSearchParams });
 });
 
 type GoogleAuthWeb = typeof import('@/lib/google-auth.web');
-type Moment = {
-  isSkippedMoment?: () => boolean;
-  isDismissedMoment?: () => boolean;
-  getDismissedReason?: () => string;
-};
 
-let credentialCallback: (res: { credential?: string }) => void = () => {};
-let promptListener: ((moment: Moment) => void) | undefined;
-const renderButton = jest.fn((parent: HTMLElement) => {
-  // 지금의 GIS: 버튼은 구글 도메인 iframe 안에 있다 — 페이지에서 누를 수 없다.
-  parent.appendChild(document.createElement('iframe'));
-});
-const prompt = jest.fn((listener?: (moment: Moment) => void) => {
-  promptListener = listener;
-});
-const disableAutoSelect = jest.fn();
+const STATE_KEY = 'rougether.google-web.state';
+const NONCE_KEY = 'rougether.google-web.nonce';
+const ORIGIN = 'http://localhost';
 
-function installGoogleStub() {
-  (window as Window & { google?: unknown }).google = {
-    accounts: {
-      id: {
-        initialize: (cfg: { callback: typeof credentialCallback }) => {
-          credentialCallback = cfg.callback;
-        },
-        renderButton,
-        prompt,
-        disableAutoSelect,
-      },
-    },
-  };
+function jwt(payload: Record<string, unknown>): string {
+  const b64 = (o: unknown) =>
+    Buffer.from(JSON.stringify(o))
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+  return `${b64({ alg: 'RS256' })}.${b64(payload)}.sig`;
 }
 
-async function loadModule(): Promise<GoogleAuthWeb> {
-  installGoogleStub();
+function setLocation(hash: string) {
+  window.history.replaceState(null, '', `/login${hash}`);
+}
+
+function loadModule(): GoogleAuthWeb {
   let mod!: GoogleAuthWeb;
   // 동적 import는 jest(CommonJS)에서 --experimental-vm-modules가 필요해 require로.
   jest.isolateModules(() => {
     mod = jest.requireActual('@/lib/google-auth.web') as GoogleAuthWeb;
   });
-  // 모듈 로드 시 시작한 ensureReady()가 initialize까지.
-  await Promise.resolve();
-  await Promise.resolve();
   return mod;
 }
 
-beforeEach(() => {
-  renderButton.mockClear();
-  prompt.mockClear();
-  promptListener = undefined;
+afterEach(() => {
+  window.sessionStorage.clear();
+  setLocation('');
 });
 
-describe('공식 구글 버튼 (#1532)', () => {
-  it('사용자가 공식 버튼(iframe)을 눌러 받은 credential로 로그인 흐름이 토큰을 얻는다', async () => {
-    const { getGoogleIdToken, onGoogleCredential } = await loadModule();
-    const started = jest.fn();
-    onGoogleCredential(started);
-
-    credentialCallback({ credential: 'id-token' });
-
-    expect(started).toHaveBeenCalledTimes(1);
-    await expect(getGoogleIdToken()).resolves.toBe('id-token');
-    // 받아 둔 credential은 1회용 — 다음 요청이 같은 토큰을 다시 쓰지 않는다.
-    expect(prompt).not.toHaveBeenCalled();
-  });
-
-  it('공식 버튼을 자리 폭(200~400px)·테마·언어에 맞춰 그린다', async () => {
-    const { mountGoogleButton } = await loadModule();
-    const parent = document.createElement('div');
-    parent.appendChild(document.createElement('span'));
-
-    await mountGoogleButton(parent, { width: 520.4, theme: 'filled_black', locale: 'ko' });
-
-    expect(renderButton).toHaveBeenCalledWith(
-      parent,
-      expect.objectContaining({
-        width: 400,
-        theme: 'filled_black',
-        locale: 'ko',
-        text: 'continue_with',
-      }),
-    );
-    // 다시 그릴 때 이전 버튼을 비운다.
-    expect(parent.querySelector('span')).toBeNull();
-    await mountGoogleButton(parent, { width: 120, theme: 'outline', locale: 'en' });
-    expect(renderButton).toHaveBeenLastCalledWith(parent, expect.objectContaining({ width: 200 }));
-  });
-
-  it('구독을 풀면 더는 로그인 흐름을 시작하지 않는다', async () => {
-    const { onGoogleCredential } = await loadModule();
-    const started = jest.fn();
-    const off = onGoogleCredential(started);
-    off();
-    credentialCallback({ credential: 'id-token' });
-    expect(started).not.toHaveBeenCalled();
-  });
-});
-
-describe('받아 둔 credential이 없을 때 — One Tap 대체 경로', () => {
-  beforeEach(() => {
-    jest.useFakeTimers();
-  });
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
-  it('One Tap으로 받은 credential을 돌려준다(공식 버튼 구독자는 부르지 않는다)', async () => {
-    const { getGoogleIdToken, onGoogleCredential } = await loadModule();
-    const started = jest.fn();
-    onGoogleCredential(started);
-    const p = getGoogleIdToken();
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(prompt).toHaveBeenCalledTimes(1);
-    // 성공으로 닫힐 때의 dismissed는 취소가 아니다.
-    promptListener?.({
-      isDismissedMoment: () => true,
-      getDismissedReason: () => 'credential_returned',
+describe('getGoogleIdToken (web, 리다이렉트)', () => {
+  it('일반 진입이면 state·nonce를 저장하고 구글 인가 페이지로 떠난다 (끝나지 않는 Promise)', async () => {
+    const assign = jest.fn();
+    const original = window.location;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...original, origin: ORIGIN, hash: '', href: `${ORIGIN}/login`, assign },
     });
-    credentialCallback({ credential: 'one-tap-token' });
-    await expect(p).resolves.toBe('one-tap-token');
-    expect(started).not.toHaveBeenCalled();
+    try {
+      const { getGoogleIdToken } = loadModule();
+      void getGoogleIdToken();
+      await Promise.resolve();
+      expect(assign).toHaveBeenCalledTimes(1);
+      const url = new URL(assign.mock.calls[0][0] as string);
+      expect(url.host).toBe('accounts.google.com');
+      expect(url.searchParams.get('client_id')).toBe(GOOGLE_WEB_CLIENT_ID);
+      expect(url.searchParams.get('redirect_uri')).toBe(`${ORIGIN}/login`);
+      expect(url.searchParams.get('state')).toBe(window.sessionStorage.getItem(STATE_KEY));
+      expect(url.searchParams.get('nonce')).toBe(window.sessionStorage.getItem(NONCE_KEY));
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: original });
+    }
   });
 
-  it('One Tap을 건너뛰거나 닫으면 null(취소)', async () => {
-    const { getGoogleIdToken } = await loadModule();
-    const skipped = getGoogleIdToken();
-    await Promise.resolve();
-    await Promise.resolve();
-    promptListener?.({ isSkippedMoment: () => true });
-    await expect(skipped).resolves.toBeNull();
+  it('복귀 진입이면 id token을 돌려주고, 주소의 토큰과 state·nonce를 지운다', async () => {
+    const token = jwt({ nonce: 'n1' });
+    window.sessionStorage.setItem(STATE_KEY, 's1');
+    window.sessionStorage.setItem(NONCE_KEY, 'n1');
+    setLocation(`#id_token=${token}&state=s1`);
+    const { getGoogleIdToken, hasGoogleRedirect } = loadModule();
 
-    const dismissed = getGoogleIdToken();
-    await Promise.resolve();
-    await Promise.resolve();
-    promptListener?.({ isDismissedMoment: () => true, getDismissedReason: () => 'cancel_called' });
-    await expect(dismissed).resolves.toBeNull();
+    expect(hasGoogleRedirect()).toBe(true);
+    await expect(getGoogleIdToken()).resolves.toBe(token);
+    expect(window.location.hash).toBe('');
+    expect(window.sessionStorage.getItem(STATE_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem(NONCE_KEY)).toBeNull();
+    // 새로고침해도 같은 토큰을 다시 쓰지 않는다.
+    expect(hasGoogleRedirect()).toBe(false);
   });
 
-  it('아무 응답이 없어도 영원히 기다리지 않는다', async () => {
-    const { getGoogleIdToken, PROMPT_TIMEOUT_MS } = await loadModule();
-    const p = getGoogleIdToken();
-    await Promise.resolve();
-    await Promise.resolve();
-    jest.advanceTimersByTime(PROMPT_TIMEOUT_MS);
-    await expect(p).resolves.toBeNull();
+  it('동의 화면 취소는 null(에러 아님)', async () => {
+    window.sessionStorage.setItem(STATE_KEY, 's1');
+    window.sessionStorage.setItem(NONCE_KEY, 'n1');
+    setLocation('#error=access_denied&state=s1');
+    await expect(loadModule().getGoogleIdToken()).resolves.toBeNull();
   });
-});
 
-it('로그아웃은 자동 선택만 끈다', async () => {
-  const { signOutGoogle } = await loadModule();
-  await signOutGoogle();
-  expect(disableAutoSelect).toHaveBeenCalled();
+  it('state·nonce가 안 맞으면 throw — 그래도 복귀 파라미터는 걷어낸다', async () => {
+    window.sessionStorage.setItem(STATE_KEY, 's1');
+    window.sessionStorage.setItem(NONCE_KEY, 'n1');
+    setLocation(`#id_token=${jwt({ nonce: 'other' })}&state=s1`);
+    const { getGoogleIdToken, hasGoogleRedirect } = loadModule();
+    await expect(getGoogleIdToken()).rejects.toThrow('nonce mismatch');
+    expect(hasGoogleRedirect()).toBe(false);
+
+    window.sessionStorage.setItem(STATE_KEY, 's1');
+    setLocation(`#id_token=${jwt({ nonce: 'n1' })}&state=forged`);
+    await expect(getGoogleIdToken()).rejects.toThrow('state mismatch');
+  });
 });

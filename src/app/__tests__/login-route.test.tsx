@@ -14,10 +14,12 @@ const mockReplace = jest.fn();
 const mockKakao = jest.fn();
 const mockGoogle = jest.fn();
 let mockRedirect = false;
+let mockGoogleRedirect = false;
 
 jest.mock('expo-router', () => ({ router: { replace: (...a: unknown[]) => mockReplace(...a) } }));
 jest.mock('@/lib/analytics', () => ({ track: (...a: unknown[]) => mockTrack(...a) }));
 jest.mock('@/lib/kakao-auth', () => ({ hasKakaoRedirect: () => mockRedirect }));
+jest.mock('@/lib/google-auth', () => ({ hasGoogleRedirect: () => mockGoogleRedirect }));
 jest.mock('@/hooks/use-auth', () => {
   // 참조가 고정된 훅 반환 — 렌더마다 새 함수면 복귀 이펙트가 다시 돈다.
   const auth = {
@@ -155,5 +157,35 @@ describe('로그인 버튼 계측 (#1282)', () => {
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
     expect(events('login_tap')).toEqual([['login_tap', { provider: 'google' }]]);
     expect(events('login_cancel')).toEqual([]);
+  });
+});
+
+describe('웹 구글 리다이렉트 복귀 (#1532)', () => {
+  const consumeGoogle = (result: 'ok' | 'cancelled' | 'failed') =>
+    mockGoogle.mockImplementation(() => {
+      mockGoogleRedirect = false;
+      return Promise.resolve(result);
+    });
+  afterEach(() => {
+    mockGoogleRedirect = false;
+  });
+
+  it('복귀 중에는 소개를 건너뛰고 구글 로그인을 이어서 끝낸다', async () => {
+    mockGoogleRedirect = true;
+    consumeGoogle('ok');
+    const ui = await render(<Login />);
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
+    expect(mockKakao).not.toHaveBeenCalled();
+    expect(ui.queryByText('루게더에 오신 걸 환영해요')).toBeNull();
+    expect(events('login_view')).toEqual([['login_view', { via: 'google_redirect' }]]);
+    expect(events('login_tap')).toEqual([]);
+  });
+
+  it('복귀했는데 실패하면 구글 실패 문구를 띄우고 로그인 화면에 머문다', async () => {
+    mockGoogleRedirect = true;
+    consumeGoogle('failed');
+    const ui = await render(<Login />);
+    await waitFor(() => expect(ui.getByText(/구글 로그인에 실패했어요/)).toBeTruthy());
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 });

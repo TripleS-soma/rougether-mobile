@@ -1,171 +1,96 @@
 /**
  * 구글 **웹** 로그인 — `google-auth.ts`의 웹 변형. Metro가 웹 번들에서만 이
- * 파일을 고르므로 네이티브 SDK(@react-native-google-signin)는 웹에 들어가지
- * 않는다. Google Identity Services(GIS)로 id token을 받아 네이티브와 같은
- * 계약(`getGoogleIdToken` → 서버 `/auth/google`)을 지킨다 — aud는 같은 웹
- * 클라이언트 ID라 서버 allowlist를 그대로 통과한다.
+ * 파일을 고르므로 네이티브 SDK(@react-native-google-signin)는 웹에 들어가지 않는다.
  *
- * 공식 버튼을 화면에 그대로 둔다(#1532). 예전엔 공식 버튼을 화면 밖에 숨겨 두고
- * 우리 디자인 버튼을 누르면 JS로 그 버튼을 클릭했는데, GIS가 버튼을 **구글 도메인
- * iframe** 안에 그리도록 바뀌면서(2026-10 확인) 우리 페이지가 버튼을 찾지도
- * 누르지도 못해 웹 구글 로그인이 통째로 막혔다. 사용자가 공식 버튼을 직접 누르면
- * GIS가 `callback`으로 credential을 주고, 그 순간 화면이 평소 로그인 흐름
- * (`getGoogleIdToken` → 서버)을 시작한다 — 받아 둔 credential을 돌려주는 식.
+ * 카카오 웹(`kakao-auth.web.ts`)처럼 **페이지 리다이렉트**다(#1532). 예전엔 GIS
+ * 공식 버튼을 화면 밖에 숨겨 두고 JS로 눌렀는데, GIS가 버튼을 구글 도메인 iframe
+ * 안에 그리도록 바뀌어 그 클릭이 막혔다(2026-10). 공식 버튼을 그대로 보이면 크기·
+ * 모양이 고정이라(최대 400×40) 우리 버튼과 맞지 않아 리다이렉트로 바꿨다.
+ *
+ * `getGoogleIdToken`은 두 번에 걸쳐 완성된다: 1차 호출은 accounts.google.com으로
+ * 떠나며 끝나지 않는 Promise를 돌려주고(페이지가 내려감), 복귀 후 로그인 화면이
+ * `hasGoogleRedirect()`를 보고 다시 호출하면 프래그먼트의 id token을 돌려준다 —
+ * 그 뒤는 네이티브와 같은 `/auth/google`.
+ *
+ * 필요한 설정(Google Cloud Console, 프로젝트 rougether, 웹 클라이언트
+ * `GOOGLE_WEB_CLIENT_ID`): 승인된 리디렉션 URI에 `<origin>/login`
+ * (운영 https://app.rougether.com/login, 로컬 http://localhost:8081/login).
  */
+import {
+  buildGoogleAuthorizeUrl,
+  parseGoogleRedirect,
+  stripGoogleFragment,
+} from './google-web-oauth';
 import { GOOGLE_WEB_CLIENT_ID } from './oauth-client-ids';
 
-type CredentialResponse = { credential?: string };
-type PromptMoment = {
-  isSkippedMoment?: () => boolean;
-  isDismissedMoment?: () => boolean;
-  getDismissedReason?: () => string;
-};
-type GoogleId = {
-  initialize(config: Record<string, unknown>): void;
-  renderButton(parent: HTMLElement, options: Record<string, unknown>): void;
-  prompt(listener?: (moment: PromptMoment) => void): void;
-  disableAutoSelect(): void;
-};
-declare global {
-  interface Window {
-    google?: { accounts?: { id?: GoogleId } };
+const STATE_KEY = 'rougether.google-web.state';
+const NONCE_KEY = 'rougether.google-web.nonce';
+
+function redirectUri(): string {
+  return `${window.location.origin}/login`;
+}
+
+function read(key: string): string | null {
+  try {
+    return window.sessionStorage.getItem(key);
+  } catch {
+    return null;
   }
 }
 
-const GSI_SRC = 'https://accounts.google.com/gsi/client';
-/** One Tap 대체 경로가 아무 응답 없이 머무를 수 있는 최대 시간 — 로그인 버튼이 잠기지 않게. */
-export const PROMPT_TIMEOUT_MS = 60_000;
-
-export type GoogleButtonOptions = {
-  /** px, GIS 허용 범위 200~400. */
-  width: number;
-  theme: 'outline' | 'filled_black';
-  /** BCP 47 — 버튼 문구 언어("Google로 계속하기"/"Continue with Google"). */
-  locale: string;
-};
-
-let ready: Promise<GoogleId> | null = null;
-/** 공식 버튼으로 받아 두고 아직 로그인 흐름이 가져가지 않은 credential. */
-let held: string | null = null;
-let promptResolve: ((token: string | null) => void) | null = null;
-const listeners = new Set<() => void>();
-
-function loadScript(): Promise<GoogleId> {
-  return new Promise((resolve, reject) => {
-    const existing = window.google?.accounts?.id;
-    if (existing) return resolve(existing);
-    const script = document.createElement('script');
-    script.src = GSI_SRC;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      const id = window.google?.accounts?.id;
-      if (id) resolve(id);
-      else reject(new Error('google identity services unavailable after load'));
-    };
-    script.onerror = () => reject(new Error('google identity services script failed to load'));
-    document.head.appendChild(script);
-  });
+function randomHex(): string {
+  const bytes = new Uint8Array(16);
+  window.crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-function onCredential(res: CredentialResponse) {
-  const token = res.credential ?? null;
-  // One Tap 대체 경로가 기다리는 중이면 그쪽이 가져간다.
-  // (정리는 finish가 한다 — 여기서 먼저 비우면 finish가 자기 차례가 아니라고 보고 버린다.)
-  if (promptResolve) {
-    promptResolve(token);
-    return;
-  }
-  if (!token) return;
-  held = token;
-  listeners.forEach((listener) => listener());
+function expected() {
+  return { state: read(STATE_KEY), nonce: read(NONCE_KEY) };
 }
 
-function ensureReady(): Promise<GoogleId> {
-  ready ??= loadScript().then((id) => {
-    id.initialize({
-      client_id: GOOGLE_WEB_CLIENT_ID,
-      ux_mode: 'popup',
-      // 자동 선택 없이 매번 계정 선택 — 최근 로그인 배지가 "누구로" 안내한다.
-      auto_select: false,
-      itp_support: true,
-      callback: onCredential,
-    });
-    return id;
-  });
-  return ready;
-}
-
-// 로그인 화면이 버튼을 그리기 전에 스크립트를 미리 받아 둔다.
-if (typeof document !== 'undefined') {
-  void ensureReady().catch(() => {
-    // 실패는 버튼을 그릴 때·로그인 시도에서 다시 드러난다.
-    ready = null;
-  });
-}
-
-/** 공식 구글 버튼을 `parent` 안에 그린다. 스크립트 로드 실패는 throw. */
-export async function mountGoogleButton(
-  parent: HTMLElement,
-  { width, theme, locale }: GoogleButtonOptions,
-): Promise<void> {
-  const id = await ensureReady();
-  parent.replaceChildren();
-  id.renderButton(parent, {
-    type: 'standard',
-    size: 'large',
-    theme,
-    shape: 'rectangular',
-    text: 'continue_with',
-    logo_alignment: 'left',
-    width: Math.round(Math.max(200, Math.min(400, width))),
-    locale,
-  });
-}
-
-/** 공식 버튼으로 credential을 받았을 때 — 화면이 로그인 흐름을 시작한다. 구독 해제 함수를 돌려준다. */
-export function onGoogleCredential(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
+/** 구글에서 리다이렉트로 돌아온 진입인가 — 로그인 화면이 나머지 절반을 이어가게 한다. */
+export function hasGoogleRedirect(): boolean {
+  return parseGoogleRedirect(window.location.hash, expected()) != null;
 }
 
 /**
- * id token을 반환한다. 공식 버튼으로 받아 둔 credential이 있으면 그것(1회용)을,
- * 없으면(예: 계정 충돌 안내의 [Google로 로그인]) One Tap을 띄워 기다린다.
- * - 받은 것이 없거나 사용자가 닫으면 null (에러 아님 — 조용히 로그인 화면 유지).
- * - 스크립트 로드 실패는 throw — 호출부가 실패 메시지를 띄운다.
+ * 구글 로그인 — 복귀 진입이면 id token을 반환하고, 아니면 accounts.google.com으로
+ * 떠난다(반환하지 않는 Promise).
+ * - 사용자가 동의 화면에서 취소하면 null (에러 아님 — 조용히 로그인 화면 유지).
+ * - state·nonce 불일치, 그 밖의 인가 오류는 throw — 호출부가 실패 문구를 띄운다.
  */
 export async function getGoogleIdToken(): Promise<string | null> {
-  if (held) {
-    const token = held;
-    held = null;
-    return token;
+  const back = parseGoogleRedirect(window.location.hash, expected());
+  if (back) {
+    // 복귀 파라미터는 1회용 — 새로고침으로 같은 토큰을 다시 쓰지 않게, 토큰이
+    // 주소창·히스토리에 남지 않게 즉시 걷어낸다.
+    window.sessionStorage.removeItem(STATE_KEY);
+    window.sessionStorage.removeItem(NONCE_KEY);
+    window.history.replaceState(null, '', stripGoogleFragment(window.location.href));
+    if (back.kind === 'cancelled') return null;
+    if (back.kind === 'state_mismatch') throw new Error('google redirect state mismatch');
+    if (back.kind === 'nonce_mismatch') throw new Error('google redirect nonce mismatch');
+    if (back.kind === 'error') throw new Error(`google authorize error: ${back.error}`);
+    return back.idToken;
   }
-  const id = await ensureReady();
-  return new Promise<string | null>((resolve) => {
-    const finish = (token: string | null) => {
-      if (promptResolve !== finish) return;
-      promptResolve = null;
-      window.clearTimeout(timer);
-      resolve(token);
-    };
-    const timer = window.setTimeout(() => finish(null), PROMPT_TIMEOUT_MS);
-    promptResolve = finish;
-    id.prompt((moment) => {
-      // 'credential_returned'로 닫히는 건 성공 — callback이 토큰을 넘긴다.
-      const dismissed =
-        moment.isDismissedMoment?.() && moment.getDismissedReason?.() !== 'credential_returned';
-      if (moment.isSkippedMoment?.() || dismissed) finish(null);
-    });
+  const state = randomHex();
+  const nonce = randomHex();
+  window.sessionStorage.setItem(STATE_KEY, state);
+  window.sessionStorage.setItem(NONCE_KEY, nonce);
+  window.location.assign(
+    buildGoogleAuthorizeUrl({
+      clientId: GOOGLE_WEB_CLIENT_ID,
+      redirectUri: redirectUri(),
+      state,
+      nonce,
+    }),
+  );
+  return new Promise<string | null>(() => {
+    // 페이지가 accounts.google.com으로 떠나므로 여기서 끝나지 않는다.
   });
 }
 
-/** 로그아웃 시 구글 자동 선택만 끈다(웹은 세션이 브라우저 것) — 실패해도 앱 로그아웃은 막지 않는다. */
+/** 웹은 구글 세션이 브라우저 것이라 앱 로그아웃에서 건드리지 않는다. */
 export async function signOutGoogle(): Promise<void> {
-  try {
-    const id = await ensureReady();
-    id.disableAutoSelect();
-  } catch {
-    // best-effort
-  }
+  // no-op
 }

@@ -14,7 +14,6 @@ import {
 
 // 1024px 원본(icon.png, 885KB)은 네이티브 지문 입력이라 그대로 두고, 화면용 336px 사본을 쓴다.
 import appIcon from '@/assets/images/login-app-icon.webp';
-import { GoogleWebButton } from '@/components/screens/login/google-web-button';
 import { LoginConflictDialog } from '@/components/screens/login/login-conflict-dialog';
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
@@ -195,18 +194,6 @@ export function LoginScreen({
     }
   };
 
-  const googleCard = (
-    <SocialButton
-      bg={OAuthBrand.google.bg}
-      textColor={OAuthBrand.google.fg}
-      label="Google"
-      logo={<GoogleG size={18} />}
-      bordered
-      onPress={onGoogleLogin ? submitGoogle : notReady}
-      recent={lastLoginProvider === 'google'}
-    />
-  );
-
   return (
     <View style={[styles.screen, useScreenStyle(['top', 'bottom'])]}>
       <KeyboardAvoidingView
@@ -343,18 +330,15 @@ export function LoginScreen({
                 recent={lastLoginProvider === 'apple'}
               />
             ) : null}
-            {/* 웹은 구글 공식 버튼을 그대로 그린다 (#1532) — GIS가 버튼을 iframe에 그려
-                우리 버튼에서 대신 눌러 줄 수 없다. 받은 credential로 같은 흐름을 시작하고,
-                공식 버튼을 못 그리면(스크립트 차단) 우리 버튼으로 돌아간다. */}
-            {Platform.OS === 'web' ? (
-              <GoogleWebButton
-                recent={lastLoginProvider === 'google'}
-                onCredential={onGoogleLogin ? submitGoogle : notReady}
-                fallback={googleCard}
-              />
-            ) : (
-              googleCard
-            )}
+            <SocialButton
+              bg={OAuthBrand.google.bg}
+              textColor={OAuthBrand.google.fg}
+              label="Google"
+              logo={<GoogleG size={18} />}
+              bordered
+              onPress={onGoogleLogin ? submitGoogle : notReady}
+              recent={lastLoginProvider === 'google'}
+            />
           </View>
 
           {/* 이메일 가입 잠정 제외 — 소셜 로그인만 제공. 이메일 가입을
