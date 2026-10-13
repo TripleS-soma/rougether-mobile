@@ -71,8 +71,14 @@ export function NicknameStep({
             {tr('member.onboarding.nicknameBody', { name: characterName })}
           </Text>
         </View>
-        {/* accessible={false} — 배경을 스크린리더 대상으로 만들지 않는다. */}
-        <Pressable style={styles.nicknameBody} onPress={Keyboard.dismiss} accessible={false}>
+        {/* accessible={false} — 배경을 스크린리더 대상으로 만들지 않는다.
+            웹은 배경 탭 닫기를 걸지 않는다(#1536): 입력칸 클릭이 이 Pressable까지 올라와
+            Keyboard.dismiss(웹에선 blur)가 방금 잡은 포커스를 빼앗아, 한 번 포커스가 빠진 뒤로는
+            다시 입력할 수 없었다. PC엔 화면 키보드가 없고 모바일 웹은 브라우저가 바깥 탭에 blur한다. */}
+        <Pressable
+          style={styles.nicknameBody}
+          onPress={Platform.OS === 'web' ? undefined : Keyboard.dismiss}
+          accessible={false}>
           <CharacterAvatar characterId={characterId} frames={characterFrames} size={120} />
           <TextInput
             value={nickname}
