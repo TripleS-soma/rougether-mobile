@@ -5,10 +5,11 @@ import { i18n } from '@/i18n';
  * 물리 계약 번호 — 서버 `MinigameCatalog.CURRENT_RULES_VERSION`과 같아야 한다.
  * v3 (#1322): 러너 속도가 40초 이후에도 10초마다 +1, 장애물 최대 높이 84→96.
  * 계단·합치기는 v2와 동일(엔진이 `rulesVersion === 1 ? … : …`로 분기).
+ * 탑 쌓기(#1529)는 v3에서 처음 생긴 게임이라 v3 규칙만 있다.
  */
 export const CURRENT_MINIGAME_RULES_VERSION = 3;
 
-export type MinigameCode = 'room-runner' | 'cat-stairs' | 'cat-merge';
+export type MinigameCode = 'room-runner' | 'cat-stairs' | 'cat-merge' | 'cat-tower';
 export type MinigameDefinition = Minigame & {
   gameCode: MinigameCode;
   maxTicks: number;
@@ -66,6 +67,22 @@ export const MINIGAME_DEFINITIONS: Record<MinigameCode, MinigameDefinition> = {
       return i18n.t('roomShop.minigame.merge.instructions');
     },
     pose: 3,
+  },
+  'cat-tower': {
+    gameCode: 'cat-tower',
+    get name() {
+      return i18n.t('roomShop.minigame.tower.name');
+    },
+    get description() {
+      return i18n.t('roomShop.minigame.tower.description');
+    },
+    rulesVersion: CURRENT_MINIGAME_RULES_VERSION,
+    maxTicks: 18000,
+    get instructions() {
+      return i18n.t('roomShop.minigame.tower.instructions');
+    },
+    // 캐릭터 포즈 프레임은 0~3 네 장 — 남은 0번.
+    pose: 0,
   },
 };
 

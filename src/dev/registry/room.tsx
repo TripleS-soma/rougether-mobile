@@ -80,7 +80,7 @@ export const roomEntries: GalleryEntry[] = [
   {
     name: 'MinigamesPreview',
     description:
-      '개발 미리보기 전용 3종 카탈로그 → 러너·계단·합치기 연습 → 빈 랭킹. API 기록 없음 (#1302).',
+      '개발 미리보기 전용 4종 카탈로그 → 러너·계단·합치기·탑 쌓기 연습 → 빈 랭킹. API 기록 없음 (#1302).',
     render: () => <MinigamePreview />,
   },
   {
@@ -92,6 +92,11 @@ export const roomEntries: GalleryEntry[] = [
     name: 'CatMergePreview',
     description: '고양이 합치기 연습 미리보기. 4×4 타일 퍼즐, 실제 랭킹 미기록.',
     render: () => <MinigamePreview initialGameCode="cat-merge" />,
+  },
+  {
+    name: 'CatTowerPreview',
+    description: '고양이 탑 쌓기 연습 미리보기. 탭으로 상자 떨어뜨리기, 실제 랭킹 미기록 (#1529).',
+    render: () => <MinigamePreview initialGameCode="cat-tower" />,
   },
   {
     name: 'MinigamesScreen',

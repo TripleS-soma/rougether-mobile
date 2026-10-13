@@ -305,10 +305,16 @@
         "description": "Merge cats with the same number to make bigger ones.",
         "instructions": "Swipe to merge matching numbers"
       },
+      "tower": {
+        "name": "Cat Tower",
+        "description": "Line up the swinging boxes and stack them high.",
+        "instructions": "Tap to drop the box"
+      },
       "frame": {
         "runner": "Runner game",
         "stairs": "Cat stairs climbing",
-        "merge": "Cat merge"
+        "merge": "Cat merge",
+        "tower": "Cat tower stacking"
       },
       "title": "Minigames",
       "practice": "Practice",

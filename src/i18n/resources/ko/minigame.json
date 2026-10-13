@@ -61,6 +61,20 @@
       "right": "오른쪽",
       "timeout": "시간 초과",
       "wrong": "잘못된 방향"
+    },
+    "tower": {
+      "mainA11y": "고양이 탑 쌓기",
+      "canvasA11y": "화면을 탭하거나 스페이스 키를 눌러 흔들리는 상자를 떨어뜨려 쌓는 고양이 탑 쌓기",
+      "canvasFallback": "고양이 탑 쌓기 게임",
+      "startA11y": "탑 쌓기 시작",
+      "title": "고양이 탑 쌓기",
+      "titlePractice": "고양이 탑 쌓기 · 연습",
+      "layers": "{{layers}}층",
+      "hint": "탭 · 스페이스",
+      "perfect": "딱 맞아요!",
+      "combo": "{{n}}연속",
+      "miss": "상자를 놓쳤어요",
+      "timeUp": "시간 종료"
     }
   }
 }

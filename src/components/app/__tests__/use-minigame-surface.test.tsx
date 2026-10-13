@@ -37,7 +37,7 @@ jest.mock('@/components/app/minigame-player', () => {
           accessibilityLabel="테스트 게임 완료"
           onPress={() =>
             onFinish(
-              gameCode === 'room-runner'
+              gameCode === 'room-runner' || gameCode === 'cat-tower'
                 ? { ticks: 120, jumpTicks: [30] }
                 : { ticks: 120, actions: [{ tick: 30, direction: 'LEFT' }] },
             )
@@ -107,9 +107,9 @@ it('navigates catalog to runner and starts an authenticated run only on an expli
   await waitFor(() => expect(ui.getByLabelText('루틴 러너 시작')).toBeTruthy());
   expect(start).not.toHaveBeenCalled();
   // 목록 카드의 내 최고 기록 (#1425) — 게임별 랭킹을 한 번씩 읽는다(랭킹 화면과 같은 캐시).
-  await waitFor(() => expect(ranking).toHaveBeenCalledTimes(3));
+  await waitFor(() => expect(ranking).toHaveBeenCalledTimes(4));
   expect(new Set(ranking.mock.calls.map(([code]) => code))).toEqual(
-    new Set(['room-runner', 'cat-stairs', 'cat-merge']),
+    new Set(['room-runner', 'cat-stairs', 'cat-merge', 'cat-tower']),
   );
   await fireEvent.press(ui.getByLabelText('루틴 러너 시작'));
   expect(ui.getByText('탭해서 점프')).toBeTruthy();
@@ -175,7 +175,7 @@ it('loads real leaderboard data on navigation and returns to the catalog', async
   expect(ui.getByText('미니게임')).toBeTruthy();
 });
 
-it.each(['cat-stairs', 'cat-merge'] as const)(
+it.each(['cat-stairs', 'cat-merge', 'cat-tower'] as const)(
   'starts %s using its own instructions, renderer, and server session',
   async (gameCode) => {
     const definition = MINIGAME_DEFINITIONS[gameCode];
@@ -189,10 +189,14 @@ it.each(['cat-stairs', 'cat-merge'] as const)(
     expect(start).toHaveBeenCalledWith(gameCode, CURRENT_MINIGAME_RULES_VERSION);
     await fireEvent.press(ui.getByLabelText('테스트 게임 완료'));
     await waitFor(() =>
-      expect(finish).toHaveBeenCalledWith(gameCode, `${gameCode}-run-1`, {
-        ticks: 120,
-        actions: [{ tick: 30, direction: 'LEFT' }],
-      }),
+      expect(finish).toHaveBeenCalledWith(
+        gameCode,
+        `${gameCode}-run-1`,
+        // 탑 쌓기는 떨어뜨린 틱을 러너의 jumpTicks 필드로 보낸다.
+        gameCode === 'cat-tower'
+          ? { ticks: 120, jumpTicks: [30] }
+          : { ticks: 120, actions: [{ tick: 30, direction: 'LEFT' }] },
+      ),
     );
     await waitFor(() => expect(ui.getByText('최고 기록')).toBeTruthy());
     expect(ui.queryByTestId('runner-active')).toBeNull();

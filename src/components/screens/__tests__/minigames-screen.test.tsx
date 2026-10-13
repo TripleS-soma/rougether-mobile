@@ -41,8 +41,8 @@ it('dispatches each of the three supplied games through distinct start and ranki
       onPractice={jest.fn()}
     />,
   );
-  expect(ui.getAllByRole('button', { name: / 시작$/ })).toHaveLength(3);
-  expect(ui.getAllByRole('button', { name: / 랭킹$/ })).toHaveLength(3);
+  expect(ui.getAllByRole('button', { name: / 시작$/ })).toHaveLength(PLAYABLE_MINIGAMES.length);
+  expect(ui.getAllByRole('button', { name: / 랭킹$/ })).toHaveLength(PLAYABLE_MINIGAMES.length);
   expect(ui.queryByText('최고 기록과 닉네임이 전체 랭킹에 표시돼요.')).toBeNull();
   expect(ui.queryByText('연습 · 기록 안 함')).toBeNull();
   for (const game of PLAYABLE_MINIGAMES) {
@@ -67,12 +67,14 @@ it('offers installed games missing from a partial server catalog only in the pra
   expect(ui.getByRole('header', { name: '연습 · 기록 안 함' })).toBeTruthy();
   await fireEvent.press(ui.getByLabelText('고양이 계단 연습하기 · 랭킹 미기록'));
   await fireEvent.press(ui.getByLabelText('고양이 합치기 연습하기 · 랭킹 미기록'));
-  expect(practice.mock.calls).toEqual([['cat-stairs'], ['cat-merge']]);
+  await fireEvent.press(ui.getByLabelText('고양이 탑 쌓기 연습하기 · 랭킹 미기록'));
+  expect(practice.mock.calls).toEqual([['cat-stairs'], ['cat-merge'], ['cat-tower']]);
   expect(ui.queryByLabelText('고양이 계단 시작')).toBeNull();
   expect(ui.queryByLabelText('고양이 합치기 시작')).toBeNull();
+  expect(ui.queryByLabelText('고양이 탑 쌓기 시작')).toBeNull();
 });
 
-it('hides stale ranked cards after an API error and offers all three games as explicit practice', async () => {
+it('hides stale ranked cards after an API error and offers every installed game as explicit practice', async () => {
   const retry = jest.fn();
   const practice = jest.fn();
   const ui = await render(
