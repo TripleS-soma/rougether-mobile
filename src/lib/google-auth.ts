@@ -36,6 +36,11 @@ export async function getGoogleIdToken(): Promise<string | null> {
   }
 }
 
+/** 리다이렉트 복귀 진입인가 — 웹(`google-auth.web.ts`)만 의미가 있고 네이티브는 늘 false. */
+export function hasGoogleRedirect(): boolean {
+  return false;
+}
+
 /** 로그아웃 시 구글 세션도 정리(선택) — 실패해도 앱 로그아웃은 막지 않는다. */
 export async function signOutGoogle(): Promise<void> {
   try {

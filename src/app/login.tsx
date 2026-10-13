@@ -7,6 +7,7 @@ import { LoginScreen } from '@/components/screens/login-screen';
 import { useAuth } from '@/hooks/use-auth';
 import { track } from '@/lib/analytics';
 import { loadIntroSeen, markIntroSeen } from '@/lib/intro-store';
+import { hasGoogleRedirect } from '@/lib/google-auth';
 import { hasKakaoRedirect } from '@/lib/kakao-auth';
 import { loadLastLoginProvider, type SocialProvider } from '@/lib/last-login';
 import type { SocialLoginResult } from '@/lib/login-conflict';
@@ -29,7 +30,7 @@ function tracked(provider: SocialProvider, login: SocialLogin): SocialLogin {
 }
 
 /** 로그인 화면에 어떻게 왔나 — `login_view`의 via. */
-type LoginVia = 'intro' | 'have_account' | 'direct' | 'kakao_redirect';
+type LoginVia = 'intro' | 'have_account' | 'direct' | 'kakao_redirect' | 'google_redirect';
 
 export default function Login() {
   const { login, loginWithGoogle, loginWithKakao, loginWithApple } = useAuth();
@@ -43,34 +44,38 @@ export default function Login() {
   // 다른 이펙트가 다시 물으면 false가 나온다).
   const [introSeen, setIntroSeen] = useState<boolean | null>(null);
   const via = useRef<LoginVia>('direct');
-  // 웹 카카오 로그인은 kauth 리다이렉트로 돌아온다 — 복귀 진입이면 사용자가
-  // 다시 누르지 않아도 나머지 절반(코드 교환 → /auth/kakao)을 이어서 끝낸다.
-  // 네이티브는 hasKakaoRedirect가 항상 false라 이 효과가 아무 일도 안 한다.
+  // 웹 카카오·구글 로그인은 페이지 리다이렉트로 돌아온다(구글은 #1532부터) — 복귀
+  // 진입이면 사용자가 다시 누르지 않아도 나머지 절반(카카오: 코드 교환, 구글: 프래그먼트의
+  // id token → 서버)을 이어서 끝낸다. 네이티브는 has*Redirect가 항상 false라 아무 일도 안 한다.
   const [resumeError, setResumeError] = useState<string | null>(null);
   // 복귀 교환이 도는 동안 화면을 잠근다 — 화면의 submitting은 화면 안 탭만 알아서,
-  // 이 값이 없으면 교환 중에 누른 카카오 버튼이 두 번째 시도를 시작한다.
+  // 이 값이 없으면 교환 중에 누른 소셜 버튼이 두 번째 시도를 시작한다.
   const [resuming, setResuming] = useState(false);
   useEffect(() => {
-    if (!hasKakaoRedirect()) return;
-    // 이미 로그인 버튼을 누르고 돌아온 사람이다 — 소개 차례가 아니다. 교환을 시작하기
-    // 전에 기록한다: getKakaoAccessToken이 URL·세션스토리지의 복귀 파라미터를 지운다.
-    via.current = 'kakao_redirect';
+    const provider = hasKakaoRedirect() ? 'kakao' : hasGoogleRedirect() ? 'google' : null;
+    if (!provider) return;
+    // 이미 로그인 버튼을 누르고 돌아온 사람이다 — 소개 차례가 아니다. 이어가기 전에
+    // 기록한다: 토큰을 꺼내는 쪽이 URL·세션스토리지의 복귀 파라미터를 지운다.
+    via.current = provider === 'kakao' ? 'kakao_redirect' : 'google_redirect';
     setIntroSeen(true);
     setResuming(true);
-    void loginWithKakao().then((result) => {
+    const resume = provider === 'kakao' ? loginWithKakao : loginWithGoogle;
+    void resume().then((result) => {
       setResuming(false);
       if (result === 'ok') router.replace('/');
-      else if (result === 'cancelled') track('login_cancel', { provider: 'kakao' });
+      else if (result === 'cancelled') track('login_cancel', { provider });
       else {
-        const base = i18n.t('member.login.kakaoFailed');
+        const base = i18n.t(
+          provider === 'kakao' ? 'member.login.kakaoFailed' : 'member.login.googleFailed',
+        );
         const f = getLastLoginFailure();
         setResumeError(f ? loginErrorMessage(base, f) : base);
       }
     });
-  }, [loginWithKakao]);
+  }, [loginWithKakao, loginWithGoogle]);
   useEffect(() => {
     // 복귀 판정은 위 이펙트가 이미 했다(같은 커밋에서 선언 순서대로 돈다).
-    if (via.current === 'kakao_redirect') return;
+    if (via.current === 'kakao_redirect' || via.current === 'google_redirect') return;
     let active = true;
     void loadIntroSeen().then((seen) => {
       // 이미 정해졌으면(복귀) 뒤늦은 저장소 값으로 덮지 않는다.
