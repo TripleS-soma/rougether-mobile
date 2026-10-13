@@ -562,3 +562,19 @@ describe('봇에는 접속 표시를 붙이지 않는다 (#1013)', () => {
     expect(seatOf(false).online).toBe(true);
   });
 });
+
+// 공동 미션 기간은 KST 달력 날짜다(spec api.md 타임존) — 생성은 `<날짜>T23:59:59+09:00`으로 보낸다.
+// 기기 시간대로 바꾸면 KST보다 동쪽(UTC+10 이상: 호주·뉴질랜드)에서 하루 늦게 보였다.
+describe('toHouseMission — 마감일은 KST 날짜', () => {
+  it.each([
+    ['2026-10-20T23:59:59+09:00', '2026-10-20'],
+    ['2026-10-20T00:00:00+09:00', '2026-10-20'],
+    ['2026-10-20T14:59:59Z', '2026-10-20'],
+  ])('endsAt %s → endsOn %s (기기 시간대와 무관)', (endsAt, endsOn) => {
+    expect(toHouseMission({ missionId: 1, endsAt }).endsOn).toBe(endsOn);
+  });
+
+  it('깨진 시각이면 마감일이 없다', () => {
+    expect(toHouseMission({ missionId: 1, endsAt: 'not-a-date' }).endsOn).toBeUndefined();
+  });
+});
