@@ -2,6 +2,7 @@ import type { MinigameReplay } from '@/api/minigames';
 import { RunnerGame } from '@/components/minigame/runner-game';
 import { StairsGame } from '@/components/minigame/stairs-game';
 import { MergeGame } from '@/components/minigame/merge-game';
+import { TowerGame } from '@/components/minigame/tower-game';
 import type { MinigameCode } from '@/constants/minigames';
 
 export type MinigamePlayerProps = {
@@ -21,5 +22,7 @@ export function MinigamePlayer({ gameCode, ...props }: MinigamePlayerProps) {
       return <StairsGame {...props} />;
     case 'cat-merge':
       return <MergeGame {...props} />;
+    case 'cat-tower':
+      return <TowerGame {...props} />;
   }
 }

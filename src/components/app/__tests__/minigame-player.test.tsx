@@ -22,8 +22,11 @@ jest.mock('@/features/minigame/stairs-html', () => ({
 jest.mock('@/features/minigame/merge-html', () => ({
   createMergeHtml: (config: unknown) => JSON.stringify(config),
 }));
+jest.mock('@/features/minigame/tower-html', () => ({
+  createTowerHtml: (config: unknown) => JSON.stringify(config),
+}));
 
-const games: { code: MinigameCode; label: string; result: object }[] = [
+const games: { code: MinigameCode; label: string; result: object; expected?: object }[] = [
   { code: 'room-runner', label: '러너 게임', result: { ticks: 30, jumpTicks: [2] } },
   {
     code: 'cat-stairs',
@@ -35,9 +38,16 @@ const games: { code: MinigameCode; label: string; result: object }[] = [
     label: '고양이 합치기',
     result: { ticks: 30, actions: [{ tick: 2, direction: 'DOWN' }] },
   },
+  {
+    code: 'cat-tower',
+    label: '고양이 탑 쌓기',
+    // 문서는 dropTicks를 보내고, 서버에는 러너와 같은 jumpTicks로 넘긴다.
+    result: { ticks: 30, dropTicks: [2, 9] },
+    expected: { ticks: 30, jumpTicks: [2, 9] },
+  },
 ];
 
-describe.each(games)('MinigamePlayer $code', ({ code, label, result }) => {
+describe.each(games)('MinigamePlayer $code', ({ code, label, result, expected = result }) => {
   it('routes to the real renderer and forwards its validated replay once', async () => {
     const onFinish = jest.fn();
     const { getByLabelText } = await render(
@@ -56,7 +66,7 @@ describe.each(games)('MinigamePlayer $code', ({ code, label, result }) => {
       game.props.onMessage(event);
     });
     expect(onFinish).toHaveBeenCalledTimes(1);
-    expect(onFinish).toHaveBeenCalledWith(result);
+    expect(onFinish).toHaveBeenCalledWith(expected);
   });
 
   it('ignores foreign messages and recovers a malformed current finish with the same seed', async () => {
@@ -99,7 +109,7 @@ describe.each(games)('MinigamePlayer $code', ({ code, label, result }) => {
         },
       });
     });
-    expect(onFinish).toHaveBeenCalledWith(result);
+    expect(onFinish).toHaveBeenCalledWith(expected);
   });
 
   it.each(['onError', 'onContentProcessDidTerminate', 'onRenderProcessGone'])(

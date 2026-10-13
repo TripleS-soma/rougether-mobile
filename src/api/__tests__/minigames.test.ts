@@ -27,7 +27,7 @@ function mockResponse(data: unknown) {
   return fetchMock;
 }
 
-const gameCodes = ['room-runner', 'cat-stairs', 'cat-merge'];
+const gameCodes = ['room-runner', 'cat-stairs', 'cat-merge', 'cat-tower'];
 const result: MinigameResult = {
   runId: 'run-123',
   score: 240,
