@@ -107,6 +107,25 @@ describe('OnboardingScreen', () => {
     dismiss.mockRestore();
   });
 
+  // 웹(PC)에서 닉네임 입력칸을 다시 클릭하면 포커스가 안 잡히던 문제 — 입력칸 클릭이 배경
+  // Pressable까지 올라가 Keyboard.dismiss가 방금 잡은 포커스를 빼앗았다(웹에선 dismiss가 blur).
+  // fireEvent.press는 가장 가까운 onPress로 올라가므로 입력칸을 누르는 것이 그 버블링 그대로다.
+  it('웹에서는 입력칸을 눌러도 키보드 닫기(=blur)가 불리지 않는다', async () => {
+    const os = Platform.OS;
+    Platform.OS = 'web';
+    const dismiss = jest.spyOn(Keyboard, 'dismiss');
+    try {
+      const { getByText, getByLabelText } = await render(<OnboardingScreen />);
+      await fireEvent.press(getByText('운동'));
+      await fireEvent.press(getByText('시작하기'));
+      await fireEvent.press(getByLabelText('닉네임 입력'));
+      expect(dismiss).not.toHaveBeenCalled();
+    } finally {
+      dismiss.mockRestore();
+      Platform.OS = os;
+    }
+  });
+
   // 안드로이드는 엣지투엣지라 KeyboardAvoidingView가 무력 — 키보드 높이만큼 아래 여백을 직접 준다 (#1326).
   it('안드로이드 닉네임 단계는 키보드 높이만큼 아래 여백을 두고, 닫히면 0으로 돌아온다 (#1326)', async () => {
     const os = Platform.OS;
