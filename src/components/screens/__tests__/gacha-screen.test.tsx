@@ -78,7 +78,7 @@ describe('GachaScreen', () => {
     expect(getByText('5,600')).toBeTruthy();
   });
 
-  it('shows three category tabs and starts on furniture regardless of API order', async () => {
+  it('shows four category tabs and starts on furniture regardless of API order', async () => {
     const legacy: GachaMachine = {
       ...machine,
       id: 88,
@@ -89,7 +89,9 @@ describe('GachaScreen', () => {
     const { getAllByRole, getByLabelText, queryByLabelText } = await render(
       <GachaScreen gachas={[legacy, ...machines]} coinBalance={5600} />,
     );
-    expect(getAllByRole('tab')).toHaveLength(3);
+    expect(getAllByRole('tab')).toHaveLength(4);
+    // 캐릭터 머신이 목록에 없으면 캐릭터 탭은 비활성으로만 보인다.
+    expect(getByLabelText('캐릭터 뽑기')).toBeDisabled();
     expect(getByLabelText('벽지 뽑기')).not.toBeSelected();
     expect(getByLabelText('바닥 뽑기')).not.toBeSelected();
     expect(getByLabelText('가구 뽑기')).toBeSelected();
@@ -111,6 +113,64 @@ describe('GachaScreen', () => {
     expect(onDraw).toHaveBeenCalledTimes(1);
     expect(onDraw).toHaveBeenCalledWith(id, 1);
     expect(getByText(reward.name!)).toBeTruthy();
+  });
+
+  /**
+   * 캐릭터 뽑기 (2026-10-14) — 카테고리 없는 전용 머신(`character_gacha`)을 넷째 탭으로 보여 주고,
+   * 방 레벨 10 전에는 골라서 구경만 할 수 있다(뽑기 버튼 대신 잠금 안내).
+   */
+  describe('캐릭터 뽑기 레벨 10 해금', () => {
+    const characterMachine: GachaMachine = {
+      ...machine,
+      id: 104,
+      code: 'character_gacha',
+      category: 'CHARACTER',
+      name: '캐릭터 뽑기',
+      costAmount: 500,
+      kind: 'character',
+    };
+    const all = [...machines, characterMachine];
+
+    it('잠겨 있으면 뽑기 버튼 대신 해금 레벨을 안내하고 뽑지 않는다', async () => {
+      const onDraw = jest.fn();
+      const { getByLabelText, getAllByText, queryByText } = await render(
+        <GachaScreen gachas={all} coinBalance={5600} onDraw={onDraw} characterUnlocked={false} />,
+      );
+      await fireEvent.press(getByLabelText('캐릭터 뽑기'));
+      expect(getByLabelText('캐릭터 뽑기')).toBeSelected();
+      expect(getAllByText('Lv. 10에 열려요').length).toBeGreaterThan(0);
+      expect(queryByText('1회 뽑기')).toBeNull();
+      expect(onDraw).not.toHaveBeenCalled();
+    });
+
+    it('열려 있으면 캐릭터 머신의 실제 id로 뽑는다', async () => {
+      const onDraw = jest
+        .fn()
+        .mockResolvedValue([
+          { rewardType: 'CHARACTER', characterId: 2, name: '강아지', converted: false },
+        ]);
+      const { getByLabelText, getByText } = await render(
+        <GachaScreen
+          gachas={all}
+          coinBalance={5600}
+          onDraw={onDraw}
+          characterUnlocked
+          reducedMotion
+        />,
+      );
+      await fireEvent.press(getByLabelText('캐릭터 뽑기'));
+      await fireEvent.press(getByText('1회 뽑기'));
+      expect(onDraw).toHaveBeenCalledWith(104, 1);
+    });
+
+    it('다른 상자는 레벨과 상관없이 뽑을 수 있다', async () => {
+      const onDraw = jest.fn().mockResolvedValue([reward]);
+      const { getByText } = await render(
+        <GachaScreen gachas={all} coinBalance={5600} onDraw={onDraw} reducedMotion />,
+      );
+      await fireEvent.press(getByText('1회 뽑기'));
+      expect(onDraw).toHaveBeenCalledWith(103, 1);
+    });
   });
 
   it('does not draw from a legacy theme machine before the category catalog is ready', async () => {

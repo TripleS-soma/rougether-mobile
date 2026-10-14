@@ -40,7 +40,7 @@ import type {
   MemberRoomSummary,
   MemberSummary,
   MissionSummary,
-  RoomResponse,
+  RoomRenderResponse,
 } from '@/api/types';
 
 // --- house (집) ------------------------------------------------------------
@@ -258,7 +258,8 @@ export function toGuestbookEntry(g: GuestbookItem): GuestbookEntry {
  * 화면의 목업과 같은 기본 빈 방을 그린다.
  */
 function toPreviewRoom(
-  room: RoomResponse | null | undefined,
+  // 집 미리보기는 렌더 부분집합(RoomRenderResponse)을 준다 — 내 방 응답의 필수 필드가 없다.
+  room: RoomRenderResponse | null | undefined,
   cat: ShopCatalogue,
 ): MemberRoomPreview {
   if (!room) return { placements: [] };

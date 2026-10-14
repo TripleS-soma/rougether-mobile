@@ -78,6 +78,7 @@ describe('GachaLobby', () => {
       '벽지 뽑기',
       '바닥 뽑기',
       '가구 뽑기',
+      '캐릭터 뽑기',
     ]);
     expect(screen.getByRole('tab', { name: '가구 뽑기' })).toBeSelected();
 

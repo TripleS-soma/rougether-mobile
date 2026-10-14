@@ -1390,6 +1390,8 @@ export type RoomResponse = {
   growthLevel?: number;
   growthPoints?: number;
   pointsToNextLevel?: number;
+  characterUnlocked: boolean;
+  characterUnlockLevel: number;
   layoutFormat?: 'SLOT_V1' | 'FREE_V1';
   layoutRevision?: number;
   character?: RoomCharacterResponse;

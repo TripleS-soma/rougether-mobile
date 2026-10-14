@@ -28,6 +28,7 @@ import { Overlay, Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { track } from '@/lib/analytics';
+import { CHARACTER_UNLOCK_LEVEL } from '@/constants/characters';
 import { getCategoryGachas, getGachaCategory } from '@/constants/gacha';
 import { APP_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -83,6 +84,13 @@ export type GachaScreenProps = {
   onLoadRewards?: (gachaId: number) => Promise<GachaRewardResponse[] | null>;
   /** 설정 > 효과음 토글. 리빌 영상의 짧은 스팅/우시 효과도 이 값을 따른다. */
   soundEffectsEnabled?: boolean;
+  /**
+   * 캐릭터 뽑기 해금 여부 — 서버 내 방 응답 `characterUnlocked`(방 레벨 10, 2026-10-14).
+   * 기본은 잠김: 모르면 열지 않는다(서버도 403으로 막는다).
+   */
+  characterUnlocked?: boolean;
+  /** 해금 레벨 — 서버 `characterUnlockLevel`, 없으면 앱 기본값. */
+  characterUnlockLevel?: number;
 };
 
 /** 보상 시트의 등급 그룹 순서 (#620, 서버 등급 어휘) — 미지의 등급은 맨 뒤 '기타'. */
@@ -133,6 +141,8 @@ export function GachaScreen({
   onGoPlace,
   onLoadRewards,
   soundEffectsEnabled = true,
+  characterUnlocked = false,
+  characterUnlockLevel = CHARACTER_UNLOCK_LEVEL,
 }: GachaScreenProps) {
   const t = useTokens();
   const { split } = useAppFrame();
@@ -253,8 +263,9 @@ export function GachaScreen({
   const canAfford = (count: GachaDrawCount) =>
     box ? balanceFor(box.costCurrencyType) >= drawCost(count) : false;
 
+  const characterLocked = !characterUnlocked && !!box && getGachaCategory(box) === 'CHARACTER';
   const pull = async (count: GachaDrawCount) => {
-    if (!box || drawBusy.current || (starterDrawState && count !== 1)) return;
+    if (!box || drawBusy.current || (starterDrawState && count !== 1) || characterLocked) return;
     // The button stays tappable when unaffordable — the tap says why.
     if (!canAfford(count)) {
       // 뽑기 앞에서 코인이 모자라 돌아서는 지점 (#799) — 퍼널의 흔한 막힘.
@@ -376,6 +387,7 @@ export function GachaScreen({
             error={error}
             topInset={headerInset}
             bottomInset={insets.bottom}
+            characterLockLevel={characterUnlocked ? undefined : characterUnlockLevel}
           />
         </View>
       ) : (

@@ -69,6 +69,7 @@
     "navMenu": {
       "close": "닫기",
       "changeCharacter": "캐릭터 교체",
+      "changeCharacterLocked": "캐릭터 교체는 방 레벨 {{level}}에 열려요",
       "decorate": "방 꾸미기",
       "market": "가구 거래소",
       "saveImage": "방 이미지 저장",

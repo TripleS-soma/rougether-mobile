@@ -43,10 +43,6 @@
       "otter": {
         "name": "Otter",
         "description": "A playful, lovable routine buddy"
-      },
-      "moru": {
-        "name": "Moru",
-        "description": "A cozy routine buddy you meet at level 5"
       }
     },
     "intro": {

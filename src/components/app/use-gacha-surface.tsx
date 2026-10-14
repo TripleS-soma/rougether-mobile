@@ -18,6 +18,8 @@ type GachaScreenProps = ComponentProps<typeof GachaScreen>;
 export function useGachaSurface({
   screen,
   wallet,
+  characterUnlocked,
+  characterUnlockLevel,
   starterFlow,
   soundEffectsEnabled,
   goBack,
@@ -27,6 +29,9 @@ export function useGachaSurface({
 }: {
   screen: Screen;
   wallet: Wallet;
+  /** 캐릭터 뽑기 해금 (방 레벨 10, 2026-10-14) — 내 방 응답에서. */
+  characterUnlocked: boolean;
+  characterUnlockLevel: number;
   /** 온보딩 미션이 '첫 뽑기' 단계인지 (스킵 허용 계정 제외) — 무료 스타터 기계를 띄운다. */
   starterFlow: boolean;
   soundEffectsEnabled: boolean;
@@ -86,6 +91,8 @@ export function useGachaSurface({
         coinBalance={wallet.coin}
         diamondBalance={wallet.diamond}
         soundEffectsEnabled={soundEffectsEnabled}
+        characterUnlocked={characterUnlocked}
+        characterUnlockLevel={characterUnlockLevel}
         onBack={goBack}
         // 뽑은 아이템·캐릭터의 재조회는 useGacha가 인벤토리·캐릭터 쿼리를
         // 무효화해 처리한다 (#1027) — 셸이 손으로 꿰던 재조회 두 줄이 사라졌다.

@@ -24,6 +24,8 @@ export type NavMenuPopoverProps = {
   onClose: () => void;
   /** 캐릭터 교체 항목 — 미배선이면 숨김 (#260). */
   onOpenCharacterPicker?: () => void;
+  /** 캐릭터 교체가 레벨 10 전이라 잠김 — 자물쇠 아이콘으로 보인다(누르면 안내 토스트). */
+  characterPickerLocked?: boolean;
   /** 방 꾸미기. */
   onEditRoom?: () => void;
   /** 가구 거래소 (#1502) — 꾸미기 바로 아래. 없으면 숨김(거래소 꺼짐). */
@@ -50,6 +52,7 @@ export function NavMenuPopover({
   right,
   onClose,
   onOpenCharacterPicker,
+  characterPickerLocked = false,
   onEditRoom,
   onOpenMarket,
   onSaveRoomImage,
@@ -86,7 +89,7 @@ export function NavMenuPopover({
               ...(onOpenCharacterPicker
                 ? [
                     {
-                      icon: 'profile' as const,
+                      icon: characterPickerLocked ? ('lock' as const) : ('profile' as const),
                       label: tr('app.navMenu.changeCharacter'),
                       onPress: () => onOpenCharacterPicker(),
                     },

@@ -22,7 +22,7 @@ import { useWeeklyReport } from '@/hooks/use-weekly-report';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
 import { WeeklyReportScreen } from '@/components/screens/weekly-report-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
-import { CHARACTER_SELECTION_ENABLED, type CharacterId } from '@/constants/characters';
+import { type CharacterId } from '@/constants/characters';
 import { type Routine } from '@/constants/routines';
 import type { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useAnnouncements } from '@/hooks/use-announcements';
@@ -122,6 +122,9 @@ export function useMyRoomPages({
   };
   /** 방 렌더 prop — 배치 상태·카탈로그는 꾸미기(셸 잔류)와 공유라 셸 소유. */
   room: RoomGrowthProps & {
+    /** 캐릭터 교체 해금 (방 레벨 10, 2026-10-14) — 서버 내 방 응답 `characterUnlocked`. */
+    characterUnlocked: boolean;
+    characterUnlockLevel: number;
     placements: MyRoomScreenProps['placements'];
     wallpaperId: string;
     floorId: string | null;
@@ -513,9 +516,8 @@ export function useMyRoomPages({
     [recommendations, currentDaysById],
   );
 
-  // Unlock the existing picker once the server has awarded Moru.
-  const canSelectCharacter =
-    CHARACTER_SELECTION_ENABLED || character.ownedCharacters?.some((c) => c.id === 'moru');
+  // 캐릭터 교체는 방 레벨 10에 열린다(2026-10-14) — 판정은 서버 `characterUnlocked`.
+  const canSelectCharacter = room.characterUnlocked;
 
   /** 탭 페이저의 나의 방 페이지 prop — `<MyRoomScreen {...tabProps} />`. */
   const tabProps = {
@@ -565,6 +567,7 @@ export function useMyRoomPages({
     unreadNotificationCount: unreadCount + announcements.unreadCount,
     ownedCharacters: canSelectCharacter ? character.ownedCharacters : undefined,
     onSelectCharacter: canSelectCharacter ? character.wearCharacter : undefined,
+    characterLockLevel: canSelectCharacter ? undefined : room.characterUnlockLevel,
     onManageCategories: openCategoryManage,
     onUpdateCategory: updateRoutineCategory,
     onOpenGacha: openGacha,
