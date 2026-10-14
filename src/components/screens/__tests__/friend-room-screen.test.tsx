@@ -4,10 +4,26 @@ import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
+import { Themes, cheerTones } from '@/constants/theme';
 import { shiftIso as isoShift, todayIso } from '@/utils/datetime';
 import { ToastProvider } from '@/components/ui/toast';
 
 describe('FriendRoomScreen', () => {
+  // 첫 버튼만 primary로 꽉 채워 '선택된 상태'처럼 보이던 것 — 세 응원은 동등한 원탭이라
+  // 문구 뜻을 따라 각자 다른 틴트를 깐다(칭찬 초록 / 다정 코랄 / 축하 금색).
+  it('응원 버튼 3개가 문구마다 다른 틴트를 쓴다', async () => {
+    const { getByLabelText } = await render(<FriendRoomScreen />);
+    const tones = cheerTones(Themes.cozy);
+    const bgOf = (label: string) => {
+      const flat = [getByLabelText(label).props.style].flat(Infinity);
+      return Object.assign({}, ...flat).backgroundColor;
+    };
+    expect(bgOf('잘하고 있어!')).toBe(tones.great.bg);
+    expect(bgOf('응원하기')).toBe(tones.support.bg);
+    expect(bgOf('오늘도 최고!')).toBe(tones.best.bg);
+    expect(new Set([tones.great.bg, tones.support.bg, tones.best.bg]).size).toBe(3);
+  });
+
   it(
     '청소 가능한 거미줄을 탭하면 onCleanCobweb이 불린다 (#@N@)'.replace('@N@', '1116'),
     async () => {

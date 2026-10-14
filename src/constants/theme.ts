@@ -150,6 +150,25 @@ export function withAlpha(hex: string, alphaHex: string): string {
 }
 
 /**
+ * 친구 방 응원 버튼 3종의 톤 — 문구 뜻을 따라 칠한다(👍 칭찬=초록 / ♥ 다정=코랄 / ✦ 축하=금색).
+ * 세 버튼이 동등한 원탭 선택지라 꽉 찬 채움 대신 같은 세기의 틴트를 깔고, 글자는 테마 `text`,
+ * 아이콘만 진한 색을 쓴다. 새 hue를 만들지 않고 기존 기본색에서 파생해 테마·다크를 그대로 따른다.
+ * 칭찬은 `primary`가 아니라 `success` — 브랜드색이 피치·금색인 테마에서 축하(금색)와 겹치지 않게.
+ * soft(13%)보다 진한 건 다크 서피스에서 세 색이 구분돼 보여야 해서다.
+ */
+export const CHEER_TINT_ALPHA = '33';
+
+export type CheerTone = { bg: string; icon: string };
+
+export function cheerTones(c: SemanticColors): Record<'great' | 'support' | 'best', CheerTone> {
+  return {
+    great: { bg: withAlpha(c.success, CHEER_TINT_ALPHA), icon: c.success },
+    support: { bg: withAlpha(c.danger, CHEER_TINT_ALPHA), icon: c.danger },
+    best: { bg: withAlpha(c.warning, CHEER_TINT_ALPHA), icon: c.warning },
+  };
+}
+
+/**
  * soft 자리 표시 — 테마 리터럴에서 soft 키의 **자리(키 순서)** 만 잡고, 값은 `withSoftTints`가
  * 기본색에서 채운다. 순서를 지키는 이유: 토큰 스와치·Storybook 색 표가 `Object.entries` 순서로
  * 그려 시각 회귀 스냅샷이 키 순서에 묶여 있다(#1521).

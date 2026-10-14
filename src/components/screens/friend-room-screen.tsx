@@ -33,7 +33,7 @@ import { RetryState } from '@/components/ui/retry-state';
 import { FriendWeekStrip } from '@/components/screens/house/friend-week-strip';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { BookOpenPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, cheerTones } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
@@ -158,6 +158,7 @@ export function FriendRoomScreen({
   onLoadMoreGuestbook,
 }: FriendRoomScreenProps) {
   const t = useTokens();
+  const tones = useMemo(() => cheerTones(t), [t]);
   const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -501,25 +502,15 @@ export function FriendRoomScreen({
                   onDone={() => setBursts((prev) => prev.filter((x) => x.id !== b.id))}
                 />
               ))}
-              {CHEERS.map((cheer, idx) => (
+              {CHEERS.map((cheer) => (
                 <ScalePressable
                   key={cheer.type}
                   onPress={() => requestCheer(cheer.type)}
                   accessibilityRole="button"
                   accessibilityLabel={tr(cheer.labelKey)}
-                  style={[
-                    styles.cheerBtn,
-                    { backgroundColor: idx === 0 ? t.primary : t.surfaceMuted },
-                  ]}>
-                  {/* On the filled first button the mark follows the text ink. */}
-                  <Pictogram
-                    name={cheer.icon}
-                    size={16}
-                    color={idx === 0 ? t.onPrimary : undefined}
-                  />
-                  <Text style={[Typography.label, { color: idx === 0 ? t.onPrimary : t.text }]}>
-                    {tr(cheer.labelKey)}
-                  </Text>
+                  style={[styles.cheerBtn, { backgroundColor: tones[cheer.type].bg }]}>
+                  <Pictogram name={cheer.icon} size={16} color={tones[cheer.type].icon} />
+                  <Text style={[Typography.label, { color: t.text }]}>{tr(cheer.labelKey)}</Text>
                 </ScalePressable>
               ))}
             </View>
