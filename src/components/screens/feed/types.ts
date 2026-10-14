@@ -68,6 +68,26 @@ export type FeedPostEdit = {
   routineCompletion?: FeedRoutineCompletion;
 };
 
+/**
+ * 자유글에 붙은 미니게임 기록 카드 (서버 feat/feed-minigame-record) — 게시 시점 스냅샷이라
+ * 이후 기록이 바뀌어도 그대로다. `rank`는 랭킹이 없으면 null(카드에서 순위 줄을 뺀다).
+ * 다른 사람 이름은 담지 않는다 — 내 점수·내 순위만.
+ */
+export type FeedMinigameRecord = {
+  gameCode: string;
+  score: number;
+  rank: number | null;
+  personalBest: boolean;
+  /** ISO-8601 UTC. */
+  achievedAt: string;
+};
+
+/**
+ * 작성 화면에 붙인 기록 카드 — 미리보기용 기록 + 요청에 실을 `runId`. 사용자가 고칠 수 없고
+ * 뺄 수만 있다.
+ */
+export type FeedMinigameRecordDraft = FeedMinigameRecord & { runId: string };
+
 export type FeedPost = {
   postId: number;
   author: FeedAuthor;
@@ -76,6 +96,8 @@ export type FeedPost = {
   content: string;
   /** 인증글의 연결 루틴 — 자유글·연결 없는 옛 인증글은 null. */
   routine: FeedPostRoutine | null;
+  /** 미니게임 기록 카드 — 없거나 null이면 기록 없는 글. 수정으로 붙이거나 바꿀 수 없다. */
+  minigameRecord?: FeedMinigameRecord | null;
   images: FeedImage[];
   likeCount: number;
   commentCount: number;

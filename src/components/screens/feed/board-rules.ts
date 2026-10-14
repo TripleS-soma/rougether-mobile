@@ -4,6 +4,8 @@
  *
  * - `FREE`: 사진 0–10장. 사진이 없으면 공백을 뺀 본문이 필수. 루틴 연결 없음.
  * - `VERIFICATION`: 사진 1–10장 필수, 본문 선택, **최근 7일 안에 완료한 루틴 하나 연결 필수**.
+ * - 미니게임 기록 카드(서버 feat/feed-minigame-record)는 **자유게시판에만** — 기록 글은 수정에서도
+ *   인증게시판으로 옮길 수 없다(서버 400 FEED_INPUT_INVALID).
  */
 import type {
   FeedBoardType,
@@ -43,8 +45,14 @@ export function feedCanBeVerification(imageCount: number): boolean {
   return imageCount > 0;
 }
 
+/** 미니게임 기록 카드가 붙은 글인가 — 이런 글은 자유게시판에 머문다. */
+export function feedHasMinigameRecord(post: Pick<FeedPost, 'minigameRecord'>): boolean {
+  return post.minigameRecord != null;
+}
+
 /** 수정 창에서 저장할 수 없는 이유 — null이면 저장할 수 있다. */
-export type FeedEditBlocker = 'needPhotoForVerification' | 'needRoutine' | 'needContent';
+export type FeedEditBlocker =
+  'needPhotoForVerification' | 'recordStaysFree' | 'needRoutine' | 'needContent';
 
 /** 수정 창의 초안 — 게시판·연결 루틴·본문. */
 export type FeedEditDraft = {
@@ -53,7 +61,7 @@ export type FeedEditDraft = {
   content: string;
 };
 
-type EditablePost = Pick<FeedPost, 'boardType' | 'routine' | 'images'>;
+type EditablePost = Pick<FeedPost, 'boardType' | 'routine' | 'images' | 'minigameRecord'>;
 
 /**
  * 수정 저장 조건 (서버 #430) — 자유 → 인증은 사진이 있는 글 + 루틴 선택이 필요하다. 인증으로
@@ -62,6 +70,7 @@ type EditablePost = Pick<FeedPost, 'boardType' | 'routine' | 'images'>;
 export function feedEditBlocker(post: EditablePost, draft: FeedEditDraft): FeedEditBlocker | null {
   const imageCount = post.images.length;
   if (draft.board === 'VERIFICATION' && post.boardType !== 'VERIFICATION') {
+    if (feedHasMinigameRecord(post)) return 'recordStaysFree';
     if (!feedCanBeVerification(imageCount)) return 'needPhotoForVerification';
     if (!draft.routine) return 'needRoutine';
   }

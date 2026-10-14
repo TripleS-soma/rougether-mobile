@@ -43,15 +43,39 @@ import {
   DEMO_FEED_COMPLETIONS,
   DEMO_FEED_DRAFT,
   DEMO_FEED_POSTS,
+  DEMO_FEED_RECORD_POST,
   DEMO_FEED_TEXT_POST,
   DEMO_FEED_TODAY,
+  DEMO_MINIGAME_RECORD_DRAFT,
 } from '@/mocks/fixtures';
+import { FeedMinigameRecordCard } from '@/components/feed/feed-minigame-record';
 import type { GalleryEntry } from '@/dev/registry/types';
+
+/** 기록 카드 작성 데모 — 본문 편집·카드 빼기를 로컬 상태로. */
+function FeedComposeRecordDemo() {
+  const [content, setContent] = useState('🐱 고양이 탑 쌓기 1,240점, 전체 3위 달성!');
+  const [record, setRecord] = useState<typeof DEMO_MINIGAME_RECORD_DRAFT | null>(
+    DEMO_MINIGAME_RECORD_DRAFT,
+  );
+  return (
+    <View style={{ height: 640, alignSelf: 'stretch' }}>
+      <FeedComposeScreen
+        board="FREE"
+        onChangeBoard={() => {}}
+        content={content}
+        onChangeContent={setContent}
+        record={record}
+        onRemoveRecord={() => setRecord(null)}
+        onSubmit={() => {}}
+      />
+    </View>
+  );
+}
 
 /** 피드 게시판 필터 데모 (서버 #428) — 전체/자유/인증을 눌러 로컬 픽스처를 거른다. */
 function FeedScreenDemo() {
   const [board, setBoard] = useState<FeedBoardFilter>('ALL');
-  const all = [DEMO_FEED_TEXT_POST, ...DEMO_FEED_POSTS];
+  const all = [DEMO_FEED_RECORD_POST, DEMO_FEED_TEXT_POST, ...DEMO_FEED_POSTS];
   const posts = board === 'ALL' ? all : all.filter((p) => p.boardType === board);
   return (
     <FeedScreen
@@ -484,6 +508,53 @@ export const memberEntries: GalleryEntry[] = [
         />
       </View>
     ),
+  },
+  {
+    name: 'FeedMinigameRecordCard',
+    description:
+      '미니게임 기록 카드 (서버 feat/feed-minigame-record): 게임 아이콘·이름, 큰 점수, 전체 N위, 새 최고 기록 배지, [나도 도전하기]. 아래는 순위 없음(rank null)·최고 기록 아님, 그다음은 작성 화면의 ✕ 빼기 상태. 로컬 픽스처.',
+    render: () => (
+      <View style={{ gap: 12, alignSelf: 'stretch' }}>
+        <FeedMinigameRecordCard
+          record={DEMO_FEED_RECORD_POST.minigameRecord!}
+          onChallenge={() => {}}
+        />
+        <FeedMinigameRecordCard
+          record={{ ...DEMO_FEED_RECORD_POST.minigameRecord!, rank: null, personalBest: false }}
+          onChallenge={() => {}}
+          testID="feed-minigame-record-plain"
+        />
+        <FeedMinigameRecordCard
+          record={DEMO_MINIGAME_RECORD_DRAFT}
+          onRemove={() => {}}
+          testID="feed-minigame-record-draft"
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'FeedPostScreen · 미니게임 기록 글',
+    description:
+      '기록 카드가 붙은 자유글 상세: 본문(옛 앱은 이것만 보인다) 아래 카드와 [나도 도전하기]. 내 글이면 수정 창에서 인증게시판이 잠긴다. 로컬 픽스처.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <FeedPostScreen
+          post={{ ...DEMO_FEED_RECORD_POST, mine: true }}
+          comments={[]}
+          onAddComment={() => true}
+          onToggleLike={() => {}}
+          onEditPost={() => true}
+          onDeletePost={() => {}}
+          onChallenge={() => {}}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'FeedComposeScreen · 기록 카드',
+    description:
+      '미니게임 결과의 [자랑하기]로 연 작성 화면: 자유게시판(인증 잠김) + 고칠 수 있는 본문 초안 + 고칠 수 없는 기록 카드(✕로 빼기). 자동으로 올리지 않는다. 로컬 상태만.',
+    render: () => <FeedComposeRecordDemo />,
   },
   {
     name: 'BlockedUsersScreen',

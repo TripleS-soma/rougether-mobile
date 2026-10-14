@@ -127,3 +127,57 @@ describe('인증글 루틴 완료 연결 (서버 #430)', () => {
     );
   });
 });
+
+describe('미니게임 기록 카드 (서버 feat/feed-minigame-record)', () => {
+  const recordPost = {
+    ...textPost,
+    content: '🐱 고양이 탑 쌓기 1,240점, 전체 3위 달성!',
+    minigameRecord: {
+      gameCode: 'cat-tower',
+      score: 1240,
+      rank: 3,
+      personalBest: true,
+      achievedAt: '2026-10-14T03:00:00Z',
+    },
+  };
+
+  it('응답의 minigameRecord를 카드 모델로 옮긴다', async () => {
+    mockResponse(recordPost);
+    await expect(fetchFeedPost(40)).resolves.toMatchObject({
+      minigameRecord: {
+        gameCode: 'cat-tower',
+        score: 1240,
+        rank: 3,
+        personalBest: true,
+        achievedAt: '2026-10-14T03:00:00Z',
+      },
+    });
+  });
+
+  it('rank가 null이면 순위 없음, 필드가 없거나 불완전하면 기록 없는 글', async () => {
+    mockResponse({ ...recordPost, minigameRecord: { ...recordPost.minigameRecord, rank: null } });
+    await expect(fetchFeedPost(40)).resolves.toMatchObject({
+      minigameRecord: { score: 1240, rank: null },
+    });
+    mockResponse(textPost);
+    await expect(fetchFeedPost(40)).resolves.toMatchObject({ minigameRecord: null });
+    mockResponse({ ...recordPost, minigameRecord: { gameCode: 'cat-tower' } });
+    await expect(fetchFeedPost(40)).resolves.toMatchObject({ minigameRecord: null });
+  });
+
+  it('기록 글 등록은 minigameRecord.runId를 함께 보낸다', async () => {
+    const fetchMock = mockResponse(recordPost, 201);
+    const body = {
+      clientPostId: '481e86b3-09bd-46ab-82fd-d834a1f3e7fc',
+      boardType: 'FREE' as const,
+      content: recordPost.content,
+      imageIds: [],
+      minigameRecord: { runId: 'run-77' },
+    };
+    await createFeedPost(body);
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${API_BASE}/feed/posts`,
+      expect.objectContaining({ method: 'POST', body: JSON.stringify(body) }),
+    );
+  });
+});

@@ -26,6 +26,14 @@ export type MinigameRunnerScreenProps = {
   onPractice?: () => void;
   onRetrySubmit?: () => void;
   onLeaderboard?: () => void;
+  /**
+   * 새 최고 기록 자랑 제안 (2026-10-14) — 결과 아래 "새 기록이에요! 피드에 기록을 자랑할까요?"
+   * [자랑하기] / [괜찮아요]. 조건(랭킹전·최고 기록·10판 이상·피드 켜짐)과 판당 1회는 셸이 판정해
+   * true를 넘긴다.
+   */
+  sharePrompt?: boolean;
+  onShareRecord?: () => void;
+  onDismissShare?: () => void;
   onBack?: () => void;
 };
 
@@ -44,6 +52,9 @@ export function MinigameRunnerScreen({
   onPractice,
   onRetrySubmit,
   onLeaderboard,
+  sharePrompt = false,
+  onShareRecord,
+  onDismissShare,
   onBack,
 }: MinigameRunnerScreenProps) {
   const t = useTokens();
@@ -114,6 +125,33 @@ export function MinigameRunnerScreen({
           </Text>
         </GlassSurface>
       ) : null}
+      {result && sharePrompt ? (
+        <GlassSurface
+          interactive={false}
+          glassEffectStyle="clear"
+          fallbackColor={t.primarySoft}
+          style={styles.share}
+          testID="minigame-share-prompt">
+          <Text accessibilityRole="header" style={[Typography.label, { color: t.text }]}>
+            {tr('roomShop.minigame.play.shareTitle')}
+          </Text>
+          <View style={styles.shareActions}>
+            <Button
+              label={tr('roomShop.minigame.play.shareDismiss')}
+              onPress={onDismissShare}
+              variant="secondary"
+              style={styles.shareButton}
+            />
+            <Button
+              label={tr('roomShop.minigame.play.shareAccept')}
+              accessibilityLabel={tr('roomShop.minigame.play.shareAcceptA11y')}
+              onPress={onShareRecord}
+              leftIcon="sparkles"
+              style={styles.shareButton}
+            />
+          </View>
+        </GlassSurface>
+      ) : null}
       {!game || finished ? (
         <View style={styles.actions}>
           {onStart ? (
@@ -174,4 +212,7 @@ const styles = StyleSheet.create({
   },
   result: { padding: Spacing.four, gap: Spacing.two, borderRadius: Radius.xl },
   actions: { gap: Spacing.two },
+  share: { padding: Spacing.three, gap: Spacing.three, borderRadius: Radius.xl },
+  shareActions: { flexDirection: 'row', gap: Spacing.two },
+  shareButton: { flex: 1, paddingHorizontal: Spacing.two },
 });

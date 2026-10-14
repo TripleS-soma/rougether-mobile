@@ -3,6 +3,7 @@ import type {
   FeedComment,
   FeedCompletionGroup,
   FeedDraftImage,
+  FeedMinigameRecordDraft,
   FeedPost,
 } from '@/components/screens/feed/types';
 import type { House, HouseMission } from '@/components/screens/house/types';
@@ -221,6 +222,39 @@ export const DEMO_FEED_TEXT_POST: FeedPost = {
   mine: false,
   createdAt: '2026-09-22T05:00:00Z',
   updatedAt: '2026-09-22T05:00:00Z',
+};
+
+/** 미니게임 기록 카드 (서버 feat/feed-minigame-record) — 작성 화면에 붙인 초안. */
+export const DEMO_MINIGAME_RECORD_DRAFT: FeedMinigameRecordDraft = {
+  runId: 'demo-run-1',
+  gameCode: 'cat-tower',
+  score: 1240,
+  rank: 3,
+  personalBest: true,
+  achievedAt: '2026-09-22T05:30:00Z',
+};
+
+/** 기록 카드가 붙은 자유글 — 본문에도 숫자가 있다(카드를 못 그리는 옛 앱용). */
+export const DEMO_FEED_RECORD_POST: FeedPost = {
+  postId: 5,
+  author: { userId: 8, nickname: '이웃', profileImageKey: null },
+  boardType: 'FREE',
+  content: '🐱 고양이 탑 쌓기 1,240점, 전체 3위 달성!',
+  routine: null,
+  minigameRecord: {
+    gameCode: 'cat-tower',
+    score: 1240,
+    rank: 3,
+    personalBest: true,
+    achievedAt: '2026-09-22T05:30:00Z',
+  },
+  images: [],
+  likeCount: 2,
+  commentCount: 0,
+  likedByMe: false,
+  mine: false,
+  createdAt: '2026-09-22T05:31:00Z',
+  updatedAt: '2026-09-22T05:31:00Z',
 };
 
 export const DEMO_FEED_COMMENTS: FeedComment[] = [

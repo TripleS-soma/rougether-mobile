@@ -1,4 +1,4 @@
-import type { Minigame } from '@/api/minigames';
+import type { Minigame, MinigameResult } from '@/api/minigames';
 import { i18n } from '@/i18n';
 
 /**
@@ -92,4 +92,23 @@ export function getMinigameDefinition(gameCode: string): MinigameDefinition | un
   return Object.prototype.hasOwnProperty.call(MINIGAME_DEFINITIONS, gameCode)
     ? MINIGAME_DEFINITIONS[gameCode as MinigameCode]
     : undefined;
+}
+
+/**
+ * 새 최고 기록을 피드에 자랑하자고 제안하는 최소 판 수 (2026-10-14 제품 오너 결정) — 그 게임의
+ * 랭킹전을 이만큼 끝낸 사람에게만(서버 `playCount`, 이번 판 포함). 처음 몇 판은 매번 최고
+ * 기록이라 제안이 소음이 된다.
+ */
+export const MINIGAME_SHARE_MIN_PLAYS = 10;
+
+/**
+ * 결과 화면에서 [자랑하기]를 제안할까 — 랭킹전(연습 아님) · 새 최고 기록 · 그 게임 10판 이상 ·
+ * 피드가 켜져 있을 때만. 판당 한 번만 보이는 건 셸(`use-minigame-surface`)이 지킨다.
+ */
+export function canOfferRecordShare(
+  result: Pick<MinigameResult, 'personalBest' | 'playCount'> | null | undefined,
+  { practice, feedEnabled }: { practice: boolean; feedEnabled: boolean },
+): boolean {
+  if (!result || practice || !feedEnabled) return false;
+  return result.personalBest && result.playCount >= MINIGAME_SHARE_MIN_PLAYS;
 }

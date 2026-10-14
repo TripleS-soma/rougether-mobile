@@ -14,16 +14,24 @@
  * 루틴 완료 연결(서버 #430): 인증게시판은 `routineCompletion` 필수, 자유게시판은 보내면 400
  * 이라 **인증일 때만** 싣는다. 고른 루틴은 게시판을 자유로 바꿔도 기억해 두고(다시 인증으로
  * 오면 그대로), 연결 루틴이 다르면 같은 id도 409라 서명에 넣는다.
+ *
+ * 미니게임 기록 카드(서버 feat/feed-minigame-record): 결과 화면의 [자랑하기]가 `startRecordPost`로
+ * 본문 초안과 카드를 채운다. 카드는 **자유게시판일 때만** `minigameRecord: { runId }`로 싣고,
+ * 서버가 400 FEED_MINIGAME_RECORD_INVALID로 거부하면 카드를 빼고 안내한다 — 사용자는 글만 다시
+ * 올리면 된다. 카드도 내용 서명에 넣는다.
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { getSessionUserId } from '@/api/auth';
+import { ErrorCode } from '@/api/error-codes';
+import { ApiError } from '@/api/http';
 import { createFeedPost, deleteFeedImage, type FeedUploadFile, uploadFeedImage } from '@/api/feed';
 import { feedComposeBlocker } from '@/components/screens/feed/board-rules';
 import type {
   FeedBoardType,
   FeedDraftImage,
+  FeedMinigameRecordDraft,
   FeedPost,
   FeedRoutineCompletion,
 } from '@/components/screens/feed/types';
@@ -59,6 +67,7 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
   const [content, setContentState] = useState('');
   const [board, setBoard] = useState<FeedBoardType>(FEED_DEFAULT_BOARD);
   const [routine, setRoutine] = useState<FeedRoutineCompletion | null>(null);
+  const [record, setRecord] = useState<FeedMinigameRecordDraft | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const { mutateAsync: uploadAsync } = useMutation({ mutationFn: uploadFeedImage });
@@ -141,6 +150,20 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
     setContentState(next.slice(0, FEED_MAX_CONTENT));
   }, []);
 
+  /**
+   * 기록 자랑 글 시작 — 자유게시판 + 본문 초안 + 기록 카드. 본문은 사용자가 고칠 수 있고,
+   * 카드는 뺄 수만 있다. 자동으로 올리지 않는다.
+   */
+  const startRecordPost = useCallback((draft: FeedMinigameRecordDraft, text: string) => {
+    attempt.current = null;
+    setRecord(draft);
+    setBoard('FREE');
+    setContentState(text.slice(0, FEED_MAX_CONTENT));
+  }, []);
+
+  /** 기록 카드 빼기 — 그다음은 보통 글이다. */
+  const removeRecord = useCallback(() => setRecord(null), []);
+
   /** 작성 취소 — 올려 둔 사진을 서버에서 지우고 초안을 비운다. */
   const discard = useCallback(() => {
     for (const img of imagesRef.current) {
@@ -152,6 +175,7 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
     setContentState('');
     setBoard(FEED_DEFAULT_BOARD);
     setRoutine(null);
+    setRecord(null);
   }, [imagesRef]);
 
   /** 게시 — 성공하면 새 글, 아니면 null(안내는 onError). */
@@ -168,7 +192,15 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
     const imageIds = current.map((img) => img.imageId as number);
     const text = content.trim();
     const routineCompletion = board === 'VERIFICATION' && routine ? routine : undefined;
-    const signature = JSON.stringify([board, text, imageIds, routineCompletion ?? null]);
+    // 기록 카드는 자유게시판에만 — 루틴 연결과 함께 보낼 수 없다.
+    const minigameRecord = board === 'FREE' && record ? { runId: record.runId } : undefined;
+    const signature = JSON.stringify([
+      board,
+      text,
+      imageIds,
+      routineCompletion ?? null,
+      minigameRecord?.runId ?? null,
+    ]);
     if (attempt.current?.signature !== signature) {
       attempt.current = { id: newFeedClientId(), signature };
     }
@@ -181,11 +213,13 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
         content: text || undefined,
         imageIds,
         ...(routineCompletion ? { routineCompletion } : {}),
+        ...(minigameRecord ? { minigameRecord } : {}),
       });
       track('feed_post_create', {
         image_count: imageIds.length,
         has_text: text.length > 0,
         board_type: board,
+        source: minigameRecord ? 'minigame_record' : 'compose',
       });
       attempt.current = null;
       files.current.clear();
@@ -193,17 +227,28 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
       setContentState('');
       setBoard(FEED_DEFAULT_BOARD);
       setRoutine(null);
+      setRecord(null);
       // `lists` 접두 — 통합 피드와 게시판별 목록을 한꺼번에.
       await qc.invalidateQueries({ queryKey: queryKeys.feed.lists(userId) });
       return post;
     } catch (err) {
+      if (
+        minigameRecord &&
+        err instanceof ApiError &&
+        err.code === ErrorCode.FEED_MINIGAME_RECORD_INVALID
+      ) {
+        // 카드를 빼고 안내 — 본문은 그대로라 [올리기]를 다시 누르면 보통 글로 올라간다.
+        setRecord(null);
+        onErrorRef.current?.(i18n.t('feed.record.invalidRemoved'));
+        return null;
+      }
       onErrorRef.current?.(feedErrorMessage(err));
       return null;
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
     }
-  }, [board, content, routine, createAsync, imagesRef, onErrorRef, qc, userId]);
+  }, [board, content, routine, record, createAsync, imagesRef, onErrorRef, qc, userId]);
 
   const uploading = images.some((img) => img.status === 'uploading');
   const canSubmit = !submitting && feedComposeBlocker(board, images, content, routine) === null;
@@ -214,12 +259,15 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
       content,
       board,
       routine,
+      record,
       submitting,
       uploading,
       canSubmit,
       setContent,
       setBoard,
       setRoutine,
+      startRecordPost,
+      removeRecord,
       addImages,
       retryImage,
       removeImage,
@@ -231,12 +279,15 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
       content,
       board,
       routine,
+      record,
       submitting,
       uploading,
       canSubmit,
       setContent,
       setBoard,
       setRoutine,
+      startRecordPost,
+      removeRecord,
       addImages,
       retryImage,
       removeImage,

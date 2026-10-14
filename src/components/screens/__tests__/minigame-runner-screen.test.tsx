@@ -34,7 +34,14 @@ it('shows a server result only after confirmation and blocks duplicate actions d
     <MinigameRunnerScreen
       game={<Text>게임</Text>}
       finished
-      result={{ runId: 'run', score: 180, bestScore: 300, personalBest: false, rank: 9 }}
+      result={{
+        runId: 'run',
+        score: 180,
+        bestScore: 300,
+        personalBest: false,
+        rank: 9,
+        playCount: 4,
+      }}
     />,
   );
   expect(ui.getByText('180점')).toBeTruthy();
@@ -75,4 +82,42 @@ it('shows one recovery banner and retains the old score retry if a new start als
   await fireEvent.press(ui.getByLabelText('다시 저장'));
   expect(retry).toHaveBeenCalledTimes(1);
   expect(ui.getByLabelText('저장 재시도를 그만하고 연습')).toBeTruthy();
+});
+
+it('새 최고 기록 자랑 제안 — 셸이 켤 때만 보이고 두 버튼을 잇는다', async () => {
+  const result = {
+    runId: 'run',
+    score: 1240,
+    bestScore: 1240,
+    personalBest: true,
+    rank: 3,
+    playCount: 12,
+  };
+  const onShare = jest.fn();
+  const onDismiss = jest.fn();
+  const ui = await render(
+    <MinigameRunnerScreen
+      game={<Text>게임</Text>}
+      finished
+      result={result}
+      onShareRecord={onShare}
+      onDismissShare={onDismiss}
+    />,
+  );
+  expect(ui.queryByText('새 기록이에요! 피드에 기록을 자랑할까요?')).toBeNull();
+  await ui.rerender(
+    <MinigameRunnerScreen
+      game={<Text>게임</Text>}
+      finished
+      result={result}
+      sharePrompt
+      onShareRecord={onShare}
+      onDismissShare={onDismiss}
+    />,
+  );
+  expect(ui.getByText('새 기록이에요! 피드에 기록을 자랑할까요?')).toBeTruthy();
+  await fireEvent.press(ui.getByLabelText('피드에 새 기록 자랑하기'));
+  expect(onShare).toHaveBeenCalledTimes(1);
+  await fireEvent.press(ui.getByText('괜찮아요'));
+  expect(onDismiss).toHaveBeenCalledTimes(1);
 });

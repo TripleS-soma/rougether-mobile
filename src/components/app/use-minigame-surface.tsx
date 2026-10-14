@@ -11,14 +11,17 @@ import {
 
 import type { MinigameReplay } from '@/api/minigames';
 import type { Screen } from '@/components/app/navigation';
+import type { FeedMinigameRecordDraft } from '@/components/screens/feed/types';
 import { MinigamePlayer } from '@/components/app/minigame-player';
 import { LandscapeStage, useLandscapeStage } from '@/components/minigame/landscape-stage';
 import { MinigamesScreen } from '@/components/screens/minigames-screen';
 import { MinigameRunnerScreen } from '@/components/screens/minigame-runner-screen';
 import { MinigameLeaderboardScreen } from '@/components/screens/minigame-leaderboard-screen';
+import { FEED_ENABLED } from '@/constants/feed';
 import {
   MINIGAME_DEFINITIONS,
   PLAYABLE_MINIGAMES,
+  canOfferRecordShare,
   getMinigameDefinition,
   type MinigameCode,
 } from '@/constants/minigames';
@@ -78,12 +81,22 @@ function ActiveMinigame({
 /** 러너 캔버스 비율 (`runner-html` 720×420). */
 const RUNNER_ASPECT = 720 / 420;
 
+const NO_RUN_IDS: ReadonlySet<string> = new Set();
+
 export function useMinigameSurface({
   screen,
   setScreen,
+  onShareRecord,
+  feedEnabled = FEED_ENABLED,
 }: {
   screen: Screen;
   setScreen: Dispatch<SetStateAction<Screen>>;
+  /**
+   * 결과 화면의 [자랑하기] — 셸이 피드 작성 화면을 기록 카드와 함께 연다. 없으면 제안도 없다.
+   */
+  onShareRecord?: (record: FeedMinigameRecordDraft) => void;
+  /** 테스트용 — 기본은 `FEED_ENABLED`. */
+  feedEnabled?: boolean;
 }) {
   const [gameCode, setGameCode] = useState<MinigameCode>('room-runner');
   const definition = MINIGAME_DEFINITIONS[gameCode];
@@ -156,6 +169,44 @@ export function useMinigameSurface({
   );
   const activeSessionId = session?.id ?? null;
 
+  // 새 최고 기록 자랑 제안 — 판(runId)당 한 번. [자랑하기]·[괜찮아요] 어느 쪽이든 누른 판은 다시
+  // 묻지 않는다(결과 화면에 돌아와도).
+  const [shareHandled, setShareHandled] = useState<ReadonlySet<string>>(NO_RUN_IDS);
+  const { result } = run;
+  const shareOffered =
+    !!onShareRecord &&
+    !!result &&
+    canOfferRecordShare(result, { practice: !!session?.practice, feedEnabled }) &&
+    !shareHandled.has(result.runId);
+  const offeredRunId = screen === 'minigameRunner' && shareOffered && result ? result.runId : null;
+  const shownRef = useRef(new Set<string>());
+  useEffect(() => {
+    if (!offeredRunId || shownRef.current.has(offeredRunId)) return;
+    shownRef.current.add(offeredRunId);
+    track('minigame_share_prompt', { game: gameCode, action: 'shown' });
+  }, [offeredRunId, gameCode]);
+  const markShareHandled = useCallback((runId: string) => {
+    setShareHandled((prev) => new Set(prev).add(runId));
+  }, []);
+  const acceptShare = useCallback(() => {
+    if (!result || !onShareRecord) return;
+    markShareHandled(result.runId);
+    track('minigame_share_prompt', { game: gameCode, action: 'accepted' });
+    onShareRecord({
+      runId: result.runId,
+      gameCode,
+      score: result.score,
+      rank: result.rank,
+      personalBest: result.personalBest,
+      achievedAt: new Date().toISOString(),
+    });
+  }, [gameCode, markShareHandled, onShareRecord, result]);
+  const dismissShare = useCallback(() => {
+    if (!result) return;
+    markShareHandled(result.runId);
+    track('minigame_share_prompt', { game: gameCode, action: 'dismissed' });
+  }, [gameCode, markShareHandled, result]);
+
   const subScreen =
     screen === 'minigames' ? (
       <MinigamesScreen
@@ -194,6 +245,9 @@ export function useMinigameSurface({
         onRetrySubmit={run.retrySubmit}
         // The runner also shows the button before a game starts — only a finished game is a result.
         onLeaderboard={() => openLeaderboard(gameCode, run.finished ? 'result' : 'runner')}
+        sharePrompt={shareOffered}
+        onShareRecord={acceptShare}
+        onDismissShare={dismissShare}
         onBack={openMinigames}
       />
     ) : screen === 'minigameLeaderboard' ? (
@@ -204,5 +258,5 @@ export function useMinigameSurface({
         onBack={openMinigames}
       />
     ) : null;
-  return { openMinigames, subScreen, activeSessionId };
+  return { openMinigames, openGame, subScreen, activeSessionId };
 }

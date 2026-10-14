@@ -91,6 +91,11 @@ export type AnalyticsEvent =
   | 'minigame_leaderboard_view'
   /** 랭킹전 기록 저장 실패 — 재시도 버튼의 분모. 상세 status는 api_error. */
   | 'minigame_submit_failed'
+  /**
+   * 새 최고 기록 피드 자랑 제안 — action: shown(제안 노출, 판당 1회) | accepted([자랑하기]) |
+   * dismissed([괜찮아요]). 실제 게시는 feed_post_create의 source=minigame_record.
+   */
+  | 'minigame_share_prompt'
   /** 알림 탭 새 소식 탭 (#1320) — id: 공지 id, kind: screen|url|none(행동 없는 소식). */
   | 'announcement_open'
   /** 달력 탭에서 날짜를 눌러 주간 보기로 (#1327) — today: 오늘을 눌렀는지. */
@@ -100,7 +105,7 @@ export type AnalyticsEvent =
   // 공개 SNS 피드 (#1409) — FEED_ENABLED가 꺼져 있는 동안은 발생하지 않는다.
   /** 피드 탭 진입 — 탭 전환마다. */
   | 'feed_view'
-  /** 게시물 등록 성공 — image_count, has_text, board_type(FREE|VERIFICATION, 서버 #428). */
+  /** 게시물 등록 성공 — image_count, has_text, board_type(FREE|VERIFICATION, 서버 #428), source. */
   | 'feed_post_create'
   /** 좋아요 반영 성공 — liked: true(누름)|false(취소). */
   | 'feed_like'
@@ -301,7 +306,14 @@ export type AnalyticsParams = {
   announcement_open: { id: number | string; kind: string };
   calendar_week_open: { today: boolean };
   language_change: { language: string };
-  feed_post_create: { image_count: number; has_text: boolean; board_type: string };
+  feed_post_create: {
+    image_count: number;
+    has_text: boolean;
+    board_type: string;
+    /** compose(직접 쓰기) | minigame_record(결과 화면 [자랑하기]로 기록 카드를 붙여 올림). */
+    source: string;
+  };
+  minigame_share_prompt: { game: string; action: 'shown' | 'accepted' | 'dismissed' };
   feed_like: { liked: boolean };
   content_report: { target: string; reason: string };
   user_block: { via: string } | undefined;

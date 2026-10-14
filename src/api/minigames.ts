@@ -26,6 +26,11 @@ export type MinigameResult = {
   bestScore: number;
   personalBest: boolean;
   rank: number;
+  /**
+   * 이 게임의 내 랭킹전 완료 횟수(이번 판 포함). 피드 자랑 제안(10판 이상)의 조건이다.
+   * 숫자가 아니면 0으로 받는다(제안 없음) — 서버 #446 이전 응답 대비.
+   */
+  playCount: number;
 };
 export type MinigameRankingEntry = {
   rank: number;
@@ -47,11 +52,20 @@ export function fetchMinigames(rulesVersion: number) {
 export function startMinigameRun(gameCode: string, rulesVersion: number) {
   return apiPost<MinigameRun>(`${gamePath(gameCode)}/runs?rulesVersion=${rulesVersion}`);
 }
-export function finishMinigameRun(gameCode: string, runId: string, replay: MinigameReplay) {
-  return apiPost<MinigameResult>(
+export async function finishMinigameRun(
+  gameCode: string,
+  runId: string,
+  replay: MinigameReplay,
+): Promise<MinigameResult> {
+  const res = await apiPost<Omit<MinigameResult, 'playCount'> & { playCount?: number }>(
     `${gamePath(gameCode)}/runs/${encodeURIComponent(runId)}/finish`,
     replay,
   );
+  const playCount = res.playCount;
+  return {
+    ...res,
+    playCount: typeof playCount === 'number' && Number.isFinite(playCount) ? playCount : 0,
+  };
 }
 export function fetchMinigameLeaderboard(gameCode: string) {
   return apiGet<MinigameLeaderboard>(`${gamePath(gameCode)}/leaderboard`);

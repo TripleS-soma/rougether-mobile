@@ -76,6 +76,23 @@ describe('수정에서 게시판 전환 (서버 #430)', () => {
     );
   });
 
+  it('미니게임 기록 글은 사진이 있어도 인증으로 옮길 수 없다', () => {
+    const recordPost = {
+      ...freePhoto,
+      minigameRecord: {
+        gameCode: 'cat-tower',
+        score: 1240,
+        rank: 3,
+        personalBest: true,
+        achievedAt: '2026-10-14T03:00:00Z',
+      },
+    };
+    expect(feedEditBlocker(recordPost, { board: 'VERIFICATION', routine, content: '글' })).toBe(
+      'recordStaysFree',
+    );
+    expect(feedEditBlocker(recordPost, { board: 'FREE', routine: null, content: '글' })).toBeNull();
+  });
+
   it('사진 없는 자유글은 여전히 본문이 필요하다', () => {
     expect(feedEditBlocker(freeText, { board: 'FREE', routine: null, content: ' ' })).toBe(
       'needContent',

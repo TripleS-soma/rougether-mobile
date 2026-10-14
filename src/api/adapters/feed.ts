@@ -6,6 +6,7 @@ import type {
   FeedAuthor,
   FeedComment,
   FeedImage,
+  FeedMinigameRecord,
   FeedPost,
   FeedPostRoutine,
 } from '@/components/screens/feed/types';
@@ -13,6 +14,7 @@ import type {
   FeedAuthorResponse,
   FeedCommentResponse,
   FeedImageResponse,
+  FeedMinigameRecordResponse,
   FeedPostResponse,
   FeedRoutineResponse,
 } from '@/api/types';
@@ -39,6 +41,20 @@ function toFeedPostRoutine(res: FeedRoutineResponse | null | undefined): FeedPos
   return { routineId: res.routineId, title: res.title ?? '', date: res.date };
 }
 
+/** 기록 카드 — 필드가 없거나(배포 전 서버) 게임·점수가 빠졌으면 null(일반 글로 그린다). */
+function toFeedMinigameRecord(
+  res: FeedMinigameRecordResponse | null | undefined,
+): FeedMinigameRecord | null {
+  if (!res || !res.gameCode || typeof res.score !== 'number') return null;
+  return {
+    gameCode: res.gameCode,
+    score: res.score,
+    rank: typeof res.rank === 'number' && res.rank > 0 ? res.rank : null,
+    personalBest: res.personalBest ?? false,
+    achievedAt: res.achievedAt ?? '',
+  };
+}
+
 export function toFeedPost(res: FeedPostResponse): FeedPost | null {
   if (res.postId == null) return null;
   return {
@@ -48,6 +64,7 @@ export function toFeedPost(res: FeedPostResponse): FeedPost | null {
     boardType: res.boardType === 'FREE' ? 'FREE' : 'VERIFICATION',
     content: res.content ?? '',
     routine: toFeedPostRoutine(res.routine),
+    minigameRecord: toFeedMinigameRecord(res.minigameRecord),
     images: (res.images ?? []).map(toFeedImage).filter((i): i is FeedImage => i !== null),
     likeCount: Math.max(0, res.likeCount ?? 0),
     commentCount: Math.max(0, res.commentCount ?? 0),
