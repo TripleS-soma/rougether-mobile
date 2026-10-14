@@ -5,15 +5,14 @@ import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import type { DrawResult, GachaDrawCount, GachaRewardResponse } from '@/api';
 import type { GachaMachine } from '@/api/adapters';
-import type { GachaCategory } from '@/api/types';
 import { GachaScreen } from '@/components/screens/gacha-screen';
 import { Button } from '@/components/ui/button';
-import { GACHA_CATEGORIES, GACHA_CATEGORY_META } from '@/constants/gacha';
+import { GACHA_CATEGORIES, GACHA_CATEGORY_META, type LobbyGachaCategory } from '@/constants/gacha';
 
 type DemoRarity = '일반' | '희귀' | '전설';
 
 /** These are catalog keys already used by the room renderer and dev gallery. */
-const DEMO_REWARDS: Record<GachaCategory, DrawResult[]> = {
+const DEMO_REWARDS: Record<LobbyGachaCategory, DrawResult[]> = {
   WALLPAPER: [
     {
       rewardType: 'ITEM',
@@ -65,6 +64,10 @@ const DEMO_REWARDS: Record<GachaCategory, DrawResult[]> = {
       converted: false,
     },
   ],
+  CHARACTER: [
+    { rewardType: 'CHARACTER', characterId: 2, name: '강아지', converted: false },
+    { rewardType: 'CHARACTER', characterId: 3, name: '호랑이', converted: false },
+  ],
 };
 
 const DEMO_MACHINES: GachaMachine[] = GACHA_CATEGORIES.map((category, index) => ({
@@ -80,7 +83,7 @@ const DEMO_MACHINES: GachaMachine[] = GACHA_CATEGORIES.map((category, index) => 
   drawCount: 1,
 }));
 
-function categoryForId(gachaId: number): GachaCategory {
+function categoryForId(gachaId: number): LobbyGachaCategory {
   return DEMO_MACHINES.find((machine) => machine.id === gachaId)?.category ?? 'FURNITURE';
 }
 
@@ -121,10 +124,13 @@ export function GachaPhonePreview({
   fullscreen = false,
   rarity = '전설',
   reducedMotion = false,
+  characterUnlocked = false,
 }: {
   fullscreen?: boolean;
   rarity?: DemoRarity;
   reducedMotion?: boolean;
+  /** 캐릭터 상자 해금 (방 레벨 10) — 끄면 잠금 안내를 본다. */
+  characterUnlocked?: boolean;
 }) {
   const { entry } = useLocalSearchParams<{ entry?: string | string[] }>();
   // The full gallery mounts every demo. Only a directly selected entry may
@@ -136,6 +142,7 @@ export function GachaPhonePreview({
       coinBalance={5600}
       diamondBalance={120}
       reducedMotion={reducedMotion}
+      characterUnlocked={characterUnlocked}
       soundEffectsEnabled
       onBack={fullscreen ? () => setOpen(false) : undefined}
       onDraw={async (gachaId, count) => demoDraw(gachaId, count, rarity)}

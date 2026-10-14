@@ -5,8 +5,13 @@ const machine = (code?: string): GachaMachine =>
   ({ id: 1, name: '뽑기', code, kind: 'furniture' }) as GachaMachine;
 
 describe('쓸 수 없는 뽑기 차단 (#983)', () => {
-  it('캐릭터 뽑기는 막는다 — 교체 진입점이 없다 (#637)', () => {
-    expect(isDrawableGacha(machine('character_gacha'))).toBe(false);
+  // 2026-10-14 방 레벨 10 해금으로 캐릭터 뽑기를 다시 열었다 — 잠금은 화면이 레벨로 건다.
+  it('캐릭터 뽑기는 연다 — 로비의 넷째 상자', () => {
+    expect(isDrawableGacha(machine('character_gacha'))).toBe(true);
+    expect(getGachaCategory(machine('character_gacha'))).toBe('CHARACTER');
+    expect(getCategoryGachas([{ ...machine('character_gacha'), id: 9 }]).map((m) => m.id)).toEqual([
+      9,
+    ]);
   });
 
   it('악세사리 뽑기도 막는다 — 장착 배선이 없다 (#618)', () => {

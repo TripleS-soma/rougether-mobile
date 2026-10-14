@@ -139,13 +139,17 @@ describe('useGacha', () => {
     await act(async () => {
       expect(await result.current.draw(81)).toBeNull();
     });
-    expect(global.fetch).toHaveBeenCalledTimes(2);
+    // 목록은 요청 2개(꾸미기 카탈로그 + 캐릭터 머신용 기존 목록)라, 뽑기 횟수만 센다.
+    const drawCount = () =>
+      (global.fetch as jest.Mock).mock.calls.filter(([url]) => String(url).endsWith('/draw'))
+        .length;
+    expect(drawCount()).toBe(1);
     expect(walletInCache(client)).toBeUndefined();
     await act(async () => {
       expect(await result.current.draw(81)).toBeNull();
     });
     await flushQueryNotifications();
-    expect(global.fetch).toHaveBeenCalledTimes(3);
+    expect(drawCount()).toBe(2);
   });
 
   it('뽑기 응답 잔액이 다른 훅의 지갑(셸 헤더가 읽는 값)에 바로 보인다 — 셸이 꿰지 않는다', async () => {

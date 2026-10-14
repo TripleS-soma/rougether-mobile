@@ -236,6 +236,11 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     ownedCharacters?: OwnedCharacter[];
     /** Wear the picked character (PUT /me/characters/select). */
     onSelectCharacter?: (serverId: number) => void;
+    /**
+     * 캐릭터 교체가 잠겨 있으면 해금 레벨(방 레벨 10, 2026-10-14). 메뉴에 자물쇠 항목으로 보이고,
+     * 누르면 몇 레벨에 열리는지 알려 준다. undefined면 잠금 표시가 없다.
+     */
+    characterLockLevel?: number;
     /** 햄버거 메뉴 → 카테고리 관리 화면으로 이동 (#394). */
     onManageCategories?: () => void;
     /** 카테고리 헤더 탭 → 해당 카테고리 수정 시트 저장 (#541). 없으면 헤더 탭 비활성. */
@@ -381,6 +386,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   unreadNotificationCount = 0,
   ownedCharacters,
   onSelectCharacter,
+  characterLockLevel,
   onManageCategories,
   onUpdateCategory,
   onToggleCompletion,
@@ -1626,7 +1632,15 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           onClose={() => setNavMenuOpen(false)}
           // 출석 이벤트·재화 내역은 내 정보 바로가기로 (#1055 → #1089) — 메뉴는 방 작업만.
           onOpenCharacterPicker={
-            ownedCharacters && onSelectCharacter ? () => setCharacterSheetOpen(true) : undefined
+            ownedCharacters && onSelectCharacter
+              ? () => setCharacterSheetOpen(true)
+              : characterLockLevel != null
+                ? () =>
+                    toast(tr('app.navMenu.changeCharacterLocked', { level: characterLockLevel }))
+                : undefined
+          }
+          characterPickerLocked={
+            !(ownedCharacters && onSelectCharacter) && characterLockLevel != null
           }
           onEditRoom={onEdit}
           onOpenMarket={onOpenMarket}

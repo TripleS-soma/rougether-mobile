@@ -1,6 +1,6 @@
 /** Wallet / gacha / shop (item catalogue) adapters. */
 import { type Wallet } from '@/constants/currency';
-import { GACHA_CATEGORY_META, getGachaCategory } from '@/constants/gacha';
+import { GACHA_CATEGORY_META, getGachaCategory, type LobbyGachaCategory } from '@/constants/gacha';
 import { GachaAccents, WallpaperTints } from '@/constants/theme';
 import { i18n } from '@/i18n';
 import {
@@ -13,7 +13,6 @@ import {
 } from '@/resources/furniture';
 import { type PictogramName } from '@/components/ui/pictograms';
 import type {
-  GachaCategory,
   GachaResponse,
   ItemResponse,
   MyItemSummary,
@@ -110,7 +109,7 @@ export type GachaMachine = {
   giftBoxKey?: string;
   /** Compatibility grouping; all decoration categories belong to furniture. */
   kind: 'furniture' | 'character';
-  category?: GachaCategory;
+  category?: LobbyGachaCategory;
   /** 서버 기계 코드 (`bakery_morning` 등) — 노출 판정에 쓴다 (#983). */
   code?: string;
 };
@@ -129,7 +128,10 @@ export function toGachaMachine(g: GachaResponse, index = 0): GachaMachine {
     accent: categoryMeta?.accent ?? GachaAccents[index % GachaAccents.length],
     giftBoxKey: g.giftBoxAssetKey,
     category,
-    kind: category || !g.code?.startsWith('character') ? 'furniture' : 'character',
+    kind:
+      category === 'CHARACTER' || (!category && g.code?.startsWith('character'))
+        ? 'character'
+        : 'furniture',
   };
 }
 

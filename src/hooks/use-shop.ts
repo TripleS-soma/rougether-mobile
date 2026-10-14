@@ -47,6 +47,7 @@ import { track } from '@/lib/analytics';
 import { queryKeys } from '@/lib/query-keys';
 import type { RoomCobweb } from '@/components/room/room';
 import type { PlacedFurniture } from '@/resources/furniture';
+import { characterUnlockOf } from '@/constants/characters';
 
 // 빈 기본값 — 인라인 `[]`는 매 렌더 새 배열이라 파생 memo가 매번 다시 돈다.
 const NO_ITEMS: ItemResponse[] = [];
@@ -249,14 +250,19 @@ export function useShop() {
         const res = await saveAsync(body);
         // 보낸 본문을 방 캐시에 그대로 — 재조회 없이 placement가 저장한 모습이
         // 된다(재조회해도 같은 답). 거미줄은 배치 저장과 무관하니 그대로 (#829).
-        qc.setQueryData<RoomWithLayout>(myRoomKey, (prev) => ({
-          ...prev,
-          layoutRevision: res.layoutRevision ?? baseRevision + 1,
-          placements: body.placements,
-          slots: body.surfaceSlots.filter(
-            (s): s is { slotType: string; userItemId: number } => s.userItemId != null,
-          ),
-        }));
+        // 저장은 방을 받은 뒤에만 된다(baseRevision이 방에서 온다) — 캐시가 없으면 건드리지 않는다.
+        qc.setQueryData<RoomWithLayout>(
+          myRoomKey,
+          (prev) =>
+            prev && {
+              ...prev,
+              layoutRevision: res.layoutRevision ?? baseRevision + 1,
+              placements: body.placements,
+              slots: body.surfaceSlots.filter(
+                (s): s is { slotType: string; userItemId: number } => s.userItemId != null,
+              ),
+            },
+        );
         toast(i18n.t('roomShop.shop.layoutSaved'), 'success');
         return 'ok';
       } catch (err) {
@@ -270,8 +276,11 @@ export function useShop() {
     [saveAsync, qc, myRoomKey, revisionRef, userItemMapRef, toast],
   );
 
+  const characterUnlock = characterUnlockOf(room);
   return useMemo(
     () => ({
+      characterUnlocked: characterUnlock.unlocked,
+      characterUnlockLevel: characterUnlock.level,
       growthLevel: room?.growthLevel,
       growthPoints: room?.growthPoints,
       pointsToNextLevel: room?.pointsToNextLevel,
@@ -287,6 +296,8 @@ export function useShop() {
       saveLayout,
     }),
     [
+      characterUnlock.unlocked,
+      characterUnlock.level,
       room?.growthLevel,
       room?.growthPoints,
       room?.pointsToNextLevel,

@@ -46,8 +46,13 @@ export const shopGachaEntries: GalleryEntry[] = [
   {
     name: 'GachaScreen',
     description:
-      '테마 구분 없는 벽지·바닥·가구 3개 상자. 실제 재화 소모 없이 단챠·5+1·보상 목록을 확인한다.',
+      '벽지·바닥·가구·캐릭터 4개 상자. 캐릭터는 방 레벨 10 전이라 잠긴 상태. 실제 재화 소모 없이 단챠·5+1·보상 목록을 확인한다.',
     render: () => <GachaPhonePreview />,
+  },
+  {
+    name: 'GachaCharacterUnlocked',
+    description: '방 레벨 10 달성 후 — 캐릭터 상자를 뽑을 수 있다(2026-10-14).',
+    render: () => <GachaPhonePreview characterUnlocked />,
   },
   {
     name: 'GachaPhonePreview',

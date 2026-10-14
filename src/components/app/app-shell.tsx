@@ -230,6 +230,8 @@ export function AppShell({
     ownedIds,
     placement,
     growthLevel,
+    characterUnlocked,
+    characterUnlockLevel,
     growthPoints,
     pointsToNextLevel,
     loading: shopLoading,
@@ -348,6 +350,8 @@ export function AppShell({
   const gachaSurface = useGachaSurface({
     screen,
     wallet,
+    characterUnlocked,
+    characterUnlockLevel,
     starterFlow: missions.step?.id === 'first-draw' && !missionSkipEnabled,
     soundEffectsEnabled: settingsSurface.soundSettings.effects,
     goBack,
@@ -405,6 +409,8 @@ export function AppShell({
     character: { wornCharacterId, wornCharacterFrames, ownedCharacters, wearCharacter },
     room: {
       growthLevel,
+      characterUnlocked,
+      characterUnlockLevel,
       growthPoints,
       pointsToNextLevel,
       placements: placedItems,

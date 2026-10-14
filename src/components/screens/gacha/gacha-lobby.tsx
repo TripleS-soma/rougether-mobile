@@ -27,6 +27,7 @@ export function GachaLobby({
   error,
   topInset = 0,
   bottomInset = 0,
+  characterLockLevel,
 }: {
   starterDrawState?: 'PENDING' | 'CLAIMED';
   machines: GachaMachine[];
@@ -39,22 +40,33 @@ export function GachaLobby({
   error: string;
   topInset?: number;
   bottomInset?: number;
+  /**
+   * 캐릭터 뽑기가 잠겨 있으면 해금 레벨(2026-10-14, 방 레벨 10). 잠긴 상자도 골라서 구경하고
+   * 보상 목록을 볼 수 있지만, 뽑기 버튼 대신 잠금 안내가 나온다. undefined면 열려 있다.
+   */
+  characterLockLevel?: number;
 }) {
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const tr = useT();
   const category = getGachaCategory(selected) ?? 'FURNITURE';
+  const locked = category === 'CHARACTER' && characterLockLevel != null;
   // 온보딩 첫 뽑기(#1325)는 스피커 확정 — 카테고리 탭을 숨기고 문구를 바꾼다.
   const copy = starterDrawState
     ? {
         title: tr('roomShop.gacha.lobby.starter.title'),
         detail: tr('roomShop.gacha.lobby.starter.detail'),
       }
-    : {
-        title: tr(`roomShop.gacha.lobby.copy.${category}.title`),
-        detail: tr(`roomShop.gacha.lobby.copy.${category}.detail`),
-      };
+    : locked
+      ? {
+          title: tr('roomShop.gacha.lobby.characterLocked.title', { level: characterLockLevel }),
+          detail: tr('roomShop.gacha.lobby.characterLocked.detail'),
+        }
+      : {
+          title: tr(`roomShop.gacha.lobby.copy.${category}.title`),
+          detail: tr(`roomShop.gacha.lobby.copy.${category}.detail`),
+        };
   return (
     <View style={styles.root}>
       <ScrollView
@@ -164,73 +176,91 @@ export function GachaLobby({
             {error}
           </Text>
         ) : null}
-        <View style={styles.actions}>
-          {(starterDrawState ? ([1] as const) : ([1, 6] as const)).map((count) => {
-            const primary = !!starterDrawState || count === 6;
-            const affordable = canAfford(count);
-            const cost = selected.costAmount * (primary ? 5 : 1);
-            const label = tr(
-              starterDrawState === 'CLAIMED'
-                ? 'roomShop.gacha.lobby.starter.claimed'
-                : starterDrawState
-                  ? 'roomShop.gacha.lobby.starter.drawFree'
-                  : count === 6
-                    ? 'roomShop.gacha.lobby.drawBonus'
-                    : 'roomShop.gacha.lobby.drawOne',
-            );
-            const ink = affordable ? (primary ? t.onPrimary : t.text) : t.textMuted;
-            return (
-              // 버튼 전체를 짚는다(글자만 재면 테두리가 라벨에만 뜬다) — flex는 래퍼로 옮긴다.
-              // 버튼 자체엔 flex를 주지 않는다: 세로 래퍼 안의 flex 1은 높이 기준을 0으로 만들어
-              // Android(Yoga)에서 줄 높이가 버튼(72)을 반영하지 못하고 18로 잡혀 아래가 잘렸다
-              // (갤럭시 S25 실측). 폭은 래퍼가 정하고 버튼은 늘어나기(stretch)로 채운다.
-              <CoachTarget
-                key={count}
-                id={count === 1 ? 'gacha-draw' : `gacha-draw-${count}`}
-                style={{ flex: primary ? 1.5 : 1 }}>
-                <ScalePressable
-                  onPress={() => onDraw(count)}
-                  disabled={busy}
-                  accessibilityRole="button"
-                  accessibilityState={{ disabled: busy }}
-                  accessibilityLabel={
-                    starterDrawState
-                      ? label
-                      : tr('roomShop.gacha.lobby.drawA11y', {
-                          label,
-                          cost: formatAmount(cost),
-                          currency: tr(
-                            selected.costCurrencyType === 'COIN'
-                              ? 'roomShop.wallet.coin'
-                              : 'roomShop.wallet.diamond',
-                          ),
-                        })
-                  }
-                  style={[
-                    styles.draw,
-                    {
-                      borderColor: primary ? 'transparent' : t.border,
-                      backgroundColor: !affordable ? t.disabledBg : primary ? t.primary : t.surface,
-                    },
-                  ]}>
-                  <Text style={[Typography.label, { color: ink }]}>{label}</Text>
-                  {!starterDrawState ? (
-                    <View style={styles.cost}>
-                      <Icon
-                        name={selected.costCurrencyType === 'COIN' ? 'coin' : 'diamond'}
-                        size={14}
-                        color={selected.costCurrencyType === 'COIN' ? t.warning : ink}
-                      />
-                      <Text style={[Typography.supporting, emph('semibold'), { color: ink }]}>
-                        {formatAmount(cost)}
-                      </Text>
-                    </View>
-                  ) : null}
-                </ScalePressable>
-              </CoachTarget>
-            );
-          })}
-        </View>
+        {locked ? (
+          <View
+            accessible
+            accessibilityLabel={tr('roomShop.gacha.lobby.characterLocked.button', {
+              level: characterLockLevel,
+            })}
+            style={[styles.draw, styles.lockedDraw, { backgroundColor: t.disabledBg }]}>
+            <Icon name="lock" size={16} color={t.textMuted} />
+            <Text style={[Typography.label, { color: t.textMuted }]}>
+              {tr('roomShop.gacha.lobby.characterLocked.button', { level: characterLockLevel })}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.actions}>
+            {(starterDrawState ? ([1] as const) : ([1, 6] as const)).map((count) => {
+              const primary = !!starterDrawState || count === 6;
+              const affordable = canAfford(count);
+              const cost = selected.costAmount * (primary ? 5 : 1);
+              const label = tr(
+                starterDrawState === 'CLAIMED'
+                  ? 'roomShop.gacha.lobby.starter.claimed'
+                  : starterDrawState
+                    ? 'roomShop.gacha.lobby.starter.drawFree'
+                    : count === 6
+                      ? 'roomShop.gacha.lobby.drawBonus'
+                      : 'roomShop.gacha.lobby.drawOne',
+              );
+              const ink = affordable ? (primary ? t.onPrimary : t.text) : t.textMuted;
+              return (
+                // 버튼 전체를 짚는다(글자만 재면 테두리가 라벨에만 뜬다) — flex는 래퍼로 옮긴다.
+                // 버튼 자체엔 flex를 주지 않는다: 세로 래퍼 안의 flex 1은 높이 기준을 0으로 만들어
+                // Android(Yoga)에서 줄 높이가 버튼(72)을 반영하지 못하고 18로 잡혀 아래가 잘렸다
+                // (갤럭시 S25 실측). 폭은 래퍼가 정하고 버튼은 늘어나기(stretch)로 채운다.
+                <CoachTarget
+                  key={count}
+                  id={count === 1 ? 'gacha-draw' : `gacha-draw-${count}`}
+                  style={{ flex: primary ? 1.5 : 1 }}>
+                  <ScalePressable
+                    onPress={() => onDraw(count)}
+                    disabled={busy}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: busy }}
+                    accessibilityLabel={
+                      starterDrawState
+                        ? label
+                        : tr('roomShop.gacha.lobby.drawA11y', {
+                            label,
+                            cost: formatAmount(cost),
+                            currency: tr(
+                              selected.costCurrencyType === 'COIN'
+                                ? 'roomShop.wallet.coin'
+                                : 'roomShop.wallet.diamond',
+                            ),
+                          })
+                    }
+                    style={[
+                      styles.draw,
+                      {
+                        borderColor: primary ? 'transparent' : t.border,
+                        backgroundColor: !affordable
+                          ? t.disabledBg
+                          : primary
+                            ? t.primary
+                            : t.surface,
+                      },
+                    ]}>
+                    <Text style={[Typography.label, { color: ink }]}>{label}</Text>
+                    {!starterDrawState ? (
+                      <View style={styles.cost}>
+                        <Icon
+                          name={selected.costCurrencyType === 'COIN' ? 'coin' : 'diamond'}
+                          size={14}
+                          color={selected.costCurrencyType === 'COIN' ? t.warning : ink}
+                        />
+                        <Text style={[Typography.supporting, emph('semibold'), { color: ink }]}>
+                          {formatAmount(cost)}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </ScalePressable>
+                </CoachTarget>
+              );
+            })}
+          </View>
+        )}
       </View>
     </View>
   );
@@ -300,5 +330,6 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
     padding: Spacing.two,
   },
+  lockedDraw: { flexDirection: 'row', gap: Spacing.two, borderColor: 'transparent' },
   cost: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
 });

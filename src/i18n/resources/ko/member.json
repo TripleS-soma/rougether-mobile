@@ -43,10 +43,6 @@
       "otter": {
         "name": "수달",
         "description": "장난기 많고 사랑스러운 루틴 친구"
-      },
-      "moru": {
-        "name": "모루",
-        "description": "레벨 5에서 만나는 포근한 루틴 친구"
       }
     },
     "intro": {

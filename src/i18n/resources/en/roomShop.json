@@ -211,6 +211,10 @@
         "FURNITURE": {
           "title": "Furniture draw",
           "label": "Furniture"
+        },
+        "CHARACTER": {
+          "title": "Character draw",
+          "label": "Characters"
         }
       },
       "lobby": {
@@ -226,6 +230,10 @@
           "FURNITURE": {
             "title": "A piece you'll love",
             "detail": "Discover furniture and decor from many themes."
+          },
+          "CHARACTER": {
+            "title": "Meet a new friend",
+            "detail": "This box holds character friends to keep your room company. If you get one you already have, you get coins back."
           }
         },
         "eyebrow": "A little thrill for today",
@@ -244,6 +252,11 @@
           "detail": "Your first draw gives you a speaker. Place it anywhere you like.",
           "drawFree": "First furniture draw (free)",
           "claimed": "See your speaker"
+        },
+        "characterLocked": {
+          "title": "Unlocks at room level {{level}}",
+          "detail": "Complete routines to grow your room and unlock both character draws and character switching. You can already see which friends are inside.",
+          "button": "Unlocks at Lv. {{level}}"
         }
       },
       "giftOpenA11y": "Open the gift box",
