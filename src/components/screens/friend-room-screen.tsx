@@ -74,6 +74,10 @@ const GUESTBOOK_MAX = 500;
 export type FriendRoomScreenProps = Omit<RoomSceneProps, 'characterId'> & {
   friendName?: string;
   /**
+   * 친구의 한 줄 소개 (2026-10-14) — 같은 집 구성원에게만 서버가 내려준다. 비어 있으면 숨긴다.
+   */
+  friendBio?: string | null;
+  /**
    * 방 캔버스 좌우 플링 (#644) — 같은 집의 다른 멤버 방으로 순회. 'left'
    * 플링 = 다음 멤버. 방문 가능한 친구가 1명뿐이면 부모가 생략한다.
    */
@@ -125,6 +129,7 @@ export type FriendRoomScreenProps = Omit<RoomSceneProps, 'characterId'> & {
  */
 export function FriendRoomScreen({
   friendName: friendNameProp,
+  friendBio,
   onSwipeFriend,
   streakDays = 7,
   cobweb,
@@ -375,6 +380,17 @@ export function FriendRoomScreen({
             inputFocused && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
           ]}
           keyboardShouldPersistTaps="handled">
+          {friendBio?.trim() ? (
+            <Text
+              numberOfLines={2}
+              accessibilityLabel={tr('roomShop.friendRoom.bioA11y', {
+                name: friendName,
+                bio: friendBio.trim(),
+              })}
+              style={[Typography.supporting, styles.bio, { color: t.textMuted }]}>
+              {friendBio.trim()}
+            </Text>
+          ) : null}
           <GestureDetector gesture={friendFling}>
             <View style={styles.roomWrap} collapsable={false}>
               <Room {...roomScene} />
@@ -704,6 +720,7 @@ const styles = StyleSheet.create({
   body: {
     paddingBottom: Spacing.six,
   },
+  bio: { textAlign: 'center', paddingHorizontal: Spacing.four },
   roomWrap: {
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.four,

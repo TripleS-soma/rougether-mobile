@@ -53,6 +53,8 @@ export type FriendRoom = {
   /** The friend's CDN animation keys (room response); local sprite fallback. */
   characterFrames?: string[];
   streakDays: number;
+  /** 친구의 한 줄 소개 (2026-10-14, 서버 `ownerBio`) — 같은 집 구성원에게만 온다. */
+  bio: string | null;
   /** 친구 방에 낀 거미줄 (#829). */
   cobweb: RoomCobweb | null;
   routines: Routine[];
@@ -79,6 +81,7 @@ const emptyRoom = (): FriendRoom => ({
   placement: null,
   cobweb: null,
   streakDays: 0,
+  bio: null,
   routines: [],
   categories: [],
   selectedDate: todayIso(),
@@ -164,6 +167,7 @@ export function useFriendRoom() {
             toCharacterFrames(undefined, room?.character?.animations))
           : undefined,
         streakDays: room?.streak?.currentCount ?? 0,
+        bio: room?.ownerBio ?? null,
         cobweb: room?.cobweb ?? null,
         routines: day ? toFriendRoutines(day) : [],
         categories: day ? toFriendCategories(day) : [],

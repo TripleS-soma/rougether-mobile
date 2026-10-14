@@ -267,6 +267,7 @@
       "nicknamePlaceholder": "닉네임을 입력해주세요",
       "bio": "한 줄 소개",
       "bioPlaceholder": "나를 한 줄로 소개해보세요",
+      "bioHint": "같은 집 친구가 내 방에 놀러 오면 이 소개가 보여요.",
       "saveA11y": "프로필 저장"
     },
     "help": {
