@@ -9,13 +9,13 @@ import { TodoComposePreview } from '@/dev/todo-compose-preview';
 import { RecommendationSection } from '@/components/screens/my-room/recommendation-section';
 import { WeeklyReportPanel } from '@/components/screens/my-room/weekly-report-panel';
 import { WeeklyReportScreen } from '@/components/screens/weekly-report-screen';
-import type { RecommendationItem } from '@/api';
+import type { Recommendation } from '@/api';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 import type { GalleryEntry } from '@/dev/registry/types';
 
 /** 조정 추천 섹션 데모 (#1006) — 적용/무시로 카드가 실제로 빠지는 걸 본다. */
 function RecommendationSectionDemo() {
-  const [items, setItems] = useState<RecommendationItem[]>([
+  const [items, setItems] = useState<Recommendation[]>([
     {
       recommendationId: 1,
       type: 'ADJUST_DAYS',
