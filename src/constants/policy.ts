@@ -32,3 +32,15 @@ export function policyUrl(doc: PolicyDoc): string {
 
 /** 도움말 '문의하기'가 여는 지원 메일 주소. */
 export const SUPPORT_EMAIL = 'evan7484@gmail.com';
+
+/**
+ * 한 줄 소개를 같은 집 구성원에게 보이기 시작하는 날 — 개인정보처리방침 2.1 시행일(KST, 10/14 고지).
+ * 이미 적어 둔 소개가 새로 공개되는 변경이라 7일 고지를 약속했다. 그 전엔 친구 방에서 숨긴다.
+ * 시행일이 지나면 이 가드와 상수를 지운다.
+ */
+export const FRIEND_BIO_PUBLIC_FROM = '2026-10-21';
+
+/** `today`는 `todayIso()`(KST 날짜) — 단말 로컬 날짜로 판정하지 않는다. */
+export function isFriendBioPublic(today: string): boolean {
+  return today >= FRIEND_BIO_PUBLIC_FROM;
+}

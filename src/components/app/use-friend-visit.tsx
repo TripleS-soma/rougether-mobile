@@ -10,6 +10,8 @@ import { useGuestbook } from '@/hooks/use-guestbook';
 import type { ShopCatalogue } from '@/api/adapters';
 import { track } from '@/lib/analytics';
 import { i18n } from '@/i18n';
+import { isFriendBioPublic } from '@/constants/policy';
+import { todayIso } from '@/utils/datetime';
 
 /**
  * 친구 방문 클러스터 (#149·#644, #692 4단계) — 방문 중인 친구 상태와
@@ -113,6 +115,8 @@ export function useFriendVisit({
     screen === 'friendRoom' ? (
       <FriendRoomScreen
         friendName={visitingFriend.name}
+        // 방침 2.1 시행일(10/21) 전엔 숨긴다 — 이미 적힌 소개가 새로 공개되는 변경이라 7일 고지를 약속했다.
+        friendBio={isFriendBioPublic(todayIso()) ? friendRoom.bio : null}
         onSwipeFriend={visitableFriends.length >= 2 ? swipeFriend : undefined}
         guestbook={guestbookEntries}
         guestbookLoading={guestbookLoading}
