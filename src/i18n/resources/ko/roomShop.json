@@ -361,7 +361,11 @@
         "practiceAfterErrorA11y": "저장 재시도를 그만하고 연습",
         "practiceAgainA11y": "다시 연습하기",
         "practiceA11y": "연습하기 · 랭킹 미기록",
-        "leaderboardA11y": "전체 유저 랭킹 보기"
+        "leaderboardA11y": "전체 유저 랭킹 보기",
+        "shareTitle": "새 기록이에요! 피드에 기록을 자랑할까요?",
+        "shareAccept": "자랑하기",
+        "shareDismiss": "괜찮아요",
+        "shareAcceptA11y": "피드에 새 기록 자랑하기"
       },
       "leaderboard": {
         "rowA11y": "{{rank}}위 {{nickname}} {{score}}점",

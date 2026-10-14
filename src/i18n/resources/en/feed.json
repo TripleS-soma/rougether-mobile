@@ -43,7 +43,8 @@
       "editToFreeHint": "Moving to the Free board removes the linked routine.",
       "editKeepRoutine": "If you don't pick another one, the linked routine stays.",
       "editRestoreRoutine": "Keep the originally linked routine",
-      "editCurrentRoutine": "Linked routine"
+      "editCurrentRoutine": "Linked routine",
+      "editRecordStaysFree": "Posts with a record card stay on the Free board."
     },
     "compose": {
       "title": "New post",
@@ -87,7 +88,8 @@
       "FEED_STORAGE_UNAVAILABLE": "Photo storage is having trouble. Please try again later.",
       "generic": "Something went wrong. Please try again later.",
       "FEED_ROUTINE_COMPLETION_REQUIRED": "Pick a routine to verify.",
-      "FEED_ROUTINE_COMPLETION_INVALID": "We couldn't confirm that routine completion. Pick a routine you completed in the last 7 days."
+      "FEED_ROUTINE_COMPLETION_INVALID": "We couldn't confirm that routine completion. Pick a routine you completed in the last 7 days.",
+      "FEED_MINIGAME_RECORD_INVALID": "This record card can't be attached. Please post without it."
     },
     "emptyFree": "No free board posts yet.\nStart a conversation!",
     "emptyMine": "You haven't posted yet.\nShare a routine or a moment from your day!",
@@ -113,6 +115,20 @@
       "dayTitle": "Routines done {{label}}",
       "dayEmpty": "No routines completed on this day",
       "dayA11y": "{{label}}, {{count}} routines done"
+    },
+    "record": {
+      "unknownGame": "Mini game",
+      "score": "{{score}} pts",
+      "rank": "#{{rank}} overall",
+      "personalBest": "New best",
+      "challenge": "Take the challenge",
+      "challengeA11y": "Take the {{game}} challenge",
+      "removeA11y": "Remove record card",
+      "a11y": "Mini game record: {{summary}}",
+      "draft": "🐱 Scored {{score}} in {{game}}!",
+      "draftWithRank": "🐱 Scored {{score}} in {{game}} — #{{rank}} overall!",
+      "composeHint": "Record cards go on the Free board only. Tap ✕ to post just the text.",
+      "invalidRemoved": "We couldn't attach the record card, so we removed it. You can still post the text."
     }
   }
 }

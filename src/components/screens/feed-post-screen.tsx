@@ -21,12 +21,14 @@ import {
   feedAuthorName,
   feedTimeLabel,
 } from '@/components/feed/feed-parts';
+import { FeedMinigameRecordCard } from '@/components/feed/feed-minigame-record';
 import { FeedRoutineBadge, FeedRoutinePicker } from '@/components/feed/feed-routine';
 import { FeedPhoto, feedImageAspect } from '@/components/feed/feed-photo';
 import {
   feedCanBeVerification,
   feedContentRequired,
   feedEditBlocker,
+  feedHasMinigameRecord,
   feedPostEditRequest,
 } from '@/components/screens/feed/board-rules';
 import type {
@@ -111,6 +113,8 @@ export type FeedPostScreenProps = {
    * 어디서 차단했는지(계측용).
    */
   onBlockUser?: (userId: number, via: 'post' | 'comment') => void;
+  /** 기록 카드의 [나도 도전하기] — 그 게임 화면을 바로 연다. 없으면 버튼이 없다. */
+  onChallenge?: (gameCode: string) => void;
   onBack?: () => void;
   loadImage?: FeedImageLoader;
   now?: Date;
@@ -191,14 +195,18 @@ function EditPostDialog({
   const canSave = blocker === null;
   const contentRequired = feedContentRequired(board, post.images.length);
   const photoless = !feedCanBeVerification(post.images.length);
+  // 기록 카드가 붙은 글은 자유게시판에 머문다(서버: 인증으로 옮기면 400 FEED_INPUT_INVALID).
+  const hasRecord = feedHasMinigameRecord(post);
   const stayingVerification = post.boardType === 'VERIFICATION' && board === 'VERIFICATION';
   const boardHint =
     board === 'FREE'
-      ? photoless
-        ? tr('feed.post.editNeedPhoto')
-        : post.boardType === 'VERIFICATION'
-          ? tr('feed.post.editToFreeHint')
-          : null
+      ? hasRecord
+        ? tr('feed.post.editRecordStaysFree')
+        : photoless
+          ? tr('feed.post.editNeedPhoto')
+          : post.boardType === 'VERIFICATION'
+            ? tr('feed.post.editToFreeHint')
+            : null
       : null;
   return (
     <Modal
@@ -222,7 +230,7 @@ function EditPostDialog({
                 options={FEED_BOARD_TYPES}
                 value={board}
                 onChange={setBoard}
-                disabledOptions={photoless ? VERIFICATION_ONLY : undefined}
+                disabledOptions={photoless || hasRecord ? VERIFICATION_ONLY : undefined}
                 testID="feed-edit-board-tabs"
               />
               {boardHint ? (
@@ -343,6 +351,7 @@ export function FeedPostScreen({
   onReportPost,
   onReportComment,
   onBlockUser,
+  onChallenge,
   onBack,
   loadImage,
   now,
@@ -484,6 +493,9 @@ export function FeedPostScreen({
           linkColor={t.primaryText}>
           {post.content}
         </LinkifiedText>
+      ) : null}
+      {post.minigameRecord ? (
+        <FeedMinigameRecordCard record={post.minigameRecord} onChallenge={onChallenge} />
       ) : null}
       <FeedActionRow
         liked={post.likedByMe}

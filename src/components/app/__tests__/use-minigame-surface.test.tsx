@@ -3,6 +3,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import { View, useWindowDimensions } from 'react-native';
 
 import type { Screen } from '@/components/app/navigation';
+import type { FeedMinigameRecordDraft } from '@/components/screens/feed/types';
 import {
   CURRENT_MINIGAME_RULES_VERSION,
   MINIGAME_DEFINITIONS,
@@ -55,9 +56,20 @@ const start = jest.mocked(startMinigameRun);
 const finish = jest.mocked(finishMinigameRun);
 const clients: ReturnType<typeof createTestQueryClient>[] = [];
 
-function Harness({ retainOutgoing = false }: { retainOutgoing?: boolean }) {
+type HarnessProps = {
+  retainOutgoing?: boolean;
+  onShareRecord?: (record: FeedMinigameRecordDraft) => void;
+  feedEnabled?: boolean;
+};
+
+function Harness({ retainOutgoing = false, onShareRecord, feedEnabled = true }: HarnessProps) {
   const [screen, setScreen] = useState<Screen>('minigames');
-  const { subScreen, activeSessionId } = useMinigameSurface({ screen, setScreen });
+  const { subScreen, activeSessionId } = useMinigameSurface({
+    screen,
+    setScreen,
+    onShareRecord,
+    feedEnabled,
+  });
   const outgoing = useRef<ReactNode>(null);
   if (screen === 'minigameRunner') outgoing.current = subScreen;
   return (
@@ -70,14 +82,16 @@ function Harness({ retainOutgoing = false }: { retainOutgoing?: boolean }) {
   );
 }
 
-async function setup(retainOutgoing = false) {
+async function setup(retainOutgoing = false, share: Omit<HarnessProps, 'retainOutgoing'> = {}) {
   const client = createTestQueryClient();
   client.setDefaultOptions({
     ...client.getDefaultOptions(),
     mutations: { retry: false, gcTime: Infinity },
   });
   clients.push(client);
-  return render(<Harness retainOutgoing={retainOutgoing} />, { wrapper: queryWrapper(client) });
+  return render(<Harness retainOutgoing={retainOutgoing} {...share} />, {
+    wrapper: queryWrapper(client),
+  });
 }
 
 beforeEach(() => {
@@ -98,6 +112,7 @@ beforeEach(() => {
     bestScore: 20,
     personalBest: true,
     rank: 1,
+    playCount: 1,
   });
 });
 afterEach(() => clients.splice(0).forEach((client) => client.clear()));
@@ -288,5 +303,102 @@ describe('세로 폰의 루틴 러너는 가로 무대로 (#1458)', () => {
     await fireEvent.press(ui.getByLabelText('랭킹 도전'));
     await waitFor(() => expect(ui.getByTestId('runner-active').props.children).toBe('true'));
     expect(ui.queryByTestId('landscape-stage')).toBeNull();
+  });
+});
+
+describe('새 최고 기록 피드 자랑 제안 (2026-10-14)', () => {
+  const PROMPT = '새 기록이에요! 피드에 기록을 자랑할까요?';
+  const saved = (patch: Partial<Awaited<ReturnType<typeof finishMinigameRun>>> = {}) => ({
+    runId: 'cat-tower-run-1',
+    score: 1240,
+    bestScore: 1240,
+    personalBest: true,
+    rank: 3,
+    playCount: 10,
+    ...patch,
+  });
+
+  async function playTower(share: Omit<HarnessProps, 'retainOutgoing'>) {
+    const ui = await setup(false, share);
+    await waitFor(() => expect(ui.getByLabelText('고양이 탑 쌓기 시작')).toBeTruthy());
+    await fireEvent.press(ui.getByLabelText('고양이 탑 쌓기 시작'));
+    await fireEvent.press(ui.getByLabelText('랭킹 도전'));
+    await waitFor(() => expect(ui.getByLabelText('테스트 게임 완료')).toBeTruthy());
+    await fireEvent.press(ui.getByLabelText('테스트 게임 완료'));
+    await waitFor(() => expect(ui.getByText('1,240점')).toBeTruthy());
+    return ui;
+  }
+
+  it('랭킹전 새 최고 기록 + 10판 이상이면 묻고, [자랑하기]는 기록 초안을 넘긴다', async () => {
+    finish.mockResolvedValue(saved());
+    const onShareRecord = jest.fn();
+    const ui = await playTower({ onShareRecord });
+    expect(ui.getByText(PROMPT)).toBeTruthy();
+    expect(mockTrack).toHaveBeenCalledWith('minigame_share_prompt', {
+      game: 'cat-tower',
+      action: 'shown',
+    });
+    await fireEvent.press(ui.getByLabelText('피드에 새 기록 자랑하기'));
+    expect(onShareRecord).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: 'cat-tower-run-1',
+        gameCode: 'cat-tower',
+        score: 1240,
+        rank: 3,
+        personalBest: true,
+      }),
+    );
+    expect(mockTrack).toHaveBeenCalledWith('minigame_share_prompt', {
+      game: 'cat-tower',
+      action: 'accepted',
+    });
+    expect(ui.queryByText(PROMPT)).toBeNull();
+  });
+
+  it('[괜찮아요]로 닫은 판은 결과 화면에 돌아와도 다시 묻지 않는다', async () => {
+    finish.mockResolvedValue(saved());
+    const onShareRecord = jest.fn();
+    const ui = await playTower({ onShareRecord });
+    await fireEvent.press(ui.getByText('괜찮아요'));
+    expect(ui.queryByText(PROMPT)).toBeNull();
+    expect(mockTrack).toHaveBeenCalledWith('minigame_share_prompt', {
+      game: 'cat-tower',
+      action: 'dismissed',
+    });
+    // 랭킹에 다녀와 같은 판의 결과를 다시 연다.
+    await fireEvent.press(ui.getByLabelText('전체 유저 랭킹 보기'));
+    await fireEvent.press(ui.getByLabelText('뒤로 가기'));
+    await fireEvent.press(ui.getByLabelText('고양이 탑 쌓기 시작'));
+    expect(ui.getByText('1,240점')).toBeTruthy();
+    expect(ui.queryByText(PROMPT)).toBeNull();
+    expect(onShareRecord).not.toHaveBeenCalled();
+    expect(
+      mockTrack.mock.calls.filter(
+        ([event, props]) => event === 'minigame_share_prompt' && props.action === 'shown',
+      ),
+    ).toHaveLength(1);
+  });
+
+  it.each([
+    ['9판째', saved({ playCount: 9 }), true],
+    ['최고 기록이 아닌 판', saved({ personalBest: false }), true],
+    ['playCount가 없는 옛 서버(0)', saved({ playCount: 0 }), true],
+    ['피드가 꺼진 빌드', saved(), false],
+  ])('%s에는 묻지 않는다', async (_label, result, feedEnabled) => {
+    finish.mockResolvedValue(result);
+    const ui = await playTower({ onShareRecord: jest.fn(), feedEnabled });
+    expect(ui.queryByText(PROMPT)).toBeNull();
+  });
+
+  it('연습 판에는 묻지 않는다', async () => {
+    finish.mockResolvedValue(saved());
+    const ui = await setup(false, { onShareRecord: jest.fn() });
+    await waitFor(() => expect(ui.getByLabelText('고양이 탑 쌓기 시작')).toBeTruthy());
+    await fireEvent.press(ui.getByLabelText('고양이 탑 쌓기 시작'));
+    await fireEvent.press(ui.getByLabelText('연습하기 · 랭킹 미기록'));
+    await fireEvent.press(ui.getByLabelText('테스트 게임 완료'));
+    await act(async () => {});
+    expect(finish).not.toHaveBeenCalled();
+    expect(ui.queryByText(PROMPT)).toBeNull();
   });
 });

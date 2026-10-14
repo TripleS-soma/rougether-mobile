@@ -34,6 +34,7 @@ const result: MinigameResult = {
   bestScore: 360,
   personalBest: false,
   rank: 12,
+  playCount: 3,
 };
 
 describe('미니게임 API', () => {
@@ -186,6 +187,15 @@ describe('미니게임 API', () => {
       `${API_BASE}/minigames/game%2F%20a%2Bb%3F/runs/run%2F%20c%2Bd%3F/finish`,
       expect.objectContaining({ method: 'POST', body: JSON.stringify(replay) }),
     );
+  });
+
+  it('완료 응답에 playCount가 없으면(서버 배포 전) 0으로 받는다', async () => {
+    const { playCount: _omit, ...legacy } = result;
+    mockResponse(legacy);
+
+    await expect(
+      finishMinigameRun('cat-tower', 'run-123', { ticks: 10, jumpTicks: [] }),
+    ).resolves.toEqual({ ...legacy, playCount: 0 });
   });
 
   it('랭킹 경로의 gameCode를 단일 URI 경로 요소로 인코딩한다', async () => {

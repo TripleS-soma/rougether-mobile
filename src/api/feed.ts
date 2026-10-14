@@ -163,8 +163,16 @@ function adaptPage<T, R>(page: Page<T>, adapt: (item: T) => R | null): Page<R> {
   return { ...page, items: page.items.map(adapt).filter((x): x is R => x !== null) };
 }
 
+/**
+ * 게시 요청 — 생성 타입 + 미니게임 기록 카드(`minigameRecord`, 서버 feat/feed-minigame-record).
+ * 기록은 자유게시판에만, 루틴 연결과 함께 보낼 수 없다. 기록이 내 것이 아니거나 랭킹전이 아니면
+ * 400 FEED_MINIGAME_RECORD_INVALID.
+ * TODO(gen:api-types): 서버 배포 후 재생성하면 교차형을 지우고 `FeedCreateRequest`만 쓴다.
+ */
+export type FeedCreateInput = FeedCreateRequest & { minigameRecord?: { runId: string } };
+
 /** POST /feed/posts — 같은 `clientPostId`의 재시도는 원래 글을 돌려준다(201). */
-export async function createFeedPost(input: FeedCreateRequest): Promise<FeedPost> {
+export async function createFeedPost(input: FeedCreateInput): Promise<FeedPost> {
   return adaptPost(await apiPost<FeedPostResponse>('/feed/posts', input));
 }
 

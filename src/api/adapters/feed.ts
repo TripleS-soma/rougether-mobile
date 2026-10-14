@@ -6,6 +6,7 @@ import type {
   FeedAuthor,
   FeedComment,
   FeedImage,
+  FeedMinigameRecord,
   FeedPost,
   FeedPostRoutine,
 } from '@/components/screens/feed/types';
@@ -16,6 +17,19 @@ import type {
   FeedPostResponse,
   FeedRoutineResponse,
 } from '@/api/types';
+
+/**
+ * 미니게임 기록 카드 응답 (서버 feat/feed-minigame-record) — 아직 생성 타입에 없다.
+ * TODO(gen:api-types): 서버 배포 후 재생성하면 이 로컬 타입과 아래 교차형을 지운다.
+ */
+export type FeedMinigameRecordResponse = {
+  gameCode?: string;
+  score?: number;
+  rank?: number | null;
+  personalBest?: boolean;
+  achievedAt?: string;
+};
+type FeedPostWire = FeedPostResponse & { minigameRecord?: FeedMinigameRecordResponse | null };
 
 function toFeedAuthor(res: FeedAuthorResponse | undefined): FeedAuthor {
   return {
@@ -39,7 +53,21 @@ function toFeedPostRoutine(res: FeedRoutineResponse | null | undefined): FeedPos
   return { routineId: res.routineId, title: res.title ?? '', date: res.date };
 }
 
-export function toFeedPost(res: FeedPostResponse): FeedPost | null {
+/** 기록 카드 — 필드가 없거나(배포 전 서버) 게임·점수가 빠졌으면 null(일반 글로 그린다). */
+function toFeedMinigameRecord(
+  res: FeedMinigameRecordResponse | null | undefined,
+): FeedMinigameRecord | null {
+  if (!res || !res.gameCode || typeof res.score !== 'number') return null;
+  return {
+    gameCode: res.gameCode,
+    score: res.score,
+    rank: typeof res.rank === 'number' && res.rank > 0 ? res.rank : null,
+    personalBest: res.personalBest ?? false,
+    achievedAt: res.achievedAt ?? '',
+  };
+}
+
+export function toFeedPost(res: FeedPostWire): FeedPost | null {
   if (res.postId == null) return null;
   return {
     postId: res.postId,
@@ -48,6 +76,7 @@ export function toFeedPost(res: FeedPostResponse): FeedPost | null {
     boardType: res.boardType === 'FREE' ? 'FREE' : 'VERIFICATION',
     content: res.content ?? '',
     routine: toFeedPostRoutine(res.routine),
+    minigameRecord: toFeedMinigameRecord(res.minigameRecord),
     images: (res.images ?? []).map(toFeedImage).filter((i): i is FeedImage => i !== null),
     likeCount: Math.max(0, res.likeCount ?? 0),
     commentCount: Math.max(0, res.commentCount ?? 0),

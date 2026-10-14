@@ -75,6 +75,7 @@ const SAVED: MinigameResult = {
   bestScore: 92,
   personalBest: false,
   rank: 8,
+  playCount: 5,
 };
 const EMPTY_LEADERBOARD: MinigameLeaderboard = {
   items: [],

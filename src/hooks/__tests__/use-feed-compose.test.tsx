@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { createFeedPost, deleteFeedImage, uploadFeedImage } from '@/api/feed';
+import { ApiError } from '@/api/http';
 import { useFeedCompose } from '@/hooks/use-feed-compose';
 import { DEMO_FEED_POSTS } from '@/mocks/fixtures';
 import { queryWrapper } from '@/test-utils/query-wrapper';
@@ -281,6 +282,109 @@ describe('useFeedCompose (#1409)', () => {
       });
       expect(result.current.board).toBe('FREE');
       expect(result.current.routine).toBeNull();
+    });
+  });
+
+  describe('미니게임 기록 카드 (서버 feat/feed-minigame-record)', () => {
+    const RECORD = {
+      runId: 'run-77',
+      gameCode: 'cat-tower',
+      score: 1240,
+      rank: 3,
+      personalBest: true,
+      achievedAt: '2026-10-14T03:00:00Z',
+    };
+    const DRAFT = '🐱 고양이 탑 쌓기 1,240점, 전체 3위 달성!';
+
+    async function withRecord(onError = jest.fn()) {
+      const hook = await renderHook(() => useFeedCompose({ onError }), {
+        wrapper: queryWrapper(),
+      });
+      await act(async () => {
+        hook.result.current.setBoard('VERIFICATION');
+        hook.result.current.startRecordPost(RECORD, DRAFT);
+      });
+      return hook;
+    }
+
+    it('기록 글 시작은 자유게시판 + 본문 초안 + 카드, 게시하면 runId를 싣는다', async () => {
+      const { result } = await withRecord();
+      expect(result.current.board).toBe('FREE');
+      expect(result.current.content).toBe(DRAFT);
+      expect(result.current.record).toEqual(RECORD);
+      expect(result.current.canSubmit).toBe(true);
+      // 자동으로 올리지 않는다.
+      expect(createFeedPost).not.toHaveBeenCalled();
+      await act(async () => {
+        result.current.setContent('탑 높이 신기록!');
+      });
+      await act(async () => {
+        await result.current.submit();
+      });
+      const [body] = jest.mocked(createFeedPost).mock.calls[0];
+      expect(body).toMatchObject({
+        boardType: 'FREE',
+        content: '탑 높이 신기록!',
+        minigameRecord: { runId: 'run-77' },
+      });
+      expect(body.routineCompletion).toBeUndefined();
+      expect(result.current.record).toBeNull();
+    });
+
+    it('카드를 빼면 보통 글로 올라간다', async () => {
+      const { result } = await withRecord();
+      await act(async () => {
+        result.current.removeRecord();
+      });
+      await act(async () => {
+        await result.current.submit();
+      });
+      const [body] = jest.mocked(createFeedPost).mock.calls[0];
+      expect(body.minigameRecord).toBeUndefined();
+      expect(body.content).toBe(DRAFT);
+    });
+
+    it('FEED_MINIGAME_RECORD_INVALID면 카드를 빼고 안내 — 다시 누르면 글만 새 id로 올린다', async () => {
+      jest
+        .mocked(createFeedPost)
+        .mockRejectedValueOnce(
+          new ApiError(
+            400,
+            'POST',
+            '/feed/posts',
+            JSON.stringify({ code: 'FEED_MINIGAME_RECORD_INVALID' }),
+          ),
+        );
+      const onError = jest.fn();
+      const { result } = await withRecord(onError);
+      let posted: unknown = 'unset';
+      await act(async () => {
+        posted = await result.current.submit();
+      });
+      expect(posted).toBeNull();
+      expect(onError).toHaveBeenCalledWith(
+        '기록 카드를 붙일 수 없어서 뺐어요. 글은 그대로 올릴 수 있어요.',
+      );
+      expect(result.current.record).toBeNull();
+      expect(result.current.content).toBe(DRAFT);
+
+      await act(async () => {
+        posted = await result.current.submit();
+      });
+      const [first, second] = jest.mocked(createFeedPost).mock.calls.map((c) => c[0]);
+      expect(first.minigameRecord).toEqual({ runId: 'run-77' });
+      expect(second.minigameRecord).toBeUndefined();
+      expect(second.clientPostId).not.toBe(first.clientPostId);
+      expect(posted).toEqual(DEMO_FEED_POSTS[0]);
+    });
+
+    it('작성을 버리면 카드도 사라진다', async () => {
+      const { result } = await withRecord();
+      await act(async () => {
+        result.current.discard();
+      });
+      expect(result.current.record).toBeNull();
+      expect(result.current.content).toBe('');
     });
   });
 });
