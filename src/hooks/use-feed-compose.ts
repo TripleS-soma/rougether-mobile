@@ -150,17 +150,6 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
     setContentState(next.slice(0, FEED_MAX_CONTENT));
   }, []);
 
-  /**
-   * 기록 자랑 글 시작 — 자유게시판 + 본문 초안 + 기록 카드. 본문은 사용자가 고칠 수 있고,
-   * 카드는 뺄 수만 있다. 자동으로 올리지 않는다.
-   */
-  const startRecordPost = useCallback((draft: FeedMinigameRecordDraft, text: string) => {
-    attempt.current = null;
-    setRecord(draft);
-    setBoard('FREE');
-    setContentState(text.slice(0, FEED_MAX_CONTENT));
-  }, []);
-
   /** 기록 카드 빼기 — 그다음은 보통 글이다. */
   const removeRecord = useCallback(() => setRecord(null), []);
 
@@ -177,6 +166,22 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
     setRoutine(null);
     setRecord(null);
   }, [imagesRef]);
+
+  /**
+   * 기록 자랑 글 시작 — 자유게시판 + 본문 초안 + 기록 카드. 본문은 사용자가 고칠 수 있고,
+   * 카드는 뺄 수만 있다. 자동으로 올리지 않는다. 늘 빈 초안에서 시작한다 — 작성 화면을 떠날 때
+   * 초안을 버리므로 보통은 비어 있지만, 남은 사진·루틴이 기록 글에 섞이지 않게 한 번 더 비운다
+   * (#1555 리뷰).
+   */
+  const startRecordPost = useCallback(
+    (draft: FeedMinigameRecordDraft, text: string) => {
+      discard();
+      setRecord(draft);
+      setBoard('FREE');
+      setContentState(text.slice(0, FEED_MAX_CONTENT));
+    },
+    [discard],
+  );
 
   /** 게시 — 성공하면 새 글, 아니면 null(안내는 onError). */
   const submit = useCallback(async (): Promise<FeedPost | null> => {
