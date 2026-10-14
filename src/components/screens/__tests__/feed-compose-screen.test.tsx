@@ -2,7 +2,11 @@ import { fireEvent, render } from '@testing-library/react-native';
 
 import { FeedComposeScreen } from '@/components/screens/feed-compose-screen';
 import type { FeedDraftImage } from '@/components/screens/feed/types';
-import { DEMO_FEED_COMPLETIONS, DEMO_FEED_TODAY } from '@/mocks/fixtures';
+import {
+  DEMO_FEED_COMPLETIONS,
+  DEMO_FEED_TODAY,
+  DEMO_MINIGAME_RECORD_DRAFT,
+} from '@/mocks/fixtures';
 
 const done = (key: string, imageId: number): FeedDraftImage => ({
   key,
@@ -173,6 +177,38 @@ describe('FeedComposeScreen (#1409)', () => {
     it('자유게시판에선 루틴 고르기를 그리지 않는다', async () => {
       const ui = await render(<FeedComposeScreen board="FREE" routinePicker={picker} />);
       expect(ui.queryByTestId('feed-routine-picker')).toBeNull();
+    });
+  });
+
+  describe('미니게임 기록 카드 (서버 feat/feed-minigame-record)', () => {
+    it('붙인 카드를 보이고, 카드가 있는 동안 인증게시판은 잠긴다 — ✕로 뺄 수 있다', async () => {
+      const onRemoveRecord = jest.fn();
+      const onSubmit = jest.fn();
+      const ui = await render(
+        <FeedComposeScreen
+          board="FREE"
+          content="🐱 고양이 탑 쌓기 1,240점, 전체 3위 달성!"
+          record={DEMO_MINIGAME_RECORD_DRAFT}
+          onRemoveRecord={onRemoveRecord}
+          onChangeBoard={jest.fn()}
+          onSubmit={onSubmit}
+        />,
+      );
+      expect(ui.getByDisplayValue('🐱 고양이 탑 쌓기 1,240점, 전체 3위 달성!')).toBeTruthy();
+      expect(ui.getByText('1,240점')).toBeTruthy();
+      expect(ui.getByText('전체 3위')).toBeTruthy();
+      expect(
+        ui.getByText('기록 카드는 자유게시판에만 올라가요. ✕를 누르면 카드 없이 글만 올려요.'),
+      ).toBeTruthy();
+      expect(ui.getByLabelText('인증 게시판').props.accessibilityState).toMatchObject({
+        disabled: true,
+      });
+      // 작성 화면의 카드엔 도전 버튼이 없다.
+      expect(ui.queryByText('나도 도전하기')).toBeNull();
+      await fireEvent.press(ui.getByLabelText('기록 카드 빼기'));
+      expect(onRemoveRecord).toHaveBeenCalled();
+      await fireEvent.press(ui.getByLabelText('올리기'));
+      expect(onSubmit).toHaveBeenCalled();
     });
   });
 });

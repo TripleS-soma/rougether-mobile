@@ -11,9 +11,10 @@ import {
 import { fetchFeedImage } from '@/api/feed';
 import type { ReportReason } from '@/api/types';
 import { type Screen } from '@/components/app/navigation';
+import { feedRecordDraftText } from '@/components/feed/feed-minigame-record';
 import { FeedComposeScreen } from '@/components/screens/feed-compose-screen';
 import { FeedPostScreen } from '@/components/screens/feed-post-screen';
-import type { FeedBoardFilter } from '@/components/screens/feed/types';
+import type { FeedBoardFilter, FeedMinigameRecordDraft } from '@/components/screens/feed/types';
 import type { FeedScreenProps } from '@/components/screens/feed-screen';
 import { useToast } from '@/components/ui/toast';
 import { FEED_ENABLED, FEED_MAX_IMAGES } from '@/constants/feed';
@@ -34,7 +35,10 @@ import { pickLibraryImages } from '@/lib/pick-image';
  */
 export function useFeedPages({
   nav,
+  openGame,
 }: {
+  /** 기록 카드의 [나도 도전하기] — 미니게임 서피스의 게임 열기(`useMinigameSurface().openGame`). */
+  openGame?: (gameCode: string) => void;
   nav: {
     screen: Screen;
     setScreen: Dispatch<SetStateAction<Screen>>;
@@ -87,6 +91,18 @@ export function useFeedPages({
     if (current === 'FREE' || current === 'VERIFICATION') setComposeBoard(current);
     setScreen('feedCompose');
   }, [boardRef, setComposeBoard, setScreen]);
+
+  // 미니게임 결과의 [자랑하기] — 자유게시판 + 본문 초안 + 기록 카드로 작성 화면을 연다.
+  // 자동으로 올리지 않는다: 사용자가 본문을 고치고(카드도 뺄 수 있다) 직접 [올리기]를 누른다.
+  const startRecordPost = compose.startRecordPost;
+  const shareRecord = useCallback(
+    (record: FeedMinigameRecordDraft) => {
+      if (!FEED_ENABLED) return;
+      startRecordPost(record, feedRecordDraftText(record));
+      setScreen('feedCompose');
+    },
+    [startRecordPost, setScreen],
+  );
 
   // 작성 화면을 어떤 경로로든(뒤로 버튼·하드웨어 백·엣지 백) 떠나면 초안을 버린다 — 올려 둔
   // 사진도 서버에서 취소해 미사용 업로드 30장 한도를 잡아먹지 않게.
@@ -187,10 +203,11 @@ export function useFeedPages({
       onLoadMore: feed.loadMore,
       onToggleLike: handleToggleLike,
       onOpenPost: openPost,
+      onChallenge: openGame,
       onCompose: openCompose,
       loadImage: fetchFeedImage,
     }),
-    [board, feed, handleToggleLike, openPost, openCompose],
+    [board, feed, handleToggleLike, openPost, openGame, openCompose],
   );
 
   // 알림함 카드·푸시 탭·인앱 배너의 FEED_COMMENT(refId·FCM postId = 게시물 id)는 셸이
@@ -218,6 +235,7 @@ export function useFeedPages({
         onReportPost={handleReportPost}
         onReportComment={handleReportComment}
         onBlockUser={(userId, via) => void handleBlockUser(userId, via)}
+        onChallenge={openGame}
         onBack={goBack}
         loadImage={fetchFeedImage}
       />
@@ -236,9 +254,11 @@ export function useFeedPages({
         onRetryImage={compose.retryImage}
         onSubmit={() => void handleSubmit()}
         submitting={compose.submitting}
+        record={compose.record}
+        onRemoveRecord={compose.removeRecord}
         onBack={goBack}
       />
     ) : null;
 
-  return { tabProps, subScreen, openPost };
+  return { tabProps, subScreen, openPost, shareRecord };
 }

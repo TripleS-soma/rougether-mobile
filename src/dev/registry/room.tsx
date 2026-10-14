@@ -108,6 +108,31 @@ export const roomEntries: GalleryEntry[] = [
     render: () => <MinigameRunnerScreen />,
   },
   {
+    name: 'MinigameRunnerScreen · 새 기록 자랑 제안',
+    description:
+      '랭킹전 새 최고 기록 + 그 게임 10판 이상 + 피드 켜짐일 때 결과 아래 "새 기록이에요! 피드에 기록을 자랑할까요?" [괜찮아요] / [자랑하기]. 판당 한 번(셸이 판정). 샘플 결과.',
+    render: () => (
+      <MinigameRunnerScreen
+        gameName="고양이 탑 쌓기"
+        finished
+        game={<View />}
+        result={{
+          runId: 'demo-run-1',
+          score: 1240,
+          bestScore: 1240,
+          personalBest: true,
+          rank: 3,
+          playCount: 12,
+        }}
+        sharePrompt
+        onShareRecord={() => {}}
+        onDismissShare={() => {}}
+        onStart={() => {}}
+        onPractice={() => {}}
+      />
+    ),
+  },
+  {
     name: 'MinigameLeaderboardScreen',
     description: '샘플 랭킹 미리보기. 아래 닉네임과 점수는 실제 유저 데이터가 아니에요.',
     render: () => (

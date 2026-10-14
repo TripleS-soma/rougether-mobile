@@ -93,6 +93,12 @@ export const ErrorCode = {
   FEED_UPLOAD_LIMIT: 'FEED_UPLOAD_LIMIT',
   /** 503 — 사진 저장소 일시 오류. */
   FEED_STORAGE_UNAVAILABLE: 'FEED_STORAGE_UNAVAILABLE',
+  /**
+   * 400 — 게시물에 붙인 미니게임 기록이 내 랭킹전 완료 기록이 아니거나, 자유게시판이 아니거나,
+   * 루틴 연결과 함께 보냄 (서버 feat/feed-minigame-record). 작성 화면은 카드를 빼고 그대로
+   * 올릴 수 있게 한다.
+   */
+  FEED_MINIGAME_RECORD_INVALID: 'FEED_MINIGAME_RECORD_INVALID',
   /** 404 — 채팅방 없음 (#1408). */
   CHAT_ROOM_NOT_FOUND: 'CHAT_ROOM_NOT_FOUND',
   /** 403 — 비구성원·탈퇴/강퇴·삭제된 집 등 채팅 접근 불가 (#1408). */

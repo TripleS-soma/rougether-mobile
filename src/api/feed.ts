@@ -163,7 +163,11 @@ function adaptPage<T, R>(page: Page<T>, adapt: (item: T) => R | null): Page<R> {
   return { ...page, items: page.items.map(adapt).filter((x): x is R => x !== null) };
 }
 
-/** POST /feed/posts — 같은 `clientPostId`의 재시도는 원래 글을 돌려준다(201). */
+/**
+ * POST /feed/posts — 같은 `clientPostId`의 재시도는 원래 글을 돌려준다(201).
+ * `minigameRecord`(기록 카드)는 자유게시판에만, 루틴 연결과 함께 보낼 수 없다. 내 랭킹전 판이
+ * 아니면 400 FEED_MINIGAME_RECORD_INVALID.
+ */
 export async function createFeedPost(input: FeedCreateRequest): Promise<FeedPost> {
   return adaptPost(await apiPost<FeedPostResponse>('/feed/posts', input));
 }

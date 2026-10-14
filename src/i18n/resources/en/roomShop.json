@@ -361,7 +361,11 @@
         "practiceAfterErrorA11y": "Stop retrying the save and practice",
         "practiceAgainA11y": "Practice again",
         "practiceA11y": "Practice · not ranked",
-        "leaderboardA11y": "See the global ranking"
+        "leaderboardA11y": "See the global ranking",
+        "shareTitle": "New record! Show it off on the feed?",
+        "shareAccept": "Show off",
+        "shareDismiss": "No thanks",
+        "shareAcceptA11y": "Share your new record on the feed"
       },
       "leaderboard": {
         "rowA11y": "Rank {{rank}} {{nickname}} {{score}} pts",

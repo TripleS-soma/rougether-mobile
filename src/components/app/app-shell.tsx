@@ -19,6 +19,7 @@ import { useMyRoomPages } from '@/components/app/use-my-room-pages';
 import { useSettingsSurface } from '@/components/app/use-settings-surface';
 import { HouseScreen } from '@/components/screens/house-screen';
 import { FeedScreen } from '@/components/screens/feed-screen';
+import type { FeedMinigameRecordDraft } from '@/components/screens/feed/types';
 import { FEED_ENABLED } from '@/constants/feed';
 import { isScheduledOn, MyRoomScreen } from '@/components/screens/my-room-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
@@ -102,7 +103,18 @@ export function AppShell({
   const [screen, setScreen] = useState<Screen>(initialScreen);
   // 버그 제보 진단 기록 (#1162) — 화면 이동·앱 상태를 메모리에만.
   useDiagnosticsRecorder(screen);
-  const minigames = useMinigameSurface({ screen, setScreen });
+  // 미니게임 결과의 [자랑하기] → 피드 작성 (2026-10-14). 피드 배선(useFeedPages)이 아래에서
+  // 서므로 ref로 잇는다 — 미니게임 서피스는 [나도 도전하기]용 openGame을 피드에 넘겨 준다.
+  const shareRecordRef = useRef<((record: FeedMinigameRecordDraft) => void) | null>(null);
+  const shareMinigameRecord = useCallback(
+    (record: FeedMinigameRecordDraft) => shareRecordRef.current?.(record),
+    [],
+  );
+  const minigames = useMinigameSurface({
+    screen,
+    setScreen,
+    onShareRecord: FEED_ENABLED ? shareMinigameRecord : undefined,
+  });
   // Remember where the add/edit-routine screen was opened from, so its back
   // button returns to the right place (my-room or routine manage).
   const [addReturnScreen, setAddReturnScreen] = useState<Screen>('routineManage');
@@ -518,7 +530,14 @@ export function AppShell({
 
   // 피드 페이지 배선 (#1409) — 피드 탭과 서브화면 2종(상세·작성). FEED_ENABLED가 꺼져
   // 있으면 요청도 화면도 없다.
-  const feedPages = useFeedPages({ nav: { screen, setScreen, goBack } });
+  const feedPages = useFeedPages({
+    nav: { screen, setScreen, goBack },
+    openGame: minigames.openGame,
+  });
+  const feedShareRecord = feedPages.shareRecord;
+  useEffect(() => {
+    shareRecordRef.current = feedShareRecord;
+  }, [feedShareRecord]);
 
   // 가구 거래소 배선 (#1427) — 목록(전체 메뉴에서 여는 독립 화면, #1502)·상세·내 주문 서브화면,
   // 스튜디오 발행. MARKET_ENABLED가 꺼져 있으면 요청도 화면도 없다.

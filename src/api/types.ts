@@ -355,6 +355,7 @@ export type FeedCreateRequest = {
   imageIds?: number[];
   boardType?: 'FREE' | 'VERIFICATION';
   routineCompletion?: FeedRoutineCompletionRequest;
+  minigameRecord?: FeedMinigameRecordRequest;
 };
 
 export type FeedImageResponse = {
@@ -363,6 +364,18 @@ export type FeedImageResponse = {
   width?: number;
   height?: number;
   contentType?: string;
+};
+
+export type FeedMinigameRecordRequest = {
+  runId: string;
+};
+
+export type FeedMinigameRecordResponse = {
+  gameCode?: string;
+  score?: number;
+  rank?: number | null;
+  personalBest?: boolean;
+  achievedAt?: string;
 };
 
 export type FeedPageResponseFeedCommentResponse = {
@@ -390,6 +403,7 @@ export type FeedPostResponse = {
   updatedAt?: string;
   boardType?: 'FREE' | 'VERIFICATION';
   routine?: FeedRoutineResponse;
+  minigameRecord?: FeedMinigameRecordResponse;
 };
 
 export type FeedRoutineCompletionRequest = {
@@ -977,6 +991,7 @@ export type MinigameFinishResponse = {
   bestScore?: number;
   personalBest?: boolean;
   rank?: number;
+  playCount: number;
 };
 
 export type MinigameLeaderboardResponse = {

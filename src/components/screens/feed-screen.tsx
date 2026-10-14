@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { FEED_BOARD_FILTERS, FeedBoardTabs } from '@/components/feed/feed-board';
+import { FeedMinigameRecordCard } from '@/components/feed/feed-minigame-record';
 import { FeedActionRow, FeedAuthorRow, feedAuthorName } from '@/components/feed/feed-parts';
 import { FeedRoutineBadge } from '@/components/feed/feed-routine';
 import { FeedPhoto, feedImageAspect } from '@/components/feed/feed-photo';
@@ -54,6 +55,8 @@ export type FeedScreenProps = {
   onLoadMore?: () => void;
   onToggleLike?: (postId: number) => void;
   onOpenPost?: (postId: number) => void;
+  /** 기록 카드의 [나도 도전하기] — 그 게임 화면을 바로 연다. 없으면 버튼이 없다. */
+  onChallenge?: (gameCode: string) => void;
   onCompose?: () => void;
   /** 인증 사진 로더 — 셸이 `fetchFeedImage`를 넘긴다. */
   loadImage?: FeedImageLoader;
@@ -66,6 +69,7 @@ type CardProps = {
   loadImage?: FeedImageLoader;
   onToggleLike?: (postId: number) => void;
   onOpenPost?: (postId: number) => void;
+  onChallenge?: (gameCode: string) => void;
   now?: Date;
 };
 
@@ -78,6 +82,7 @@ const FeedPostCard = memo(function FeedPostCard({
   loadImage,
   onToggleLike,
   onOpenPost,
+  onChallenge,
   now,
 }: CardProps) {
   const t = useTokens();
@@ -129,6 +134,10 @@ const FeedPostCard = memo(function FeedPostCard({
           </Text>
         ) : null}
       </Pressable>
+      {post.minigameRecord ? (
+        // 카드 본문(Pressable) 밖에 둔다 — 안에 두면 스크린리더가 [나도 도전하기]에 닿지 못한다.
+        <FeedMinigameRecordCard record={post.minigameRecord} onChallenge={onChallenge} />
+      ) : null}
       <FeedActionRow
         liked={post.likedByMe}
         likeCount={post.likeCount}
@@ -158,6 +167,7 @@ export function FeedScreen({
   onLoadMore,
   onToggleLike,
   onOpenPost,
+  onChallenge,
   onCompose,
   loadImage,
   now,
@@ -216,10 +226,11 @@ export function FeedScreen({
         loadImage={loadImage}
         onToggleLike={onToggleLike}
         onOpenPost={onOpenPost}
+        onChallenge={onChallenge}
         now={now}
       />
     ),
-    [loadImage, onToggleLike, onOpenPost, now],
+    [loadImage, onToggleLike, onOpenPost, onChallenge, now],
   );
 
   return (

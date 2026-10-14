@@ -43,7 +43,8 @@
       "editToFreeHint": "자유게시판으로 옮기면 연결한 루틴이 풀려요.",
       "editKeepRoutine": "바꾸지 않으면 지금 연결한 루틴이 그대로 남아요.",
       "editRestoreRoutine": "원래 연결한 루틴으로 되돌리기",
-      "editCurrentRoutine": "지금 연결한 루틴"
+      "editCurrentRoutine": "지금 연결한 루틴",
+      "editRecordStaysFree": "기록 카드가 있는 글은 자유게시판에만 둘 수 있어요."
     },
     "compose": {
       "title": "새 게시물",
@@ -87,7 +88,8 @@
       "FEED_STORAGE_UNAVAILABLE": "사진 저장소가 잠시 불안정해요. 잠시 후 다시 시도해 주세요.",
       "generic": "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.",
       "FEED_ROUTINE_COMPLETION_REQUIRED": "인증할 루틴을 골라 주세요.",
-      "FEED_ROUTINE_COMPLETION_INVALID": "그 루틴의 완료 기록을 확인하지 못했어요. 최근 7일 안에 완료한 루틴을 다시 골라 주세요."
+      "FEED_ROUTINE_COMPLETION_INVALID": "그 루틴의 완료 기록을 확인하지 못했어요. 최근 7일 안에 완료한 루틴을 다시 골라 주세요.",
+      "FEED_MINIGAME_RECORD_INVALID": "기록 카드를 붙일 수 없어요. 카드 없이 올려 주세요."
     },
     "emptyFree": "아직 자유게시판 글이 없어요.\n첫 이야기를 남겨 보세요!",
     "emptyMine": "아직 쓴 글이 없어요.\n오늘의 루틴이나 일상을 나눠 보세요!",
@@ -113,6 +115,20 @@
       "dayTitle": "{{label}} 완료한 루틴",
       "dayEmpty": "이 날 완료한 루틴이 없어요",
       "dayA11y": "{{label}}, 완료한 루틴 {{count}}개"
+    },
+    "record": {
+      "unknownGame": "미니게임",
+      "score": "{{score}}점",
+      "rank": "전체 {{rank}}위",
+      "personalBest": "새 최고 기록",
+      "challenge": "나도 도전하기",
+      "challengeA11y": "{{game}} 나도 도전하기",
+      "removeA11y": "기록 카드 빼기",
+      "a11y": "미니게임 기록: {{summary}}",
+      "draft": "🐱 {{game}} {{score}}점 달성!",
+      "draftWithRank": "🐱 {{game}} {{score}}점, 전체 {{rank}}위 달성!",
+      "composeHint": "기록 카드는 자유게시판에만 올라가요. ✕를 누르면 카드 없이 글만 올려요.",
+      "invalidRemoved": "기록 카드를 붙일 수 없어서 뺐어요. 글은 그대로 올릴 수 있어요."
     }
   }
 }

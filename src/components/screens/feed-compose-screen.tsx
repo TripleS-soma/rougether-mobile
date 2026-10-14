@@ -11,12 +11,14 @@ import {
 } from 'react-native';
 
 import { FEED_BOARD_TYPES, FeedBoardTabs } from '@/components/feed/feed-board';
+import { FeedMinigameRecordCard } from '@/components/feed/feed-minigame-record';
 import { FeedRoutinePicker } from '@/components/feed/feed-routine';
 import { feedComposeBlocker } from '@/components/screens/feed/board-rules';
 import type {
   FeedBoardType,
   FeedCompletionPicker,
   FeedDraftImage,
+  FeedMinigameRecordDraft,
   FeedRoutineCompletion,
 } from '@/components/screens/feed/types';
 import { Icon } from '@/components/ui/icon';
@@ -31,6 +33,7 @@ import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
 
 const NO_IMAGES: FeedDraftImage[] = [];
+const VERIFICATION_ONLY: readonly FeedBoardType[] = ['VERIFICATION'];
 const THUMB_SIZE = 96;
 
 export type FeedComposeScreenProps = {
@@ -53,6 +56,12 @@ export type FeedComposeScreenProps = {
   onRetryImage?: (key: string) => void;
   onSubmit?: () => void;
   submitting?: boolean;
+  /**
+   * 붙인 미니게임 기록 카드 (서버 feat/feed-minigame-record) — 결과 화면의 [자랑하기]로만
+   * 붙는다. 고칠 수 없고 ✕로 뺄 수만 있다. 카드가 있는 동안은 자유게시판에 머문다.
+   */
+  record?: FeedMinigameRecordDraft | null;
+  onRemoveRecord?: () => void;
   onBack?: () => void;
 };
 
@@ -77,6 +86,8 @@ export function FeedComposeScreen({
   onRetryImage,
   onSubmit,
   submitting = false,
+  record = null,
+  onRemoveRecord,
   onBack,
 }: FeedComposeScreenProps) {
   const t = useTokens();
@@ -130,6 +141,7 @@ export function FeedComposeScreen({
               value={board}
               onChange={onChangeBoard}
               disabled={submitting || !onChangeBoard}
+              disabledOptions={record ? VERIFICATION_ONLY : undefined}
               testID="feed-compose-board"
             />
             <Text style={[Typography.supporting, styles.boardHint, { color: t.textMuted }]}>
@@ -138,6 +150,19 @@ export function FeedComposeScreen({
                 : tr('feed.compose.boardHintVerification')}
             </Text>
           </View>
+          {record ? (
+            <View style={styles.boardRow}>
+              <FeedMinigameRecordCard
+                record={record}
+                onRemove={onRemoveRecord}
+                removeDisabled={submitting}
+                testID="feed-compose-record"
+              />
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                {tr('feed.record.composeHint')}
+              </Text>
+            </View>
+          ) : null}
           {board === 'VERIFICATION' ? (
             <FeedRoutinePicker
               picker={routinePicker}
