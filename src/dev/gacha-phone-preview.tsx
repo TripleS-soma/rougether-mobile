@@ -124,10 +124,13 @@ export function GachaPhonePreview({
   fullscreen = false,
   rarity = '전설',
   reducedMotion = false,
+  characterUnlocked = false,
 }: {
   fullscreen?: boolean;
   rarity?: DemoRarity;
   reducedMotion?: boolean;
+  /** 캐릭터 상자 해금 (방 레벨 10) — 끄면 잠금 안내를 본다. */
+  characterUnlocked?: boolean;
 }) {
   const { entry } = useLocalSearchParams<{ entry?: string | string[] }>();
   // The full gallery mounts every demo. Only a directly selected entry may
@@ -139,6 +142,7 @@ export function GachaPhonePreview({
       coinBalance={5600}
       diamondBalance={120}
       reducedMotion={reducedMotion}
+      characterUnlocked={characterUnlocked}
       soundEffectsEnabled
       onBack={fullscreen ? () => setOpen(false) : undefined}
       onDraw={async (gachaId, count) => demoDraw(gachaId, count, rarity)}
