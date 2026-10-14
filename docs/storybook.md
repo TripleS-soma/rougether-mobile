@@ -160,7 +160,7 @@ npx --no-install vitest run --project=storybook
 
 - 설정은 `vitest.config.ts`(스토리북 전용 — 앱 단위 테스트는 jest 그대로).
 - 스토리 `render`에서 Storybook 훅(`useArgs`)과 React 훅(`useState` 등)을 **한 함수에 섞지 마세요**. Vitest 포터블 스토리에서 오류가 납니다 — 로컬 상태는 내부 컴포넌트로 분리합니다(`field`·`toggle-switch` 스토리 참고).
-- 접근성 검사는 현재 `a11y: { test: 'todo' }`(경고)입니다. 2026-09-16 기준 `error`로 올리면 46건 실패 — 대부분 색 대비(color-contrast), 그다음 RN Web이 내보내는 ARIA 속성(aria-prohibited-attr, 진행률 이름 등). 정리하면 `.storybook/preview.tsx`에서 `error`로 올립니다.
+- 접근성 검사는 `a11y: { test: 'error' }`라 위반이 있으면 실패합니다(#1404에서 ARIA 위반을 정리하고 올림). **색 대비(color-contrast)만 규칙에서 꺼 두었습니다** — 테마 토큰 조정이 필요한 디자인 결정이라 #1389에 남아 있습니다. 스토리에서 `rules`를 덮어쓸 때는 이 제외도 함께 적으세요(`.storybook/preview.tsx` 주석 참고).
 
 ### 시각 회귀 (스크린샷 비교)
 

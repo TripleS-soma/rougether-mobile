@@ -90,6 +90,34 @@ describe('API adapters — shop / gacha', () => {
     expect(placed.backgroundId).toBeNull(); // background not owned
   });
 
+  // AI 가구 = 서버 테마 코드 photo_furniture (spec market). 공개 카탈로그엔 없고 보유 목록으로만 온다.
+  it('photo_furniture 테마의 보유 가구에 aiGenerated를 붙인다', () => {
+    const cat = toShopCatalogue(
+      [
+        {
+          id: 1,
+          name: '침대',
+          placementType: 'positioned',
+          defaultSlot: 'bottomLeft',
+          categoryCode: 'furniture',
+          theme: { id: 1, code: 'forest_sage', name: '숲속 세이지' },
+        },
+      ],
+      [
+        {
+          itemId: 9,
+          name: '내가 만든 의자',
+          placementType: 'positioned',
+          defaultSlot: 'midRight',
+          categoryCode: 'furniture',
+          theme: { id: 7, code: 'photo_furniture', name: '사진 가구' },
+        },
+      ],
+    );
+    expect(cat.furniture.find((f) => f.id === '9')?.aiGenerated).toBe(true);
+    expect(cat.furniture.find((f) => f.id === '1')?.aiGenerated).toBeUndefined();
+  });
+
   it('uses explicit character identity instead of a missing theme to group gacha', () => {
     expect(toGachaMachine({ gachaId: 1, name: '숲속 세이지 뽑기', themeId: 1 }).kind).toBe(
       'furniture',
