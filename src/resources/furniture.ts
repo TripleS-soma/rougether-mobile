@@ -100,8 +100,16 @@ export type FurnitureItem = {
   defaultPositionY?: number;
   /** Gacha reward metadata (optional). */
   theme?: string;
+  /**
+   * 사진으로 만든 AI 가구 — 서버 테마 코드 `photo_furniture`(spec market). 거래소에서 산
+   * 남의 AI 가구도 같은 아이템이라 true다. 꾸미기의 AI 가구 탭이 이걸로 거른다.
+   */
+  aiGenerated?: boolean;
   rarity?: Rarity;
 };
+
+/** AI 가구가 속하는 서버 테마 코드 (spec `domains/market` — 거래 대상과 같은 기준). */
+export const AI_FURNITURE_THEME_CODE = 'photo_furniture';
 
 const fk = (id: string) => `furniture/${id}`;
 

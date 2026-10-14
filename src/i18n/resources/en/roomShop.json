@@ -65,6 +65,7 @@
         "wallpaper": "Wallpaper",
         "floor": "Floor",
         "background": "Scene",
+        "ai": "AI furniture",
         "market": "Market"
       },
       "tabA11y": "{{label}} tab",

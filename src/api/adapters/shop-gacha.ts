@@ -4,6 +4,7 @@ import { GACHA_CATEGORY_META, getGachaCategory } from '@/constants/gacha';
 import { GachaAccents, WallpaperTints } from '@/constants/theme';
 import { i18n } from '@/i18n';
 import {
+  AI_FURNITURE_THEME_CODE,
   DEFAULT_WALLPAPER_ID,
   type FurnitureCategory,
   type FurnitureItem,
@@ -173,6 +174,7 @@ function toFurnitureItem(item: ItemResponse): FurnitureItem {
     defaultPositionX: item.defaultPositionX ?? undefined,
     defaultPositionY: item.defaultPositionY ?? undefined,
     theme: item.theme?.name,
+    ...(item.theme?.code === AI_FURNITURE_THEME_CODE ? { aiGenerated: true } : null),
   };
 }
 

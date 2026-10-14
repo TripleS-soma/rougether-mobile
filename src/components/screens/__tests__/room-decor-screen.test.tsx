@@ -998,6 +998,59 @@ describe('RoomDecorScreen — 보유중 필터', () => {
   });
 
   /**
+   * AI 가구 탭 — 사진으로 만든 가구(`photo_furniture`)를 상점 가구와 섞지 않고 따로 모은다.
+   * 가진 게 있을 때만 보이고, 가구 탭에는 다시 나오지 않는다.
+   */
+  describe('AI 가구 탭', () => {
+    const AI_ITEM = {
+      ...FURNITURE_ITEMS[0],
+      id: 'ai-1',
+      name: '내가 만든 의자',
+      aiGenerated: true,
+    };
+
+    it('AI 가구가 있으면 탭이 생기고, 누르면 AI 가구만 보인다', async () => {
+      const furniture = [FURNITURE_ITEMS[0], AI_ITEM];
+      const { getByLabelText, queryByLabelText } = await render(
+        <RoomDecorScreen
+          initialItems={[]}
+          furniture={furniture}
+          ownedIds={[FURNITURE_ITEMS[0].id, 'ai-1']}
+        />,
+      );
+      // 기본 가구 탭에는 AI 가구가 없다.
+      expect(getByLabelText(FURNITURE_ITEMS[0].name)).toBeTruthy();
+      expect(queryByLabelText('내가 만든 의자')).toBeNull();
+
+      await fireEvent.press(getByLabelText('AI 가구 탭'));
+      expect(getByLabelText('내가 만든 의자')).toBeTruthy();
+      expect(queryByLabelText(FURNITURE_ITEMS[0].name)).toBeNull();
+    });
+
+    it('AI 가구가 없으면 탭이 없다', async () => {
+      const { queryByLabelText } = await render(<RoomDecorScreen initialItems={[]} />);
+      expect(queryByLabelText('AI 가구 탭')).toBeNull();
+    });
+
+    it('AI 탭으로 진입했는데 AI 가구가 없으면 가구 탭을 보여준다', async () => {
+      const { getByLabelText } = await render(
+        <RoomDecorScreen
+          initialItems={[]}
+          initialTab="ai"
+          furniture={[FURNITURE_ITEMS[0]]}
+          ownedIds={[FURNITURE_ITEMS[0].id]}
+        />,
+      );
+      expect(getByLabelText('가구 탭').props.accessibilityState).toMatchObject({ selected: true });
+      expect(getByLabelText(FURNITURE_ITEMS[0].name)).toBeTruthy();
+    });
+
+    it('스튜디오에서 넘어온 AI 가구는 AI 탭으로 되짚는다', () => {
+      expect(decorTabForItem('ai-1', { furniture: [AI_ITEM] })).toBe('ai');
+    });
+  });
+
+  /**
    * 뽑기에서 넘어오면 하이라이트만으론 부족하다 (#897) — 뽑은 게 안 보이는
    * 탭에 있으면 찾아야 한다.
    */
