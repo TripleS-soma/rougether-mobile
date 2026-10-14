@@ -141,6 +141,13 @@ export function FeedMinigameRecordCard({
 }
 
 const styles = StyleSheet.create({
+  thumb: {
+    borderRadius: Radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.half,
+    overflow: 'hidden',
+  },
   card: {
     borderRadius: Radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
@@ -201,3 +208,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+/**
+ * 목록 줄 오른쪽의 기록 타일 — 썸네일 자리에 게임 아이콘과 점수만 작게. 카드 전체(순위·배지·
+ * [나도 도전하기])는 상세에서 본다. 장식이라 스크린리더는 줄의 라벨로 읽는다.
+ */
+export function FeedRecordThumb({ record, size }: { record: FeedMinigameRecord; size: number }) {
+  const t = useTokens();
+  const Typography = useTypography();
+  const definition = getMinigameDefinition(record.gameCode);
+  return (
+    <View
+      importantForAccessibility="no-hide-descendants"
+      accessibilityElementsHidden
+      style={[styles.thumb, { width: size, height: size, backgroundColor: t.primarySoft }]}>
+      <CharacterAvatar characterId="cat" pose={definition?.pose ?? FALLBACK_POSE} size={size / 2} />
+      <Text style={[Typography.supporting, { color: t.primaryText }]} numberOfLines={1}>
+        {record.score.toLocaleString()}
+      </Text>
+    </View>
+  );
+}

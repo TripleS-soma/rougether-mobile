@@ -32,22 +32,20 @@ jest.mock('@/lib/analytics', () => ({ track: jest.fn() }));
 
 const DRAFT_TEXT = '🐱 고양이 탑 쌓기 1,240점, 전체 3위 달성!';
 
+let lastTabProps: object = {};
 function Harness({ openGame }: { openGame: (gameCode: string) => void }) {
   const [screen, setScreen] = useState<Screen>('minigameRunner');
   const pages = useFeedPages({
     nav: { screen, setScreen, goBack: () => setScreen('feed') },
     openGame,
   });
+  lastTabProps = pages.tabProps;
   return (
     <View>
       <Text testID="screen">{screen}</Text>
       <Pressable
         accessibilityLabel="자랑하기 테스트"
         onPress={() => pages.shareRecord(DEMO_MINIGAME_RECORD_DRAFT)}
-      />
-      <Pressable
-        accessibilityLabel="목록 도전 테스트"
-        onPress={() => pages.tabProps.onChallenge?.('cat-tower')}
       />
       {pages.subScreen}
     </View>
@@ -89,9 +87,11 @@ it('[자랑하기]는 자유게시판·본문 초안·기록 카드로 작성을
   });
 });
 
-it('피드의 [나도 도전하기]는 미니게임 서피스의 게임 열기로 잇는다', async () => {
-  const openGame = jest.fn();
-  const ui = await render(<Harness openGame={openGame} />, { wrapper: wrapper() });
-  await fireEvent.press(ui.getByLabelText('목록 도전 테스트'));
-  expect(openGame).toHaveBeenCalledWith('cat-tower');
+// 목록은 줄만 보여 준다(에브리타임식) — [나도 도전하기]는 상세의 기록 카드에서만(상세 배선은
+// feed-minigame-record.test가 본다). 목록 props에 도전 콜백이 다시 생기지 않게 잠근다.
+it('피드 목록에는 도전·좋아요 콜백을 넘기지 않는다', async () => {
+  const ui = await render(<Harness openGame={jest.fn()} />, { wrapper: wrapper() });
+  expect(ui.getByTestId('screen')).toBeTruthy();
+  expect(lastTabProps).not.toHaveProperty('onChallenge');
+  expect(lastTabProps).not.toHaveProperty('onToggleLike');
 });

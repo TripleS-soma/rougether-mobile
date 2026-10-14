@@ -61,16 +61,14 @@ describe('미니게임 기록 카드 (서버 feat/feed-minigame-record)', () => 
     expect(feedRecordDraftText({ ...RECORD, rank: null })).toBe('🐱 고양이 탑 쌓기 1,240점 달성!');
   });
 
-  it('피드 목록과 상세에서 기록 글은 카드를 그리고, 도전 버튼이 게임을 연다', async () => {
+  it('목록은 기록을 작게 요약하고, 상세의 카드에서 도전 버튼이 게임을 연다', async () => {
     const onChallenge = jest.fn();
-    const list = await render(
-      <FeedScreen posts={[DEMO_FEED_RECORD_POST]} onChallenge={onChallenge} />,
-    );
-    expect(list.getByText('1,240점')).toBeTruthy();
-    await fireEvent.press(list.getByText('나도 도전하기'));
-    expect(onChallenge).toHaveBeenCalledWith('cat-tower');
+    const list = await render(<FeedScreen posts={[DEMO_FEED_RECORD_POST]} />);
+    // 썸네일 자리의 게임 타일(점수) — 카드·도전 버튼은 목록에 없다.
+    // 타일은 장식이라 스크린리더에서 숨긴다(줄 라벨로 읽는다).
+    expect(list.getByText('1,240', { includeHiddenElements: true })).toBeTruthy();
+    expect(list.queryByText('나도 도전하기')).toBeNull();
 
-    onChallenge.mockClear();
     const detail = await render(
       <FeedPostScreen post={DEMO_FEED_RECORD_POST} onChallenge={onChallenge} />,
     );

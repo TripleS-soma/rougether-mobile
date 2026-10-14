@@ -11,10 +11,10 @@ import {
 } from 'react-native';
 
 import { FEED_BOARD_FILTERS, FeedBoardTabs } from '@/components/feed/feed-board';
-import { FeedMinigameRecordCard } from '@/components/feed/feed-minigame-record';
-import { FeedActionRow, FeedAuthorRow, feedAuthorName } from '@/components/feed/feed-parts';
+import { FeedRecordThumb, feedRecordDraftText } from '@/components/feed/feed-minigame-record';
+import { feedAuthorName, feedTimeLabel } from '@/components/feed/feed-parts';
 import { FeedRoutineBadge } from '@/components/feed/feed-routine';
-import { FeedPhoto, feedImageAspect } from '@/components/feed/feed-photo';
+import { FeedPhoto } from '@/components/feed/feed-photo';
 import type { FeedBoardFilter, FeedImageLoader, FeedPost } from '@/components/screens/feed/types';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon } from '@/components/ui/icon';
@@ -33,8 +33,10 @@ import { useT } from '@/i18n';
 const NO_POSTS: FeedPost[] = [];
 const COMPOSE_SIZE = 56;
 /** 목록 카드 본문 줄 수 — 사진 없는 자유글은 글이 주인공이라 더 길게 보인다. */
-const CARD_LINES = 3;
-const TEXT_ONLY_CARD_LINES = 8;
+/** 목록 줄의 본문 미리보기 줄 수(에브리타임과 같은 세 줄). */
+const ROW_LINES = 3;
+/** 오른쪽 썸네일 한 변 — 본문 세 줄 + 메타 줄 높이에 맞춘다. */
+const THUMB_SIZE = Spacing.six * 2;
 
 export type FeedScreenProps = {
   posts?: FeedPost[];
@@ -53,10 +55,7 @@ export type FeedScreenProps = {
   loadingMore?: boolean;
   /** 목록 끝 근처 — 다음 페이지. 중복 호출 가드는 훅이 한다. */
   onLoadMore?: () => void;
-  onToggleLike?: (postId: number) => void;
   onOpenPost?: (postId: number) => void;
-  /** 기록 카드의 [나도 도전하기] — 그 게임 화면을 바로 연다. 없으면 버튼이 없다. */
-  onChallenge?: (gameCode: string) => void;
   onCompose?: () => void;
   /** 인증 사진 로더 — 셸이 `fetchFeedImage`를 넘긴다. */
   loadImage?: FeedImageLoader;
@@ -64,88 +63,118 @@ export type FeedScreenProps = {
   now?: Date;
 } & ScrollRestoreProps;
 
-type CardProps = {
+type RowProps = {
   post: FeedPost;
   loadImage?: FeedImageLoader;
-  onToggleLike?: (postId: number) => void;
   onOpenPost?: (postId: number) => void;
-  onChallenge?: (gameCode: string) => void;
+  /** 목록의 첫·마지막 줄 — 묶음의 위·아래 모서리만 둥글게. */
+  first: boolean;
+  last: boolean;
   now?: Date;
 };
 
 /**
- * 목록 카드 — 작성자(게시판 배지) + 첫 사진 + 본문 세 줄 + 좋아요·댓글. 사진·본문을 누르면
- * 상세. 사진 없는 자유글(서버 #428)은 사진 자리 없이 본문을 여덟 줄까지.
+ * 목록 한 줄 — 에브리타임처럼 왼쪽에 본문 세 줄과 메타(시각 · 작성자 · ♡ · 💬), 오른쪽에 첫
+ * 사진 정사각형 썸네일(기록 글은 게임 타일). 줄 전체를 누르면 상세에서 사진을 크게 보고
+ * 좋아요·댓글·[나도 도전하기]를 한다. 목록에선 좋아요를 누르지 않는다(숫자만).
  */
-const FeedPostCard = memo(function FeedPostCard({
+const FeedPostRow = memo(function FeedPostRow({
   post,
   loadImage,
-  onToggleLike,
   onOpenPost,
-  onChallenge,
+  first,
+  last,
   now,
-}: CardProps) {
+}: RowProps) {
   const t = useTokens();
   const Typography = useTypography();
   const tr = useT();
-  const first = post.images[0];
-  const open = onOpenPost ? () => onOpenPost(post.postId) : undefined;
+  const photo = post.images[0];
+  const name = feedAuthorName(post.author, tr('feed.anonymous'));
+  const time = feedTimeLabel(post.createdAt, now);
+  // 본문이 비어 있는 옛 기록 글도 줄이 비지 않게 — 기록 요약을 본문 자리에.
+  const text =
+    post.content || (post.minigameRecord ? feedRecordDraftText(post.minigameRecord) : '');
   return (
-    <View style={[styles.card, { backgroundColor: t.surface }]} testID={`feed-post-${post.postId}`}>
-      <Pressable
-        onPress={open}
-        accessibilityRole="button"
-        accessibilityLabel={tr('feed.openPostA11y', {
-          name: feedAuthorName(post.author, tr('feed.anonymous')),
-        })}
-        style={styles.cardBody}>
-        <FeedAuthorRow
-          author={post.author}
-          createdAt={post.createdAt}
-          edited={post.updatedAt !== post.createdAt}
-          board={post.boardType}
-          now={now}
-        />
+    <Pressable
+      onPress={onOpenPost ? () => onOpenPost(post.postId) : undefined}
+      accessibilityRole="button"
+      accessibilityLabel={tr('feed.openPostA11y', { name })}
+      testID={`feed-post-${post.postId}`}
+      style={({ pressed }) => [
+        styles.row,
+        { backgroundColor: pressed ? t.surfaceMuted : t.surface, borderColor: t.border },
+        first && styles.rowFirst,
+        last && styles.rowLast,
+        !last && styles.rowDivider,
+      ]}>
+      <View style={styles.rowText}>
+        {text ? (
+          <Text style={[Typography.body, { color: t.text }]} numberOfLines={ROW_LINES}>
+            {text}
+          </Text>
+        ) : null}
         {post.boardType === 'VERIFICATION' && post.routine ? (
           <FeedRoutineBadge routine={post.routine} />
         ) : null}
-        {first ? (
-          <View>
-            <FeedPhoto
-              image={first}
-              loader={loadImage}
-              accessibilityLabel={tr('feed.imageA11y', { index: 1, total: post.images.length })}
-              style={[styles.photo, { aspectRatio: feedImageAspect(first) }]}
-            />
-            {post.images.length > 1 ? (
-              <View style={[styles.countBadge, { backgroundColor: t.surface }]}>
-                <Text style={[Typography.supporting, { color: t.text }]}>
-                  {tr('feed.imageCount', { count: post.images.length - 1 })}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-        {post.content ? (
+        <View style={styles.meta}>
+          {time ? (
+            <Text style={[Typography.supporting, { color: t.textMuted }]} numberOfLines={1}>
+              {time}
+            </Text>
+          ) : null}
           <Text
-            style={[Typography.body, { color: t.text }]}
-            numberOfLines={first ? CARD_LINES : TEXT_ONLY_CARD_LINES}>
-            {post.content}
+            style={[Typography.supporting, styles.metaName, { color: t.textMuted }]}
+            numberOfLines={1}>
+            {name}
           </Text>
-        ) : null}
-      </Pressable>
-      {post.minigameRecord ? (
-        // 카드 본문(Pressable) 밖에 둔다 — 안에 두면 스크린리더가 [나도 도전하기]에 닿지 못한다.
-        <FeedMinigameRecordCard record={post.minigameRecord} onChallenge={onChallenge} />
+          {post.likeCount > 0 ? (
+            <View
+              style={styles.count}
+              accessible
+              accessibilityLabel={tr('feed.likeCount', { count: post.likeCount })}>
+              <Icon
+                name={post.likedByMe ? 'heart' : 'heart-outline'}
+                size={13}
+                color={post.likedByMe ? t.danger : t.textMuted}
+              />
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>{post.likeCount}</Text>
+            </View>
+          ) : null}
+          {post.commentCount > 0 ? (
+            <View
+              style={styles.count}
+              accessible
+              accessibilityLabel={tr('feed.commentCount', { count: post.commentCount })}>
+              <Icon name="comment" size={13} color={t.textMuted} />
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                {post.commentCount}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      </View>
+      {photo ? (
+        <View>
+          <FeedPhoto
+            image={photo}
+            loader={loadImage}
+            contentFit="cover"
+            accessibilityLabel={tr('feed.imageA11y', { index: 1, total: post.images.length })}
+            style={[styles.thumb, { width: THUMB_SIZE, height: THUMB_SIZE }]}
+          />
+          {post.images.length > 1 ? (
+            <View style={[styles.countBadge, { backgroundColor: t.surface }]}>
+              <Text style={[Typography.supporting, { color: t.text }]}>
+                {tr('feed.imageCount', { count: post.images.length - 1 })}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      ) : post.minigameRecord ? (
+        <FeedRecordThumb record={post.minigameRecord} size={THUMB_SIZE} />
       ) : null}
-      <FeedActionRow
-        liked={post.likedByMe}
-        likeCount={post.likeCount}
-        commentCount={post.commentCount}
-        onToggleLike={onToggleLike ? () => onToggleLike(post.postId) : undefined}
-        onOpenComments={open}
-      />
-    </View>
+    </Pressable>
   );
 });
 
@@ -165,9 +194,7 @@ export function FeedScreen({
   hasNext = false,
   loadingMore = false,
   onLoadMore,
-  onToggleLike,
   onOpenPost,
-  onChallenge,
   onCompose,
   loadImage,
   now,
@@ -219,18 +246,19 @@ export function FeedScreen({
     }
   }, [onRefresh]);
 
+  const lastIndex = posts.length - 1;
   const renderItem = useCallback(
-    ({ item }: { item: FeedPost }) => (
-      <FeedPostCard
+    ({ item, index }: { item: FeedPost; index: number }) => (
+      <FeedPostRow
         post={item}
         loadImage={loadImage}
-        onToggleLike={onToggleLike}
         onOpenPost={onOpenPost}
-        onChallenge={onChallenge}
+        first={index === 0}
+        last={index === lastIndex}
         now={now}
       />
     ),
-    [loadImage, onToggleLike, onOpenPost, onChallenge, now],
+    [loadImage, onOpenPost, lastIndex, now],
   );
 
   return (
@@ -326,25 +354,50 @@ const styles = StyleSheet.create({
   },
   body: {
     padding: Spacing.three,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.three,
   },
-  card: {
-    borderRadius: Radius.xl,
-    padding: Spacing.three,
+  rowFirst: {
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+  },
+  rowLast: {
+    borderBottomLeftRadius: Radius.xl,
+    borderBottomRightRadius: Radius.xl,
+  },
+  rowDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  rowText: {
+    flex: 1,
+    gap: Spacing.one,
+  },
+  meta: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.two,
   },
-  cardBody: {
-    gap: Spacing.two,
+  metaName: {
+    flexShrink: 1,
   },
-  photo: {
+  count: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.half,
+  },
+  thumb: {
     borderRadius: Radius.lg,
   },
   countBadge: {
     position: 'absolute',
-    top: Spacing.two,
-    right: Spacing.two,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.half,
+    top: Spacing.one,
+    right: Spacing.one,
+    paddingHorizontal: Spacing.one,
     borderRadius: Radius.pill,
   },
   state: {

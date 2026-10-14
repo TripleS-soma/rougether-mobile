@@ -6,15 +6,16 @@ import { DEMO_FEED_POSTS, DEMO_FEED_TEXT_POST } from '@/mocks/fixtures';
 const NOW = new Date('2026-09-22T03:30:00Z');
 
 describe('FeedScreen (#1409)', () => {
-  it('게시물 카드 — 작성자·본문·좋아요/댓글 수, 닉네임 없으면 기본 표기', async () => {
-    const { getByText, getAllByText } = await render(
+  it('목록 줄 — 본문·시각·작성자·좋아요/댓글 수, 닉네임 없으면 기본 표기', async () => {
+    const { getByText, getAllByText, getByLabelText } = await render(
       <FeedScreen posts={DEMO_FEED_POSTS} now={NOW} />,
     );
     expect(getByText('피드')).toBeTruthy();
     expect(getByText('루틴친구')).toBeTruthy();
     expect(getByText(/오늘 아침 루틴 완료/)).toBeTruthy();
-    expect(getByText('좋아요 3')).toBeTruthy();
-    expect(getByText('댓글 2')).toBeTruthy();
+    // 숫자만(목록에서 좋아요는 누르지 않는다) — 읽기 라벨은 "좋아요 3".
+    expect(getByLabelText('좋아요 3')).toBeTruthy();
+    expect(getByLabelText('댓글 2')).toBeTruthy();
     // 사진 2장 — 첫 장만 보이고 나머지 장수 배지.
     expect(getByText('+1')).toBeTruthy();
     expect(getByText('30분 전')).toBeTruthy();
@@ -22,18 +23,13 @@ describe('FeedScreen (#1409)', () => {
     expect(getAllByText('알 수 없는 사용자').length).toBeGreaterThan(0);
   });
 
-  it('좋아요를 누르면 그 글 id로 토글을 부른다 — 이미 누른 글은 취소 라벨', async () => {
-    const onToggleLike = jest.fn();
-    const { getAllByLabelText, getByLabelText } = await render(
-      <FeedScreen posts={DEMO_FEED_POSTS} onToggleLike={onToggleLike} />,
-    );
-    await fireEvent.press(getAllByLabelText('좋아요')[0]);
-    expect(onToggleLike).toHaveBeenCalledWith(3);
-    await fireEvent.press(getByLabelText('좋아요 취소'));
-    expect(onToggleLike).toHaveBeenCalledWith(2);
+  it('목록에는 좋아요 버튼이 없다 — 상세에서 누른다', async () => {
+    const { queryByLabelText } = await render(<FeedScreen posts={DEMO_FEED_POSTS} />);
+    expect(queryByLabelText('좋아요')).toBeNull();
+    expect(queryByLabelText('좋아요 취소')).toBeNull();
   });
 
-  it('카드를 누르면 상세, + 버튼은 작성', async () => {
+  it('줄을 누르면 상세, + 버튼은 작성', async () => {
     const onOpenPost = jest.fn();
     const onCompose = jest.fn();
     const { getByLabelText } = await render(
@@ -105,18 +101,15 @@ describe('FeedScreen (#1409)', () => {
     expect(queryByLabelText('전체 게시판')).toBeNull();
   });
 
-  it('카드마다 게시판 배지, 사진 없는 자유글은 사진 자리 없이 본문을 길게', async () => {
+  it('본문은 세 줄, 사진은 오른쪽 정사각형 썸네일(없으면 자리도 없다)', async () => {
     const ui = await render(<FeedScreen posts={[DEMO_FEED_TEXT_POST, ...DEMO_FEED_POSTS]} />);
-    expect(ui.getAllByTestId('feed-board-badge-FREE')).toHaveLength(2);
-    expect(ui.getAllByTestId('feed-board-badge-VERIFICATION')).toHaveLength(2);
-
-    const card = ui.getByTestId('feed-post-4');
-    expect(ui.queryByLabelText('사진 1/0')).toBeNull();
-    const body = ui.getByText(/요즘 아침 루틴을 어떻게/);
-    expect(body.props.numberOfLines).toBe(8);
-    expect(card).toBeTruthy();
-    // 사진 있는 글은 세 줄.
+    expect(ui.getByTestId('feed-post-4')).toBeTruthy();
+    expect(ui.getByText(/요즘 아침 루틴을 어떻게/).props.numberOfLines).toBe(3);
     expect(ui.getByText(/오늘 아침 루틴 완료/).props.numberOfLines).toBe(3);
+    // 사진 2장 글은 첫 장 썸네일 하나 + 나머지 장수.
+    const withPhotos = DEMO_FEED_POSTS.filter((p) => p.images.length > 0).length;
+    expect(ui.getAllByLabelText(/^사진 1\//).length).toBe(withPhotos);
+    expect(ui.getByText('+1')).toBeTruthy();
   });
 
   it('연결 루틴이 있는 인증글만 "루틴 · M/D 완료" 배지 (서버 #430)', async () => {
