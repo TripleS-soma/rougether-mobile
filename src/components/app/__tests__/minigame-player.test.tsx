@@ -25,6 +25,9 @@ jest.mock('@/features/minigame/merge-html', () => ({
 jest.mock('@/features/minigame/tower-html', () => ({
   createTowerHtml: (config: unknown) => JSON.stringify(config),
 }));
+jest.mock('@/features/minigame/yarn-html', () => ({
+  createYarnHtml: (config: unknown) => JSON.stringify(config),
+}));
 
 const games: { code: MinigameCode; label: string; result: object; expected?: object }[] = [
   { code: 'room-runner', label: '러너 게임', result: { ticks: 30, jumpTicks: [2] } },
@@ -45,6 +48,8 @@ const games: { code: MinigameCode; label: string; result: object; expected?: obj
     result: { ticks: 30, dropTicks: [2, 9] },
     expected: { ticks: 30, jumpTicks: [2, 9] },
   },
+  // 털실 정리는 문서가 보낸 형태 그대로(ticks = 집은 횟수, picks) 서버에 넘긴다.
+  { code: 'cat-yarn', label: '고양이 털실 정리', result: { ticks: 2, picks: [3, 1] } },
 ];
 
 describe.each(games)('MinigamePlayer $code', ({ code, label, result, expected = result }) => {

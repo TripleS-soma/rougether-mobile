@@ -5,6 +5,7 @@ import { RunnerGame } from '@/components/minigame/runner-game.web';
 import { StairsGame } from '@/components/minigame/stairs-game.web';
 import { MergeGame } from '@/components/minigame/merge-game.web';
 import { TowerGame } from '@/components/minigame/tower-game.web';
+import { YarnGame } from '@/components/minigame/yarn-game.web';
 
 type Root = { render: (children: ReactNode) => void; unmount: () => void };
 const { createRoot } = jest.requireActual('react-dom/client') as {
@@ -37,6 +38,9 @@ jest.mock('@/features/minigame/merge-html', () => ({
 jest.mock('@/features/minigame/tower-html', () => ({
   createTowerHtml: (config: unknown) => JSON.stringify(config),
 }));
+jest.mock('@/features/minigame/yarn-html', () => ({
+  createYarnHtml: (config: unknown) => JSON.stringify(config),
+}));
 
 const games = [
   { name: 'runner', Component: RunnerGame, result: { ticks: 10, jumpTicks: [] } },
@@ -49,6 +53,7 @@ const games = [
     result: { ticks: 10, dropTicks: [3] },
     expected: { ticks: 10, jumpTicks: [3] },
   },
+  { name: 'yarn', Component: YarnGame, result: { ticks: 2, picks: [1, 4] } },
 ];
 
 describe.each(games)('$name web recovery', ({ Component, result, ...rest }) => {
