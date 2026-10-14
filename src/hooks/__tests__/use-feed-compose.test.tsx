@@ -109,6 +109,40 @@ describe('useFeedCompose (#1409)', () => {
     expect(second.clientPostId).not.toBe(first.clientPostId);
   });
 
+  // 기록 자랑 글은 늘 빈 초안에서 시작한다 — 남은 사진·루틴이 기록 글에 섞이지 않게 (#1555 리뷰).
+  it('기록 자랑 글은 남은 초안(사진·루틴)을 비우고 시작하고, 버리면 카드도 사라진다', async () => {
+    const RECORD = {
+      runId: 'run-1',
+      gameCode: 'cat-tower',
+      score: 1240,
+      rank: 3,
+      personalBest: true,
+      achievedAt: '2026-10-14T03:00:00Z',
+    };
+    const { result } = await withUploaded();
+    await act(async () => {
+      result.current.setBoard('VERIFICATION');
+      result.current.setRoutine(ROUTINE);
+    });
+    await act(async () => {
+      result.current.startRecordPost(RECORD, '🐱 고양이 탑 쌓기 1,240점, 전체 3위 달성!');
+    });
+    expect(deleteFeedImage).toHaveBeenCalledWith(100);
+    expect(deleteFeedImage).toHaveBeenCalledWith(101);
+    expect(result.current.images).toHaveLength(0);
+    expect(result.current.routine).toBeNull();
+    expect(result.current.board).toBe('FREE');
+    expect(result.current.record).toEqual(RECORD);
+    expect(result.current.content).toBe('🐱 고양이 탑 쌓기 1,240점, 전체 3위 달성!');
+
+    // 작성 화면을 떠나면 셸이 discard를 부른다 — 다음 일반 글쓰기에 카드가 남지 않는다.
+    await act(async () => {
+      result.current.discard();
+    });
+    expect(result.current.record).toBeNull();
+    expect(result.current.content).toBe('');
+  });
+
   it('올라간 사진을 빼거나 작성을 버리면 서버 업로드도 취소한다', async () => {
     const { result } = await withUploaded();
     await act(async () => {
