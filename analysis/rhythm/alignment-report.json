@@ -1,0 +1,1039 @@
+{
+  "sunoSong": "https://suno.com/song/8b361e0f-97f5-49c2-9249-9037e5e0a3da",
+  "requestedBpm": 120,
+  "measuredBpm": 116.09716328540856,
+  "sourceDuration": 126.73351473922902,
+  "clipSourceStart": 39.931836734693874,
+  "clipDuration": 70.318946,
+  "sampleRate": 22050,
+  "playableFirstBeatOffset": 3,
+  "targetGridResidualMaxMs": 15.621211186598316,
+  "sourceSha256": "75ce359c96f47e989d7c7d3def9a55749035fdb39e32b66563c351f1816865df",
+  "clipSha256": "f207f363d10bd9faa7a7a82ebf6a58da102e0bba559f6bd51244a75ea9a9b1b6",
+  "method": "Fit quarter-note comb in stable40\u2013110s; snap nearest transient within35ms, subtract5ms STFT attack lag; 32 escalating targets; retain fitted meter where no clear attack exists. Stronger syncopated offbeats are not selected.",
+  "evidence": [
+    {
+      "sourceTime": 40.0318253968254,
+      "energy": 1.7303074885079193,
+      "deltaMs": 10.810856974210026,
+      "measured": true
+    },
+    {
+      "sourceTime": 40.54266439909297,
+      "energy": 2.124507501638902,
+      "deltaMs": 4.841366234096256,
+      "measured": true
+    },
+    {
+      "sourceTime": 41.06148526077097,
+      "energy": 1.0424111089478827,
+      "deltaMs": 6.853734904403552,
+      "measured": true
+    },
+    {
+      "sourceTime": 41.57431972789115,
+      "energy": 1.1618612059029705,
+      "deltaMs": 2.8797090168879436,
+      "measured": true
+    },
+    {
+      "sourceTime": 42.095136054421765,
+      "energy": 0.7737351442137645,
+      "deltaMs": 6.887542539814717,
+      "measured": true
+    },
+    {
+      "sourceTime": 42.613956916099774,
+      "energy": 1.3671225544168752,
+      "deltaMs": 8.899911210129119,
+      "measured": true
+    },
+    {
+      "sourceTime": 43.118809523809524,
+      "energy": 0.9089890501775933,
+      "deltaMs": -3.0559740878146613,
+      "measured": true
+    },
+    {
+      "sourceTime": 43.63962585034013,
+      "energy": 1.6449243158646856,
+      "deltaMs": 0.9518594350979015,
+      "measured": true
+    },
+    {
+      "sourceTime": 44.160442176870745,
+      "energy": 1.2874849145770262,
+      "deltaMs": 4.959692958024675,
+      "measured": true
+    },
+    {
+      "sourceTime": 44.669285714285714,
+      "energy": 1.7920024383304045,
+      "deltaMs": -3.0052626347014666,
+      "measured": true
+    },
+    {
+      "sourceTime": 45.18611111111111,
+      "energy": 1.4455993989468447,
+      "deltaMs": -2.988358816999437,
+      "measured": true
+    },
+    {
+      "sourceTime": 45.70892290249433,
+      "energy": 1.7026159254034257,
+      "deltaMs": 3.014939558525498,
+      "measured": true
+    },
+    {
+      "sourceTime": 46.22774376417233,
+      "energy": 0.5619730260157156,
+      "deltaMs": 5.0273082288399,
+      "measured": true
+    },
+    {
+      "sourceTime": 46.74057823129252,
+      "energy": 1.1102789753737379,
+      "deltaMs": 1.0532823413313963,
+      "measured": true
+    },
+    {
+      "sourceTime": 47.25133344195888,
+      "energy": 0,
+      "deltaMs": null,
+      "measured": false
+    },
+    {
+      "sourceTime": 47.766247165532874,
+      "energy": 1.2403822468613304,
+      "deltaMs": -6.894769433699821,
+      "measured": true
+    },
+    {
+      "sourceTime": 48.28706349206349,
+      "energy": 1.0342673785693952,
+      "deltaMs": -2.8869359107730475,
+      "measured": true
+    },
+    {
+      "sourceTime": 48.803888888888885,
+      "energy": 1.2035381398456069,
+      "deltaMs": -2.8700320930710177,
+      "measured": true
+    },
+    {
+      "sourceTime": 49.326700680272104,
+      "energy": 1.2411368436593475,
+      "deltaMs": 3.133266282453917,
+      "measured": true
+    },
+    {
+      "sourceTime": 49.83953514739229,
+      "energy": 1.003259390567804,
+      "deltaMs": -0.8407596050474808,
+      "measured": true
+    },
+    {
+      "sourceTime": 50.354365079365074,
+      "energy": 0.9414116995222759,
+      "deltaMs": -2.819320639957823,
+      "measured": true
+    },
+    {
+      "sourceTime": 50.869195011337865,
+      "energy": 1.973782771866127,
+      "deltaMs": -4.79788167486106,
+      "measured": true
+    },
+    {
+      "sourceTime": 51.38602040816326,
+      "energy": 2.053859418617301,
+      "deltaMs": -4.78097785715903,
+      "measured": true
+    },
+    {
+      "sourceTime": 51.89885487528345,
+      "energy": 1.66217393788214,
+      "deltaMs": -8.755003744660428,
+      "measured": true
+    },
+    {
+      "sourceTime": 52.415680272108844,
+      "energy": 1.2167594077352488,
+      "deltaMs": -8.738099926958398,
+      "measured": true
+    },
+    {
+      "sourceTime": 52.934501133786846,
+      "energy": 1.7817638479723474,
+      "deltaMs": -6.725731256651102,
+      "measured": true
+    },
+    {
+      "sourceTime": 53.45132653061224,
+      "energy": 0.9293306724178415,
+      "deltaMs": -6.708827438949072,
+      "measured": true
+    },
+    {
+      "sourceTime": 53.97413832199546,
+      "energy": 1.2941032666230539,
+      "deltaMs": -0.7055290634170319,
+      "measured": true
+    },
+    {
+      "sourceTime": 54.484977324263035,
+      "energy": 0.5779582933958128,
+      "deltaMs": -6.675019803537907,
+      "measured": true
+    },
+    {
+      "sourceTime": 55.01377551020408,
+      "energy": 1.2738239874462696,
+      "deltaMs": 5.314673129809933,
+      "measured": true
+    },
+    {
+      "sourceTime": 55.51463718820862,
+      "energy": 2.0240450606017397,
+      "deltaMs": -10.63214187334438,
+      "measured": true
+    },
+    {
+      "sourceTime": 56.035453514739224,
+      "energy": 1.1985155500395106,
+      "deltaMs": -6.624308350424712,
+      "measured": true
+    },
+    {
+      "sourceTime": 56.550283446712015,
+      "energy": 1.270877216060773,
+      "deltaMs": -8.60286938532795,
+      "measured": true
+    },
+    {
+      "sourceTime": 57.073095238095235,
+      "energy": 1.3760723699497757,
+      "deltaMs": -2.5995710098030145,
+      "measured": true
+    },
+    {
+      "sourceTime": 57.57595238095238,
+      "energy": 1.090160210504578,
+      "deltaMs": -16.55092116035206,
+      "measured": true
+    },
+    {
+      "sourceTime": 58.10475056689342,
+      "energy": 1.022666271902965,
+      "deltaMs": -4.561228226997116,
+      "measured": true
+    },
+    {
+      "sourceTime": 58.6175850340136,
+      "energy": 0.8870888571878692,
+      "deltaMs": -8.535254114512725,
+      "measured": true
+    },
+    {
+      "sourceTime": 59.13041950113379,
+      "energy": 1.5415739008996066,
+      "deltaMs": -12.509280002021228,
+      "measured": true
+    },
+    {
+      "sourceTime": 59.653231292517006,
+      "energy": 0.7096516771394618,
+      "deltaMs": -6.505981626489188,
+      "measured": true
+    },
+    {
+      "sourceTime": 60.16407029478458,
+      "energy": 1.4211288367777182,
+      "deltaMs": -12.475472366610063,
+      "measured": true
+    },
+    {
+      "sourceTime": 60.680895691609976,
+      "energy": 1.4624411152126775,
+      "deltaMs": -12.458568548908033,
+      "measured": true
+    },
+    {
+      "sourceTime": 61.2057029478458,
+      "energy": 1.398223264168896,
+      "deltaMs": -4.459805320777832,
+      "measured": true
+    },
+    {
+      "sourceTime": 61.716541950113374,
+      "energy": 1.1244130595781425,
+      "deltaMs": -10.429296060891602,
+      "measured": true
+    },
+    {
+      "sourceTime": 62.23536281179138,
+      "energy": 1.5904707024848939,
+      "deltaMs": -8.4169273905772,
+      "measured": true
+    },
+    {
+      "sourceTime": 62.76615646258503,
+      "energy": 0.5903394843582432,
+      "deltaMs": 5.568230395375906,
+      "measured": true
+    },
+    {
+      "sourceTime": 63.29096371882086,
+      "energy": 1.1939705596644705,
+      "deltaMs": 13.566993623513213,
+      "measured": true
+    },
+    {
+      "sourceTime": 63.78583900226757,
+      "energy": 1.2999217479416452,
+      "deltaMs": -8.366215937464005,
+      "measured": true
+    },
+    {
+      "sourceTime": 64.30066893424036,
+      "energy": 1.1712139703469444,
+      "deltaMs": -10.344776972374348,
+      "measured": true
+    },
+    {
+      "sourceTime": 64.81749433106576,
+      "energy": 1.1487917332887954,
+      "deltaMs": -10.327873154665212,
+      "measured": true
+    },
+    {
+      "sourceTime": 65.34030612244898,
+      "energy": 1.6252367979969733,
+      "deltaMs": -4.324574779133172,
+      "measured": true
+    },
+    {
+      "sourceTime": 65.85513605442178,
+      "energy": 0.8460659319808973,
+      "deltaMs": -6.303135814036409,
+      "measured": true
+    },
+    {
+      "sourceTime": 66.35998866213153,
+      "energy": 1.0000972165459805,
+      "deltaMs": -18.259021111973084,
+      "measured": true
+    },
+    {
+      "sourceTime": 66.88280045351475,
+      "energy": 1.2423575101291016,
+      "deltaMs": -12.255722736441044,
+      "measured": true
+    },
+    {
+      "sourceTime": 67.41159863945579,
+      "energy": 1.363105574616012,
+      "deltaMs": -0.26602980310030944,
+      "measured": true
+    },
+    {
+      "sourceTime": 67.91645124716554,
+      "energy": 1.591235801168565,
+      "deltaMs": -12.221915101036984,
+      "measured": true
+    },
+    {
+      "sourceTime": 68.43128117913832,
+      "energy": 2.1086846061470186,
+      "deltaMs": -14.200476135940221,
+      "measured": true
+    },
+    {
+      "sourceTime": 68.95409297052154,
+      "energy": 0.8157671048251085,
+      "deltaMs": -8.197177760422392,
+      "measured": true
+    },
+    {
+      "sourceTime": 69.47890022675737,
+      "energy": 1.1391142017868687,
+      "deltaMs": -0.19841453227797956,
+      "measured": true
+    },
+    {
+      "sourceTime": 69.98774376417234,
+      "energy": 1.6134467020658463,
+      "deltaMs": -8.163370125018332,
+      "measured": true
+    },
+    {
+      "sourceTime": 70.51055555555556,
+      "energy": 1.155142031767625,
+      "deltaMs": -2.160071749486292,
+      "measured": true
+    },
+    {
+      "sourceTime": 71.02738095238095,
+      "energy": 0.7861144365058201,
+      "deltaMs": -2.143167931777157,
+      "measured": true
+    },
+    {
+      "sourceTime": 71.54021541950114,
+      "energy": 1.5544439060838864,
+      "deltaMs": -6.1171938192927655,
+      "measured": true
+    },
+    {
+      "sourceTime": 72.07100907029479,
+      "energy": 0.8245945314055375,
+      "deltaMs": 7.867963966674552,
+      "measured": true
+    },
+    {
+      "sourceTime": 72.57586167800454,
+      "energy": 1.5625537440134,
+      "deltaMs": -4.087921331262123,
+      "measured": true
+    },
+    {
+      "sourceTime": 73.0847052154195,
+      "energy": 1.5087740298541374,
+      "deltaMs": -12.052876924002476,
+      "measured": true
+    },
+    {
+      "sourceTime": 73.60552154195011,
+      "energy": 1.0584371789568976,
+      "deltaMs": -8.045043401082808,
+      "measured": true
+    },
+    {
+      "sourceTime": 74.1183560090703,
+      "energy": 1.3385387281138743,
+      "deltaMs": -12.019069288598416,
+      "measured": true
+    },
+    {
+      "sourceTime": 74.64116780045352,
+      "energy": 1.3801009015039014,
+      "deltaMs": -6.015770913066376,
+      "measured": true
+    },
+    {
+      "sourceTime": 75.16198412698414,
+      "energy": 0.6580388605415687,
+      "deltaMs": -2.007937390132497,
+      "measured": true
+    },
+    {
+      "sourceTime": 75.67282312925171,
+      "energy": 1.4576869305175892,
+      "deltaMs": -7.977428130260478,
+      "measured": true
+    },
+    {
+      "sourceTime": 76.18964852607711,
+      "energy": 1.4178078893983754,
+      "deltaMs": -7.9605243125513425,
+      "measured": true
+    },
+    {
+      "sourceTime": 76.71445578231292,
+      "energy": 1.3341254063756167,
+      "deltaMs": 0.03823891557885872,
+      "measured": true
+    },
+    {
+      "sourceTime": 77.22928571428572,
+      "energy": 0.7122492281783699,
+      "deltaMs": -1.940322119324378,
+      "measured": true
+    },
+    {
+      "sourceTime": 77.74611111111112,
+      "energy": 1.2388709361816663,
+      "deltaMs": -1.9234183016152429,
+      "measured": true
+    },
+    {
+      "sourceTime": 78.25984302242043,
+      "energy": 0,
+      "deltaMs": null,
+      "measured": false
+    },
+    {
+      "sourceTime": 78.7777664399093,
+      "energy": 1.372246531053651,
+      "deltaMs": -3.8850755188235553,
+      "measured": true
+    },
+    {
+      "sourceTime": 79.30057823129252,
+      "energy": 0.6520735082725581,
+      "deltaMs": 2.118222856708485,
+      "measured": true
+    },
+    {
+      "sourceTime": 79.82937641723356,
+      "energy": 0.8385558786434039,
+      "deltaMs": 14.10791579004922,
+      "measured": true
+    },
+    {
+      "sourceTime": 80.32624716553289,
+      "energy": 0.7285297284596944,
+      "deltaMs": -5.829828918308522,
+      "measured": true
+    },
+    {
+      "sourceTime": 80.85304988662132,
+      "energy": 1.0577734877118734,
+      "deltaMs": 4.1643991624340515,
+      "measured": true
+    },
+    {
+      "sourceTime": 81.3638888888889,
+      "energy": 0.7334286054274832,
+      "deltaMs": -1.8050915776939291,
+      "measured": true
+    },
+    {
+      "sourceTime": 81.88071428571429,
+      "energy": 1.1697382228508344,
+      "deltaMs": -1.788187759984794,
+      "measured": true
+    },
+    {
+      "sourceTime": 82.4015306122449,
+      "energy": 1.2906042288244854,
+      "deltaMs": 2.2196457629348743,
+      "measured": true
+    },
+    {
+      "sourceTime": 82.90837868480726,
+      "energy": 0.9095868448637764,
+      "deltaMs": -7.740774682403639,
+      "measured": true
+    },
+    {
+      "sourceTime": 83.42520408163266,
+      "energy": 0.9373747058126326,
+      "deltaMs": -7.723870864694504,
+      "measured": true
+    },
+    {
+      "sourceTime": 83.93803854875284,
+      "energy": 1.3421179866334898,
+      "deltaMs": -11.697896752195902,
+      "measured": true
+    },
+    {
+      "sourceTime": 84.45486394557824,
+      "energy": 1.1333341205583545,
+      "deltaMs": -11.680992934500978,
+      "measured": true
+    },
+    {
+      "sourceTime": 84.97767573696146,
+      "energy": 1.2884064019000758,
+      "deltaMs": -5.677694558968938,
+      "measured": true
+    },
+    {
+      "sourceTime": 85.4805328798186,
+      "energy": 1.1825537696813933,
+      "deltaMs": -19.629044709532195,
+      "measured": true
+    },
+    {
+      "sourceTime": 86.00134920634922,
+      "energy": 1.1993658258991902,
+      "deltaMs": -15.621211186598316,
+      "measured": true
+    },
+    {
+      "sourceTime": 86.53413832199547,
+      "energy": 0.8572013048675966,
+      "deltaMs": 0.35941145196716207,
+      "measured": true
+    },
+    {
+      "sourceTime": 87.03699546485261,
+      "energy": 1.4171472282252908,
+      "deltaMs": -13.591938698596095,
+      "measured": true
+    },
+    {
+      "sourceTime": 87.55980725623583,
+      "energy": 0.9913185695373614,
+      "deltaMs": -7.588640323064055,
+      "measured": true
+    },
+    {
+      "sourceTime": 88.07264172335601,
+      "energy": 1.316992243252369,
+      "deltaMs": -11.562666210565453,
+      "measured": true
+    },
+    {
+      "sourceTime": 88.59545351473923,
+      "energy": 0.6942537067366369,
+      "deltaMs": -5.559367835047624,
+      "measured": true
+    },
+    {
+      "sourceTime": 89.1062925170068,
+      "energy": 1.9000903857133353,
+      "deltaMs": -11.528858575161394,
+      "measured": true
+    },
+    {
+      "sourceTime": 89.63109977324264,
+      "energy": 0.806539819577182,
+      "deltaMs": -3.5300953470311924,
+      "measured": true
+    },
+    {
+      "sourceTime": 90.1399433106576,
+      "energy": 1.3445857782580373,
+      "deltaMs": -11.495050939757334,
+      "measured": true
+    },
+    {
+      "sourceTime": 90.66275510204082,
+      "energy": 0.863622678617899,
+      "deltaMs": -5.491752564225294,
+      "measured": true
+    },
+    {
+      "sourceTime": 91.175589569161,
+      "energy": 1.6739570331690348,
+      "deltaMs": -9.465778451740903,
+      "measured": true
+    },
+    {
+      "sourceTime": 91.6924149659864,
+      "energy": 1.3868774692442596,
+      "deltaMs": -9.448874634031768,
+      "measured": true
+    },
+    {
+      "sourceTime": 92.20724489795919,
+      "energy": 0.9934552061301541,
+      "deltaMs": -11.427435668935004,
+      "measured": true
+    },
+    {
+      "sourceTime": 92.7260657596372,
+      "energy": 1.3699997771283106,
+      "deltaMs": -9.415066998627708,
+      "measured": true
+    },
+    {
+      "sourceTime": 93.24887755102041,
+      "energy": 1.25294637404508,
+      "deltaMs": -3.411768623095668,
+      "measured": true
+    },
+    {
+      "sourceTime": 93.7637074829932,
+      "energy": 1.1777421269292716,
+      "deltaMs": -5.390329657998905,
+      "measured": true
+    },
+    {
+      "sourceTime": 94.278537414966,
+      "energy": 1.071138448032486,
+      "deltaMs": -7.368890692902141,
+      "measured": true
+    },
+    {
+      "sourceTime": 94.79137188208617,
+      "energy": 1.5114585219290178,
+      "deltaMs": -11.34291658041775,
+      "measured": true
+    },
+    {
+      "sourceTime": 95.316179138322,
+      "energy": 1.8748390510051811,
+      "deltaMs": -3.344153352287549,
+      "measured": true
+    },
+    {
+      "sourceTime": 95.84298185941043,
+      "energy": 0.4272880930800948,
+      "deltaMs": 6.650074728455024,
+      "measured": true
+    },
+    {
+      "sourceTime": 96.35781179138323,
+      "energy": 0.9597720517746454,
+      "deltaMs": 4.671513693565998,
+      "measured": true
+    },
+    {
+      "sourceTime": 96.86066893424037,
+      "energy": 1.2688599262151348,
+      "deltaMs": -9.27983645699726,
+      "measured": true
+    },
+    {
+      "sourceTime": 97.37549886621315,
+      "energy": 1.143607257832301,
+      "deltaMs": -11.258397491900496,
+      "measured": true
+    },
+    {
+      "sourceTime": 97.89631519274377,
+      "energy": 1.4619728521527464,
+      "deltaMs": -7.250563968966617,
+      "measured": true
+    },
+    {
+      "sourceTime": 98.4211224489796,
+      "energy": 1.2063110619184285,
+      "deltaMs": 0.7481992591635844,
+      "measured": true
+    },
+    {
+      "sourceTime": 98.93395691609977,
+      "energy": 1.6235207881057507,
+      "deltaMs": -3.2258266283520243,
+      "measured": true
+    },
+    {
+      "sourceTime": 99.44878684807257,
+      "energy": 1.0295408142018474,
+      "deltaMs": -5.20438766324105,
+      "measured": true
+    },
+    {
+      "sourceTime": 99.96760770975057,
+      "energy": 1.1040892844101273,
+      "deltaMs": -3.1920189929479648,
+      "measured": true
+    },
+    {
+      "sourceTime": 100.47645124716554,
+      "energy": 1.8491403429665474,
+      "deltaMs": -11.156974585659896,
+      "measured": true
+    },
+    {
+      "sourceTime": 101.00325396825397,
+      "energy": 0.8341042979287014,
+      "deltaMs": -1.1627465049315333,
+      "measured": true
+    },
+    {
+      "sourceTime": 101.51608843537416,
+      "energy": 1.8305196175890697,
+      "deltaMs": -5.136772392432931,
+      "measured": true
+    },
+    {
+      "sourceTime": 102.03890022675738,
+      "energy": 1.2529662128978634,
+      "deltaMs": 0.866525983099109,
+      "measured": true
+    },
+    {
+      "sourceTime": 102.54574829931973,
+      "energy": 1.4791480888532276,
+      "deltaMs": -9.093894462253616,
+      "measured": true
+    },
+    {
+      "sourceTime": 103.06456916099773,
+      "energy": 1.2875216600583177,
+      "deltaMs": -7.081525791932108,
+      "measured": true
+    },
+    {
+      "sourceTime": 103.57939909297053,
+      "energy": 1.1737542430215184,
+      "deltaMs": -9.060086826821134,
+      "measured": true
+    },
+    {
+      "sourceTime": 104.09422902494332,
+      "energy": 0.9411058314139503,
+      "deltaMs": -11.038647861738582,
+      "measured": true
+    },
+    {
+      "sourceTime": 104.61903628117915,
+      "energy": 1.4658036909079029,
+      "deltaMs": -3.03988463359417,
+      "measured": true
+    },
+    {
+      "sourceTime": 105.13785714285714,
+      "energy": 1.3954061314047166,
+      "deltaMs": -1.0275159633010844,
+      "measured": true
+    },
+    {
+      "sourceTime": 105.65069160997733,
+      "energy": 1.6421704385733396,
+      "deltaMs": -5.001541850802482,
+      "measured": true
+    },
+    {
+      "sourceTime": 106.16751700680273,
+      "energy": 1.7661096196735087,
+      "deltaMs": -4.984638033093347,
+      "measured": true
+    },
+    {
+      "sourceTime": 106.69032879818594,
+      "energy": 1.1579298149446429,
+      "deltaMs": 1.0186603424244822,
+      "measured": true
+    },
+    {
+      "sourceTime": 107.2211224489796,
+      "energy": 0.6681293757668239,
+      "deltaMs": 15.0038181283918,
+      "measured": true
+    },
+    {
+      "sourceTime": 107.71998866213153,
+      "energy": 1.2437511366507799,
+      "deltaMs": -2.9384617273677804,
+      "measured": true
+    },
+    {
+      "sourceTime": 108.25078231292517,
+      "energy": 0.8975391381009898,
+      "deltaMs": 11.046696058571115,
+      "measured": true
+    },
+    {
+      "sourceTime": 108.75363945578232,
+      "energy": 1.229928385312688,
+      "deltaMs": -2.904654091963721,
+      "measured": true
+    },
+    {
+      "sourceTime": 109.2904195011338,
+      "energy": 0.6954949861788902,
+      "deltaMs": 17.0668982518265,
+      "measured": true
+    },
+    {
+      "sourceTime": 109.79128117913832,
+      "energy": 1.1523920405257182,
+      "deltaMs": 1.1200832486508716,
+      "measured": true
+    },
+    {
+      "sourceTime": 110.31010204081633,
+      "energy": 1.306553126811412,
+      "deltaMs": 3.1324519189723787,
+      "measured": true
+    },
+    {
+      "sourceTime": 110.83490929705216,
+      "energy": 0.9225162456919884,
+      "deltaMs": 11.13121514710258,
+      "measured": true
+    }
+  ],
+  "targets": [
+    {
+      "sourceTime": 44.669285714285714,
+      "energy": 1.7920024383304045,
+      "deltaMs": -3.0052626347014666,
+      "measured": true
+    },
+    {
+      "sourceTime": 48.803888888888885,
+      "energy": 1.2035381398456069,
+      "deltaMs": -2.8700320930710177,
+      "measured": true
+    },
+    {
+      "sourceTime": 52.934501133786846,
+      "energy": 1.7817638479723474,
+      "deltaMs": -6.725731256651102,
+      "measured": true
+    },
+    {
+      "sourceTime": 57.073095238095235,
+      "energy": 1.3760723699497757,
+      "deltaMs": -2.5995710098030145,
+      "measured": true
+    },
+    {
+      "sourceTime": 61.2057029478458,
+      "energy": 1.398223264168896,
+      "deltaMs": -4.459805320777832,
+      "measured": true
+    },
+    {
+      "sourceTime": 65.34030612244898,
+      "energy": 1.6252367979969733,
+      "deltaMs": -4.324574779133172,
+      "measured": true
+    },
+    {
+      "sourceTime": 69.47890022675737,
+      "energy": 1.1391142017868687,
+      "deltaMs": -0.19841453227797956,
+      "measured": true
+    },
+    {
+      "sourceTime": 73.60552154195011,
+      "energy": 1.0584371789568976,
+      "deltaMs": -8.045043401082808,
+      "measured": true
+    },
+    {
+      "sourceTime": 75.67282312925171,
+      "energy": 1.4576869305175892,
+      "deltaMs": -7.977428130260478,
+      "measured": true
+    },
+    {
+      "sourceTime": 77.74611111111112,
+      "energy": 1.2388709361816663,
+      "deltaMs": -1.9234183016152429,
+      "measured": true
+    },
+    {
+      "sourceTime": 79.82937641723356,
+      "energy": 0.8385558786434039,
+      "deltaMs": 14.10791579004922,
+      "measured": true
+    },
+    {
+      "sourceTime": 81.88071428571429,
+      "energy": 1.1697382228508344,
+      "deltaMs": -1.788187759984794,
+      "measured": true
+    },
+    {
+      "sourceTime": 83.93803854875284,
+      "energy": 1.3421179866334898,
+      "deltaMs": -11.697896752195902,
+      "measured": true
+    },
+    {
+      "sourceTime": 86.00134920634922,
+      "energy": 1.1993658258991902,
+      "deltaMs": -15.621211186598316,
+      "measured": true
+    },
+    {
+      "sourceTime": 88.07264172335601,
+      "energy": 1.316992243252369,
+      "deltaMs": -11.562666210565453,
+      "measured": true
+    },
+    {
+      "sourceTime": 90.1399433106576,
+      "energy": 1.3445857782580373,
+      "deltaMs": -11.495050939757334,
+      "measured": true
+    },
+    {
+      "sourceTime": 91.175589569161,
+      "energy": 1.6739570331690348,
+      "deltaMs": -9.465778451740903,
+      "measured": true
+    },
+    {
+      "sourceTime": 92.20724489795919,
+      "energy": 0.9934552061301541,
+      "deltaMs": -11.427435668935004,
+      "measured": true
+    },
+    {
+      "sourceTime": 93.24887755102041,
+      "energy": 1.25294637404508,
+      "deltaMs": -3.411768623095668,
+      "measured": true
+    },
+    {
+      "sourceTime": 94.278537414966,
+      "energy": 1.071138448032486,
+      "deltaMs": -7.368890692902141,
+      "measured": true
+    },
+    {
+      "sourceTime": 95.316179138322,
+      "energy": 1.8748390510051811,
+      "deltaMs": -3.344153352287549,
+      "measured": true
+    },
+    {
+      "sourceTime": 96.35781179138323,
+      "energy": 0.9597720517746454,
+      "deltaMs": 4.671513693565998,
+      "measured": true
+    },
+    {
+      "sourceTime": 97.37549886621315,
+      "energy": 1.143607257832301,
+      "deltaMs": -11.258397491900496,
+      "measured": true
+    },
+    {
+      "sourceTime": 98.4211224489796,
+      "energy": 1.2063110619184285,
+      "deltaMs": 0.7481992591635844,
+      "measured": true
+    },
+    {
+      "sourceTime": 99.44878684807257,
+      "energy": 1.0295408142018474,
+      "deltaMs": -5.20438766324105,
+      "measured": true
+    },
+    {
+      "sourceTime": 100.47645124716554,
+      "energy": 1.8491403429665474,
+      "deltaMs": -11.156974585659896,
+      "measured": true
+    },
+    {
+      "sourceTime": 101.51608843537416,
+      "energy": 1.8305196175890697,
+      "deltaMs": -5.136772392432931,
+      "measured": true
+    },
+    {
+      "sourceTime": 102.54574829931973,
+      "energy": 1.4791480888532276,
+      "deltaMs": -9.093894462253616,
+      "measured": true
+    },
+    {
+      "sourceTime": 103.57939909297053,
+      "energy": 1.1737542430215184,
+      "deltaMs": -9.060086826821134,
+      "measured": true
+    },
+    {
+      "sourceTime": 104.61903628117915,
+      "energy": 1.4658036909079029,
+      "deltaMs": -3.03988463359417,
+      "measured": true
+    },
+    {
+      "sourceTime": 105.65069160997733,
+      "energy": 1.6421704385733396,
+      "deltaMs": -5.001541850802482,
+      "measured": true
+    },
+    {
+      "sourceTime": 106.69032879818594,
+      "energy": 1.1579298149446429,
+      "deltaMs": 1.0186603424244822,
+      "measured": true
+    }
+  ],
+  "note": "Signal-aligned pulse, not certified bar/downbeat transcription or human playtest."
+}

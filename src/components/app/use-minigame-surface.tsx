@@ -9,6 +9,9 @@ import {
   type SetStateAction,
 } from 'react';
 
+import { RhythmPracticeScreen } from '@/components/screens/rhythm-practice-screen';
+import { rhythmPracticeDefinition } from '@/features/minigame/rhythm-catalog';
+
 import type { MinigameReplay } from '@/api/minigames';
 import type { Screen } from '@/components/app/navigation';
 import { MinigamePlayer } from '@/components/app/minigame-player';
@@ -33,6 +36,11 @@ import { track } from '@/lib/analytics';
 
 // Retained transition nodes must match the current session, not just the game screen.
 export const MinigameActiveContext = createContext<string | null>(null);
+
+function ActiveRhythm({ sessionId, onBack }: { sessionId: string; onBack: () => void }) {
+  const activeSessionId = useContext(MinigameActiveContext);
+  return <RhythmPracticeScreen active={activeSessionId === sessionId} onBack={onBack} />;
+}
 
 function ActiveMinigame({
   gameCode,
@@ -85,6 +93,11 @@ export function useMinigameSurface({
   screen: Screen;
   setScreen: Dispatch<SetStateAction<Screen>>;
 }) {
+  const [rhythmOpen, setRhythmOpen] = useState(false);
+  const [rhythmAttempt, setRhythmAttempt] = useState(0);
+  useEffect(() => {
+    if (screen !== 'minigames') setRhythmOpen(false);
+  }, [screen]);
   const [gameCode, setGameCode] = useState<MinigameCode>('room-runner');
   const definition = MINIGAME_DEFINITIONS[gameCode];
   const catalog = useMinigames(screen === 'minigames');
@@ -140,6 +153,11 @@ export function useMinigameSurface({
   );
   const openPractice = useCallback(
     (code: string) => {
+      if (code === 'routine-rhythm') {
+        setRhythmAttempt((value) => value + 1);
+        setRhythmOpen(true);
+        return;
+      }
       const next = getMinigameDefinition(code);
       if (!next) return;
       runsRef.current[next.gameCode].practice();
@@ -154,13 +172,21 @@ export function useMinigameSurface({
     },
     [finish, session],
   );
-  const activeSessionId = session?.id ?? null;
+  const rhythmSessionId = `routine-rhythm-${rhythmAttempt}`;
+  const activeSessionId =
+    screen === 'minigames' && rhythmOpen
+      ? rhythmSessionId
+      : screen === 'minigameRunner'
+        ? (session?.id ?? null)
+        : null;
 
   const subScreen =
-    screen === 'minigames' ? (
+    screen === 'minigames' && rhythmOpen ? (
+      <ActiveRhythm sessionId={rhythmSessionId} onBack={() => setRhythmOpen(false)} />
+    ) : screen === 'minigames' ? (
       <MinigamesScreen
         {...catalog}
-        practiceGames={PLAYABLE_MINIGAMES}
+        practiceGames={[...PLAYABLE_MINIGAMES, rhythmPracticeDefinition()]}
         bests={bests}
         onRetry={catalog.retry}
         onSelectGame={openGame}

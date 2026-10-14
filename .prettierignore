@@ -9,3 +9,7 @@ package-lock.json
 .claude/skills/design-sync/out/
 # Firebase-generated client config (재다운로드 시 diff 소음 방지)
 google-services.json
+
+# Local generated playtest and signal-analysis files.
+output/
+analysis/rhythm/pulse.json
