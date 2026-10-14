@@ -122,6 +122,7 @@
     },
     "friendRoom": {
       "defaultName": "친구",
+      "bioA11y": "{{name}}의 한 줄 소개: {{bio}}",
       "cheer": {
         "great": "잘하고 있어!",
         "support": "응원하기",
