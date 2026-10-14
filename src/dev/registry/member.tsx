@@ -77,15 +77,7 @@ function FeedScreenDemo() {
   const [board, setBoard] = useState<FeedBoardFilter>('ALL');
   const all = [DEMO_FEED_RECORD_POST, DEMO_FEED_TEXT_POST, ...DEMO_FEED_POSTS];
   const posts = board === 'ALL' ? all : all.filter((p) => p.boardType === board);
-  return (
-    <FeedScreen
-      posts={posts}
-      board={board}
-      onChangeBoard={setBoard}
-      onCompose={() => {}}
-      onToggleLike={() => {}}
-    />
-  );
+  return <FeedScreen posts={posts} board={board} onChangeBoard={setBoard} onCompose={() => {}} />;
 }
 
 /**
@@ -466,7 +458,7 @@ export const memberEntries: GalleryEntry[] = [
   {
     name: 'FeedScreen',
     description:
-      '공개 피드 탭 (#1409, FEED_ENABLED로 숨김): 위에 [전체 | 자유 | 인증] 게시판 필터(서버 #428), 카드(작성자·게시판 배지·첫 사진+장수·본문 3줄, 사진 없는 자유글은 8줄·좋아요/댓글), 떠 있는 + 작성 버튼. 로컬 픽스처 — 서버 요청·쓰기 없음, 사진은 자리표시.',
+      '공개 피드 탭 (#1409): 위에 [전체 | 자유 | 인증 | 내 글] 필터, 에브리타임식 목록 줄(왼쪽 본문 3줄 + 시각·작성자·♡·💬 숫자, 오른쪽 첫 사진 정사각형 썸네일+장수, 기록 글은 게임 타일, 인증글은 루틴 칩), 줄을 누르면 상세. 떠 있는 + 작성 버튼. 로컬 픽스처 — 서버 요청·쓰기 없음, 사진은 자리표시.',
     render: () => (
       <View style={{ height: 720, alignSelf: 'stretch' }}>
         <FeedScreenDemo />
