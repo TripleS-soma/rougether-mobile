@@ -61,7 +61,7 @@ function Harness({ retainOutgoing = false }: { retainOutgoing?: boolean }) {
   const outgoing = useRef<ReactNode>(null);
   if (screen === 'minigameRunner') outgoing.current = subScreen;
   return (
-    <MinigameActiveContext.Provider value={screen === 'minigameRunner' ? activeSessionId : null}>
+    <MinigameActiveContext.Provider value={activeSessionId}>
       <View>{subScreen}</View>
       {retainOutgoing && screen !== 'minigameRunner' ? (
         <View testID="outgoing">{outgoing.current}</View>
@@ -101,6 +101,17 @@ beforeEach(() => {
   });
 });
 afterEach(() => clients.splice(0).forEach((client) => client.clear()));
+
+it('opens the rhythm practice from the real picker without starting or submitting a ranked run', async () => {
+  const ui = await setup();
+  await waitFor(() => expect(ui.getByLabelText('루틴 리듬 연습하기 · 랭킹 미기록')).toBeTruthy());
+  await fireEvent.press(ui.getByLabelText('루틴 리듬 연습하기 · 랭킹 미기록'));
+  expect(ui.getByText('루틴 리듬')).toBeTruthy();
+  expect(start).not.toHaveBeenCalled();
+  expect(finish).not.toHaveBeenCalled();
+  await fireEvent.press(ui.getByLabelText('뒤로 가기'));
+  expect(ui.getByLabelText('루틴 리듬 연습하기 · 랭킹 미기록')).toBeTruthy();
+});
 
 it('navigates catalog to runner and starts an authenticated run only on an explicit challenge', async () => {
   const ui = await setup();

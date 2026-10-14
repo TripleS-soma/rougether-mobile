@@ -38,6 +38,7 @@ const DELEGATED_SCREENS: Record<string, string> = {
   'minigames-screen.tsx': 'MinigamesScreen',
   'minigame-runner-screen.tsx': 'MinigameRunnerScreen',
   'minigame-leaderboard-screen.tsx': 'MinigameLeaderboardScreen',
+  'rhythm-practice-screen.tsx': 'RhythmPracticeScreen',
 };
 
 function parseScreen(file: string) {

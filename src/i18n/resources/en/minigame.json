@@ -75,6 +75,51 @@
       "combo": "{{n}} in a row",
       "miss": "The box missed",
       "timeUp": "Time's up"
+    },
+    "rhythm": {
+      "name": "Routine Rhythm",
+      "tagline": "A little rhythm, every day",
+      "instructions": "Listen six times. Tap on seven!",
+      "subtitle": "Small Steps · Suno original · Four rising stages",
+      "start": "Start with the music",
+      "tap": "Tap! · Space",
+      "pause": "Pause",
+      "paused": "Take a little break",
+      "pauseHelp": "Press continue when you are ready.",
+      "resume": "Continue",
+      "again": "Play another round",
+      "calibrate": "Calibrate timing",
+      "settings": "Sound and timing",
+      "close": "Close",
+      "canvas": "A one-button rhythm game: listen six times and press on the seventh beat",
+      "volume": "Music and cue volume",
+      "offset": "Input timing offset",
+      "settingsHelp": "Use a positive offset if your input lands late. Recalibrate after changing headphones.",
+      "error": "Could not load music. Please try again.",
+      "loading": "Getting the music ready…",
+      "hold": "Hold until the release cue",
+      "release": "Release now!",
+      "rush": "Tap at the end of the quick cue!",
+      "perfect": "Right on time!",
+      "good": "Almost there",
+      "miss": "Catch the next beat!",
+      "combo": "{n} beats together",
+      "listen": "Listen to the sound, not the picture",
+      "calHelp": "Tap with the cue ten times",
+      "complete": "One little routine, complete!",
+      "summary": "Perfect {perfect} · Good {good} · Miss {miss}",
+      "phases": [
+        "1 · Listen closely",
+        "2 · Missing beats",
+        "3 · Twice as fast",
+        "4 · Smaller beats"
+      ],
+      "stageHints": [
+        "Listen six times, tap on seven",
+        "Count the missing cues in your head",
+        "Listen for double-time cues",
+        "Four times faster: focus on the sound!"
+      ]
     }
   }
 }

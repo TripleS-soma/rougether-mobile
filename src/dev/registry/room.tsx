@@ -1,3 +1,4 @@
+import { RhythmPracticeScreen } from '@/components/screens/rhythm-practice-screen';
 import { StarterSpeakerPreview } from '@/dev/starter-speaker-preview';
 import { SpeakerPreview } from '@/dev/speaker-preview';
 import { useState } from 'react';
@@ -91,6 +92,11 @@ export const roomEntries: GalleryEntry[] = [
     name: 'CatMergePreview',
     description: '고양이 합치기 연습 미리보기. 4×4 타일 퍼즐, 실제 랭킹 미기록.',
     render: () => <MinigamePreview initialGameCode="cat-merge" />,
+  },
+  {
+    name: 'RoutineRhythmPreview',
+    description: 'Suno 원곡 · 일곱 번째 박자 · 홀드 · 출력 지연 보정 · 연습 전용.',
+    render: () => <RhythmPracticeScreen />,
   },
   {
     name: 'CatTowerPreview',

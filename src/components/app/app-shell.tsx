@@ -710,8 +710,7 @@ export function AppShell({
         onVolumeChange={speaker.setVolume}
       />
       {/* 엣지 백 (#564) — 콘텐츠 전체를 감싸되 관찰만 한다(차단 없음). */}
-      <MinigameActiveContext.Provider
-        value={screen === 'minigameRunner' ? minigames.activeSessionId : null}>
+      <MinigameActiveContext.Provider value={minigames.activeSessionId}>
         <GestureDetector gesture={edgeBackPan}>
           <View style={styles.content}>
             {/* 두 층 슬라이드 (#1094) — 전환 중 300ms만 두 화면이 함께 산다. */}
