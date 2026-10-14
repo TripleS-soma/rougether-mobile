@@ -104,7 +104,7 @@
       "good": "Almost there",
       "miss": "Catch the next beat!",
       "combo": "{n} beats together",
-      "listen": "Listen to the sound, not the picture",
+      "listen": "Watch and hear six pulses. Predict the seventh!",
       "calHelp": "Tap with the cue ten times",
       "complete": "One little routine, complete!",
       "summary": "Perfect {perfect} · Good {good} · Miss {miss}",
@@ -118,8 +118,9 @@
         "Listen six times, tap on seven",
         "Count the missing cues in your head",
         "Listen for double-time cues",
-        "Four times faster: focus on the sound!"
-      ]
+        "Four times faster. Remember the missing pulses!"
+      ],
+      "holdButton": "Hold · Release with the cue"
     }
   }
 }

@@ -11,3 +11,6 @@ Original prompt: 이 게임 박자가 잘안맞는거같은데... 약간? 박자
 - Remaining product integration: ranked server replay contract and real iOS/Android device/audio route tests. These do not claim to be completed by the local web adapter tests.
 
 - User steering: 화면의 박자 가이드가 너무 쉽고 뒤로 갈수록 어려워져야 한다. Removed all visual cue counts, target circles, rush progress, periodic cat bounce and brand eyebrow. Four levels:4/4/8/16 notes,1x/1x/2x/4x cue speed,0/1/2/3 hidden cues,80/70/60/50ms PERFECT windows. ChartVersion2; ranked replay still excluded.
+
+- Corrected over-removal after user feedback: restored Rhythm Doctor-inspired cue ECG, muted X gaps, single-cue rush wave, hold charge and input-only seventh response. Cue-aligned cat/heart response returns; free-running beat bounce and numbered target guide remain removed. Rising32-note progression and clean header retained.
+- ECG revision verified: audible cue/X/rush/hold tests20 PASS; screenshot region byte-identical before/after seventh without input; actual wave/X/hold/rush frames inspected, no page errors. Typecheck/lint pass; full32 stage and real-audio QA rerun.
