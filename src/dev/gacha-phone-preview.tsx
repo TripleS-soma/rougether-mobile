@@ -5,15 +5,14 @@ import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import type { DrawResult, GachaDrawCount, GachaRewardResponse } from '@/api';
 import type { GachaMachine } from '@/api/adapters';
-import type { GachaCategory } from '@/api/types';
 import { GachaScreen } from '@/components/screens/gacha-screen';
 import { Button } from '@/components/ui/button';
-import { GACHA_CATEGORIES, GACHA_CATEGORY_META } from '@/constants/gacha';
+import { GACHA_CATEGORIES, GACHA_CATEGORY_META, type LobbyGachaCategory } from '@/constants/gacha';
 
 type DemoRarity = '일반' | '희귀' | '전설';
 
 /** These are catalog keys already used by the room renderer and dev gallery. */
-const DEMO_REWARDS: Record<GachaCategory, DrawResult[]> = {
+const DEMO_REWARDS: Record<LobbyGachaCategory, DrawResult[]> = {
   WALLPAPER: [
     {
       rewardType: 'ITEM',
@@ -65,6 +64,10 @@ const DEMO_REWARDS: Record<GachaCategory, DrawResult[]> = {
       converted: false,
     },
   ],
+  CHARACTER: [
+    { rewardType: 'CHARACTER', characterId: 2, name: '강아지', converted: false },
+    { rewardType: 'CHARACTER', characterId: 3, name: '호랑이', converted: false },
+  ],
 };
 
 const DEMO_MACHINES: GachaMachine[] = GACHA_CATEGORIES.map((category, index) => ({
@@ -80,7 +83,7 @@ const DEMO_MACHINES: GachaMachine[] = GACHA_CATEGORIES.map((category, index) => 
   drawCount: 1,
 }));
 
-function categoryForId(gachaId: number): GachaCategory {
+function categoryForId(gachaId: number): LobbyGachaCategory {
   return DEMO_MACHINES.find((machine) => machine.id === gachaId)?.category ?? 'FURNITURE';
 }
 

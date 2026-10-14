@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { Room } from '@/components/room/room';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
-import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { MarketAssetScreen } from '@/components/screens/market-asset-screen';
 import { MarketOrdersScreen } from '@/components/screens/market-orders-screen';
 import { MarketScreen } from '@/components/screens/market-screen';
@@ -135,22 +134,6 @@ export const roomEntries: GalleryEntry[] = [
         onRetry={() => {}}
         onPractice={() => {}}
       />
-    ),
-  },
-  {
-    name: 'MoruRoom',
-    description: '레벨 5 보상 모루. 캐릭터를 누르면 대기·인사·기쁨·눕기를 순환합니다.',
-    render: () => (
-      <View style={{ flex: 1, minHeight: 720 }}>
-        <MyRoomScreen
-          userName="모루의 친구"
-          characterId="moru"
-          characterFrames={['idle', 'wave', 'pose-cycle', 'lying'].map(
-            (motion) => `characters/moru/animations/${motion}.webp`,
-          )}
-          routines={[]}
-        />
-      </View>
     ),
   },
   {

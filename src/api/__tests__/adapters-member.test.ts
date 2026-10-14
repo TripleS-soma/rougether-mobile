@@ -8,22 +8,29 @@ import {
 import { characterIdFromCode } from '@/api/adapters/room';
 
 describe('API adapters — member', () => {
-  it('keeps Moru and all four server poses in owned, master, and room mappings', () => {
+  it('keeps all four server poses in owned, master, and room mappings', () => {
     const keys = ['idle', 'wave', 'pose-cycle', 'lying'].map(
-      (motion) => `characters/moru/animations/${motion}.webp`,
+      (motion) => `characters/dog/animations/${motion}.webp`,
     );
     const poses = keys.map((assetKey, i) => ({ id: i + 1, assetKey, sortOrder: (i + 1) * 10 }));
-    const master = { id: 10, code: 'moru', poses: [...poses].reverse() };
-    expect(toAppCharacterId(10, [master])).toBe('moru');
-    expect(characterIdFromCode('moru')).toBe('moru');
-    expect(toCharacterFramesMap([master])).toEqual({ moru: keys });
-    expect(toOwnedCharacter({ ...master, characterId: 10, selected: false })).toMatchObject({
-      serverId: 10,
-      id: 'moru',
-      name: '모루',
+    const master = { id: 2, code: 'dog', poses: [...poses].reverse() };
+    expect(toAppCharacterId(2, [master])).toBe('dog');
+    expect(characterIdFromCode('dog')).toBe('dog');
+    expect(toCharacterFramesMap([master])).toEqual({ dog: keys });
+    expect(toOwnedCharacter({ ...master, characterId: 2, selected: false })).toMatchObject({
+      serverId: 2,
+      id: 'dog',
+      name: '강아지',
       frames: keys,
       selected: false,
     });
+  });
+
+  // 모루는 2026-10-14 제거됐다 — 서버 보유 목록에 남아 있어도(보유 기록 유지) 앱은 보여 주지 않는다.
+  it('drops the removed Moru character from owned and master mappings', () => {
+    expect(characterIdFromCode('moru')).toBeUndefined();
+    expect(toAppCharacterId(10, [{ id: 10, code: 'moru' }])).toBeUndefined();
+    expect(toOwnedCharacter({ characterId: 10, code: 'moru', selected: false })).toBeNull();
   });
 
   it('maps a bug report to the history row (#496)', () => {

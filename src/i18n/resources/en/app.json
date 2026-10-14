@@ -69,6 +69,7 @@
     "navMenu": {
       "close": "Close",
       "changeCharacter": "Change character",
+      "changeCharacterLocked": "Character switching unlocks at room level {{level}}",
       "decorate": "Decorate room",
       "market": "Furniture market",
       "saveImage": "Save room image",

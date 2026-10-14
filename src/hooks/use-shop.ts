@@ -47,6 +47,7 @@ import { track } from '@/lib/analytics';
 import { queryKeys } from '@/lib/query-keys';
 import type { RoomCobweb } from '@/components/room/room';
 import type { PlacedFurniture } from '@/resources/furniture';
+import { characterUnlockOf } from '@/constants/characters';
 
 // 빈 기본값 — 인라인 `[]`는 매 렌더 새 배열이라 파생 memo가 매번 다시 돈다.
 const NO_ITEMS: ItemResponse[] = [];
@@ -270,8 +271,11 @@ export function useShop() {
     [saveAsync, qc, myRoomKey, revisionRef, userItemMapRef, toast],
   );
 
+  const characterUnlock = characterUnlockOf(room);
   return useMemo(
     () => ({
+      characterUnlocked: characterUnlock.unlocked,
+      characterUnlockLevel: characterUnlock.level,
       growthLevel: room?.growthLevel,
       growthPoints: room?.growthPoints,
       pointsToNextLevel: room?.pointsToNextLevel,
@@ -287,6 +291,8 @@ export function useShop() {
       saveLayout,
     }),
     [
+      characterUnlock.unlocked,
+      characterUnlock.level,
       room?.growthLevel,
       room?.growthPoints,
       room?.pointsToNextLevel,
