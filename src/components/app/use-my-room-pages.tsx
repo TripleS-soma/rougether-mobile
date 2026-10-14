@@ -567,7 +567,9 @@ export function useMyRoomPages({
     unreadNotificationCount: unreadCount + announcements.unreadCount,
     ownedCharacters: canSelectCharacter ? character.ownedCharacters : undefined,
     onSelectCharacter: canSelectCharacter ? character.wearCharacter : undefined,
-    characterLockLevel: canSelectCharacter ? undefined : room.characterUnlockLevel,
+    // 방을 받기 전엔(레벨 미상) 잠금 항목도 숨긴다 — 해금 계정에 자물쇠가 잠깐 비치지 않게 (#1547 리뷰).
+    characterLockLevel:
+      canSelectCharacter || room.growthLevel == null ? undefined : room.characterUnlockLevel,
     onManageCategories: openCategoryManage,
     onUpdateCategory: updateRoutineCategory,
     onOpenGacha: openGacha,
