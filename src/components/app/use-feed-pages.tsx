@@ -201,13 +201,11 @@ export function useFeedPages({
       hasNext: feed.hasNext,
       loadingMore: feed.loadingMore,
       onLoadMore: feed.loadMore,
-      onToggleLike: handleToggleLike,
       onOpenPost: openPost,
-      onChallenge: openGame,
       onCompose: openCompose,
       loadImage: fetchFeedImage,
     }),
-    [board, feed, handleToggleLike, openPost, openGame, openCompose],
+    [board, feed, openPost, openCompose],
   );
 
   // 알림함 카드·푸시 탭·인앱 배너의 FEED_COMMENT(refId·FCM postId = 게시물 id)는 셸이

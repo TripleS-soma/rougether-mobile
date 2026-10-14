@@ -22,6 +22,8 @@ export type FeedPhotoProps = {
   loader?: FeedImageLoader;
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
+  /** 기본 `contain`(원본 비율). 목록 썸네일은 `cover`로 정사각형을 채운다. */
+  contentFit?: 'contain' | 'cover';
 };
 
 /**
@@ -29,7 +31,13 @@ export type FeedPhotoProps = {
  * 주소(웹 blob URL · 네이티브 data URI)를 그린다. 원본 비율 그대로(contain) 보여 주고, 남는
  * 자리는 옅은 면으로 채운다. 디스크 캐시는 쓰지 않는다(서버 `no-store`).
  */
-export function FeedPhoto({ image, loader, accessibilityLabel, style }: FeedPhotoProps) {
+export function FeedPhoto({
+  image,
+  loader,
+  accessibilityLabel,
+  style,
+  contentFit = 'contain',
+}: FeedPhotoProps) {
   const t = useTokens();
   const [uri, setUri] = useState<string | null>(null);
   useEffect(() => {
@@ -54,7 +62,7 @@ export function FeedPhoto({ image, loader, accessibilityLabel, style }: FeedPhot
         <Image
           source={{ uri }}
           style={StyleSheet.absoluteFill}
-          contentFit="contain"
+          contentFit={contentFit}
           cachePolicy="memory"
           transition={120}
         />
