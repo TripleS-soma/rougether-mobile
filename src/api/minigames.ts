@@ -28,15 +28,10 @@ export type MinigameResult = {
   rank: number;
   /**
    * 이 게임의 내 랭킹전 완료 횟수(이번 판 포함). 피드 자랑 제안(10판 이상)의 조건이다.
-   * 서버(feat/feed-minigame-record) 배포 전 응답엔 없으므로 0으로 받는다(제안 없음).
+   * 숫자가 아니면 0으로 받는다(제안 없음) — 서버 #446 이전 응답 대비.
    */
   playCount: number;
 };
-/**
- * POST …/finish 원본 응답 — `playCount`가 아직 생성 타입(`MinigameFinishResponse`)에 없다.
- * TODO(gen:api-types): 서버 PR 배포 후 재생성하면 이 로컬 타입을 지우고 생성 타입을 쓴다.
- */
-type MinigameFinishWire = Omit<MinigameResult, 'playCount'> & { playCount?: number };
 export type MinigameRankingEntry = {
   rank: number;
   userId: number;
@@ -62,7 +57,7 @@ export async function finishMinigameRun(
   runId: string,
   replay: MinigameReplay,
 ): Promise<MinigameResult> {
-  const res = await apiPost<MinigameFinishWire>(
+  const res = await apiPost<Omit<MinigameResult, 'playCount'> & { playCount?: number }>(
     `${gamePath(gameCode)}/runs/${encodeURIComponent(runId)}/finish`,
     replay,
   );

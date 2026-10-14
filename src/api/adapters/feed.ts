@@ -14,22 +14,10 @@ import type {
   FeedAuthorResponse,
   FeedCommentResponse,
   FeedImageResponse,
+  FeedMinigameRecordResponse,
   FeedPostResponse,
   FeedRoutineResponse,
 } from '@/api/types';
-
-/**
- * 미니게임 기록 카드 응답 (서버 feat/feed-minigame-record) — 아직 생성 타입에 없다.
- * TODO(gen:api-types): 서버 배포 후 재생성하면 이 로컬 타입과 아래 교차형을 지운다.
- */
-export type FeedMinigameRecordResponse = {
-  gameCode?: string;
-  score?: number;
-  rank?: number | null;
-  personalBest?: boolean;
-  achievedAt?: string;
-};
-type FeedPostWire = FeedPostResponse & { minigameRecord?: FeedMinigameRecordResponse | null };
 
 function toFeedAuthor(res: FeedAuthorResponse | undefined): FeedAuthor {
   return {
@@ -67,7 +55,7 @@ function toFeedMinigameRecord(
   };
 }
 
-export function toFeedPost(res: FeedPostWire): FeedPost | null {
+export function toFeedPost(res: FeedPostResponse): FeedPost | null {
   if (res.postId == null) return null;
   return {
     postId: res.postId,
