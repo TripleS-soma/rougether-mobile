@@ -68,13 +68,17 @@ type PickerTarget = 'wallpaper' | 'floor' | 'background' | 'all';
  * 카탈로그 그리드의 종류 탭 — 한 번에 한 그리드만 보여준다 (#488). 가구 거래소는 예전엔 여기
  * 탭이었지만 전체 메뉴(≡)의 독립 화면으로 옮겼다(#1502).
  */
-export type DecorTab = 'furniture' | 'decor' | 'wallpaper' | 'floor' | 'background';
+export type DecorTab = 'furniture' | 'decor' | 'wallpaper' | 'floor' | 'background' | 'ai';
 
 /**
  * 소품 = 서버 categoryCode 'decor'(장식)와 'floor'(러그); 가구 = 나머지
  * (서버 'furniture', 데모 '한옥' 세트 포함).
  */
-const isDecorItem = (i: FurnitureItem) => i.category === '장식' || i.category === '러그';
+const isDecorItem = (i: FurnitureItem) =>
+  !i.aiGenerated && (i.category === '장식' || i.category === '러그');
+
+/** 가구 탭 = 소품도 AI 가구도 아닌 것. AI 가구는 자기 탭으로만 간다(겹쳐 보이지 않게). */
+const isFurnitureTabItem = (i: FurnitureItem) => !i.aiGenerated && !isDecorItem(i);
 
 /**
  * 뽑은 아이템 id가 어느 탭에 있는지 (#897). 뽑기 결과(`DrawResult`)에는
@@ -95,6 +99,7 @@ export function decorTabForItem(
   if (catalogs.backgrounds?.some((b) => b.id === itemId)) return 'background';
   const item = catalogs.furniture?.find((f) => f.id === itemId);
   if (!item) return undefined;
+  if (item.aiGenerated) return 'ai';
   return isDecorItem(item) ? 'decor' : 'furniture';
 }
 
@@ -566,8 +571,9 @@ export function RoomDecorScreen({
   // 아이템은 categoryCode(가구/소품)로 한 번 더 나눈다 (#488). 한 번에 한
   // 그리드만 — 통짜 세로 나열은 스크롤이 너무 길다.
   const [allTab, setAllTab] = useState<DecorTab>(initialTab);
-  const furnitureTabItems = useMemo(() => furniture.filter((i) => !isDecorItem(i)), [furniture]);
+  const furnitureTabItems = useMemo(() => furniture.filter(isFurnitureTabItem), [furniture]);
   const decorTabItems = useMemo(() => furniture.filter(isDecorItem), [furniture]);
+  const aiTabItems = useMemo(() => furniture.filter((i) => i.aiGenerated), [furniture]);
   const isSurfacePicker = picker === 'wallpaper' || picker === 'floor' || picker === 'background';
   // 방금 뽑은 아이템(#630)이 맨 앞, 그다음 보유 순 — 뽑기에서 넘어온 사용자가
   // 찾을 필요 없게 한다.
@@ -622,6 +628,22 @@ export function RoomDecorScreen({
     () => byOwnedFirst(decorTabItems),
     [byOwnedFirst, decorTabItems],
   );
+  const sortedAiTabItems = useMemo(() => byOwnedFirst(aiTabItems), [byOwnedFirst, aiTabItems]);
+  // 종류 탭 — 가구가 기본, 소품(categoryCode decor·러그)은 분리, 표면류·AI 가구는 있을 때만
+  // (#488). AI 가구는 사진으로 만든 내 가구라 상점 카탈로그와 섞이지 않게 따로 모은다.
+  const allTabs = useMemo<DecorTab[]>(
+    () => [
+      'furniture',
+      'decor',
+      'wallpaper',
+      ...(floors.length > 0 ? (['floor'] as const) : []),
+      ...(backgrounds.length > 0 ? (['background'] as const) : []),
+      ...(aiTabItems.length > 0 ? (['ai'] as const) : []),
+    ],
+    [floors.length, backgrounds.length, aiTabItems.length],
+  );
+  // 고른 탭이 사라지면(마지막 AI 가구를 팔았거나 진입 탭에 항목이 없을 때) 빈 화면 대신 가구 탭.
+  const shownTab: DecorTab = allTabs.includes(allTab) ? allTab : 'furniture';
 
   // 캔버스·카탈로그는 2단과 1단이 같은 트리다 — 아래 분기는 배치만 정한다. 예전엔 두 분기가
   // 이 JSX를 따로 들고 있어(341줄) 한쪽만 고치면 웹 2단에서만 조용히 어긋났다(장부 2라운드 1번).
@@ -785,20 +807,11 @@ export function RoomDecorScreen({
         <View style={[styles.panel, { backgroundColor: t.surface }]}>
           <View style={styles.panelHead}>
             {picker === 'all' ? (
-              // 전체보기: 서버 분류별 탭 — 가구가 기본, 소품(categoryCode
-              // decor·러그)은 분리, 표면류는 있을 때만 (#488).
+              // 전체보기: 서버 분류별 탭 (allTabs 참고).
               <View style={styles.segment}>
-                {(
-                  [
-                    'furniture' as const,
-                    'decor' as const,
-                    'wallpaper' as const,
-                    ...(floors.length > 0 ? ['floor' as const] : []),
-                    ...(backgrounds.length > 0 ? ['background' as const] : []),
-                  ] as const
-                ).map((key) => {
+                {allTabs.map((key) => {
                   const label = tr(`roomShop.decor.tab.${key}`);
-                  const active = allTab === key;
+                  const active = shownTab === key;
                   return (
                     <Pressable
                       key={key}
@@ -921,9 +934,16 @@ export function RoomDecorScreen({
               t={t}
             />
           ) : null}
-          {picker === 'all' && (allTab === 'furniture' || allTab === 'decor') ? (
+          {picker === 'all' &&
+          (shownTab === 'furniture' || shownTab === 'decor' || shownTab === 'ai') ? (
             <FurnitureGrid
-              items={allTab === 'furniture' ? sortedFurnitureTabItems : sortedDecorTabItems}
+              items={
+                shownTab === 'furniture'
+                  ? sortedFurnitureTabItems
+                  : shownTab === 'decor'
+                    ? sortedDecorTabItems
+                    : sortedAiTabItems
+              }
               placed={placedSet}
               onPlace={togglePlace}
               owned={owned}
@@ -931,7 +951,7 @@ export function RoomDecorScreen({
               t={t}
             />
           ) : null}
-          {picker === 'all' && allTab === 'wallpaper' ? (
+          {picker === 'all' && shownTab === 'wallpaper' ? (
             <SwatchGrid
               items={sortedWallpapers}
               selectedId={wallpaperId}
@@ -943,7 +963,7 @@ export function RoomDecorScreen({
               t={t}
             />
           ) : null}
-          {picker === 'all' && allTab === 'floor' ? (
+          {picker === 'all' && shownTab === 'floor' ? (
             <SwatchGrid
               items={sortedFloors}
               selectedId={floorId}
@@ -956,7 +976,7 @@ export function RoomDecorScreen({
               t={t}
             />
           ) : null}
-          {picker === 'all' && allTab === 'background' ? (
+          {picker === 'all' && shownTab === 'background' ? (
             <SwatchGrid
               items={sortedBackgrounds}
               selectedId={backgroundId}

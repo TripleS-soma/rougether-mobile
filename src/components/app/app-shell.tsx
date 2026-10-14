@@ -598,7 +598,7 @@ export function AppShell({
           onGoToRoom={async () => {
             const refreshed = await refreshOwned();
             if (refreshed) {
-              setDecorInitialTab('furniture');
+              setDecorInitialTab('ai');
               setScreen('decor');
             }
             return refreshed;
