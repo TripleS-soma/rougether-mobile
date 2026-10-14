@@ -9,6 +9,18 @@ import { shiftIso as isoShift, todayIso } from '@/utils/datetime';
 import { ToastProvider } from '@/components/ui/toast';
 
 describe('FriendRoomScreen', () => {
+  // 친구의 한 줄 소개 (2026-10-14) — 같은 집 구성원에게만 서버가 준다. 비면 자리도 없다.
+  it('친구의 한 줄 소개를 보여 주고, 비어 있으면 숨긴다', async () => {
+    const view = await render(
+      <FriendRoomScreen friendName="민지" friendBio="  아침형 인간 도전 중  " />,
+    );
+    expect(view.getByText('아침형 인간 도전 중')).toBeTruthy();
+    expect(view.getByLabelText('민지의 한 줄 소개: 아침형 인간 도전 중')).toBeTruthy();
+
+    await view.rerender(<FriendRoomScreen friendName="민지" friendBio="   " />);
+    expect(view.queryByLabelText(/한 줄 소개/)).toBeNull();
+  });
+
   // 첫 버튼만 primary로 꽉 채워 '선택된 상태'처럼 보이던 것 — 세 응원은 동등한 원탭이라
   // 문구 뜻을 따라 각자 다른 틴트를 깐다(칭찬 초록 / 다정 코랄 / 축하 금색).
   it('응원 버튼 3개가 문구마다 다른 틴트를 쓴다', async () => {

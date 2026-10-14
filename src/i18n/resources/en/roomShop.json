@@ -122,6 +122,7 @@
     },
     "friendRoom": {
       "defaultName": "Friend",
+      "bioA11y": "{{name}}'s intro: {{bio}}",
       "cheer": {
         "great": "Great job!",
         "support": "Cheer",

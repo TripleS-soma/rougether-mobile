@@ -113,6 +113,7 @@ export function useFriendVisit({
     screen === 'friendRoom' ? (
       <FriendRoomScreen
         friendName={visitingFriend.name}
+        friendBio={friendRoom.bio}
         onSwipeFriend={visitableFriends.length >= 2 ? swipeFriend : undefined}
         guestbook={guestbookEntries}
         guestbookLoading={guestbookLoading}

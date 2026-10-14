@@ -287,6 +287,7 @@
       "nicknamePlaceholder": "Enter a nickname",
       "bio": "Bio",
       "bioPlaceholder": "Introduce yourself in one line",
+      "bioHint": "Housemates see this intro when they visit your room.",
       "saveA11y": "Save profile"
     },
     "help": {

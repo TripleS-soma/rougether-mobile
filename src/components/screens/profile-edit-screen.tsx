@@ -99,6 +99,10 @@ export function ProfileEditScreen({
               placeholder={tr('member.profileEdit.bioPlaceholder')}
               maxLength={BIO_MAX}
             />
+            {/* 공개 범위 안내 (2026-10-14) — 친구 방 방문 때 같은 집 구성원에게 보인다. */}
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {tr('member.profileEdit.bioHint')}
+            </Text>
           </View>
         </ScrollView>
 

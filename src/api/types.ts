@@ -1387,6 +1387,7 @@ export type RoomRenderResponse = {
 
 export type RoomResponse = {
   roomUserId?: number;
+  ownerBio?: string | null;
   growthLevel?: number;
   growthPoints?: number;
   pointsToNextLevel?: number;

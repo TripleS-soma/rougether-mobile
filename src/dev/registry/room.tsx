@@ -215,7 +215,7 @@ export const roomEntries: GalleryEntry[] = [
       'Ported from the prototype FriendRoomScreen (#9): read-only room + routines + cheers.',
     render: () => (
       <View style={{ height: 860, alignSelf: 'stretch' }}>
-        <FriendRoomScreen friendName="민지" />
+        <FriendRoomScreen friendName="민지" friendBio="아침형 인간 도전 중 ☀️ 같이 해요!" />
       </View>
     ),
   },
