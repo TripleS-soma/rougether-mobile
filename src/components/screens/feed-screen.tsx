@@ -297,12 +297,15 @@ export function FeedScreen({
         ]}
         ListHeaderComponent={
           onChangeBoard ? (
-            <FeedBoardTabs
-              options={FEED_BOARD_FILTERS}
-              value={board}
-              onChange={handleChangeBoard}
-              testID="feed-board-filter"
-            />
+            // 줄 묶음과 붙지 않게 — 줄 사이 간격을 없애면서(#1559) 탭 아래 간격도 사라졌다.
+            <View style={styles.listHeader}>
+              <FeedBoardTabs
+                options={FEED_BOARD_FILTERS}
+                value={board}
+                onChange={handleChangeBoard}
+                testID="feed-board-filter"
+              />
+            </View>
           ) : null
         }
         ListEmptyComponent={
@@ -354,6 +357,9 @@ const styles = StyleSheet.create({
   },
   body: {
     padding: Spacing.three,
+  },
+  listHeader: {
+    marginBottom: Spacing.three,
   },
   row: {
     flexDirection: 'row',
