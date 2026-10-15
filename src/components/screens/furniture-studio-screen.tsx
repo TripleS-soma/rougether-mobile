@@ -191,9 +191,12 @@ export function FurnitureStudioScreen({
                 {tr(
                   job.status === 'SUCCEEDED'
                     ? 'roomShop.studio.succeeded'
-                    : 'roomShop.studio.failed',
+                    : job.userItemId != null
+                      ? 'roomShop.studio.reviewFailed'
+                      : 'roomShop.studio.failed',
                 )}
               </Text>
+              {job.status === 'FAILED' ? <FurnitureFailureNotice job={job} /> : null}
               {job.status === 'SUCCEEDED' || job.userItemId ? (
                 <>
                   <Button
@@ -211,9 +214,12 @@ export function FurnitureStudioScreen({
                   ) : null}
                 </>
               ) : (
-                <Text style={[Typography.body, { color: t.textMuted }]}>
-                  {tr('roomShop.studio.retryHint')}
-                </Text>
+                <Button
+                  label={tr('roomShop.studio.retryPhoto')}
+                  onPress={onChoosePhoto}
+                  variant="secondary"
+                  disabled={!ready}
+                />
               )}
             </View>
           ))}
@@ -226,6 +232,58 @@ export function FurnitureStudioScreen({
           onClose={() => setIssuing(null)}
         />
       ) : null}
+    </View>
+  );
+}
+
+function furnitureFailureKind(code: string | null) {
+  switch (code) {
+    case 'PHOTO_REJECTED':
+    case 'IMAGE_GENERATION_REFUSED':
+      return 'photo';
+    case 'GENERATION_BUDGET_EXHAUSTED':
+    case 'HARD_QA_REJECTED':
+      return 'quality';
+    case 'SOURCE_UPLOAD_FAILED':
+    case 'SOURCE_UNAVAILABLE':
+    case 'UPLOAD_EXPIRED':
+      return 'upload';
+    case 'QUEUE_WAIT_EXCEEDED':
+    case 'EXECUTION_TIME_BUDGET_EXHAUSTED':
+    case 'WORKER_INTERRUPTED':
+    case 'JOB_EXPIRED':
+      return 'timeout';
+    default:
+      return 'temporary';
+  }
+}
+
+function FurnitureFailureNotice({ job }: { job: FurnitureJob }) {
+  const t = useTokens();
+  const Typography = useTypography();
+  const tr = useT();
+  const kind = furnitureFailureKind(job.failureCode);
+  // Review details only explain photo or quality failures, not unrelated processing errors.
+  const detail = ['PHOTO_REJECTED', 'GENERATION_BUDGET_EXHAUSTED'].includes(job.failureCode ?? '')
+    ? job.reason?.trim()
+    : null;
+  return (
+    <View accessibilityRole="alert" style={styles.section}>
+      <Text style={[Typography.body, { color: t.text }]}>
+        {detail || tr(`roomShop.studio.failure.${kind}.reason`)}
+      </Text>
+      {job.userItemId == null ? (
+        <Text style={[Typography.supporting, { color: t.textMuted }]}>
+          {tr(`roomShop.studio.failure.${kind}.hint`)}
+        </Text>
+      ) : null}
+      <Text style={[Typography.supporting, { color: t.textMuted }]}>
+        {tr(
+          job.userItemId != null
+            ? 'roomShop.studio.failure.existingFurniture'
+            : 'roomShop.studio.failure.creditReturned',
+        )}
+      </Text>
     </View>
   );
 }

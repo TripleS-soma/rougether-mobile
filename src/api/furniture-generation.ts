@@ -10,6 +10,7 @@ export type FurnitureJob = {
   assetKey: string | null;
   userItemId: number | null;
   failureCode: string | null;
+  reason?: string | null;
 };
 export const isFurnitureJobActive = (job: FurnitureJob) =>
   ['UPLOADING', 'QUEUED', 'PROCESSING'].includes(job.status);

@@ -266,8 +266,8 @@
     },
     "studio": {
       "title": "AI furniture studio",
-      "heroTitle": "Bring furniture from a photo into your room",
-      "heroBody": "Turn one photo of furniture you love\ninto your own piece in Rougether.",
+      "heroTitle": "Bring a subject from a photo into your room",
+      "heroBody": "Turn a photo you love\ninto a decoration for your room.",
       "credits": "{{n}} credits",
       "creditsChecking": "Checking credits",
       "creditsReserved": " · {{n}} in use",
@@ -280,7 +280,7 @@
       "choosePhoto": "Choose a furniture photo",
       "sending": "Sending photo",
       "submit": "Make it with 1 credit",
-      "photoHint": "A JPG or PNG photo showing one piece of furniture · up to 10MB\nThe photo is used to create AI furniture. Credits are refunded if generation fails.",
+      "photoHint": "A JPG or PNG showing one clear subject · up to 10MB\nIf several subjects are visible, crop the photo to keep only the one you want.\nThe photo is used to create AI furniture. Credits are returned if generation fails.",
       "attendanceTitle": "Check in for 7 days, make your own furniture",
       "attendanceBody": "Check in 7 days in a row to earn 1 credit.",
       "attendanceCta": "View attendance event",
@@ -289,7 +289,6 @@
       "succeeded": "Added to your inventory",
       "failed": "Couldn't finish this one",
       "placeInRoom": "Place in my room",
-      "retryHint": "Try again with a different photo.",
       "error": {
         "FURNITURE_CREDITS_REQUIRED": "Not enough credits. Earn credits from the attendance event.",
         "FURNITURE_GENERATION_UNAVAILABLE": "Furniture making is taking a break. Please try again later.",
@@ -302,6 +301,32 @@
         "openFailed": "Couldn't open the photo. Check your photo access settings.",
         "inventoryLoadFailed": "Couldn't load your inventory. Please try again.",
         "FURNITURE_MARKET_LISTED": "Furniture listed on the market can't be re-reviewed."
+      },
+      "reviewFailed": "Couldn't finish this review",
+      "retryPhoto": "Choose a photo to try again",
+      "failure": {
+        "photo": {
+          "reason": "We couldn't make furniture from this photo.",
+          "hint": "Crop the photo so one subject is clearly visible, then select it again."
+        },
+        "quality": {
+          "reason": "The result didn't meet the quality requirements.",
+          "hint": "Try a photo with a clear subject and a simple background."
+        },
+        "upload": {
+          "reason": "We couldn't load the photo to finish making your furniture.",
+          "hint": "Check your connection and select the photo again."
+        },
+        "timeout": {
+          "reason": "Making your furniture stopped because processing didn't finish in time.",
+          "hint": "You can try the same photo again in a little while."
+        },
+        "temporary": {
+          "reason": "A processing problem prevented us from finishing your furniture.",
+          "hint": "Try again in a little while. If it keeps failing, contact support."
+        },
+        "creditReturned": "The credit for this failed attempt has been returned.",
+        "existingFurniture": "Your previously finished furniture is still in your inventory."
       }
     },
     "minigame": {
