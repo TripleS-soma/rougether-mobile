@@ -68,10 +68,13 @@ it('offers installed games missing from a partial server catalog only in the pra
   await fireEvent.press(ui.getByLabelText('고양이 계단 연습하기 · 랭킹 미기록'));
   await fireEvent.press(ui.getByLabelText('고양이 합치기 연습하기 · 랭킹 미기록'));
   await fireEvent.press(ui.getByLabelText('고양이 탑 쌓기 연습하기 · 랭킹 미기록'));
-  expect(practice.mock.calls).toEqual([['cat-stairs'], ['cat-merge'], ['cat-tower']]);
+  await fireEvent.press(ui.getByLabelText('고양이 털실 정리 연습하기 · 랭킹 미기록'));
+  expect(practice.mock.calls).toEqual([['cat-stairs'], ['cat-merge'], ['cat-tower'], ['cat-yarn']]);
   expect(ui.queryByLabelText('고양이 계단 시작')).toBeNull();
   expect(ui.queryByLabelText('고양이 합치기 시작')).toBeNull();
   expect(ui.queryByLabelText('고양이 탑 쌓기 시작')).toBeNull();
+  // 서버 카탈로그가 아직 cat-yarn을 주지 않아도 연습은 된다.
+  expect(ui.queryByLabelText('고양이 털실 정리 시작')).toBeNull();
 });
 
 it('hides stale ranked cards after an API error and offers every installed game as explicit practice', async () => {

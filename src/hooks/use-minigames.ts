@@ -96,6 +96,17 @@ type Session = {
 };
 type Submission = { sessionId: string; run: MinigameRun; replay: MinigameReplay };
 
+/** 제출 페이로드는 알려진 필드만 복사한다 — 재시도 때 같은 값을 다시 보낸다. */
+function copyReplay(replay: MinigameReplay): MinigameReplay {
+  if ('jumpTicks' in replay) return { ticks: replay.ticks, jumpTicks: [...replay.jumpTicks] };
+  // 털실 정리(cat-yarn)는 집은 더미 번호만 보낸다.
+  if ('picks' in replay) return { ticks: replay.ticks, picks: [...replay.picks] };
+  return {
+    ticks: replay.ticks,
+    actions: replay.actions.map(({ tick, direction }) => ({ tick, direction })),
+  };
+}
+
 /** Keep failed replay payloads until an explicit new attempt, so retries are idempotent. */
 export function useMinigameRun(gameCode: string) {
   const qc = useQueryClient();
@@ -241,13 +252,7 @@ export function useMinigameRun(gameCode: string) {
       const attempt = {
         sessionId,
         run: current.run,
-        replay:
-          'jumpTicks' in replay
-            ? { ticks: replay.ticks, jumpTicks: [...replay.jumpTicks] }
-            : {
-                ticks: replay.ticks,
-                actions: replay.actions.map(({ tick, direction }) => ({ tick, direction })),
-              },
+        replay: copyReplay(replay),
       };
       submission.current = attempt;
       void submit(attempt);

@@ -212,6 +212,18 @@ describe('minigame queries', () => {
 });
 
 describe('minigame runs', () => {
+  it('submits a cat-yarn replay as a copy of the picked piles only', async () => {
+    const run = { ...RUN, runId: 'yarn-run', gameCode: 'cat-yarn', maxTicks: 2000 };
+    startRequest.mockResolvedValue(run);
+    const { result } = await renderStartedRun(run);
+    const picks = [0, 5, 5, 2];
+    await act(() => result.current.finish(run.runId, { ticks: 4, picks }));
+    await waitFor(() => expect(result.current.result).toEqual(SAVED));
+    expect(finishRequest).toHaveBeenCalledWith('cat-yarn', 'yarn-run', { ticks: 4, picks });
+    expect(finishRequest.mock.calls[0][2]).not.toHaveProperty('jumpTicks');
+    expect((finishRequest.mock.calls[0][2] as { picks: number[] }).picks).not.toBe(picks);
+  });
+
   it('starts with the server seed and displays the authoritative score and ranking after finish', async () => {
     const { result } = await renderStartedRun();
     expect(startRequest).toHaveBeenCalledWith(GAME.gameCode, CURRENT_MINIGAME_RULES_VERSION);
@@ -239,6 +251,7 @@ describe('minigame runs', () => {
     { gameCode: 'cat-stairs', maxTicks: 7200 },
     { gameCode: 'cat-merge', maxTicks: 18000 },
     { gameCode: 'cat-tower', maxTicks: 18000 },
+    { gameCode: 'cat-yarn', maxTicks: 2000 },
   ])('starts $gameCode with its own server tick limit', async ({ gameCode, maxTicks }) => {
     const run = { ...RUN, runId: `${gameCode}-run`, gameCode, maxTicks };
     startRequest.mockResolvedValue(run);
