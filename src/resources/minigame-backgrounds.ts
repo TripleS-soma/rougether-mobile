@@ -7,6 +7,7 @@ export const MINIGAME_BACKGROUNDS: Record<MinigameCode, ImageSource> = {
   'cat-stairs': require('@/assets/images/minigames/cat-stairs.webp'),
   'cat-merge': require('@/assets/images/minigames/cat-merge.webp'),
   'cat-tower': require('@/assets/images/minigames/cat-tower.webp'),
+  'cat-yarn': require('@/assets/images/minigames/cat-yarn.webp'),
 };
 
 export const MINIGAME_ICONS: Record<MinigameCode, ImageSource> = {
@@ -14,4 +15,5 @@ export const MINIGAME_ICONS: Record<MinigameCode, ImageSource> = {
   'cat-stairs': require('@/assets/images/minigames/cat-stairs-icon.webp'),
   'cat-merge': require('@/assets/images/minigames/cat-merge-icon.webp'),
   'cat-tower': require('@/assets/images/minigames/cat-tower-icon.webp'),
+  'cat-yarn': require('@/assets/images/minigames/cat-yarn-icon.webp'),
 };
