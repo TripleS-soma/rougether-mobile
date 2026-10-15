@@ -983,6 +983,7 @@ export type MinigameFinishRequest = {
   ticks: number;
   jumpTicks?: number[];
   actions?: MinigameAction[];
+  picks?: number[];
 };
 
 export type MinigameFinishResponse = {

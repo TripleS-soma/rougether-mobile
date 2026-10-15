@@ -27,7 +27,7 @@ function mockResponse(data: unknown) {
   return fetchMock;
 }
 
-const gameCodes = ['room-runner', 'cat-stairs', 'cat-merge', 'cat-tower'];
+const gameCodes = ['room-runner', 'cat-stairs', 'cat-merge', 'cat-tower', 'cat-yarn'];
 const result: MinigameResult = {
   runId: 'run-123',
   score: 240,
@@ -102,6 +102,11 @@ describe('미니게임 API', () => {
           { tick: 300, direction: 'DOWN' },
         ],
       },
+    },
+    {
+      // 털실 정리는 집은 더미 번호(picks)만 보낸다 — 틱은 집은 횟수.
+      gameCode: 'cat-yarn',
+      replay: { ticks: 4, picks: [0, 5, 2, 2] },
     },
   ];
 

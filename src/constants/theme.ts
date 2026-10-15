@@ -661,6 +661,21 @@ export const MyRoomTint = '#E8E0D0';
 export const HouseBgs = ['#FFEFD8', '#E4F0DC', '#E3EEF8', '#F7E4EA', '#ECE8FA', '#F7ECD8'];
 export const HouseBorders = ['#F0C88A', '#A8C898', '#9FBEDD', '#DBA8BC', '#B7A8DD', '#DDC08A'];
 
+/**
+ * 고양이 털실 정리(cat-yarn) 털실 7색 — 엔진 색 번호 0..6 순서. Okabe–Ito 색각 이상 안전
+ * 팔레트라 적록 색약에서도 서로 구분되고, 중간 밝기라 밝은·어두운 테마 바탕 모두에서 보인다.
+ * 테마와 무관한 고정색이며, 게임 문서가 색마다 무늬를 함께 그려 색만으로 구분하지 않게 한다.
+ */
+export const YarnBallColors = [
+  '#E69F00',
+  '#56B4E9',
+  '#009E73',
+  '#F0E442',
+  '#0072B2',
+  '#D55E00',
+  '#CC79A7',
+] as const;
+
 export const Radius = {
   sm: 8,
   md: 12,

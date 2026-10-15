@@ -5,11 +5,11 @@ import { i18n } from '@/i18n';
  * 물리 계약 번호 — 서버 `MinigameCatalog.CURRENT_RULES_VERSION`과 같아야 한다.
  * v3 (#1322): 러너 속도가 40초 이후에도 10초마다 +1, 장애물 최대 높이 84→96.
  * 계단·합치기는 v2와 동일(엔진이 `rulesVersion === 1 ? … : …`로 분기).
- * 탑 쌓기(#1529)는 v3에서 처음 생긴 게임이라 v3 규칙만 있다.
+ * 탑 쌓기(#1529)는 v3에서 처음 생긴 게임이라 v3 규칙만 있다. 털실 정리(cat-yarn)도 v3부터.
  */
 export const CURRENT_MINIGAME_RULES_VERSION = 3;
 
-export type MinigameCode = 'room-runner' | 'cat-stairs' | 'cat-merge' | 'cat-tower';
+export type MinigameCode = 'room-runner' | 'cat-stairs' | 'cat-merge' | 'cat-tower' | 'cat-yarn';
 export type MinigameDefinition = Minigame & {
   gameCode: MinigameCode;
   maxTicks: number;
@@ -83,6 +83,23 @@ export const MINIGAME_DEFINITIONS: Record<MinigameCode, MinigameDefinition> = {
     },
     // 캐릭터 포즈 프레임은 0~3 네 장 — 남은 0번.
     pose: 0,
+  },
+  'cat-yarn': {
+    gameCode: 'cat-yarn',
+    get name() {
+      return i18n.t('roomShop.minigame.yarn.name');
+    },
+    get description() {
+      return i18n.t('roomShop.minigame.yarn.description');
+    },
+    rulesVersion: CURRENT_MINIGAME_RULES_VERSION,
+    // 시계가 없는 게임 — 틱은 집은 횟수라 상한이 곧 집기 상한(2000)이다.
+    maxTicks: 2000,
+    get instructions() {
+      return i18n.t('roomShop.minigame.yarn.instructions');
+    },
+    // 포즈 프레임은 네 장뿐이라 합치기와 같은 3번(생각하는 게임끼리).
+    pose: 3,
   },
 };
 

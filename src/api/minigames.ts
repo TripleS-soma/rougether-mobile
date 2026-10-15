@@ -1,4 +1,5 @@
 import { apiGet, apiGetList, apiPost } from '@/api/client';
+import type { MinigameFinishRequest } from '@/api/types';
 
 export type Minigame = {
   gameCode: string;
@@ -18,8 +19,15 @@ export type MinigameRun = {
 
 export type MinigameDirection = 'LEFT' | 'RIGHT' | 'UP' | 'DOWN';
 export type MinigameAction = { tick: number; direction: MinigameDirection };
+/**
+ * 고양이 털실 정리(cat-yarn) 제출 — 집은 더미 번호(0..5) 순서, `ticks`는 집은 횟수(최소 1).
+ * 서버 `MinigameFinishRequest.picks`(최대 2000, server #447) — jumpTicks·actions와 함께 보내지 않는다.
+ */
+export type MinigamePickReplay = Required<Pick<MinigameFinishRequest, 'ticks' | 'picks'>>;
 export type MinigameReplay =
-  { ticks: number; jumpTicks: number[] } | { ticks: number; actions: MinigameAction[] };
+  | { ticks: number; jumpTicks: number[] }
+  | { ticks: number; actions: MinigameAction[] }
+  | MinigamePickReplay;
 export type MinigameResult = {
   runId: string;
   score: number;

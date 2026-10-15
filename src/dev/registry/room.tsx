@@ -25,6 +25,7 @@ import {
 import { RoomRenderReference } from '@/dev/room-render-reference';
 import { MinigamePreview, MINIGAME_PREVIEW_CATALOG } from '@/dev/minigame-preview';
 import { MinigamesScreen } from '@/components/screens/minigames-screen';
+import { YarnGame } from '@/components/minigame/yarn-game';
 import { MinigameRunnerScreen } from '@/components/screens/minigame-runner-screen';
 import { MinigameLeaderboardScreen } from '@/components/screens/minigame-leaderboard-screen';
 import type { GalleryEntry } from '@/dev/registry/types';
@@ -79,7 +80,7 @@ export const roomEntries: GalleryEntry[] = [
   {
     name: 'MinigamesPreview',
     description:
-      '개발 미리보기 전용 4종 카탈로그 → 러너·계단·합치기·탑 쌓기 연습 → 빈 랭킹. API 기록 없음 (#1302).',
+      '개발 미리보기 전용 5종 카탈로그 → 러너·계단·합치기·탑 쌓기·털실 정리 연습 → 빈 랭킹. API 기록 없음 (#1302).',
     render: () => <MinigamePreview />,
   },
   {
@@ -96,6 +97,17 @@ export const roomEntries: GalleryEntry[] = [
     name: 'CatTowerPreview',
     description: '고양이 탑 쌓기 연습 미리보기. 탭으로 상자 떨어뜨리기, 실제 랭킹 미기록 (#1529).',
     render: () => <MinigamePreview initialGameCode="cat-tower" />,
+  },
+  {
+    name: 'CatYarnPreview',
+    description:
+      '고양이 털실 정리 연습 미리보기. 더미 맨 위 털실을 탭해 같은 색 바구니로, 실제 랭킹 미기록.',
+    render: () => <MinigamePreview initialGameCode="cat-yarn" />,
+  },
+  {
+    name: 'CatYarnGame',
+    description: '고양이 털실 정리 게임 문서 단독 미리보기(시드 42, 연습). 결과는 버린다.',
+    render: () => <YarnGame seed={42} practice onFinish={() => {}} />,
   },
   {
     name: 'MinigamesScreen',
