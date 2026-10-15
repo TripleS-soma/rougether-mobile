@@ -112,11 +112,13 @@ export function useMinigameSurface({
   const stairs = useMinigameRun('cat-stairs');
   const merge = useMinigameRun('cat-merge');
   const tower = useMinigameRun('cat-tower');
+  const yarn = useMinigameRun('cat-yarn');
   const runs = {
     'room-runner': runner,
     'cat-stairs': stairs,
     'cat-merge': merge,
     'cat-tower': tower,
+    'cat-yarn': yarn,
   };
   const runsRef = useLatestRef(runs);
   const run = runs[gameCode];

@@ -325,11 +325,17 @@
         "description": "Line up the swinging boxes and stack them high.",
         "instructions": "Tap to drop the box"
       },
+      "yarn": {
+        "name": "Cat Yarn Sort",
+        "description": "Sort yarn balls into matching baskets to fill in a room picture.",
+        "instructions": "Tap to sort the yarn"
+      },
       "frame": {
         "runner": "Runner game",
         "stairs": "Cat stairs climbing",
         "merge": "Cat merge",
-        "tower": "Cat tower stacking"
+        "tower": "Cat tower stacking",
+        "yarn": "Cat yarn sorting"
       },
       "title": "Minigames",
       "practice": "Practice",

@@ -8,6 +8,7 @@ import { createMergeHtml } from '@/features/minigame/merge-html';
 import { createRunnerHtml } from '@/features/minigame/runner-html';
 import { createStairsHtml } from '@/features/minigame/stairs-html';
 import { createTowerHtml } from '@/features/minigame/tower-html';
+import { createYarnHtml } from '@/features/minigame/yarn-html';
 
 const HANGUL = /[가-힣]/;
 const build = () => [
@@ -15,6 +16,7 @@ const build = () => [
   createRunnerHtml({ seed: 1, channelId: 'test' }),
   createStairsHtml({ seed: 1, channelId: 'test' }),
   createTowerHtml({ seed: 1, channelId: 'test' }),
+  createYarnHtml({ seed: 1, channelId: 'test' }),
 ];
 
 /** 미니게임 WebView 문구 (#893): 문서를 만드는 시점의 언어로 문구가 실린다. */
@@ -24,13 +26,15 @@ describe('minigame copy', () => {
   });
 
   it('한국어 문서는 기존 문구를 그대로 싣는다', () => {
-    const [merge, runner, stairs, tower] = build();
+    const [merge, runner, stairs, tower, yarn] = build();
     expect(merge).toContain('합치기 시작');
     expect(merge).toContain('lang="ko"');
     expect(runner).toContain('"title":"루틴 러너"');
     expect(stairs).toContain('"timeout":"시간 초과"');
     expect(tower).toContain('탑 쌓기 시작');
     expect(tower).toContain('"layers":"{{layers}}층"');
+    expect(yarn).toContain('털실 정리 시작');
+    expect(yarn).toContain('"tray":"대기 {{n}}/{{max}}"');
   });
 
   it('영어 문서에는 한글이 한 글자도 없다', async () => {

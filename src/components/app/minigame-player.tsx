@@ -3,6 +3,7 @@ import { RunnerGame } from '@/components/minigame/runner-game';
 import { StairsGame } from '@/components/minigame/stairs-game';
 import { MergeGame } from '@/components/minigame/merge-game';
 import { TowerGame } from '@/components/minigame/tower-game';
+import { YarnGame } from '@/components/minigame/yarn-game';
 import type { MinigameCode } from '@/constants/minigames';
 
 export type MinigamePlayerProps = {
@@ -24,5 +25,7 @@ export function MinigamePlayer({ gameCode, ...props }: MinigamePlayerProps) {
       return <MergeGame {...props} />;
     case 'cat-tower':
       return <TowerGame {...props} />;
+    case 'cat-yarn':
+      return <YarnGame {...props} />;
   }
 }
