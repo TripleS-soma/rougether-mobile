@@ -135,3 +135,16 @@ it('카드에 내 최고 기록을 보여주고, 기록이 없으면 첫 기록 
   expect(ui.getByText('아직 기록이 없어요. 첫 기록을 남겨 보세요!')).toBeTruthy();
   expect(ui.queryByTestId('minigame-best-cat-merge')).toBeNull();
 });
+
+it('still renders a card for a game code the app has no artwork for', async () => {
+  const open = jest.fn();
+  const ui = await render(
+    <MinigamesScreen
+      games={[{ ...GAME, gameCode: 'future-game', name: '새 게임' }]}
+      onSelectGame={open}
+    />,
+  );
+  expect(ui.getByText('새 게임')).toBeTruthy();
+  await fireEvent.press(ui.getByLabelText('새 게임 시작'));
+  expect(open).toHaveBeenCalledWith('future-game');
+});
