@@ -330,14 +330,19 @@ export type EquippedAccessoryResponse = {
 };
 
 export type FeedAuthorResponse = {
-  userId?: number;
-  nickname?: string;
-  profileImageKey?: string;
+  // 스펙 미표기 nullable (#733): 삭제된 원댓글의 작성자는 null.
+  userId?: number | null;
+  // 스펙 미표기 nullable (#733): 삭제·탈퇴한 작성자는 null.
+  nickname?: string | null;
+  // 스펙 미표기 nullable (#733): 프로필 사진이 없거나 삭제된 원댓글은 null.
+  profileImageKey?: string | null;
 };
 
 export type FeedCommentRequest = {
   clientCommentId: string;
   content: string;
+  // 스펙 미표기 nullable (#733): 생략·null은 일반 댓글, 값이 있으면 실제 답글 대상.
+  replyToCommentId?: number | null;
 };
 
 export type FeedCommentResponse = {
@@ -347,6 +352,12 @@ export type FeedCommentResponse = {
   content?: string;
   mine?: boolean;
   createdAt?: string;
+  // 스펙 미표기 nullable (#733): 원댓글은 null, 대댓글은 최상위 댓글 id.
+  parentCommentId?: number | null;
+  // 스펙 미표기 nullable (#733): 일반 댓글은 null, 대댓글은 실제 답글 대상 id.
+  replyToCommentId?: number | null;
+  deleted?: boolean;
+  replyCount?: number;
 };
 
 export type FeedCreateRequest = {

@@ -50,6 +50,7 @@ import {
 } from '@/mocks/fixtures';
 import { FeedMinigameRecordCard } from '@/components/feed/feed-minigame-record';
 import type { GalleryEntry } from '@/dev/registry/types';
+import { FeedRepliesDemo } from '@/dev/feed-replies-demo';
 
 /** 기록 카드 작성 데모 — 본문 편집·카드 빼기를 로컬 상태로. */
 function FeedComposeRecordDemo() {
@@ -464,6 +465,12 @@ export const memberEntries: GalleryEntry[] = [
         <FeedScreenDemo />
       </View>
     ),
+  },
+  {
+    name: 'FeedCommentThread',
+    description:
+      '답글 선택·취소·작성, 한 단계 들여쓰기, 답글의 답글과 삭제된 원댓글. 로컬 상태만 바꾸며 실서버 요청 없음 (#1570).',
+    render: () => <FeedRepliesDemo />,
   },
   {
     name: 'FeedPostScreen',

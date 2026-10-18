@@ -124,6 +124,8 @@ export const queryKeys = {
       ['feed', userId, 'post', postId] as const,
     comments: (userId: number | null | undefined, postId: number | null) =>
       ['feed', userId, 'comments', postId] as const,
+    replies: (userId: number | null | undefined, postId: number, rootCommentId: number) =>
+      ['feed', userId, 'comments', postId, 'replies', rootCommentId] as const,
     /** 모든 게시물의 댓글 — 차단(#1428) 직후 그 작성자 댓글을 한꺼번에 지울 때. */
     allComments: (userId: number | null | undefined) => ['feed', userId, 'comments'] as const,
   },

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -14,13 +14,8 @@ import {
 
 import type { ReportReason } from '@/api/types';
 import { FEED_BOARD_TYPES, FeedBoardTabs } from '@/components/feed/feed-board';
-import {
-  FeedActionRow,
-  FeedAuthorRow,
-  FeedAvatar,
-  feedAuthorName,
-  feedTimeLabel,
-} from '@/components/feed/feed-parts';
+import { FeedActionRow, FeedAuthorRow, feedAuthorName } from '@/components/feed/feed-parts';
+import { FeedCommentThread } from '@/components/feed/feed-comment-thread';
 import { FeedMinigameRecordCard } from '@/components/feed/feed-minigame-record';
 import { FeedRoutineBadge, FeedRoutinePicker } from '@/components/feed/feed-routine';
 import { FeedPhoto, feedImageAspect } from '@/components/feed/feed-photo';
@@ -38,6 +33,7 @@ import type {
   FeedImageLoader,
   FeedPost,
   FeedPostEdit,
+  FeedRepliesRenderer,
   FeedRoutineCompletion,
 } from '@/components/screens/feed/types';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
@@ -78,10 +74,12 @@ export type FeedPostScreenProps = {
   comments?: FeedComment[];
   commentsLoading?: boolean;
   commentsError?: boolean;
+  commentsRefreshing?: boolean;
+  renderReplies?: FeedRepliesRenderer;
   hasMoreComments?: boolean;
   onLoadMoreComments?: () => void;
-  /** 댓글 달기 — 앞뒤 공백을 뗀 본문. true를 돌려주면 입력칸을 비운다. */
-  onAddComment?: (content: string) => Promise<boolean> | boolean;
+  /** 댓글·답글 달기. 두 번째 인수는 실제 대상 id. 성공하면 본문·대상을 비운다. */
+  onAddComment?: (content: string, replyToCommentId?: number) => Promise<boolean> | boolean;
   onDeleteComment?: (commentId: number) => void;
   onToggleLike?: (postId: number) => void;
   /** 내 글 삭제(확인 다이얼로그 뒤). */
@@ -338,6 +336,8 @@ export function FeedPostScreen({
   comments = NO_COMMENTS,
   commentsLoading = false,
   commentsError = false,
+  commentsRefreshing = false,
+  renderReplies,
   hasMoreComments = false,
   onLoadMoreComments,
   onAddComment,
@@ -365,6 +365,8 @@ export function FeedPostScreen({
   const bareScreen = useScreenStyle([]);
   const screenWithBottom = useScreenStyle(['bottom']);
   const [draft, setDraft] = useState('');
+  const inputRef = useRef<TextInput>(null);
+  const [replyTarget, setReplyTarget] = useState<FeedComment | null>(null);
   const [sending, setSending] = useState(false);
   const [confirmPost, setConfirmPost] = useState(false);
   const [confirmComment, setConfirmComment] = useState<number | null>(null);
@@ -403,8 +405,13 @@ export function FeedPostScreen({
     if (!canSend) return;
     setSending(true);
     try {
-      const ok = await onAddComment(trimmed);
-      if (ok) setDraft('');
+      const ok = replyTarget
+        ? await onAddComment(trimmed, replyTarget.commentId)
+        : await onAddComment(trimmed);
+      if (ok) {
+        setDraft('');
+        setReplyTarget(null);
+      }
     } finally {
       setSending(false);
     }
@@ -515,6 +522,8 @@ export function FeedPostScreen({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <FlatList
           data={comments}
+          onRefresh={onRetry}
+          refreshing={commentsRefreshing}
           keyExtractor={(c) => String(c.commentId)}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
@@ -535,7 +544,9 @@ export function FeedPostScreen({
             )
           }
           ListFooterComponent={
-            hasMoreComments && comments.length > 0 ? (
+            commentsError && comments.length > 0 ? (
+              <RetryState message={tr('feed.post.commentsLoadError')} onRetry={onRetry} />
+            ) : hasMoreComments && comments.length > 0 ? (
               <Pressable
                 onPress={onLoadMoreComments}
                 accessibilityRole="button"
@@ -547,48 +558,31 @@ export function FeedPostScreen({
             ) : null
           }
           renderItem={({ item: c }) => (
-            <View style={styles.comment} testID={`feed-comment-${c.commentId}`}>
-              <FeedAvatar author={c.author} size={28} />
-              <View style={styles.flex}>
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  {[feedAuthorName(c.author, tr('feed.anonymous')), feedTimeLabel(c.createdAt, now)]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </Text>
-                <LinkifiedText
-                  selectable
-                  style={[Typography.body, { color: t.text }]}
-                  linkColor={t.primaryText}>
-                  {c.content}
-                </LinkifiedText>
-              </View>
-              {c.mine && onDeleteComment ? (
-                <Pressable
-                  onPress={() => setConfirmComment(c.commentId)}
-                  accessibilityRole="button"
-                  accessibilityLabel={tr('feed.post.deleteCommentA11y')}
-                  hitSlop={Spacing.two}>
-                  <Text style={[Typography.supporting, { color: t.danger }]}>
-                    {tr('feed.post.deleteComment')}
-                  </Text>
-                </Pressable>
-              ) : null}
-              {!c.mine && (canReportComment || canBlock) ? (
-                <Pressable
-                  onPress={() =>
-                    setMenuTarget({
-                      kind: 'comment',
-                      commentId: c.commentId,
-                      authorId: c.author.userId,
-                    })
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel={tr('member.moderation.commentMenuA11y')}
-                  hitSlop={Spacing.two}>
-                  <Icon name="kebab" size={18} color={t.textMuted} />
-                </Pressable>
-              ) : null}
-            </View>
+            <FeedCommentThread
+              root={c}
+              renderReplies={renderReplies}
+              now={now}
+              replyDisabled={sending}
+              onReply={
+                onAddComment
+                  ? (comment) => {
+                      setReplyTarget(comment);
+                      inputRef.current?.focus();
+                    }
+                  : undefined
+              }
+              onDelete={onDeleteComment ? setConfirmComment : undefined}
+              onMenu={
+                canReportComment || canBlock
+                  ? (comment) =>
+                      setMenuTarget({
+                        kind: 'comment',
+                        commentId: comment.commentId,
+                        authorId: comment.author.userId,
+                      })
+                  : undefined
+              }
+            />
           )}
         />
         {onAddComment ? (
@@ -599,29 +593,57 @@ export function FeedPostScreen({
               { borderTopColor: t.border, backgroundColor: t.screen },
               androidKeyboard ? { marginBottom: androidKeyboard } : null,
             ]}>
-            <TextInput
-              value={draft}
-              onChangeText={(v) => setDraft(v.slice(0, FEED_MAX_COMMENT))}
-              maxLength={FEED_MAX_COMMENT}
-              multiline
-              placeholder={tr('feed.post.commentPlaceholder')}
-              placeholderTextColor={t.textMuted}
-              accessibilityLabel={tr('feed.post.commentA11y')}
-              style={[
-                Typography.body,
-                styles.input,
-                { backgroundColor: t.surfaceMuted, color: t.text },
-              ]}
-            />
-            <Pressable
-              onPress={() => void send()}
-              disabled={!canSend}
-              accessibilityRole="button"
-              accessibilityLabel={tr('feed.post.send')}
-              accessibilityState={{ disabled: !canSend }}
-              style={[styles.send, { backgroundColor: canSend ? t.primary : t.disabledBg }]}>
-              <Icon name="send" size={18} color={canSend ? t.onPrimary : t.textDisabled} />
-            </Pressable>
+            {replyTarget ? (
+              <View style={styles.replyTarget}>
+                <Text
+                  numberOfLines={1}
+                  style={[Typography.supporting, styles.flex, { color: t.primaryText }]}>
+                  {tr('feed.post.replyingTo', {
+                    name: feedAuthorName(replyTarget.author, tr('feed.anonymous')),
+                  })}
+                </Text>
+                <Pressable
+                  onPress={() => setReplyTarget(null)}
+                  disabled={sending}
+                  accessibilityRole="button"
+                  accessibilityLabel={tr('feed.post.cancelReply')}
+                  accessibilityState={{ disabled: sending }}
+                  hitSlop={Spacing.two}>
+                  <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                    {tr('feed.post.cancelReply')}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
+            <View style={styles.inputRow}>
+              <TextInput
+                ref={inputRef}
+                editable={!sending}
+                value={draft}
+                onChangeText={(v) => setDraft(v.slice(0, FEED_MAX_COMMENT))}
+                maxLength={FEED_MAX_COMMENT}
+                multiline
+                placeholder={tr(
+                  replyTarget ? 'feed.post.replyPlaceholder' : 'feed.post.commentPlaceholder',
+                )}
+                placeholderTextColor={t.textMuted}
+                accessibilityLabel={tr('feed.post.commentA11y')}
+                style={[
+                  Typography.body,
+                  styles.input,
+                  { backgroundColor: t.surfaceMuted, color: t.text },
+                ]}
+              />
+              <Pressable
+                onPress={() => void send()}
+                disabled={!canSend}
+                accessibilityRole="button"
+                accessibilityLabel={tr('feed.post.send')}
+                accessibilityState={{ disabled: !canSend }}
+                style={[styles.send, { backgroundColor: canSend ? t.primary : t.disabledBg }]}>
+                <Icon name="send" size={18} color={canSend ? t.onPrimary : t.textDisabled} />
+              </Pressable>
+            </View>
           </View>
         ) : null}
       </KeyboardAvoidingView>
@@ -810,20 +832,15 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.one,
     borderRadius: Radius.pill,
   },
-  comment: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.two,
-  },
   more: {
     alignSelf: 'center',
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.two,
     borderRadius: Radius.pill,
   },
+  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.two },
+  replyTarget: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
     gap: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,

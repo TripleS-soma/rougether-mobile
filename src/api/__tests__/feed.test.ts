@@ -1,5 +1,13 @@
 import { API_BASE } from '@/api/config';
-import { createFeedPost, fetchFeedPost, fetchFeedPosts, updateFeedPost } from '@/api/feed';
+import {
+  createFeedComment,
+  createFeedPost,
+  fetchFeedComments,
+  fetchFeedReplies,
+  fetchFeedPost,
+  fetchFeedPosts,
+  updateFeedPost,
+} from '@/api/feed';
 
 const realFetch = global.fetch;
 
@@ -30,6 +38,77 @@ const textPost = {
   createdAt: '2026-10-02T00:00:00Z',
   updatedAt: '2026-10-02T00:00:00Z',
 };
+
+describe('대댓글 API (#1570)', () => {
+  const reply = {
+    commentId: 52,
+    postId: 40,
+    author: { userId: 7, nickname: '나' },
+    content: '나도!',
+    parentCommentId: 10,
+    replyToCommentId: 51,
+    deleted: false,
+    replyCount: 0,
+  };
+
+  it('원댓글만 요청하고, 다른 cursor로 해당 원댓글의 대댓글을 받는다', async () => {
+    const fetchMock = mockResponse({ items: [reply], hasNext: true, nextCursor: 52 });
+    await fetchFeedComments(40, { size: 20, topLevelOnly: true });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${API_BASE}/feed/posts/40/comments?size=20&topLevelOnly=true`,
+      expect.anything(),
+    );
+    const page = await fetchFeedReplies(40, 10, { cursor: 51, size: 20 });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${API_BASE}/feed/posts/40/comments/10/replies?cursor=51&size=20`,
+      expect.anything(),
+    );
+    expect(page).toMatchObject({ items: [reply], nextCursor: 52, hasNext: true });
+  });
+
+  it('대댓글에 답할 때 원댓글 id가 아닌 실제 대상 id를 보낸다', async () => {
+    const fetchMock = mockResponse(reply, 201);
+    const input = {
+      clientCommentId: 'd952aff2-3a01-41bd-83bc-a7e5b9327bea',
+      content: '나도!',
+      replyToCommentId: 51,
+    };
+    await expect(createFeedComment(40, input)).resolves.toMatchObject(reply);
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${API_BASE}/feed/posts/40/comments`,
+      expect.objectContaining({ method: 'POST', body: JSON.stringify(input) }),
+    );
+  });
+
+  it('삭제된 원댓글과 구버전 응답의 기본값을 보존한다', async () => {
+    mockResponse({
+      items: [
+        {
+          commentId: 10,
+          deleted: true,
+          replyCount: 2,
+          author: { userId: null, nickname: null, profileImageKey: null },
+        },
+        { commentId: 11, content: '옛 댓글' },
+      ],
+      hasNext: false,
+    });
+    const page = await fetchFeedComments(40, { topLevelOnly: true });
+    expect(page.items[0]).toMatchObject({
+      deleted: true,
+      content: '',
+      mine: false,
+      replyCount: 2,
+      author: { userId: 0, nickname: null },
+    });
+    expect(page.items[1]).toMatchObject({
+      parentCommentId: null,
+      replyToCommentId: null,
+      deleted: false,
+      replyCount: 0,
+    });
+  });
+});
 
 describe('피드 게시판 API (서버 #428)', () => {
   it('자유글 등록은 boardType과 빈 imageIds를 그대로 보낸다', async () => {

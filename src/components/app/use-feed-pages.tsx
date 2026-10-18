@@ -1,4 +1,5 @@
 import {
+  type ReactNode,
   type Dispatch,
   type SetStateAction,
   useCallback,
@@ -14,13 +15,18 @@ import { type Screen } from '@/components/app/navigation';
 import { feedRecordDraftText } from '@/components/feed/feed-minigame-record';
 import { FeedComposeScreen } from '@/components/screens/feed-compose-screen';
 import { FeedPostScreen } from '@/components/screens/feed-post-screen';
-import type { FeedBoardFilter, FeedMinigameRecordDraft } from '@/components/screens/feed/types';
+import type {
+  FeedRepliesRenderer,
+  FeedRepliesState,
+  FeedBoardFilter,
+  FeedMinigameRecordDraft,
+} from '@/components/screens/feed/types';
 import type { FeedScreenProps } from '@/components/screens/feed-screen';
 import { useToast } from '@/components/ui/toast';
 import { FEED_ENABLED, FEED_MAX_IMAGES } from '@/constants/feed';
 import { useFeed } from '@/hooks/use-feed';
 import { useFeedCompose } from '@/hooks/use-feed-compose';
-import { useFeedPost } from '@/hooks/use-feed-post';
+import { useFeedPost, useFeedReplies } from '@/hooks/use-feed-post';
 import { useModeration } from '@/hooks/use-moderation';
 import { useRecentRoutineCompletions } from '@/hooks/use-recent-routine-completions';
 import { useLatestRef } from '@/hooks/use-stable-value';
@@ -28,10 +34,22 @@ import { i18n } from '@/i18n';
 import { track } from '@/lib/analytics';
 import { pickLibraryImages } from '@/lib/pick-image';
 
+/** 데이터 연결부 — 화면·갤러리는 순수 prop 기반으로 유지한다. */
+function FeedRepliesQuery({
+  postId,
+  rootId,
+  children,
+}: {
+  postId: number;
+  rootId: number;
+  children: (state: FeedRepliesState) => ReactNode;
+}) {
+  return children(useFeedReplies(postId, rootId));
+}
+
 /**
- * 피드 페이지 배선 (#1409) — 피드 탭과 서브화면 2종(게시물 상세·작성)의 훅·콜백·JSX를
- * 소유한다(use-house-pages와 같은 결). 셸은 `tabProps`를 `<FeedScreen {...tabProps} />`로
- * 스프레드하고 `subScreen`을 렌더만 한다. FEED_ENABLED가 꺼져 있으면 아무것도 요청하지 않는다.
+ * 피드 탭과 상세·작성 화면의 데이터와 콜백을 연결한다 (#1409).
+ * 셸은 tabProps와 subScreen만 렌더한다. FEED_ENABLED가 꺼져 있으면 요청하지 않는다.
  */
 export function useFeedPages({
   nav,
@@ -208,11 +226,23 @@ export function useFeedPages({
     [board, feed, openPost, openCompose],
   );
 
+  const renderReplies = useCallback<FeedRepliesRenderer>(
+    (root, render) => (
+      <FeedRepliesQuery postId={root.postId} rootId={root.commentId}>
+        {render}
+      </FeedRepliesQuery>
+    ),
+    [],
+  );
+
   // 알림함 카드·푸시 탭·인앱 배너의 FEED_COMMENT(refId·FCM postId = 게시물 id)는 셸이
   // notification-destination 표를 거쳐 openPost로 잇는다 (#1409).
   const subScreen =
     screen === 'feedPost' ? (
       <FeedPostScreen
+        key={postId}
+        renderReplies={renderReplies}
+        commentsRefreshing={detail.commentsRefreshing}
         post={detail.post}
         loading={detail.loading}
         loadError={detail.error}

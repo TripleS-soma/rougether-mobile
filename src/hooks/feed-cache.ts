@@ -75,7 +75,7 @@ export function removeFeedPost(qc: QueryClient, userId: UserId, postId: number) 
       : data,
   );
   qc.removeQueries({ queryKey: queryKeys.feed.post(userId, postId), exact: true });
-  qc.removeQueries({ queryKey: queryKeys.feed.comments(userId, postId), exact: true });
+  qc.removeQueries({ queryKey: queryKeys.feed.comments(userId, postId) });
 }
 
 /**
@@ -85,6 +85,18 @@ export function removeFeedPost(qc: QueryClient, userId: UserId, postId: number) 
  * 하고, 상세는 재조회에서 404가 된다.
  */
 export function removeFeedAuthor(qc: QueryClient, userId: UserId, authorId: number) {
+  // 차단한 원댓글의 스레드 전체를 즉시 숨긴다. 대댓글 작성자 차단은 그 행만 숨긴다.
+  const hiddenRoots = new Set<string>();
+  for (const [, data] of qc.getQueriesData<FeedCommentPages>({
+    queryKey: queryKeys.feed.allComments(userId),
+  })) {
+    for (const page of data?.pages ?? []) {
+      for (const c of page.items) {
+        if (c.author.userId === authorId && c.parentCommentId == null)
+          hiddenRoots.add(`${c.postId}:${c.commentId}`);
+      }
+    }
+  }
   qc.setQueriesData<FeedPostPages>({ queryKey: queryKeys.feed.lists(userId) }, (data) =>
     data
       ? {
@@ -102,7 +114,11 @@ export function removeFeedAuthor(qc: QueryClient, userId: UserId, authorId: numb
           ...data,
           pages: data.pages.map((page) => ({
             ...page,
-            items: page.items.filter((c) => c.author.userId !== authorId),
+            items: page.items.filter(
+              (c) =>
+                c.author.userId !== authorId &&
+                !hiddenRoots.has(`${c.postId}:${c.parentCommentId ?? c.commentId}`),
+            ),
           })),
         }
       : data,
