@@ -261,9 +261,7 @@ export async function fetchFeedComments(
     size,
     topLevelOnly: topLevelOnly == null ? undefined : String(topLevelOnly),
   });
-  const page = await apiGetPage<FeedCommentResponse>(
-    `/feed/posts/${postId}/comments${query}`,
-  );
+  const page = await apiGetPage<FeedCommentResponse>(`/feed/posts/${postId}/comments${query}`);
   return adaptPage(page, toFeedComment);
 }
 
