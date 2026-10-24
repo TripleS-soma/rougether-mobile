@@ -259,6 +259,10 @@ export const DEMO_FEED_RECORD_POST: FeedPost = {
 
 export const DEMO_FEED_COMMENTS: FeedComment[] = [
   {
+    parentCommentId: null,
+    replyToCommentId: null,
+    deleted: false,
+    replyCount: 0,
     commentId: 301,
     postId: 3,
     author: { userId: 8, nickname: '이웃', profileImageKey: null },
@@ -267,6 +271,10 @@ export const DEMO_FEED_COMMENTS: FeedComment[] = [
     createdAt: '2026-09-22T03:02:00Z',
   },
   {
+    parentCommentId: null,
+    replyToCommentId: null,
+    deleted: false,
+    replyCount: 0,
     commentId: 302,
     postId: 3,
     author: { userId: 4, nickname: '나', profileImageKey: null },

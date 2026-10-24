@@ -21,6 +21,18 @@ const OUT = process.argv[3]
  * 재생성 때마다 다시 붙인다. 서버 스펙에 nullable이 표기되면 항목을 지운다.
  */
 const NULLABLE_OVERRIDES = {
+  FeedAuthorResponse: {
+    userId: '삭제된 원댓글의 작성자는 null.',
+    nickname: '삭제·탈퇴한 작성자는 null.',
+    profileImageKey: '프로필 사진이 없거나 삭제된 원댓글은 null.',
+  },
+  FeedCommentRequest: {
+    replyToCommentId: '생략·null은 일반 댓글, 값이 있으면 실제 답글 대상.',
+  },
+  FeedCommentResponse: {
+    parentCommentId: '원댓글은 null, 대댓글은 최상위 댓글 id.',
+    replyToCommentId: '일반 댓글은 null, 대댓글은 실제 답글 대상 id.',
+  },
   CategoryResponse: {
     houseId: '미연동은 null (#578).',
   },

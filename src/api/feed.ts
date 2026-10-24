@@ -22,6 +22,7 @@ import { API_BASE } from './config';
 import { buildQuery } from './http';
 import type {
   FeedBoardType,
+  FeedCommentRequest,
   FeedCommentResponse,
   FeedCreateRequest,
   FeedImageResponse,
@@ -253,10 +254,26 @@ export function unlikeFeedPost(postId: number): Promise<void> {
 /** GET /feed/posts/{postId}/comments — **오래된 ID부터**, cursor는 마지막 commentId. */
 export async function fetchFeedComments(
   postId: number,
+  { cursor, size, topLevelOnly }: { cursor?: number; size?: number; topLevelOnly?: boolean } = {},
+): Promise<Page<FeedComment>> {
+  const query = buildQuery({
+    cursor,
+    size,
+    topLevelOnly: topLevelOnly == null ? undefined : String(topLevelOnly),
+  });
+  const page = await apiGetPage<FeedCommentResponse>(`/feed/posts/${postId}/comments${query}`);
+  return adaptPage(page, toFeedComment);
+}
+
+/** 원댓글 id로 한 단계 스레드 조회. 답글에 대한 답글도 같은 목록에 온다. */
+export async function fetchFeedReplies(
+  postId: number,
+  rootCommentId: number,
   { cursor, size }: { cursor?: number; size?: number } = {},
 ): Promise<Page<FeedComment>> {
   const page = await apiGetPage<FeedCommentResponse>(
-    `/feed/posts/${postId}/comments${buildQuery({ cursor, size })}`,
+    `/feed/posts/${postId}/comments/${rootCommentId}/replies${buildQuery({ cursor, size })}`,
+    { expectedStatuses: [404] },
   );
   return adaptPage(page, toFeedComment);
 }
@@ -264,7 +281,7 @@ export async function fetchFeedComments(
 /** POST /feed/posts/{postId}/comments — 같은 `clientCommentId` 재시도는 원래 댓글(201). */
 export async function createFeedComment(
   postId: number,
-  input: { clientCommentId: string; content: string },
+  input: FeedCommentRequest,
 ): Promise<FeedComment> {
   const comment = toFeedComment(
     await apiPost<FeedCommentResponse>(`/feed/posts/${postId}/comments`, input),

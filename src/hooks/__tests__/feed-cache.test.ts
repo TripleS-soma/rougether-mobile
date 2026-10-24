@@ -45,6 +45,10 @@ function post(postId: number, authorId = 100, over: Partial<FeedPost> = {}): Fee
 function comment(commentId: number, postId: number, authorId: number): FeedComment {
   return {
     commentId,
+    parentCommentId: null,
+    replyToCommentId: null,
+    deleted: false,
+    replyCount: 0,
     postId,
     author: { userId: authorId, nickname: `u${authorId}`, profileImageKey: null },
     content: `c${commentId}`,
@@ -164,6 +168,7 @@ describe('removeFeedPost', () => {
     qc.setQueryData<FeedPostPages>(MINE_KEY, pages([post(2)]));
     qc.setQueryData<FeedPost>(queryKeys.feed.post(ME, 2), post(2));
     qc.setQueryData<FeedCommentPages>(queryKeys.feed.comments(ME, 2), pages([comment(1, 2, 7)]));
+    qc.setQueryData<FeedCommentPages>(queryKeys.feed.replies(ME, 2, 1), pages([comment(9, 2, 8)]));
     // 다른 게시물의 상세·댓글은 남아야 한다.
     qc.setQueryData<FeedPost>(queryKeys.feed.post(ME, 3), post(3));
     qc.setQueryData<FeedCommentPages>(queryKeys.feed.comments(ME, 3), pages([comment(2, 3, 7)]));
@@ -174,6 +179,7 @@ describe('removeFeedPost', () => {
     expect(listItems(qc, MINE_KEY)).toEqual([[]]);
     expect(qc.getQueryState(queryKeys.feed.post(ME, 2))).toBeUndefined();
     expect(qc.getQueryState(queryKeys.feed.comments(ME, 2))).toBeUndefined();
+    expect(qc.getQueryState(queryKeys.feed.replies(ME, 2, 1))).toBeUndefined();
     expect(qc.getQueryData(queryKeys.feed.post(ME, 3))).toBeDefined();
     expect(qc.getQueryData(queryKeys.feed.comments(ME, 3))).toBeDefined();
   });
@@ -185,6 +191,37 @@ describe('removeFeedPost', () => {
 });
 
 describe('removeFeedAuthor (#1428 차단)', () => {
+  it('원댓글 작성자 차단은 다른 작성자의 대댓글까지 숨기고 계정별 캐시는 분리한다', () => {
+    const key = queryKeys.feed.replies(ME, 2, 10);
+    const reply = { ...comment(11, 2, 7), parentCommentId: 10, replyToCommentId: 10 };
+    qc.setQueryData(queryKeys.feed.comments(ME, 2), pages([comment(10, 2, 200)]));
+    qc.setQueryData(key, pages([reply]));
+    qc.setQueryData(queryKeys.feed.replies(OTHER_ACCOUNT, 2, 10), pages([reply]));
+    removeFeedAuthor(qc, ME, 200);
+    expect(qc.getQueryData<FeedCommentPages>(key)?.pages[0].items).toEqual([]);
+    expect(
+      qc.getQueryData<FeedCommentPages>(queryKeys.feed.replies(OTHER_ACCOUNT, 2, 10))?.pages[0]
+        .items,
+    ).toEqual([reply]);
+  });
+
+  it('대댓글 작성자만 차단하면 원댓글과 다른 작성자의 대댓글은 남긴다', () => {
+    const key = queryKeys.feed.replies(ME, 2, 10);
+    const reply = { ...comment(11, 2, 200), parentCommentId: 10, replyToCommentId: 10 };
+    const other = {
+      ...reply,
+      commentId: 12,
+      author: { userId: 7, nickname: '이웃', profileImageKey: null },
+    };
+    qc.setQueryData(queryKeys.feed.comments(ME, 2), pages([comment(10, 2, 7)]));
+    qc.setQueryData(key, pages([reply, other]));
+    removeFeedAuthor(qc, ME, 200);
+    expect(qc.getQueryData<FeedCommentPages>(key)?.pages[0].items).toEqual([other]);
+    expect(
+      qc.getQueryData<FeedCommentPages>(queryKeys.feed.comments(ME, 2))?.pages[0].items,
+    ).toHaveLength(1);
+  });
+
   it('그 작성자의 글을 모든 목록·페이지에서, 댓글을 모든 게시물에서 뺀다', () => {
     const BLOCKED = 200;
     qc.setQueryData<FeedPostPages>(

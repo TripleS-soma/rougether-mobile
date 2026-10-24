@@ -1,15 +1,22 @@
 /**
- * 피드 게시물 상세 + 댓글 (#1409). 댓글은 **오래된 순**(`id > cursor`) 무한 쿼리라, 새 댓글은
- * 마지막 페이지까지 받은 경우에만 끝에 붙이고 그 전이면 더보기로 자연히 만난다.
- * 댓글 수는 목록·상세 캐시를 함께 고친다(`feed-cache`).
+ * 피드 상세와 원댓글. 대댓글은 펼친 스레드에서만 별도 조회한다 (#1570).
+ * 작성·삭제 후 서버에서 목록·상세·스레드를 다시 받아 삭제 안내와 개수를 맞춘다.
+ * 응답 유실 재시도는 본문과 실제 답글 대상까지 같은 경우에만 UUID를 재사용한다.
  */
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useRef } from 'react';
 
 import { getSessionUserId } from '@/api/auth';
-import { createFeedComment, deleteFeedComment, fetchFeedComments, fetchFeedPost } from '@/api/feed';
+import {
+  createFeedComment,
+  deleteFeedComment,
+  fetchFeedComments,
+  fetchFeedPost,
+  fetchFeedReplies,
+} from '@/api/feed';
 import { ApiError } from '@/api/http';
-import type { FeedComment } from '@/components/screens/feed/types';
+import type { FeedComment, FeedRepliesState } from '@/components/screens/feed/types';
+import type { FeedCommentRequest } from '@/api/types';
 import { FEED_MAX_COMMENT, FEED_PAGE_SIZE } from '@/constants/feed';
 import {
   type FeedCommentPages,
@@ -18,7 +25,6 @@ import {
   findFeedPost,
   isFeedPostGone,
   newFeedClientId,
-  patchFeedPost,
   removeFeedPost,
 } from '@/hooks/feed-cache';
 import { useFeedActions } from '@/hooks/use-feed';
@@ -64,7 +70,11 @@ export function useFeedPost(
   const commentsQuery = useInfiniteQuery({
     queryKey: commentsKey,
     queryFn: ({ pageParam }) =>
-      fetchFeedComments(postId as number, { cursor: pageParam, size: FEED_PAGE_SIZE }),
+      fetchFeedComments(postId as number, {
+        cursor: pageParam,
+        size: FEED_PAGE_SIZE,
+        topLevelOnly: true,
+      }),
     initialPageParam: undefined as FeedCursor,
     getNextPageParam: (last) =>
       last.hasNext && last.nextCursor != null ? last.nextCursor : undefined,
@@ -73,61 +83,64 @@ export function useFeedPost(
   });
 
   const { mutateAsync: createCommentAsync } = useMutation({
-    mutationFn: (input: { postId: number; clientCommentId: string; content: string }) =>
-      createFeedComment(input.postId, {
-        clientCommentId: input.clientCommentId,
-        content: input.content,
-      }),
+    mutationFn: ({ postId: pid, ...input }: FeedCommentRequest & { postId: number }) =>
+      createFeedComment(pid, input),
   });
   const { mutateAsync: deleteCommentAsync } = useMutation({
     mutationFn: ({ postId: pid, commentId }: { postId: number; commentId: number }) =>
       deleteFeedComment(pid, commentId),
   });
 
-  // 실패한 댓글의 재시도는 같은 clientCommentId로 — 응답을 잃은 등록이 두 번 달리지 않게.
-  // 본문을 고쳐 다시 보내면 새 id(같은 id·다른 본문은 서버가 409).
-  const pendingComment = useRef<{ postId: number; content: string; id: string } | null>(null);
+  const refreshComments = useCallback(async () => {
+    await Promise.all([
+      // comments 접두는 펼친 대댓글 쿼리도 포함한다.
+      qc.invalidateQueries({ queryKey: commentsKey }),
+      qc.invalidateQueries({ queryKey: postKey, exact: true }),
+      qc.invalidateQueries({ queryKey: queryKeys.feed.lists(userId) }),
+    ]);
+  }, [qc, commentsKey, postKey, userId]);
+
+  const pendingComment = useRef<{
+    postId: number;
+    content: string;
+    replyToCommentId: number | null;
+    id: string;
+  } | null>(null);
   const sendingRef = useRef(false);
 
-  /** 댓글 달기 — 앞뒤 공백 제거, 비었거나 500자 초과면 보내지 않는다. 성공 여부. */
   const addComment = useCallback(
-    async (raw: string): Promise<boolean> => {
+    async (raw: string, replyToCommentId?: number): Promise<boolean> => {
       const content = raw.trim();
       if (postId == null || !content || content.length > FEED_MAX_COMMENT) return false;
       if (sendingRef.current) return false;
+      const target = replyToCommentId ?? null;
       const pending = pendingComment.current;
       const clientCommentId =
-        pending && pending.postId === postId && pending.content === content
+        pending &&
+        pending.postId === postId &&
+        pending.content === content &&
+        pending.replyToCommentId === target
           ? pending.id
           : newFeedClientId();
-      pendingComment.current = { postId, content, id: clientCommentId };
+      pendingComment.current = { postId, content, replyToCommentId: target, id: clientCommentId };
       sendingRef.current = true;
       try {
-        const comment = await createCommentAsync({ postId, clientCommentId, content });
+        await createCommentAsync({
+          postId,
+          clientCommentId,
+          content,
+          ...(target != null ? { replyToCommentId: target } : {}),
+        });
         pendingComment.current = null;
-        const cached = qc.getQueryData<FeedCommentPages>(commentsKey);
-        // 재시도가 원래 댓글을 돌려준 경우(이미 목록에 있음)는 붙이지도, 개수를 올리지도 않는다.
-        const already = cached?.pages.some((p) =>
-          p.items.some((c) => c.commentId === comment.commentId),
-        );
-        if (!already) {
-          qc.setQueryData<FeedCommentPages>(commentsKey, (data) => {
-            const last = data?.pages[data.pages.length - 1];
-            if (!data || !last || last.hasNext) return data;
-            return {
-              ...data,
-              pages: [...data.pages.slice(0, -1), { ...last, items: [...last.items, comment] }],
-            };
-          });
-          patchFeedPost(qc, userId, postId, (p) => ({ ...p, commentCount: p.commentCount + 1 }));
-        }
+        await refreshComments();
         track('feed_comment');
         return true;
       } catch (err) {
         if (isFeedPostGone(err)) removeFeedPost(qc, userId, postId);
-        // 입력 자체가 거부된 경우는 같은 id를 다시 쓸 이유가 없다.
         if (err instanceof ApiError && err.status >= 400 && err.status < 500) {
           pendingComment.current = null;
+          // 작성 중 삭제·차단된 답글 대상을 화면에서도 갱신한다.
+          if (err.code === 'FEED_COMMENT_NOT_FOUND') await refreshComments();
         }
         onErrorRef.current?.(feedErrorMessage(err));
         return false;
@@ -135,10 +148,9 @@ export function useFeedPost(
         sendingRef.current = false;
       }
     },
-    [postId, qc, userId, commentsKey, createCommentAsync, onErrorRef],
+    [postId, qc, userId, createCommentAsync, onErrorRef, refreshComments],
   );
 
-  /** 내 댓글 삭제 — 이미 없으면(404) 성공으로 보고 목록에서 뺀다. */
   const deleteComment = useCallback(
     async (commentId: number): Promise<boolean> => {
       if (postId == null) return false;
@@ -152,28 +164,11 @@ export function useFeedPost(
           return false;
         }
       }
-      let removed = false;
-      qc.setQueryData<FeedCommentPages>(commentsKey, (data) =>
-        data
-          ? {
-              ...data,
-              pages: data.pages.map((page) => {
-                const items = page.items.filter((c) => c.commentId !== commentId);
-                if (items.length !== page.items.length) removed = true;
-                return { ...page, items };
-              }),
-            }
-          : data,
-      );
-      if (removed) {
-        patchFeedPost(qc, userId, postId, (p) => ({
-          ...p,
-          commentCount: Math.max(0, p.commentCount - 1),
-        }));
-      }
+      // 원댓글을 단순 제거하면 남의 대댓글도 사라진다. 서버의 tombstone을 받는다.
+      await refreshComments();
       return true;
     },
-    [postId, qc, userId, commentsKey, deleteCommentAsync, onErrorRef],
+    [postId, qc, userId, deleteCommentAsync, onErrorRef, refreshComments],
   );
 
   const busyRef = useLatestRef(commentsQuery.isFetching);
@@ -184,12 +179,7 @@ export function useFeedPost(
     void fetchNextComments().catch(() => {});
   }, [busyRef, hasNextRef, fetchNextComments]);
 
-  const refetchPost = postQuery.refetch;
-  const refetchComments = commentsQuery.refetch;
-  const retry = useCallback(() => {
-    void refetchPost();
-    void refetchComments();
-  }, [refetchPost, refetchComments]);
+  const retry = useCallback(() => void refreshComments(), [refreshComments]);
 
   const actions = useFeedActions({ onError });
 
@@ -199,7 +189,8 @@ export function useFeedPost(
   const error = postQuery.isError && !notFound && !post;
   const comments = commentsQuery.data ?? NO_COMMENTS;
   const commentsLoading = postId != null && commentsQuery.isPending;
-  const commentsError = commentsQuery.isError && !commentsQuery.isFetchNextPageError;
+  const commentsError = commentsQuery.isError;
+  const commentsRefreshing = commentsQuery.isRefetching && !commentsQuery.isFetchingNextPage;
   const hasMoreComments = commentsQuery.hasNextPage;
 
   return useMemo(
@@ -211,6 +202,7 @@ export function useFeedPost(
       comments,
       commentsLoading,
       commentsError,
+      commentsRefreshing,
       hasMoreComments,
       loadMoreComments,
       addComment,
@@ -226,6 +218,7 @@ export function useFeedPost(
       comments,
       commentsLoading,
       commentsError,
+      commentsRefreshing,
       hasMoreComments,
       loadMoreComments,
       addComment,
@@ -233,5 +226,38 @@ export function useFeedPost(
       retry,
       actions,
     ],
+  );
+}
+
+/** 원댓글을 펼친 동안만 마운트한다. 계정·게시물·원댓글별 캐시와 독립 cursor. */
+export function useFeedReplies(postId: number, rootCommentId: number): FeedRepliesState {
+  const userId = getSessionUserId();
+  const query = useInfiniteQuery({
+    queryKey: queryKeys.feed.replies(userId, postId, rootCommentId),
+    queryFn: ({ pageParam }) =>
+      fetchFeedReplies(postId, rootCommentId, {
+        cursor: pageParam,
+        size: FEED_PAGE_SIZE,
+      }),
+    initialPageParam: undefined as FeedCursor,
+    getNextPageParam: (last) =>
+      last.hasNext && last.nextCursor != null ? last.nextCursor : undefined,
+    select: selectComments,
+  });
+  const { fetchNextPage, refetch } = query;
+  const busyRef = useLatestRef(query.isFetching);
+  const hasNextRef = useLatestRef(query.hasNextPage);
+  const onLoadMore = useCallback(() => {
+    if (!busyRef.current && hasNextRef.current) void fetchNextPage().catch(() => {});
+  }, [busyRef, hasNextRef, fetchNextPage]);
+  const onRetry = useCallback(() => void refetch(), [refetch]);
+  const comments = query.data ?? NO_COMMENTS;
+  const loading = query.isPending;
+  const error = query.isError;
+  const hasMore = query.hasNextPage;
+  const loadingMore = query.isFetchingNextPage;
+  return useMemo(
+    () => ({ comments, loading, error, hasMore, loadingMore, onLoadMore, onRetry }),
+    [comments, loading, error, hasMore, loadingMore, onLoadMore, onRetry],
   );
 }

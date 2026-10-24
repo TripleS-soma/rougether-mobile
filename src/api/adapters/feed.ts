@@ -84,5 +84,9 @@ export function toFeedComment(res: FeedCommentResponse): FeedComment | null {
     content: res.content ?? '',
     mine: res.mine ?? false,
     createdAt: res.createdAt ?? '',
+    parentCommentId: res.parentCommentId ?? null,
+    replyToCommentId: res.replyToCommentId ?? null,
+    deleted: res.deleted ?? false,
+    replyCount: Math.max(0, res.replyCount ?? 0),
   };
 }

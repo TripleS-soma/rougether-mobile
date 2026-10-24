@@ -44,7 +44,18 @@
       "editKeepRoutine": "If you don't pick another one, the linked routine stays.",
       "editRestoreRoutine": "Keep the originally linked routine",
       "editCurrentRoutine": "Linked routine",
-      "editRecordStaysFree": "Posts with a record card stay on the Free board."
+      "editRecordStaysFree": "Posts with a record card stay on the Free board.",
+      "reply": "Reply",
+      "replyA11y": "Reply to {{name}}",
+      "replyingTo": "Replying to {{name}}",
+      "cancelReply": "Cancel reply",
+      "replyPlaceholder": "Write a reply…",
+      "showReplies": "View {{count}} replies",
+      "hideReplies": "Hide replies",
+      "moreReplies": "More replies",
+      "repliesLoadError": "Could not load replies.",
+      "noReplies": "No replies yet.",
+      "deletedComment": "This comment was deleted."
     },
     "compose": {
       "title": "New post",
