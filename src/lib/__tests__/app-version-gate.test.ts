@@ -1,120 +1,160 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { storeAppUrl, storeWebUrl } from '@/constants/store-links';
 import {
   decideVersionGate,
-  installedBuildNumber,
+  fetchVersionGate,
+  installedRuntime,
   parseVersionGate,
-  ruleForPlatform,
 } from '@/lib/app-version-gate';
-import { storeAppUrl, storeWebUrl } from '@/constants/store-links';
 
-jest.mock('expo-constants', () => ({
-  __esModule: true,
-  default: { platform: { ios: { buildNumber: '125' }, android: { versionCode: 12 } } },
+const IOS = 'a'.repeat(40);
+const ANDROID = 'b'.repeat(40);
+const CURRENT = 'c'.repeat(40);
+
+let mockRuntime: string | undefined = IOS;
+jest.mock('expo-updates', () => ({
+  get runtimeVersion() {
+    return mockRuntime;
+  },
 }));
 
 const SRC = join(__dirname, '..', '..');
+const realFetch = global.fetch;
+
+beforeEach(() => {
+  mockRuntime = IOS;
+});
+afterEach(() => {
+  global.fetch = realFetch;
+});
 
 describe('parseVersionGate', () => {
-  it('정수 빌드 번호만 받는다', () => {
+  it('지문 목록과 표시용 버전을 읽는다', () => {
+    expect(
+      parseVersionGate({
+        latestVersion: '1.5.4',
+        staleRuntimes: [IOS, ANDROID],
+        blockedRuntimes: [],
+      }),
+    ).toEqual({ latestVersion: '1.5.4', staleRuntimes: [IOS, ANDROID], blockedRuntimes: [] });
+  });
+
+  it('지문 꼴이 아닌 항목은 버린다 — 오타가 섞여도 나머지는 살린다', () => {
     const config = parseVersionGate({
-      ios: { minimumBuild: 100, recommendedBuild: 126, latestVersion: '1.5.4' },
-      android: { minimumBuild: 0, recommendedBuild: 13 },
+      staleRuntimes: [IOS, '', 'nope', 'A'.repeat(40), 123, null, ANDROID],
     });
-    expect(config.ios).toEqual({
-      minimumBuild: 100,
-      recommendedBuild: 126,
-      latestVersion: '1.5.4',
-    });
-    expect(config.android).toEqual({ minimumBuild: 0, recommendedBuild: 13 });
+    expect(config.staleRuntimes).toEqual([IOS, ANDROID]);
   });
 
-  it('형식이 어긋난 규칙은 버린다 — 문자열·소수·음수·누락', () => {
-    expect(
-      parseVersionGate({ ios: { minimumBuild: '100', recommendedBuild: 126 } }).ios,
-    ).toBeUndefined();
-    expect(
-      parseVersionGate({ ios: { minimumBuild: 1.5, recommendedBuild: 126 } }).ios,
-    ).toBeUndefined();
-    expect(
-      parseVersionGate({ ios: { minimumBuild: -1, recommendedBuild: 126 } }).ios,
-    ).toBeUndefined();
-    expect(parseVersionGate({ ios: { recommendedBuild: 126 } }).ios).toBeUndefined();
-    expect(parseVersionGate(null).ios).toBeUndefined();
-    expect(parseVersionGate('nope').android).toBeUndefined();
-  });
-
-  it('막는 기준이 권하는 기준보다 높으면 막는 쪽을 버린다 — 사람이 잘못 적은 값', () => {
-    // 안내를 놓치는 건 복구되지만 멀쩡한 설치본을 막는 건 아니다.
-    expect(parseVersionGate({ ios: { minimumBuild: 999, recommendedBuild: 126 } }).ios).toEqual({
-      minimumBuild: 0,
-      recommendedBuild: 126,
-      latestVersion: undefined,
-    });
+  it('목록이 배열이 아니거나 없으면 빈 목록', () => {
+    expect(parseVersionGate({ staleRuntimes: 'all' }).staleRuntimes).toEqual([]);
+    expect(parseVersionGate({}).blockedRuntimes).toEqual([]);
+    expect(parseVersionGate(null).staleRuntimes).toEqual([]);
+    expect(parseVersionGate('nope').blockedRuntimes).toEqual([]);
   });
 
   it('latestVersion이 문자열이 아니면 생략한다', () => {
-    expect(
-      parseVersionGate({ ios: { minimumBuild: 0, recommendedBuild: 1, latestVersion: 154 } }).ios
-        ?.latestVersion,
-    ).toBeUndefined();
+    expect(parseVersionGate({ latestVersion: 154 }).latestVersion).toBeUndefined();
   });
 });
 
 describe('decideVersionGate', () => {
-  const rule = { minimumBuild: 100, recommendedBuild: 126, latestVersion: '1.5.4' };
+  const config = {
+    latestVersion: '1.5.4',
+    staleRuntimes: [IOS],
+    blockedRuntimes: [ANDROID],
+  };
 
-  it('최신이면 통과', () => {
-    expect(decideVersionGate(rule, 126).level).toBe('ok');
-    expect(decideVersionGate(rule, 200).level).toBe('ok');
+  it('목록에 없는 지문은 통과 — 최신 바이너리', () => {
+    expect(decideVersionGate(config, CURRENT).level).toBe('ok');
   });
 
-  it('권장 미달이면 안내 — 다시 안내할 기준으로 recommendedBuild를 함께 준다', () => {
-    expect(decideVersionGate(rule, 125)).toEqual({
+  it('stale 목록에 있으면 안내', () => {
+    expect(decideVersionGate(config, IOS)).toEqual({
       level: 'recommended',
       latestVersion: '1.5.4',
-      recommendedBuild: 126,
     });
   });
 
-  it('최소 미달이면 막는다', () => {
-    expect(decideVersionGate(rule, 99)).toEqual({ level: 'blocked', latestVersion: '1.5.4' });
+  it('blocked 목록에 있으면 막는다', () => {
+    expect(decideVersionGate(config, ANDROID)).toEqual({
+      level: 'blocked',
+      latestVersion: '1.5.4',
+    });
   });
 
-  it('0은 게이트 끔', () => {
-    expect(decideVersionGate({ minimumBuild: 0, recommendedBuild: 0 }, 1).level).toBe('ok');
-  });
-
-  it('모르면 통과시킨다 — 규칙 없음·설치본 번호 미확인', () => {
-    // 개발 빌드·Expo Go·웹이 여기로 온다. 안내를 못 하는 것보다
+  it('모르면 통과시킨다 — 설정 없음·지문 미확인', () => {
+    // 웹·개발 빌드·Expo Go가 여기로 온다. 안내를 못 하는 것보다
     // 쓰던 앱을 못 쓰게 만드는 쪽이 나쁘다.
-    expect(decideVersionGate(undefined, 1).level).toBe('ok');
-    expect(decideVersionGate(rule, undefined).level).toBe('ok');
+    expect(decideVersionGate(undefined, IOS).level).toBe('ok');
+    expect(decideVersionGate(config, undefined).level).toBe('ok');
+  });
+
+  it('목록을 안 채워 두면 아무도 안 조른다 — 잊었을 때 안전한 쪽', () => {
+    // "최신 지문만 적고 그 밖은 구버전"으로 뒤집으면 적는 걸 잊은 순간
+    // 최신 사용자에게 업데이트를 조른다. 그래서 나열 방식이다.
+    expect(decideVersionGate({ staleRuntimes: [], blockedRuntimes: [] }, IOS).level).toBe('ok');
   });
 });
 
-describe('installedBuildNumber', () => {
-  it('플랫폼별 바이너리 번호를 읽는다', () => {
-    expect(installedBuildNumber('ios')).toBe(125);
-    expect(installedBuildNumber('android')).toBe(12);
+describe('installedRuntime', () => {
+  it('바이너리의 런타임 지문을 읽는다', () => {
+    expect(installedRuntime()).toBe(IOS);
   });
 
-  it('웹은 번호가 없다', () => {
-    expect(installedBuildNumber('web')).toBeUndefined();
+  it('지문이 없으면 undefined — 웹·개발 빌드', () => {
+    mockRuntime = undefined;
+    expect(installedRuntime()).toBeUndefined();
+    mockRuntime = '';
+    expect(installedRuntime()).toBeUndefined();
   });
 });
 
-describe('ruleForPlatform', () => {
-  it('플랫폼 규칙만 고르고 웹은 없다', () => {
-    const config = parseVersionGate({
-      ios: { minimumBuild: 1, recommendedBuild: 2 },
-      android: { minimumBuild: 3, recommendedBuild: 4 },
+describe('fetchVersionGate', () => {
+  it('받은 JSON을 설정으로 준다', async () => {
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ latestVersion: '1.5.4', staleRuntimes: [IOS] }),
+    })) as unknown as typeof fetch;
+    await expect(fetchVersionGate()).resolves.toEqual({
+      latestVersion: '1.5.4',
+      staleRuntimes: [IOS],
+      blockedRuntimes: [],
     });
-    expect(ruleForPlatform(config, 'ios')?.recommendedBuild).toBe(2);
-    expect(ruleForPlatform(config, 'android')?.recommendedBuild).toBe(4);
-    expect(ruleForPlatform(config, 'web')).toBeUndefined();
-    expect(ruleForPlatform(undefined, 'ios')).toBeUndefined();
+  });
+
+  it('캐시를 쓰지 않는다 — 목록을 고친 직후 반영되어야 한다', async () => {
+    const fetchMock = jest.fn(async (_url: string, _init?: RequestInit) => ({
+      ok: true,
+      status: 200,
+      json: async () => ({}),
+    }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+    await fetchVersionGate();
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ cache: 'no-store' });
+  });
+
+  it('응답이 실패면 throw — 쿼리가 실패로 잡고 게이트는 통과한다', async () => {
+    global.fetch = jest.fn(async () => ({
+      ok: false,
+      status: 404,
+      json: async () => ({}),
+    })) as unknown as typeof fetch;
+    await expect(fetchVersionGate()).rejects.toThrow('404');
+  });
+
+  it('JSON이 깨졌으면 throw', async () => {
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new SyntaxError('bad json');
+      },
+    })) as unknown as typeof fetch;
+    await expect(fetchVersionGate()).rejects.toThrow();
   });
 });
 
