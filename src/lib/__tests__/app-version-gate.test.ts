@@ -85,6 +85,17 @@ describe('decideVersionGate', () => {
     });
   });
 
+  it('두 목록에 다 있으면 막는 쪽이 이긴다', () => {
+    // 랜딩 스모크가 겹침을 막지만, 우선순위 자체를 여기서 잠근다 —
+    // 안내와 막기가 동시에 뜨는 상태가 없어야 한다.
+    const overlap = {
+      latestVersion: '1.5.4',
+      staleRuntimes: [IOS],
+      blockedRuntimes: [IOS],
+    };
+    expect(decideVersionGate(overlap, IOS).level).toBe('blocked');
+  });
+
   it('모르면 통과시킨다 — 설정 없음·지문 미확인', () => {
     // 웹·개발 빌드·Expo Go가 여기로 온다. 안내를 못 하는 것보다
     // 쓰던 앱을 못 쓰게 만드는 쪽이 나쁘다.
@@ -137,16 +148,35 @@ describe('fetchVersionGate', () => {
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ cache: 'no-store' });
   });
 
-  it('응답이 실패면 throw — 쿼리가 실패로 잡고 게이트는 통과한다', async () => {
+  it('캐시 우회 쿼리를 붙인다', async () => {
+    const fetchMock = jest.fn(async (_url: string, _init?: RequestInit) => ({
+      ok: true,
+      status: 200,
+      json: async () => ({}),
+    }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+    await fetchVersionGate();
+    expect(fetchMock.mock.calls[0]?.[0]).toMatch(/\?t=\d+$/);
+  });
+
+  /**
+   * 조회 실패를 예외로 올리면 react-query 실패 경로를 타고 Sentry로 간다 —
+   * 랜딩이 잠깐 404·5xx를 내는 동안 설치본 수만큼 이벤트가 쌓여 월 한도를
+   * 노이즈로 채운다. 어차피 "모르면 통과"라 빈 설정과 결과가 같다.
+   */
+  it('응답이 실패면 빈 설정 — 예외로 올리지 않는다(Sentry 노이즈)', async () => {
     global.fetch = jest.fn(async () => ({
       ok: false,
       status: 404,
       json: async () => ({}),
     })) as unknown as typeof fetch;
-    await expect(fetchVersionGate()).rejects.toThrow('404');
+    await expect(fetchVersionGate()).resolves.toEqual({
+      staleRuntimes: [],
+      blockedRuntimes: [],
+    });
   });
 
-  it('JSON이 깨졌으면 throw', async () => {
+  it('JSON이 깨졌거나 아예 못 받았으면 빈 설정', async () => {
     global.fetch = jest.fn(async () => ({
       ok: true,
       status: 200,
@@ -154,7 +184,18 @@ describe('fetchVersionGate', () => {
         throw new SyntaxError('bad json');
       },
     })) as unknown as typeof fetch;
-    await expect(fetchVersionGate()).rejects.toThrow();
+    await expect(fetchVersionGate()).resolves.toEqual({
+      staleRuntimes: [],
+      blockedRuntimes: [],
+    });
+
+    global.fetch = jest.fn(async () => {
+      throw new TypeError('Network request failed');
+    }) as unknown as typeof fetch;
+    await expect(fetchVersionGate()).resolves.toEqual({
+      staleRuntimes: [],
+      blockedRuntimes: [],
+    });
   });
 });
 

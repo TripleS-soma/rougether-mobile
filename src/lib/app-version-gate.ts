@@ -94,12 +94,27 @@ export function decideVersionGate(
 /**
  * 원격 설정 조회. 캐시를 쓰지 않는다 — 목록을 고친 직후에도 바로 반영되어야 하고,
  * 랜딩은 GitHub Pages라 CDN 캐시가 붙는다.
+ *
+ * **조회 실패를 예외로 올리지 않는다.** 올리면 react-query 실패 경로를 타고 Sentry로
+ * 가는데(`shouldReportQueryError`는 `ApiError`·네트워크 예외 외 전부 보고한다), 랜딩이
+ * 잠깐 404·5xx를 내는 동안 설치본 수만큼 이벤트가 쌓여 월 한도를 노이즈로 채운다.
+ * `docs/observability.md`의 "4xx·오프라인은 보내지 않는다"와 같은 취지다. 어차피 이
+ * 게이트는 "모르면 통과"라 빈 설정과 조회 실패의 결과가 같다.
+ *
+ * 응답을 해석하는 `parseVersionGate`는 try 밖에 둔다 — 그쪽에서 나는 예외는 환경이
+ * 아니라 코드 버그이므로 삼키지 않는다.
  */
 export async function fetchVersionGate(signal?: AbortSignal): Promise<VersionGateConfig> {
-  const response = await fetch(`${APP_VERSION_GATE_URL}?t=${Date.now()}`, {
-    cache: 'no-store',
-    signal,
-  });
-  if (!response.ok) throw new Error(`version gate ${response.status}`);
-  return parseVersionGate(await response.json());
+  let payload: unknown;
+  try {
+    const response = await fetch(`${APP_VERSION_GATE_URL}?t=${Date.now()}`, {
+      cache: 'no-store',
+      signal,
+    });
+    if (!response.ok) return EMPTY;
+    payload = await response.json();
+  } catch {
+    return EMPTY;
+  }
+  return parseVersionGate(payload);
 }

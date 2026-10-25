@@ -121,6 +121,24 @@ describe('useAppVersionGate', () => {
     expect(saveMock).toHaveBeenCalledWith(42, '1.5.4');
   });
 
+  it("로그인 화면에서 누른 '나중에'가 로그인한 계정으로 넘어가지 않는다", async () => {
+    // 지속 저장은 계정별인데(#1298) 세션 기억까지 계정 단위여야 한다 —
+    // 단일 불리언이면 게스트의 '나중에'가 로그인 후에도 시트를 덮는다.
+    mockStatus = 'guest';
+    mockUserId = undefined;
+    runtimeMock.mockReturnValue(STALE);
+    loadMock.mockResolvedValue(undefined);
+    const { result, rerender } = await mount();
+    await waitFor(() => expect(result.current.verdict.level).toBe('recommended'));
+    await act(async () => result.current.later());
+    expect(result.current.verdict.level).toBe('ok');
+
+    mockStatus = 'authed';
+    mockUserId = 7;
+    await act(async () => rerender(undefined));
+    await waitFor(() => expect(result.current.verdict.level).toBe('recommended'));
+  });
+
   it('기억을 읽기 전에는 안 띄운다 — 이미 미룬 사람의 시트 깜빡임', async () => {
     // 원격 조회가 AsyncStorage 읽기보다 빠르면, 기억을 모르는 채로 recommended가
     // 나와 시트가 떴다 닫힌다.

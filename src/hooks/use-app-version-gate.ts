@@ -47,8 +47,12 @@ export function useAppVersionGate(): AppVersionGate {
 
   // 런타임 지문은 앱 수명 동안 바뀌지 않는다 — 한 번만 읽는다.
   const [runtime] = useState(() => installedRuntime());
-  // 이 세션에서 미뤘는지. 로그인 전의 유일한 기억이다.
-  const [laterInSession, setLaterInSession] = useState(false);
+  /**
+   * 이 세션에서 미뤘는지 — **누구로서 미뤘는지까지** 들고 있는다. 단일 불리언이면
+   * 로그인 화면에서 누른 '나중에'가 로그인한 계정으로 넘어간다(지속 저장은 #1298
+   * 이후 계정별인데 세션 기억만 안 나뉘어 있었다).
+   */
+  const [laterFor, setLaterFor] = useState<{ userId: number | undefined } | null>(null);
   /**
    * 지난 세션에 미룬 버전. 원격의 latestVersion이 달라지면 다시 안내한다.
    *
@@ -78,16 +82,16 @@ export function useAppVersionGate(): AppVersionGate {
   const verdict = useMemo(() => {
     // 막는 판정은 미룰 수 없다.
     if (raw.level !== 'recommended') return raw;
-    if (laterInSession) return OK;
+    if (laterFor != null && laterFor.userId === userId) return OK;
     // 이 계정의 기억을 읽기 전에는 띄우지 않는다 — 이미 미룬 사람에게
     // 시트가 떴다 닫히는 깜빡임이 된다.
     if (dismissed == null || dismissed.userId !== userId) return OK;
     if (dismissed.version != null && dismissed.version === raw.latestVersion) return OK;
     return raw;
-  }, [raw, laterInSession, dismissed, userId]);
+  }, [raw, laterFor, dismissed, userId]);
 
   const later = useCallback(() => {
-    setLaterInSession(true);
+    setLaterFor({ userId });
     // 원격에 latestVersion이 없으면 저장할 단위가 없어 이 세션만 유효하다.
     // 랜딩 스모크가 semver를 요구하므로 정상 설정에서는 일어나지 않는다.
     void saveDismissedVersion(userId, raw.latestVersion);
