@@ -131,6 +131,16 @@
       "confirmTitle": "Open an external site?",
       "confirmBody": "You're going to {{host}}. Don't open links you don't recognize.",
       "open": "Open"
+    },
+    "versionGate": {
+      "blockedTitle": "Update required",
+      "blockedBody": "This version can no longer be used. Please update to the latest version from the store.",
+      "noticeTitle": "A new version is out",
+      "noticeBody": "Update from the store to use the newly added features.",
+      "version": "Latest version {{version}}",
+      "update": "Go to store",
+      "later": "Later",
+      "a11y": "App update notice"
     }
   }
 }

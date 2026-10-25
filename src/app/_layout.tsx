@@ -12,6 +12,7 @@ import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-c
 import { AppErrorBoundary } from '@/components/app/app-error-boundary';
 import { AppFrame } from '@/components/app/app-frame';
 import { AppIconSync } from '@/components/app/app-icon-sync';
+import { AppVersionGate } from '@/components/app/app-version-gate';
 import { PreferencesSync } from '@/components/app/preferences-sync';
 import { notifyAppForegroundInteraction } from '@/lib/app-icon-events';
 import { AnimatedSplashOverlay } from '@/components/app/animated-splash-overlay';
@@ -112,7 +113,11 @@ function RootLayout() {
                     <AppFrame>
                       {/* 렌더 예외 → 복구 화면 + Sentry (#1376). 토큰·문구를 쓰도록 프로바이더 안쪽. */}
                       <AppErrorBoundary>
-                        <Stack screenOptions={{ headerShown: false }} />
+                        {/* 구버전 설치본에 스토어 업데이트 안내 (#1572) — 로그인
+                            화면까지 덮도록 내비게이터 바깥. */}
+                        <AppVersionGate>
+                          <Stack screenOptions={{ headerShown: false }} />
+                        </AppVersionGate>
                       </AppErrorBoundary>
                     </AppFrame>
                   </NavigationTheme>
