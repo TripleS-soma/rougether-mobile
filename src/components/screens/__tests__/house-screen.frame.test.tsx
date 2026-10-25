@@ -55,6 +55,38 @@ describe('HouseScreen — 좌석 프레이밍·카메라', () => {
     }
   });
 
+  /**
+   * 옆 집 미리보기(#1575)는 그 집이 실제 화면이 됐을 때와 같은 프레임 크기여야 한다 —
+   * 다르면 놓아서 정착하는 순간 집이 튄다. 웹 실측(정착 전후 y·높이 동일)을 jest로 잠근다.
+   * 4석(전체 폭)과 6석(높이에 맞춰 줄인 폭)을 섞어 크기 계산이 실제로 갈리는 경우를 본다.
+   */
+  it('sizes the neighbor peek exactly like that house once it settles (#1575)', async () => {
+    const four = { ...MISSION_HOUSE, maxMembers: 4 };
+    const six = { ...MISSION_HOUSE, houseId: 9, name: '여섯집', maxMembers: 6 };
+    const ui = await render(<HouseScreen houses={[four, six]} houseIndex={0} />);
+    await fireEvent(ui.getByTestId('house-scroll'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 0, width: 393, height: 852 } },
+    });
+    await fireEvent(ui.getByTestId('house-header-end'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 164, width: 393, height: 0 } },
+    });
+    const widthOf = (testID: string) =>
+      StyleSheet.flatten(ui.getByTestId(testID, { includeHiddenElements: true }).props.style)
+        .maxWidth;
+
+    const sixAsPeek = widthOf('house-peek-frame-1');
+    const fourAsLive = widthOf('house-frame-viewport');
+    await ui.rerender(<HouseScreen houses={[four, six]} houseIndex={1} />);
+    const sixAsLive = widthOf('house-frame-viewport');
+    const fourAsPeek = widthOf('house-peek-frame-0');
+
+    expect(sixAsPeek).toBeGreaterThan(0);
+    expect(sixAsPeek).toBe(sixAsLive);
+    // 4석은 줄이지 않는다 — 둘 다 전체 폭(undefined)이어야 같다.
+    expect(fourAsLive).toBeUndefined();
+    expect(fourAsPeek).toBe(fourAsLive);
+  });
+
   it('remeasures the six-seat framing after resize and header growth', async () => {
     const ui = await render(<HouseScreen houses={[{ ...MISSION_HOUSE, maxMembers: 6 }]} />);
     const layout = (width: number, height: number) =>

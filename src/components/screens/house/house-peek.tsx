@@ -143,6 +143,11 @@ export const HousePeek = memo(function HousePeek({
                         <SeatTile
                           seatIdx={seatIdx}
                           displayName={room.isMine ? userName : room.name}
+                          // 강퇴 낙관 반영(isKickedMember)은 받지 않는다 — 그 함수는 현재 집
+                          // 인덱스를 키에 묶고 있어(`${houseIndex}-${name}`) 옆 집 이름에 대면
+                          // 현재 집의 강퇴 목록을 잘못 적용한다. 강퇴한 집을 떠났다가 밀어서
+                          // 돌아오는 한 세션 안의 좁은 경우만 미리보기가 사람 있는 방으로
+                          // 보이고, 서버 목록이 갱신되면 그마저 사라진다.
                           empty={!!room.vacant}
                           isMine={!!room.isMine}
                           isOwner={!!room.isOwner}
