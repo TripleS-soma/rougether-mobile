@@ -28,6 +28,7 @@ import type {
   VisitedFriend,
 } from '@/components/screens/house/types';
 import { HouseEmptyState } from '@/components/screens/house/house-empty-state';
+import { HouseSideArrows, sideArrowTop } from '@/components/screens/house/house-side-arrows';
 import { HouseSwitcher } from '@/components/screens/house/house-switcher';
 import { manageableMembers } from '@/components/screens/house/members';
 import { PendingHousePage } from '@/components/screens/house/pending-house-page';
@@ -268,6 +269,16 @@ export const HouseScreen = memo(function HouseScreen({
   const scrollRestore = useScrollRestore(scrollRef, { getInitialScrollY, onScrollY });
   const [houseViewport, setHouseViewport] = useState({ width: 0, height: 0 });
   const [headerBottom, setHeaderBottom] = useState(0);
+  // 가운데 양쪽 화살표(#1575)가 레일과 겹치지 않게 — 화면 높이와 레일 끝을 잰다.
+  const [screenHeight, setScreenHeight] = useState(0);
+  const [railBottom, setRailBottom] = useState(0);
+  const measureScreen = useStableCallback((event: LayoutChangeEvent) => {
+    setScreenHeight(event.nativeEvent.layout.height);
+  });
+  const measureRail = useStableCallback((event: LayoutChangeEvent) => {
+    const { y, height } = event.nativeEvent.layout;
+    setRailBottom(y + height);
+  });
   const measureHouseViewport = useStableCallback((event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
     setHouseViewport((previous) =>
@@ -543,7 +554,10 @@ export const HouseScreen = memo(function HouseScreen({
   ).length;
 
   return (
-    <View style={[styles.screen, screenStyle, { backgroundColor: skyColor }]} testID="house-screen">
+    <View
+      style={[styles.screen, screenStyle, { backgroundColor: skyColor }]}
+      onLayout={measureScreen}
+      testID="house-screen">
       {/* 하단 탭은 AppShell의 형제라 이 absoluteFill 배경에 포함되지 않는다.
           9:16 마스터를 cover/center로 그려 다양한 화면 높이에서도 가장자리만
           자연스럽게 잘리고 집 뒤 핵심 여백은 유지한다. */}
@@ -593,9 +607,6 @@ export const HouseScreen = memo(function HouseScreen({
               )
             }
             title={currentHouse.name}
-            showArrows={totalPages > 1}
-            onPrev={prevHouse}
-            onNext={nextHouse}
           />
           {/* 대기 카드 페이지(#648)는 내 집이 아니라 정렬 대상에서 빠진다. */}
           <HouseOrderDots
@@ -762,10 +773,18 @@ export const HouseScreen = memo(function HouseScreen({
         )}
       </PawRefreshScroll>
 
+      {/* 집 전환 화살표 — 화면 가운데 양쪽에 고정 (#1575). 레일보다 아래 층. */}
+      <HouseSideArrows
+        showArrows={totalPages > 1}
+        onPrev={prevHouse}
+        onNext={nextHouse}
+        top={sideArrowTop(screenHeight, railBottom)}
+      />
+
       {/* 화면 고정 플로팅 레일 (#986) — 헤더바를 없애고 하늘이 맨 위부터
           시작하게 하려면 액션이 아트 **위에** 떠야 한다. 흰 원 + 라벨은
           배경이 하늘색이든 다크모드든 대비가 보장되는 형태다(#232). */}
-      <View style={[styles.rail, railInset]} pointerEvents="box-none">
+      <View style={[styles.rail, railInset]} pointerEvents="box-none" onLayout={measureRail}>
         {onOpenMissions ? (
           <CoachTarget id="house-missions">
             <RailButton
