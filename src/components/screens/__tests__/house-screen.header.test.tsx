@@ -1,5 +1,6 @@
-import { fireEvent, render } from '@testing-library/react-native';
-import { getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
+import { act, fireEvent, render, within } from '@testing-library/react-native';
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 import { HouseScreen } from '@/components/screens/house-screen';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MISSION_HOUSE } from '@/test-utils/house-screen-fixtures';
@@ -130,22 +131,101 @@ describe('HouseScreen — 헤더·레일·집 전환·미션 요약', () => {
     expect(second.getByText('소마 2번째 집')).toBeTruthy();
   });
 
-  // 집 전환 가로 플링 폐지 (#761) — 셸 탭 페이저(#563)와 같은 축을 다퉈
-  // 불예측했다. 가로 스와이프는 항상 탭 전환이고, 집 순회는 ‹ › 화살표뿐.
-  it('가로 플링으로는 집이 넘어가지 않는다 — 화살표만 (#761)', async () => {
-    const onHouseIndexChange = jest.fn();
-    const { getByLabelText } = await render(
-      <HouseScreen
-        houses={[MISSION_HOUSE, { ...MISSION_HOUSE, houseId: 8, name: '둘째집' }]}
-        houseIndex={0}
-        onHouseIndexChange={onHouseIndexChange}
-      />,
-    );
-    // 플링 핸들러 자체가 사라졌다 — 등록된 제스처가 없다.
-    expect(() => getByGestureTestId('house-carousel-fling')).toThrow();
-    // 순회는 화살표로만.
-    await fireEvent.press(getByLabelText('다음 집'));
-    expect(onHouseIndexChange).toHaveBeenLastCalledWith(1);
+  /**
+   * 집 탭의 가로 스와이프 = 집 전환 (#1575). #761은 같은 축을 탭 페이저와 다퉈 집 플링을
+   * 뺐는데, 이번엔 축을 나누는 기준을 바꿨다 — 집 탭 본문은 항상 집, 탭 전환은 항상
+   * 바텀바. 탭 페이저 잠금은 house-screen.frame.test가 잠근다.
+   */
+  describe('집 페이저 (#1575)', () => {
+    const TWO = [MISSION_HOUSE, { ...MISSION_HOUSE, houseId: 8, name: '둘째집' }];
+    const WIDTH = 390;
+    const swipe = (translationX: number, velocityX = 0) =>
+      act(async () =>
+        fireGestureHandler(getByGestureTestId('house-pager-pan'), [
+          { state: State.BEGAN },
+          { state: State.ACTIVE },
+          { state: State.END, translationX, translationY: 0, velocityX },
+        ]),
+      );
+    const mount = async (houseIndex: number, onHouseIndexChange: (i: number) => void) => {
+      const ui = await render(
+        <HouseScreen
+          houses={TWO}
+          houseIndex={houseIndex}
+          onHouseIndexChange={onHouseIndexChange}
+        />,
+      );
+      await act(async () => {
+        fireEvent(ui.getByTestId('house-pager'), 'layout', {
+          nativeEvent: { layout: { width: WIDTH, height: 800 } },
+        });
+      });
+      return ui;
+    };
+
+    it('왼쪽으로 밀면 다음 집, 오른쪽으로 밀면 이전 집', async () => {
+      const onHouseIndexChange = jest.fn();
+      const first = await mount(0, onHouseIndexChange);
+      await swipe(-WIDTH * 0.5);
+      expect(onHouseIndexChange).toHaveBeenLastCalledWith(1);
+      // 같은 제스처 ID가 둘 등록되지 않게 앞 트리를 내린다.
+      await first.unmount();
+
+      const back = jest.fn();
+      await mount(1, back);
+      await swipe(WIDTH * 0.5);
+      expect(back).toHaveBeenLastCalledWith(0);
+    });
+
+    it('짧게 끌어도 빠르게 튕기면 넘어간다', async () => {
+      const onHouseIndexChange = jest.fn();
+      await mount(0, onHouseIndexChange);
+      await swipe(-40, -900);
+      expect(onHouseIndexChange).toHaveBeenLastCalledWith(1);
+    });
+
+    it('첫·끝 집에서 바깥으로 밀면 넘어가지 않는다 — 돌지 않고 튕긴다', async () => {
+      const onHouseIndexChange = jest.fn();
+      const first = await mount(0, onHouseIndexChange);
+      await swipe(WIDTH * 0.6);
+      expect(onHouseIndexChange).not.toHaveBeenCalled();
+      await first.unmount();
+
+      const atEnd = jest.fn();
+      await mount(1, atEnd);
+      await swipe(-WIDTH * 0.6);
+      expect(atEnd).not.toHaveBeenCalled();
+    });
+
+    it('옆 집은 미리보기로 그린다 — 조작은 실제 집 한 벌에만', async () => {
+      const ui = await mount(0, jest.fn());
+      expect(ui.getByTestId('house-live-page')).toBeTruthy();
+      // 미리보기는 보이기만 한다 — 스크린리더·터치 모두에서 빠진다.
+      const peek = ui.getByTestId('house-peek-1', { includeHiddenElements: true });
+      expect(peek.props.pointerEvents).toBe('none');
+      expect(peek.props.importantForAccessibility).toBe('no-hide-descendants');
+      // 카메라는 실제 집 한 벌뿐이다.
+      expect(() => getByGestureTestId('house-camera-pan')).not.toThrow();
+    });
+
+    /**
+     * 레일은 같이 밀리지 않지만 집 페이저의 제스처 영역 안에 있어야 한다 — 형제로 빼면
+     * 레일 버튼 위에서 시작한 스와이프가 페이저에 닿지 않는다(웹 실측으로 발견, #1575).
+     */
+    it('플로팅 레일은 페이저 제스처 영역 안, 미끄러지는 줄 밖에 있다', async () => {
+      const ui = await mount(0, jest.fn());
+      const pager = ui.getByTestId('house-pager');
+      const row = ui.getByTestId('house-pager-row');
+      expect(within(pager).getByLabelText('집 탐색')).toBeTruthy();
+      expect(within(row).queryByLabelText('집 탐색')).toBeNull();
+    });
+
+    it('화살표도 그대로 남는다', async () => {
+      const onHouseIndexChange = jest.fn();
+      const ui = await mount(0, onHouseIndexChange);
+      await fireEvent.press(ui.getByLabelText('다음 집'));
+      expect(onHouseIndexChange).toHaveBeenLastCalledWith(1);
+    });
   });
 
   it('falls back to a plain hero without a cover and hides nav for one house', async () => {

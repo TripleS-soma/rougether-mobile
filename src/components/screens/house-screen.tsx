@@ -1,18 +1,10 @@
 import { Image } from 'expo-image';
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Animated,
-  Easing,
-  type LayoutChangeEvent,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Fragment, memo, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { type LayoutChangeEvent, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import Reanimated from 'react-native-reanimated';
 
+import { TabPager } from '@/components/app/tab-pager';
 import { type HouseCover } from '@/components/room/house-cover-picker';
 import { HouseOrderDots } from '@/components/room/house-order-dots';
 import { useHouseFrame } from '@/hooks/use-house-frame';
@@ -28,8 +20,15 @@ import type {
   VisitedFriend,
 } from '@/components/screens/house/types';
 import { HouseEmptyState } from '@/components/screens/house/house-empty-state';
+import { HousePeek } from '@/components/screens/house/house-peek';
+import {
+  fitHouseFrame,
+  HouseBackground,
+  HouseFramePills,
+  sceneStyles,
+  VACANT_ROOM_STYLE,
+} from '@/components/screens/house/house-scene';
 import { HouseSwitcher } from '@/components/screens/house/house-switcher';
-import { manageableMembers } from '@/components/screens/house/members';
 import { PendingHousePage } from '@/components/screens/house/pending-house-page';
 import { RailButton } from '@/components/screens/house/rail-button';
 import { SeatTile } from '@/components/screens/house/seat-tile';
@@ -41,7 +40,7 @@ import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { CrownPictogram, HousePictogram, TargetPictogram } from '@/components/ui/pictograms';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { characterIdForMember } from '@/hooks/use-member-room-previews';
-import { FixedOverlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
+import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useBottomNavInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -50,8 +49,7 @@ import { assetSource } from '@/resources/asset';
 import { houseBackgroundKey } from '@/resources/house-background';
 import { DEFAULT_HOUSES } from '@/mocks/fixtures';
 import { VACANT_FLOOR } from '@/resources/furniture';
-import { useAnimatedValue, useConstant, useStableCallback } from '@/hooks/use-stable-value';
-import { NATIVE_DRIVER } from '@/utils/animation';
+import { useConstant, useStableCallback } from '@/hooks/use-stable-value';
 
 // 카메라 순수 로직은 house/camera.ts로 이동 (#693) — 기존 임포터(테스트)를 위한 재수출.
 export { cameraClaimsMove } from '@/components/screens/house/camera';
@@ -68,6 +66,9 @@ export type * from '@/components/screens/house/types';
  * 여럿인 사용자의 `다음 집` 화살표와 같은 띠를 다퉜다.
  */
 const RAIL_TOP_GAP = 106;
+
+/** 미리보기(#1575)의 조작 자리 — 참조 고정이라 memo를 뚫지 않는다. */
+const noop = () => {};
 
 // Room이 memo 경계(#539)라 빈방 프리뷰의 prop도 렌더마다 새로 만들지 않는다.
 
@@ -228,34 +229,8 @@ export const HouseScreen = memo(function HouseScreen({
 
   const [internalHouseIndex, setInternalHouseIndex] = useState(0);
   const houseIndex = houseIndexProp ?? internalHouseIndex;
-  // 집 전환 넛지 (#450) — 이동 방향에서 프레임이 살짝 밀려 들어온다.
-  const switchX = useAnimatedValue(0);
-  const switchFade = useAnimatedValue(1);
-  const prevHouseIndex = useRef(houseIndex);
-  useEffect(() => {
-    const prev = prevHouseIndex.current;
-    if (prev === houseIndex) return;
-    const dir = houseIndex > prev ? 1 : -1;
-    prevHouseIndex.current = houseIndex;
-    // 대기 페이지(#648)가 낀 전환은 프레임이 언마운트/마운트되는 경우라
-    // 슬라이드 없이 정지 상태로만 둔다 — 언마운트된 노드에 애니메이션 금지.
-    if (houseIndex >= houses.length || prev >= houses.length) {
-      switchX.setValue(0);
-      switchFade.setValue(1);
-      return;
-    }
-    switchX.setValue(36 * dir);
-    switchFade.setValue(0.4);
-    Animated.parallel([
-      Animated.timing(switchX, {
-        toValue: 0,
-        duration: 240,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: NATIVE_DRIVER,
-      }),
-      Animated.timing(switchFade, { toValue: 1, duration: 200, useNativeDriver: NATIVE_DRIVER }),
-    ]).start();
-  }, [houseIndex, houses.length, switchX, switchFade]);
+  // 집 전환 넛지(#450, 프레임이 36px 밀려 들어오던 것)는 집 페이저(#1575)가 대신한다 —
+  // 스와이프든 화살표든 페이지가 통째로 미끄러진다. 둘 다 두면 이중으로 움직인다.
   const setHouseIndex = (next: number) => {
     setInternalHouseIndex(next);
     onHouseIndexChange?.(next);
@@ -339,20 +314,13 @@ export const HouseScreen = memo(function HouseScreen({
     previewTheme,
   });
   const coverKey = frame.assetKey;
-  const isThreeStorey = frame.kind === 'stacked' && frame.windowRects.length === 6;
-  const frameBottomGap = isThreeStorey ? Spacing.three : Spacing.six;
-  // Three portrait floors can exceed the first viewport at full screen width.
-  // Reserve the measured header, floating navigation and existing frame gaps.
-  // Landscape/short embedded previews retain scrolling instead of collapsing.
-  const availableFrameHeight =
-    houseViewport.height - headerBottom - navInset - frameBottomGap - Spacing.two;
-  const fittedFrameWidth =
-    isThreeStorey &&
-    houseViewport.height > houseViewport.width &&
-    headerBottom > 0 &&
-    availableFrameHeight > 0
-      ? Math.min(houseViewport.width, availableFrameHeight * frame.aspectRatio)
-      : undefined;
+  // 옆 집 미리보기(#1575)와 같은 계산 — 다르면 정착하는 순간 집이 튄다 (house-scene).
+  const { isThreeStorey, frameBottomGap, fittedFrameWidth } = fitHouseFrame(
+    frame,
+    houseViewport,
+    headerBottom,
+    navInset,
+  );
   // 서버가 가진 coverImageKey의 테마 경로에서 전면 배경을 파생한다. 집 전환과
   // 같은 렌더에 키가 바뀌므로 별도 저장 상태 없이 항상 프레임과 맞는다.
   const backgroundKey = houseBackgroundKey(frame.canonicalKey, scheme);
@@ -428,21 +396,22 @@ export const HouseScreen = memo(function HouseScreen({
   const handleSeatLongPress = useStableCallback((seatIdx: number) => startDrag(seatIdx));
   const handleTilePressOut = useStableCallback(() => onTilePressOut());
 
-  // 집 전환 가로 플링은 폐지 (#761) — 셸 탭 페이저(#563)와 같은 축을 다퉈
-  // "어디선 탭이 넘어가고 어디선 집이 넘어가는" 불예측성이 남았다. 가로
-  // 스와이프는 항상 탭 전환이고, 집 순회는 상단 ‹ › 화살표·점 인디케이터로만.
-  // cameraClaimsMove가 한 손가락·비확대에서 false라 프레임 위 스와이프도
-  // 그대로 페이저로 흐른다.
-  //
-  // 확대 중에는 페이저를 잠그지 않는다 (#1347). 종전(#563)엔 확대만 해도 '확대 종료'를
-  // 누를 때까지 탭 스와이프가 통째로 막혀, 확대가 남은 채 돌아온 사용자가 "집 탭에서
-  // 스와이프가 안 된다"고 느꼈다. 대신 순서로 가른다: 캔버스 위 한 손가락 가로 이동은
-  // 카메라가 CAM_PAN_SLOP(8)에서 먼저 활성화되고, 활성화된 제스처가 아직 SWIPE_CLAIM_DX(24)에
-  // 못 미친 페이저를 취소한다. 캔버스 밖(헤더·목록)에서 시작한 스와이프는 카메라가 받지
-  // 않으니 그대로 탭 이동이다. 자리 드래그는 같은 터치 안에서 전권을 가져가야 해 잠금 유지.
-  // Pending/empty content keeps HouseScreen mounted but removes the camera and
-  // its reset button. A hidden camera must not keep the entire pager locked.
-  const pagerLocked = currentHouse != null && !pendingHouse && dragSeat != null;
+  /**
+   * 집 탭의 가로 스와이프 = 집 전환 (#1575). #761은 같은 축을 탭 페이저(#563)와 다퉈
+   * "어디선 탭이 넘어가고 어디선 집이 넘어가는" 불예측성 때문에 집 플링을 뺐다. 이번엔
+   * 축을 나누는 기준을 바꿔 그 모호함을 없앤다 — **집 탭 본문의 가로 스와이프는 항상
+   * 집, 탭 전환은 항상 바텀바**(누르기·스크럽, 바텀바는 탭 페이저 바깥이다).
+   *
+   * 그래서 집 페이지가 하나라도 있으면 탭 페이저를 잠근다(집 탭이 활성일 때만 걸리는
+   * 잠금이다 — usePagerLock). 집이 없으면(집 탐색 유도 화면) 넘길 집이 없으니 잠그지
+   * 않는다.
+   *
+   * 집 페이저 안의 중재는 탭 페이저 때와 같다(#1347). 확대 중 캔버스 위 한 손가락 이동은
+   * 카메라가 CAM_PAN_SLOP(8)에서 먼저 활성화되고, 아직 SWIPE_CLAIM_DX(24)에 못 미친
+   * 페이저를 RNGH 기본 배타성으로 취소한다. 캔버스 밖에서 시작하면 집이 넘어간다. 자리
+   * 드래그는 같은 터치 안에서 전권을 가져가야 해 집 페이저를 잠근다(draggingSV).
+   */
+  const pagerLocked = totalPages > 0;
   useEffect(() => {
     onPagerLockChange?.(pagerLocked);
   }, [pagerLocked, onPagerLockChange]);
@@ -454,22 +423,96 @@ export const HouseScreen = memo(function HouseScreen({
   // 창문 타일 탭 판정 (#307): 한 번 탭 = 방문(더블탭 간격만큼 지연 실행),
   // 더블탭 = 그 방으로 카메라 줌인. 그리드 타일(프레임 밖)은 기존 즉시 방문.
 
+  // --- 집 페이저 (#1575) ---
+  // 집을 나간 직후처럼 인덱스가 잠깐 범위를 넘을 수 있다 — 빈 칸으로 밀려나지 않게 클램프.
+  const pagerIndex = Math.min(houseIndex, Math.max(0, totalPages - 1));
+  /**
+   * 페이지 i의 내용. 현재 칸만 실제 화면이고, 양옆 한 칸은 미리보기, 그보다 먼 칸은
+   * 빈 하늘이다(루트 배경이 비친다). 탭 페이저는 끌 때 양옆만 열고 화살표로 건너뛸
+   * 때만 그 사이를 연다 — 먼 칸까지 집을 그리면 마운트 비용만 는다.
+   */
+  const renderPage = (i: number, active: ReactNode) => {
+    if (i === pagerIndex) return active;
+    if (Math.abs(i - pagerIndex) > 1) return <View style={sceneStyles.page} />;
+    const house = houses[i];
+    if (house) {
+      return (
+        <HousePeek
+          house={house}
+          pageIndex={i}
+          totalPages={totalPages}
+          orderableHouses={orderableHouses}
+          pendingCount={pendingList.length}
+          viewport={houseViewport}
+          headerBottom={headerBottom}
+          navInset={navInset}
+          roomPreviews={roomPreviews}
+          characterId={characterId}
+          userName={userName}
+          catalogs={seatCatalogs}
+          enabled={enabled}
+          previewTheme={previewTheme}
+        />
+      );
+    }
+    const pending = pendingList[i - houses.length];
+    if (!pending) return <View style={sceneStyles.page} />;
+    // 대기 카드는 가벼워 그대로 그린다 — 조작만 막는다.
+    return (
+      <View
+        style={sceneStyles.page}
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants">
+        <PendingHousePage
+          pendingHouse={pending}
+          screenStyle={screenStyle}
+          totalPages={totalPages}
+          onPrev={noop}
+          onNext={noop}
+          orderableHouses={orderableHouses}
+          pendingCount={pendingList.length}
+          houseIndex={i}
+        />
+      </View>
+    );
+  };
+  const housePager = (active: ReactNode, overlay?: ReactNode) => (
+    <TabPager
+      index={pagerIndex}
+      onIndexChange={setHouseIndex}
+      lock={draggingSV}
+      bounceEdges
+      overlay={overlay}
+      testID="house-pager">
+      {Array.from({ length: totalPages }, (_, i) => (
+        <Fragment key={i}>{renderPage(i, active)}</Fragment>
+      ))}
+    </TabPager>
+  );
+
   // 승인 대기 페이지 (#648) — 잠금형 카드. 메인 프레임 트리와 독립 렌더라
   // 카메라·좌석 로직과 얽히지 않고, 스위처 산술(totalPages)만 공유한다.
   if (pendingHouse) {
     return (
-      <PendingHousePage
-        pendingHouse={pendingHouse}
-        screenStyle={screenStyle}
-        totalPages={totalPages}
-        onPrev={prevHouse}
-        onNext={nextHouse}
-        orderableHouses={orderableHouses}
-        pendingCount={pendingList.length}
-        houseIndex={houseIndex}
-        onReorderHouses={onReorderHouses}
-        onCancelJoinRequest={cancelJoinRequest}
-      />
+      <View
+        style={[styles.screen, screenStyle, { backgroundColor: skyColor }]}
+        testID="house-screen">
+        {housePager(
+          <PendingHousePage
+            pendingHouse={pendingHouse}
+            screenStyle={screenStyle}
+            totalPages={totalPages}
+            onPrev={prevHouse}
+            onNext={nextHouse}
+            orderableHouses={orderableHouses}
+            pendingCount={pendingList.length}
+            houseIndex={houseIndex}
+            onReorderHouses={onReorderHouses}
+            onCancelJoinRequest={cancelJoinRequest}
+          />,
+        )}
+      </View>
     );
   }
 
@@ -519,7 +562,7 @@ export const HouseScreen = memo(function HouseScreen({
         avatarCharacterId={characterIdForMember(room, roomPreviews, characterId)}
         catalogs={seatCatalogs}
         vacantFloor={VACANT_FLOOR}
-        vacantRoomStyle={vacantRoomStyle}
+        vacantRoomStyle={VACANT_ROOM_STYLE}
         dragPan={dragPan}
         liftScale={liftScale}
         seatMetaOpacity={seatMetaOpacity}
@@ -542,26 +585,14 @@ export const HouseScreen = memo(function HouseScreen({
       linkedRoutines.some((r) => r.missionId === m.id && r.completedToday),
   ).length;
 
-  return (
-    <View style={[styles.screen, screenStyle, { backgroundColor: skyColor }]} testID="house-screen">
+  // 배경까지 한 페이지다 — 하늘 그림이 집 커버마다 달라서(houseBackgroundKey), 배경을
+  // 고정하면 옆 집이 남의 하늘 위로 들어온다. 레일만 페이저 밖에 떠 있는다.
+  const livePage = (
+    <View style={sceneStyles.page} testID="house-live-page">
       {/* 하단 탭은 AppShell의 형제라 이 absoluteFill 배경에 포함되지 않는다.
           9:16 마스터를 cover/center로 그려 다양한 화면 높이에서도 가장자리만
           자연스럽게 잘리고 집 뒤 핵심 여백은 유지한다. */}
-      <View style={StyleSheet.absoluteFill} pointerEvents="none" testID="house-background-layer">
-        {backgroundKey ? (
-          <Image
-            source={assetSource(backgroundKey)}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-            contentPosition="center"
-            transition={200}
-            cachePolicy="memory-disk"
-            recyclingKey={backgroundKey}
-            accessible={false}
-            testID="house-background"
-          />
-        ) : null}
-      </View>
+      <HouseBackground backgroundKey={backgroundKey} />
       {/* 타일 드래그 중에는 스크롤이 제스처를 뺏지 않게 잠근다 (#278). */}
       <PawRefreshScroll
         scrollRef={scrollRef}
@@ -574,7 +605,7 @@ export const HouseScreen = memo(function HouseScreen({
         // 이 화면은 폭 제한에서 뺀다 (#986) — 하늘이 화면을 꽉 채워야 하고,
         // 태블릿에서 560으로 잘리면 좌우가 크림으로 남아 목적과 반대가 된다.
         // 프레임은 aspectRatio라 폭을 따라 커지지만, 좌석 좌표는 정규화라 안전.
-        contentContainerStyle={[styles.body, navInset ? { paddingBottom: navInset } : null]}
+        contentContainerStyle={[sceneStyles.body, navInset ? { paddingBottom: navInset } : null]}
         scrollEnabled={dragSeat == null}
         testID="house-scroll">
         {/* 프레임 모드(#287) — 하늘 위에 스위처·집 프레임, 방은 창문 안에.
@@ -582,7 +613,7 @@ export const HouseScreen = memo(function HouseScreen({
         {/* 배경·비는 #989가 화면 루트의 absoluteFill 레이어로 옮겼다 — 여기선
             안전영역 여백만 준다(헤더바가 없어 하늘이 맨 위부터 시작한다). */}
         <View
-          style={[styles.skySection, headerInset, { paddingBottom: frameBottomGap }]}
+          style={[sceneStyles.skySection, headerInset, { paddingBottom: frameBottomGap }]}
           testID="sky-section">
           <HouseSwitcher
             icon={
@@ -606,57 +637,28 @@ export const HouseScreen = memo(function HouseScreen({
           />
           <View onLayout={measureHeaderBottom} testID="house-header-end" />
           {/* 레벨·멤버 pill — 프레임 여백과 정렬된 행 (모서리 절대배치는
-                화면 끝에 걸려 보였다). 고정 밝기 흰 스크림 위라 onTint 잉크. */}
-          <View
-            style={[
-              styles.framePillsRow,
-              // Tall roofs leave quiet corners beside the balloon/roof peak.
-              // Float metadata there instead of pushing all three floors down.
-              isThreeStorey ? [styles.floatingFramePills, { top: headerBottom }] : null,
-            ]}>
-            <GlassSurface
-              interactive={false}
-              fallbackColor={FixedOverlay.skyPill}
-              style={styles.skyPill}>
-              <HousePictogram size={12} />
-              <Text style={[Typography.supporting, { color: t.onTint }]}>
-                Lv.{currentHouse.level ?? 0}
-                {currentHouse.growthPoints != null
-                  ? ` · ${currentHouse.growthPoints % 100}/100`
-                  : ''}
-              </Text>
-            </GlassSurface>
-            <GlassSurface
-              interactive={false}
-              fallbackColor={FixedOverlay.skyPill}
-              style={styles.skyPill}>
-              <Text style={[Typography.supporting, { color: t.onTint }]}>
-                {/* Vacant seats are not members — count the real ones. */}
-                {tr('house.screen.members', {
-                  n: currentHouse.memberCount ?? manageableMembers(currentHouse).length,
-                })}
-                {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
-              </Text>
-            </GlassSurface>
-          </View>
+                화면 끝에 걸려 보였다). 세 층은 지붕 옆 빈 모서리에 띄운다. */}
+          <HouseFramePills
+            house={currentHouse}
+            floatingTop={isThreeStorey ? headerBottom : undefined}
+          />
           {/* 남는 세로를 여기서 먹어 집을 잔디에 붙인다 (#986). CoachTarget이
               flex 자식이라 안쪽 View에 auto 마진을 줘도 안 먹는다 — 명시 스페이서. */}
-          <View style={styles.skySpacer} />
+          <View style={sceneStyles.skySpacer} />
           <CoachTarget id="house-frame">
-            <Animated.View
+            <View
               testID="house-frame-viewport"
               style={[
-                styles.cameraViewportOuter,
+                sceneStyles.cameraViewportOuter,
                 fittedFrameWidth == null
                   ? null
                   : { maxWidth: fittedFrameWidth, alignSelf: 'center' },
-                { opacity: switchFade, transform: [{ translateX: switchX }] },
               ]}>
               <GestureDetector gesture={cameraGesture}>
-                <View style={styles.cameraViewport}>
+                <View style={sceneStyles.cameraViewport}>
                   <Reanimated.View style={camStyle}>
                     <GestureDetector gesture={frameDragGesture}>
-                      <View style={[styles.frameWrap, { aspectRatio: frame.aspectRatio }]}>
+                      <View style={[sceneStyles.frameWrap, { aspectRatio: frame.aspectRatio }]}>
                         {/* 프레임 측정용 — 반응자 프롭이 있는 부모에는 테스트에서
                       layout 이벤트가 닿지 않아 absolute-fill 형제로 잰다. */}
                         <View
@@ -673,7 +675,7 @@ export const HouseScreen = memo(function HouseScreen({
                               key={`window-${w}`}
                               testID={`house-window-${w}`}
                               style={[
-                                styles.windowSlot,
+                                sceneStyles.windowSlot,
                                 rect,
                                 seatIdx != null && dragSeat === seatIdx && styles.dragRow,
                               ]}>
@@ -682,7 +684,10 @@ export const HouseScreen = memo(function HouseScreen({
                               ) : (
                                 /* 정원 밖 창문 — 조용한 벽 패널. */
                                 <View
-                                  style={[styles.windowFiller, { backgroundColor: t.surfaceMuted }]}
+                                  style={[
+                                    sceneStyles.windowFiller,
+                                    { backgroundColor: t.surfaceMuted },
+                                  ]}
                                   testID="window-filler"
                                 />
                               )}
@@ -728,7 +733,7 @@ export const HouseScreen = memo(function HouseScreen({
                   </GlassSurface>
                 </Pressable>
               ) : null}
-            </Animated.View>
+            </View>
           </CoachTarget>
         </View>
         {/* 프레임 모드에선 방이 창문 안에 그려져 이 격자가 비는데, paddingTop이
@@ -761,7 +766,13 @@ export const HouseScreen = memo(function HouseScreen({
           </GestureDetector>
         )}
       </PawRefreshScroll>
+    </View>
+  );
 
+  // 레일은 페이지와 같이 밀리지 않지만 집 페이저의 제스처 영역 안에 있다 — 레일 버튼 위에서
+  // 시작한 스와이프도 집을 넘긴다(#1575). 정착한 집에 대한 동작이라 같이 밀리면 헷갈린다.
+  const rail = (
+    <>
       {/* 화면 고정 플로팅 레일 (#986) — 헤더바를 없애고 하늘이 맨 위부터
           시작하게 하려면 액션이 아트 **위에** 떠야 한다. 흰 원 + 라벨은
           배경이 하늘색이든 다크모드든 대비가 보장되는 형태다(#232). */}
@@ -831,15 +842,22 @@ export const HouseScreen = memo(function HouseScreen({
           />
         </CoachTarget>
       </View>
+    </>
+  );
+
+  return (
+    <View style={[styles.screen, screenStyle, { backgroundColor: skyColor }]} testID="house-screen">
+      {housePager(livePage, rail)}
     </View>
   );
 });
 
+// 장면 레이아웃(하늘·프레임·창문·알약) 스타일은 house/house-scene으로 갔다 (#1575) —
+// 옆 집 미리보기와 같은 값을 써야 정착하는 순간 집이 튀지 않는다.
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
-  skySpacer: { flexGrow: 1 },
   rail: {
     position: 'absolute',
     right: Spacing.three,
@@ -854,22 +872,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  body: {
-    // 하늘이 남은 높이를 먹는다 (#986) — 종전엔 paddingBottom 64에 더해
-    // 남는 세로를 아무도 안 써서, 잔디 아래로 104~155px의 죽은 띠가 탭바까지
-    // 이어졌다. 집이 선반에 얹힌 것처럼 보이던 원인이다.
-    flexGrow: 1,
-  },
-  dots: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: Spacing.one,
-    paddingTop: Spacing.two,
-  },
-  dot: {
-    height: 6,
-    borderRadius: Radius.pill,
   },
   floors: {
     paddingHorizontal: Spacing.four,
@@ -892,42 +894,6 @@ const styles = StyleSheet.create({
     zIndex: 10,
     elevation: 8,
   },
-  // 빈 좌석의 빈 방은 톤을 낮춰 멤버 방과 확실히 구분한다 (시안 A).
-  vacantRoom: {
-    opacity: 0.55,
-  },
-  roomPreviewFill: {
-    width: '100%',
-    height: '100%',
-  },
-  // Over a room preview the name drops to the bottom edge on a dark scrim.
-  // 타일 라벨은 전역 +2(#660)에서 제외 (#669) — supporting 14가 방 위에선
-  // 캐릭터를 가릴 만큼 커서, 이 두 라벨만 이전 크기(12)로 고정한다.
-  // --- 프레임 모드 (#287) ---
-  skySection: {
-    position: 'relative',
-    // paddingTop은 headerInset이 준다 (안전영역 + 기본 여백) — 헤더바를 없애며
-    // 하늘이 화면 맨 위부터 시작해서, 상태바·노치와 겹치지 않게 해야 한다.
-    // 집을 위로 올린다 — 배경 아트의 바닥이 그만큼 넓게 보인다 (#989 이후
-    // 잔디는 밴드가 아니라 테마 배경 이미지가 그린다).
-    paddingBottom: Spacing.six,
-    // 남은 높이를 여기서 먹는다 (#986). 프레임 앞의 skySpacer가 그 여유를
-    // **집 위쪽**으로 몰아, 집은 잔디에 붙고 하늘만 트인다 — 집이 공중에
-    // 뜨지 않게 하는 게 요점이다.
-    flexGrow: 1,
-  },
-  // 여백 없이 화면 폭을 다 쓴다 — 기본 뷰(원배율)에서 집이 최대한 크게,
-  // 잘리는 부분 없이 보이도록 (높이는 aspectRatio가 따라온다).
-  cameraViewport: {
-    marginTop: Spacing.two,
-    overflow: 'hidden',
-  },
-  cameraViewportOuter: {
-    width: '100%',
-  },
-  frameWrap: {
-    width: '100%',
-  },
   camReset: {
     position: 'absolute',
     right: Spacing.two,
@@ -945,39 +911,4 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
   },
-  // 프레임 PNG의 투명 창문 자리 — 좌석 타일이 이 안을 가득 채운다.
-  windowSlot: {
-    position: 'absolute',
-  },
-  windowFiller: {
-    flex: 1,
-    borderRadius: Radius.md,
-    opacity: 0.6,
-  },
-  // 창문용 타일 — 슬롯을 가득 채운다 (정사각형 비율 대신).
-  framePillsRow: {
-    // 레벨 위에 멤버를 세로로 쌓는다 — 좌우로 벌리면 멤버 필이 우측 플로팅
-    // 레일과 같은 줄에 놓여 서로 밀어낸다.
-    alignItems: 'flex-start',
-    gap: Spacing.one,
-    paddingHorizontal: Spacing.four,
-    marginTop: Spacing.three,
-  },
-  floatingFramePills: {
-    position: 'absolute',
-    left: 0,
-    zIndex: 2,
-  },
-  skyPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.one,
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
-  },
-  // Name row + optional last-seen line (#383), centered as one block.
 });
-
-// 빈방 프리뷰의 합성 스타일 — memo된 Room에 렌더마다 새 배열을 넘기지 않는다 (#539).
-const vacantRoomStyle = [styles.roomPreviewFill, styles.vacantRoom];

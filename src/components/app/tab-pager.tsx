@@ -1,4 +1,12 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -22,6 +30,25 @@ export const PAGE_FLING_VELOCITY = 500;
 const SETTLE_MS = 260;
 /** Release vertical scrolls promptly instead of waiting for the 24px page claim. */
 const VERTICAL_SCROLL_SLOP = 12;
+/**
+ * 끝에서 바깥으로 끌 때 따라오는 비율 (`bounceEdges`, #1575). 1이면 그대로 따라오고
+ * 0이면 안 움직인다 — 손가락의 1/3만 따라와 "더는 없다"가 느껴진다.
+ */
+export const EDGE_RESISTANCE = 0.35;
+/** 끝에서 끌려 나오는 최대 폭(화면 폭 대비) — 빈 하늘이 넓게 드러나지 않게. */
+const EDGE_MAX_RATIO = 0.18;
+
+/**
+ * 범위 밖으로 끌린 양에 저항을 건다 — 안쪽은 그대로, 바깥은 `EDGE_RESISTANCE`배로
+ * 줄이고 화면 폭의 `EDGE_MAX_RATIO`에서 멈춘다. 'worklet' — 팬 onUpdate에서 호출.
+ */
+export function resistEdges(raw: number, min: number, width: number): number {
+  'worklet';
+  const cap = width * EDGE_MAX_RATIO;
+  if (raw > 0) return Math.min(raw * EDGE_RESISTANCE, cap);
+  if (raw < min) return min - Math.min((min - raw) * EDGE_RESISTANCE, cap);
+  return raw;
+}
 
 /**
  * 놓는 순간의 이동·속도로 목표 페이지를 판정한다 (0-base, 클램프됨).
@@ -54,6 +81,24 @@ export type TabPagerProps = {
    * 드래그처럼 페이지 안 제스처가 전권을 가져야 하는 상태 (#563).
    */
   lock?: SharedValue<boolean>;
+  /**
+   * 첫·끝 페이지에서 바깥으로 끌면 살짝 따라왔다가 튕겨 돌아온다 (#1575 집 페이저).
+   * 기본(false)은 탭 페이저 그대로 — 끝에서는 따라오지 않고, iOS에선 그 터치를
+   * 아예 놓아 바깥 제스처가 받을 수 있게 한다.
+   */
+  bounceEdges?: boolean;
+  /**
+   * 테스트 ID 접두 — 뷰포트(`<id>`)·행(`<id>-row`)·팬(`<id>-pan`)에 붙는다. 집 탭
+   * 안에 페이저가 하나 더 들어가서(#1575) 같은 ID가 둘이 되지 않게 한다.
+   */
+  testID?: string;
+  /**
+   * 페이지와 같이 밀리지 않는 덧칠 층 — 페이저의 제스처 영역 **안**에 그려서, 그 위에서
+   * 시작한 가로 끌기도 페이저가 받는다. 집 탭의 플로팅 레일(#1575): 형제로 두면 레일
+   * 버튼 위에서 민 스와이프가 페이저에 닿지 않는다. 탭은 그대로 버튼이 받는다(페이저는
+   * SWIPE_CLAIM_DX를 넘어야 활성화된다).
+   */
+  overlay?: ReactNode;
   children: ReactNode[];
 };
 
@@ -68,7 +113,15 @@ export type TabPagerProps = {
  * 손가락 위치에 따라 "달력으로"와 "집으로"로 갈려서, 가로 스와이프의 뜻을
  * 하단 탭 이동 하나로 통일했다. 달력 월 이동도 monthSwipe=false로 꺼져 있다.
  */
-export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps) {
+export function TabPager({
+  index,
+  onIndexChange,
+  lock,
+  bounceEdges = false,
+  testID = 'tab-pager',
+  overlay,
+  children,
+}: TabPagerProps) {
   const arbitrateScroll = Platform.OS === 'ios';
   // 조건부 페이지(피드 #1409 — FEED_ENABLED)는 null로 들어온다 — 빈 자리를 페이지로 세지 않는다.
   const pages = children.filter((child) => child != null && child !== false);
@@ -144,7 +197,7 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
 
   const pan = useMemo(
     () => {
-      const gesture = Gesture.Pan().withTestId('tab-pager-pan').maxPointers(1);
+      const gesture = Gesture.Pan().withTestId(`${testID}-pan`).maxPointers(1);
       // Only iOS scrolls wait for the pager. Decide both outcomes in one worklet
       // there; preserve the existing Android/web recognizer configuration.
       if (arbitrateScroll) gesture.manualActivation(true);
@@ -190,7 +243,9 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
               const outside =
                 (indexSV.value === 0 && translationX > 0) ||
                 (indexSV.value === count - 1 && translationX < 0);
-              if (outside) mgr.fail();
+              // 끝에서 튕기는 페이저는 바깥 방향도 잡는다 — 놓으면 바깥 제스처가 받는데,
+              // 집 탭은 탭 페이저가 잠겨 있어 아무도 안 받고 손가락만 헛돈다.
+              if (outside && !bounceEdges) mgr.fail();
               else mgr.activate();
             }
           })
@@ -211,7 +266,11 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
             const raw = start.value + e.translationX;
             const min = -(count - 1) * widthSV.value;
             // Never reveal an empty page, including after reversing an active drag.
-            tx.value = Math.max(min, Math.min(0, raw));
+            // 튕기는 페이저는 끝에서 저항을 걸고 따라온다 — 놓으면 settleTarget이
+            // 범위 안으로 클램프해 제자리로 돌아간다.
+            tx.value = bounceEdges
+              ? resistEdges(raw, min, widthSV.value)
+              : Math.max(min, Math.min(0, raw));
           })
           .onEnd((e, success) => {
             'worklet';
@@ -246,6 +305,8 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
     [
       arbitrateScroll,
       lock,
+      bounceEdges,
+      testID,
       count,
       commit,
       indexSV,
@@ -266,13 +327,13 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
       <GestureDetector gesture={pan}>
         <View
           style={styles.viewport}
-          testID="tab-pager"
+          testID={testID}
           onLayout={(e) => {
             widthSV.value = e.nativeEvent.layout.width;
             setWidth(e.nativeEvent.layout.width);
           }}>
           <Animated.View
-            testID="tab-pager-row"
+            testID={`${testID}-row`}
             style={[styles.row, { width: width * count || undefined }, rowStyle]}>
             {pages.map((child, i) => (
               <Page
@@ -286,6 +347,7 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
               </Page>
             ))}
           </Animated.View>
+          {overlay}
         </View>
       </GestureDetector>
     </PagerGestureContext.Provider>
@@ -315,9 +377,14 @@ function Page({
   const style = useAnimatedStyle(() => ({
     display: active || (index >= revealLo.value && index <= revealHi.value) ? 'flex' : 'none',
   }));
+  // 페이저가 겹치면(집 탭 안의 집 페이저, #1575) 안쪽이 바깥 활성 여부를 덮어쓰면 안 된다 —
+  // 다른 탭에 있는데도 집의 온라인 점·스피커가 '보이는 중'으로 돈다. 바깥과 AND한다.
+  const outerActive = useContext(PageActiveContext);
   return (
     <Animated.View style={[styles.page, { left: index * width, width: width || undefined }, style]}>
-      <PageActiveContext.Provider value={active}>{children}</PageActiveContext.Provider>
+      <PageActiveContext.Provider value={outerActive && active}>
+        {children}
+      </PageActiveContext.Provider>
     </Animated.View>
   );
 }

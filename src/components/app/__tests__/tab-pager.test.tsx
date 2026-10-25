@@ -5,11 +5,14 @@ import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-han
 import * as Reanimated from 'react-native-reanimated';
 
 import {
+  EDGE_RESISTANCE,
   PAGE_FLING_VELOCITY,
   PAGE_SNAP_RATIO,
+  resistEdges,
   settleTarget,
   TabPager,
 } from '@/components/app/tab-pager';
+import { usePageActive } from '@/hooks/use-page-active';
 
 const WIDTH = 360;
 
@@ -373,5 +376,145 @@ describe('settleTarget', () => {
     expect(settleTarget(0, -10, 0, W, 3)).toBe(0); // 임계 미달
     expect(settleTarget(2, -W, 0, W, 3)).toBe(2); // 마지막 페이지 클램프
     expect(settleTarget(0, W, 0, W, 3)).toBe(0); // 첫 페이지 클램프
+  });
+});
+
+/**
+ * 끝에서 튕기는 페이저 (#1575 집 페이저). 기본값(탭 페이저)은 위 테스트들이 그대로 잠근다.
+ */
+describe('TabPager bounceEdges (#1575)', () => {
+  function BounceHarness({
+    index,
+    onIndexChange,
+  }: {
+    index: number;
+    onIndexChange: (i: number) => void;
+  }) {
+    return (
+      <TabPager index={index} onIndexChange={onIndexChange} bounceEdges testID="bounce-pager">
+        <Text>첫 집</Text>
+        <Text>둘째 집</Text>
+        <Text>셋째 집</Text>
+      </TabPager>
+    );
+  }
+  async function renderBounce(index = 0, onIndexChange: (i: number) => void = () => {}) {
+    const utils = await render(<BounceHarness index={index} onIndexChange={onIndexChange} />);
+    await act(async () => {
+      fireEvent(utils.getByTestId('bounce-pager'), 'layout', {
+        nativeEvent: { layout: { width: WIDTH, height: 640 } },
+      });
+    });
+    return utils;
+  }
+
+  it('resistEdges: 안쪽은 그대로, 바깥은 저항을 걸고 상한에서 멈춘다', () => {
+    const min = -2 * WIDTH;
+    expect(resistEdges(-100, min, WIDTH)).toBe(-100);
+    expect(resistEdges(50, min, WIDTH)).toBeCloseTo(50 * EDGE_RESISTANCE);
+    expect(resistEdges(min - 50, min, WIDTH)).toBeCloseTo(min - 50 * EDGE_RESISTANCE);
+    // 아무리 끌어도 화면 폭의 일부만 드러난다.
+    expect(resistEdges(10_000, min, WIDTH)).toBeLessThan(WIDTH * 0.25);
+    expect(resistEdges(min - 10_000, min, WIDTH)).toBeGreaterThan(min - WIDTH * 0.25);
+  });
+
+  it.each([
+    [0, 100, 100 * EDGE_RESISTANCE],
+    [2, -100, -2 * WIDTH - 100 * EDGE_RESISTANCE],
+  ])('page %i에서 바깥으로 %ipx 끌면 저항을 받으며 따라온다', async (index, dx, expected) => {
+    const onIndexChange = jest.fn();
+    const ui = await renderBounce(index, onIndexChange);
+    const pan = getByGestureTestId('bounce-pager-pan') as PanGesture;
+    await act(async () => {
+      pan.handlers.onStart?.({} as never);
+      pan.handlers.onUpdate?.({ translationX: dx } as never);
+    });
+    await ui.rerender(<BounceHarness index={index} onIndexChange={onIndexChange} />);
+    const { transform } = StyleSheet.flatten(ui.getByTestId('bounce-pager-row').props.style);
+    expect(transform[0].translateX).toBeCloseTo(expected);
+    expect(onIndexChange).not.toHaveBeenCalled();
+  });
+
+  it('놓으면 범위 안으로 돌아온다 — 끝에서 넘어가지 않는다', async () => {
+    const onIndexChange = jest.fn();
+    await renderBounce(0, onIndexChange);
+    await act(async () =>
+      fireGestureHandler(getByGestureTestId('bounce-pager-pan'), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE },
+        { state: State.END, translationX: WIDTH, translationY: 0, velocityX: 2000 },
+      ]),
+    );
+    expect(onIndexChange).not.toHaveBeenCalled();
+  });
+
+  /**
+   * iOS 수동 활성화 경로. 기본 페이저는 끝에서 바깥으로 밀면 터치를 놓아 바깥 제스처가
+   * 받게 한다. 튕기는 페이저는 잡는다 — 집 탭은 탭 페이저가 잠겨 있어 놓으면 아무도 안
+   * 받고 손가락만 헛돈다.
+   */
+  it.each([
+    ['기본 페이저는 놓는다', false],
+    ['튕기는 페이저는 잡는다', true],
+  ])('첫 페이지에서 바깥으로 밀 때 %s', async (_label, bounce) => {
+    const ui = await render(
+      bounce ? (
+        <BounceHarness index={0} onIndexChange={() => {}} />
+      ) : (
+        <Harness index={0} onIndexChange={() => {}} />
+      ),
+    );
+    await act(async () => {
+      fireEvent(ui.getByTestId(bounce ? 'bounce-pager' : 'tab-pager'), 'layout', {
+        nativeEvent: { layout: { width: WIDTH, height: 640 } },
+      });
+    });
+    const pan = getByGestureTestId(bounce ? 'bounce-pager-pan' : 'tab-pager-pan') as PanGesture;
+    const manager = {
+      handlerTag: pan.handlerTag,
+      begin: jest.fn(),
+      activate: jest.fn(),
+      fail: jest.fn(),
+      end: jest.fn(),
+    };
+    pan.handlers.onTouchesDown?.(touchEvent(pan, 100, 200), manager);
+    pan.handlers.onTouchesMove?.(touchEvent(pan, 160, 200), manager);
+    expect(manager.fail).toHaveBeenCalledTimes(bounce ? 0 : 1);
+    expect(manager.activate).toHaveBeenCalledTimes(bounce ? 1 : 0);
+  });
+
+  /**
+   * 페이저가 겹치면 안쪽 페이지의 '보이는 중'은 바깥과 AND다 — 다른 탭에 있는데도 집의
+   * 온라인 점·스피커가 보이는 중으로 돌면 안 된다.
+   */
+  it('겹친 페이저의 활성 여부는 바깥과 AND다', async () => {
+    function Probe({ label }: { label: string }) {
+      const active = usePageActive();
+      return <Text>{`${label}:${active ? 'on' : 'off'}`}</Text>;
+    }
+    const ui = await render(
+      <TabPager index={1} onIndexChange={() => {}}>
+        <TabPager index={0} onIndexChange={() => {}} testID="inner-pager">
+          <Probe label="안쪽 현재" />
+          <Probe label="안쪽 옆" />
+        </TabPager>
+        <Text>바깥 현재</Text>
+      </TabPager>,
+    );
+    // 바깥은 1번 페이지라 안쪽 페이저 전체가 비활성이다.
+    expect(ui.getByText('안쪽 현재:off', { includeHiddenElements: true })).toBeTruthy();
+    expect(ui.getByText('안쪽 옆:off', { includeHiddenElements: true })).toBeTruthy();
+
+    await ui.rerender(
+      <TabPager index={0} onIndexChange={() => {}}>
+        <TabPager index={0} onIndexChange={() => {}} testID="inner-pager">
+          <Probe label="안쪽 현재" />
+          <Probe label="안쪽 옆" />
+        </TabPager>
+        <Text>바깥 현재</Text>
+      </TabPager>,
+    );
+    expect(ui.getByText('안쪽 현재:on', { includeHiddenElements: true })).toBeTruthy();
+    expect(ui.getByText('안쪽 옆:off', { includeHiddenElements: true })).toBeTruthy();
   });
 });

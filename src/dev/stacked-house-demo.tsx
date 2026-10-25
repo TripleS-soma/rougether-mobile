@@ -1,3 +1,4 @@
+import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
@@ -39,6 +40,8 @@ const DEMO_PREVIEWS = Object.fromEntries(DEMO_ROOMS.map((room, index) => [index 
 
 /** Fixture-only harness: no API calls, catalog mutation, or seat persistence. */
 export function StackedHouseDemo({ viewportOnly = false }: { viewportOnly?: boolean }) {
+  // 갤러리가 이 항목만 기기 화면 크기로 띄운 경우 — gallery.tsx의 viewport=1 분기.
+  const standalone = useLocalSearchParams<{ viewport?: string }>().viewport === '1';
   const t = useTokens();
   const Typography = useTypography();
   const [themeIndex, setThemeIndex] = useState(0);
@@ -82,9 +85,12 @@ export function StackedHouseDemo({ viewportOnly = false }: { viewportOnly?: bool
   );
   if (viewportOnly) {
     // iPhone safe-area fixture. The screen reserves the actual pill-nav height.
+    // 단독 모드(`?viewport=1`)는 기기 화면을 그대로 재야 하니(#1163) 높이를 주지 않는다.
+    // 목록 모드는 높이 없는 카드 안이라, 고정 높이가 없으면 집 페이저(#1575)의 절대배치
+    // 페이지가 부모 높이 0에 접혀 화면이 통째로 사라진다.
     return (
       <SafeAreaInsetsContext.Provider value={{ top: 59, bottom: 34, left: 0, right: 0 }}>
-        {screen}
+        {standalone ? screen : <View style={styles.screen}>{screen}</View>}
       </SafeAreaInsetsContext.Provider>
     );
   }

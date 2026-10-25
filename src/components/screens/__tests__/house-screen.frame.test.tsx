@@ -78,47 +78,22 @@ describe('HouseScreen — 좌석 프레이밍·카메라', () => {
     expect(fittedWidth()).toBeUndefined();
   });
 
-  it.each(['pending', 'empty'])(
-    'keeps the pager unlocked while zoomed and when the camera is replaced by %s content (#1347)',
-    async (destination) => {
+  /**
+   * 집 탭의 가로 스와이프는 집 페이저의 것이다 (#1575) — 집 페이지가 하나라도 있으면 탭
+   * 페이저를 잠그고(탭 전환은 바텀바로만), 넘길 집이 없는 빈 화면에서만 푼다. 승인 대기
+   * 카드도 집 페이저의 한 칸이라 잠금이 유지된다.
+   */
+  it.each([
+    ['pending', true],
+    ['empty', false],
+  ] as const)(
+    'locks the tab pager while house pages exist — %s content leaves it %s (#1575)',
+    async (destination, locked) => {
       const onPagerLockChange = jest.fn();
       const ui = await render(
         <HouseScreen houses={[MISSION_HOUSE]} onPagerLockChange={onPagerLockChange} />,
       );
-      const camera = getByGestureTestId('house-camera-pan') as PanGesture;
-      const manager = {
-        handlerTag: camera.handlerTag,
-        begin: jest.fn(),
-        activate: jest.fn(),
-        fail: jest.fn(),
-        end: jest.fn(),
-      };
-      const touches = (distance: number) => {
-        const allTouches = [100, 100 + distance].map((x, id) => ({
-          id,
-          x,
-          y: 100,
-          absoluteX: x,
-          absoluteY: 100,
-        }));
-        return {
-          handlerTag: camera.handlerTag,
-          state: State.BEGAN,
-          eventType: 2 as const,
-          numberOfTouches: 2,
-          pointerType: PointerType.TOUCH,
-          allTouches,
-          changedTouches: allTouches,
-        };
-      };
-      await act(async () => {
-        camera.handlers.onTouchesDown?.(touches(100), manager);
-        camera.handlers.onTouchesMove?.(touches(100), manager);
-        camera.handlers.onTouchesMove?.(touches(160), manager);
-      });
-      // 확대만으로는 탭 페이저를 잠그지 않는다 — 캔버스 위 가로 이동은 카메라가 먼저 가져간다.
-      expect(onPagerLockChange).not.toHaveBeenCalledWith(true);
-      expect(ui.getByLabelText('확대 종료')).toBeTruthy();
+      expect(onPagerLockChange).toHaveBeenLastCalledWith(true);
       await ui.rerender(
         <HouseScreen
           houses={destination === 'empty' ? [] : [MISSION_HOUSE]}
@@ -127,18 +102,87 @@ describe('HouseScreen — 좌석 프레이밍·카메라', () => {
           onPagerLockChange={onPagerLockChange}
         />,
       );
-      expect(ui.queryByLabelText('확대 종료')).toBeNull();
-      expect(onPagerLockChange).toHaveBeenLastCalledWith(false);
+      expect(onPagerLockChange).toHaveBeenLastCalledWith(locked);
     },
   );
 
-  it('releases the pager lock when leaving during a seat lift', async () => {
+  /** 집 페이저의 터치 시작을 흉내 낸다 — 잠겨 있으면 그 자리에서 fail한다. */
+  const touchHousePager = () => {
+    const pager = getByGestureTestId('house-pager-pan') as PanGesture;
+    const manager = {
+      handlerTag: pager.handlerTag,
+      begin: jest.fn(),
+      activate: jest.fn(),
+      fail: jest.fn(),
+      end: jest.fn(),
+    };
+    const allTouches = [{ id: 0, x: 100, y: 100, absoluteX: 100, absoluteY: 100 }];
+    pager.handlers.onTouchesDown?.(
+      {
+        handlerTag: pager.handlerTag,
+        state: State.BEGAN,
+        eventType: 2 as const,
+        numberOfTouches: 1,
+        pointerType: PointerType.TOUCH,
+        allTouches,
+        changedTouches: allTouches,
+      },
+      manager,
+    );
+    return manager;
+  };
+
+  /**
+   * #1347이 지키던 것 — "확대가 남은 채 돌아와도 스와이프가 죽지 않는다" — 은 이제 집
+   * 페이저가 지킨다. 확대만으로는 집 페이저를 잠그지 않는다: 캔버스 위 가로 이동은
+   * 카메라가 먼저(8px) 가져가고, 캔버스 밖에서 시작한 스와이프는 그대로 집을 넘긴다.
+   */
+  it('does not lock the house pager while zoomed (#1347 → #1575)', async () => {
+    const ui = await render(<HouseScreen houses={[MISSION_HOUSE]} />);
+    const camera = getByGestureTestId('house-camera-pan') as PanGesture;
+    const manager = {
+      handlerTag: camera.handlerTag,
+      begin: jest.fn(),
+      activate: jest.fn(),
+      fail: jest.fn(),
+      end: jest.fn(),
+    };
+    const touches = (distance: number) => {
+      const allTouches = [100, 100 + distance].map((x, id) => ({
+        id,
+        x,
+        y: 100,
+        absoluteX: x,
+        absoluteY: 100,
+      }));
+      return {
+        handlerTag: camera.handlerTag,
+        state: State.BEGAN,
+        eventType: 2 as const,
+        numberOfTouches: 2,
+        pointerType: PointerType.TOUCH,
+        allTouches,
+        changedTouches: allTouches,
+      };
+    };
+    await act(async () => {
+      camera.handlers.onTouchesDown?.(touches(100), manager);
+      camera.handlers.onTouchesMove?.(touches(100), manager);
+      camera.handlers.onTouchesMove?.(touches(160), manager);
+    });
+    expect(ui.getByLabelText('확대 종료')).toBeTruthy();
+    expect(touchHousePager().fail).not.toHaveBeenCalled();
+  });
+
+  it('locks the house pager during a seat lift and releases the tab lock on exit', async () => {
     const onPagerLockChange = jest.fn();
     const ui = await render(
       <HouseScreen houses={[MISSION_HOUSE]} onPagerLockChange={onPagerLockChange} />,
     );
+    expect(touchHousePager().fail).not.toHaveBeenCalled();
+    // 자리 드래그는 같은 터치 안에서 전권을 가져간다 — 드는 순간 집 페이저가 물러난다.
     await fireEvent(ui.getByLabelText('친구'), 'longPress');
-    expect(onPagerLockChange).toHaveBeenLastCalledWith(true);
+    expect(touchHousePager().fail).toHaveBeenCalled();
     await ui.unmount();
     expect(onPagerLockChange).toHaveBeenLastCalledWith(false);
   });
