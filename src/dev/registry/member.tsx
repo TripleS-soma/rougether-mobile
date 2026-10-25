@@ -7,6 +7,7 @@ import { IntroScreen } from '@/components/screens/intro-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
 import { LoginConflictDialog } from '@/components/screens/login/login-conflict-dialog';
 import { CharacterPickerSheet } from '@/components/screens/sheets/character-picker-sheet';
+import { AppUpdateScreen, AppUpdateSheet } from '@/components/screens/app-update-screen';
 import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { FeedScreen } from '@/components/screens/feed-screen';
 import { FeedPostScreen } from '@/components/screens/feed-post-screen';
@@ -50,6 +51,7 @@ import {
 } from '@/mocks/fixtures';
 import { FeedMinigameRecordCard } from '@/components/feed/feed-minigame-record';
 import type { GalleryEntry } from '@/dev/registry/types';
+import { FeedRepliesDemo } from '@/dev/feed-replies-demo';
 
 /** 기록 카드 작성 데모 — 본문 편집·카드 빼기를 로컬 상태로. */
 function FeedComposeRecordDemo() {
@@ -281,6 +283,21 @@ function MissionSheetDemo() {
   );
 }
 
+function AppUpdateSheetDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <View>
+      <Button label="업데이트 안내 열기" onPress={() => setOpen(true)} />
+      <AppUpdateSheet
+        visible={open}
+        latestVersion="1.5.4"
+        onOpenStore={() => setOpen(false)}
+        onLater={() => setOpen(false)}
+      />
+    </View>
+  );
+}
+
 export const memberEntries: GalleryEntry[] = [
   {
     name: 'LoginScreen',
@@ -464,6 +481,12 @@ export const memberEntries: GalleryEntry[] = [
         <FeedScreenDemo />
       </View>
     ),
+  },
+  {
+    name: 'FeedCommentThread',
+    description:
+      '답글 선택·취소·작성, 한 단계 들여쓰기, 답글의 답글과 삭제된 원댓글. 로컬 상태만 바꾸며 실서버 요청 없음 (#1570).',
+    render: () => <FeedRepliesDemo />,
   },
   {
     name: 'FeedPostScreen',
@@ -672,5 +695,20 @@ export const memberEntries: GalleryEntry[] = [
     name: 'MissionSheet · 완료 전환',
     description: '미션 완료 전환 시트 (#571) — 다음 미션 안내와 하러 가기.',
     render: () => <MissionSheetDemo />,
+  },
+  {
+    name: 'AppUpdateScreen',
+    description:
+      '더 이상 쓸 수 없는 버전 (#1572) — 닫을 수 없다. 서버 계약이 깨진 버전에만 쓰는 판정.',
+    render: () => (
+      <View style={{ height: 480, alignSelf: 'stretch' }}>
+        <AppUpdateScreen latestVersion="1.5.4" />
+      </View>
+    ),
+  },
+  {
+    name: 'AppUpdateSheet',
+    description: '새 버전 안내 (#1572) — 닫을 수 있고, 다음 버전이 나오면 다시 뜬다.',
+    render: () => <AppUpdateSheetDemo />,
   },
 ];

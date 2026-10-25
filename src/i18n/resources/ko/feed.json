@@ -44,7 +44,18 @@
       "editKeepRoutine": "바꾸지 않으면 지금 연결한 루틴이 그대로 남아요.",
       "editRestoreRoutine": "원래 연결한 루틴으로 되돌리기",
       "editCurrentRoutine": "지금 연결한 루틴",
-      "editRecordStaysFree": "기록 카드가 있는 글은 자유게시판에만 둘 수 있어요."
+      "editRecordStaysFree": "기록 카드가 있는 글은 자유게시판에만 둘 수 있어요.",
+      "reply": "답글",
+      "replyA11y": "{{name}}에게 답글",
+      "replyingTo": "{{name}}에게 답글 쓰는 중",
+      "cancelReply": "답글 취소",
+      "replyPlaceholder": "답글 달기…",
+      "showReplies": "답글 {{count}}개 보기",
+      "hideReplies": "답글 접기",
+      "moreReplies": "답글 더 보기",
+      "repliesLoadError": "답글을 불러오지 못했어요.",
+      "noReplies": "아직 답글이 없어요.",
+      "deletedComment": "삭제된 댓글이에요."
     },
     "compose": {
       "title": "새 게시물",

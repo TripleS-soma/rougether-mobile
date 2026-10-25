@@ -22,6 +22,7 @@ import { API_BASE } from './config';
 import { buildQuery } from './http';
 import type {
   FeedBoardType,
+  FeedCommentRequest,
   FeedCommentResponse,
   FeedCreateRequest,
   FeedImageResponse,
@@ -59,9 +60,16 @@ export function deleteFeedImage(imageId: number): Promise<void> {
 // 주소를 직접 줄 수 없다(버그 제보 스크린샷 #736과 같은 제약). 바이트를 받아 웹은
 // blob: URL, 네이티브는 data: URI로 바꾼다. 서버가 `Cache-Control: private, no-store`
 // 를 주므로 **디스크 캐시는 두지 않고** 메모리 LRU만 — 로그아웃하면 비운다.
+//
+// 상한은 장수와 바이트 둘 다 건다(성능 장부 M5). 서버가 긴 변 1600px JPEG로 다시 인코딩해
+// 한 장이 수백 KB인데, 네이티브 data URI는 base64라 그 1.37배가 JS 힙 문자열로 남는다.
+// 장수만 세면 60장 × 수백 KB가 통째로 힙에 머문다. 바이트는 원본 blob 크기로 센다.
 
 const IMAGE_CACHE_LIMIT = 60;
-const imageCache = new Map<number, string>();
+export const IMAGE_CACHE_BYTES = 12 * 1024 * 1024;
+type CachedImage = { uri: string; bytes: number };
+const imageCache = new Map<number, CachedImage>();
+let imageCacheBytes = 0;
 const imageInflight = new Map<number, Promise<string | null>>();
 
 function revokeIfBlob(uri: string) {
@@ -70,24 +78,41 @@ function revokeIfBlob(uri: string) {
   }
 }
 
-function rememberImage(imageId: number, uri: string) {
+function forgetImage(imageId: number) {
+  const entry = imageCache.get(imageId);
+  if (!entry) return;
   imageCache.delete(imageId);
-  imageCache.set(imageId, uri);
-  while (imageCache.size > IMAGE_CACHE_LIMIT) {
-    const oldest = imageCache.keys().next().value as number;
-    const evicted = imageCache.get(oldest);
-    imageCache.delete(oldest);
-    if (evicted) revokeIfBlob(evicted);
+  imageCacheBytes -= entry.bytes;
+  revokeIfBlob(entry.uri);
+}
+
+function rememberImage(imageId: number, entry: CachedImage) {
+  const prev = imageCache.get(imageId);
+  if (prev) {
+    imageCache.delete(imageId);
+    imageCacheBytes -= prev.bytes;
   }
+  imageCache.set(imageId, entry);
+  imageCacheBytes += entry.bytes;
+  // 방금 넣은 한 장은 예산을 넘어도 남긴다 — 화면이 그 주소를 바로 쓴다.
+  while (
+    imageCache.size > 1 &&
+    (imageCache.size > IMAGE_CACHE_LIMIT || imageCacheBytes > IMAGE_CACHE_BYTES)
+  ) {
+    forgetImage(imageCache.keys().next().value as number);
+  }
+}
+
+/** 테스트·진단용 — 지금 캐시에 든 장수와 원본 바이트 합. */
+export function feedImageCacheStats() {
+  return { count: imageCache.size, bytes: imageCacheBytes };
 }
 
 /** 캐시·진행 중 요청을 비운다 — 세션 종료와 게시물 삭제 때. */
 export function clearFeedImageCache(imageIds?: number[]) {
   const ids = imageIds ?? [...imageCache.keys()];
   for (const id of ids) {
-    const uri = imageCache.get(id);
-    if (uri) revokeIfBlob(uri);
-    imageCache.delete(id);
+    forgetImage(id);
     imageInflight.delete(id);
   }
 }
@@ -125,7 +150,7 @@ async function loadFeedImage(imageId: number): Promise<string | null> {
       Platform.OS === 'web' && typeof URL !== 'undefined' && URL.createObjectURL
         ? URL.createObjectURL(blob)
         : await blobToDataUri(blob);
-    if (uri) rememberImage(imageId, uri);
+    if (uri) rememberImage(imageId, { uri, bytes: blob.size });
     return uri;
   } catch {
     return null;
@@ -142,7 +167,7 @@ export function fetchFeedImage(imageId: number): Promise<string | null> {
   const cached = imageCache.get(imageId);
   if (cached) {
     rememberImage(imageId, cached);
-    return Promise.resolve(cached);
+    return Promise.resolve(cached.uri);
   }
   const pending = imageInflight.get(imageId);
   if (pending) return pending;
@@ -229,10 +254,26 @@ export function unlikeFeedPost(postId: number): Promise<void> {
 /** GET /feed/posts/{postId}/comments — **오래된 ID부터**, cursor는 마지막 commentId. */
 export async function fetchFeedComments(
   postId: number,
+  { cursor, size, topLevelOnly }: { cursor?: number; size?: number; topLevelOnly?: boolean } = {},
+): Promise<Page<FeedComment>> {
+  const query = buildQuery({
+    cursor,
+    size,
+    topLevelOnly: topLevelOnly == null ? undefined : String(topLevelOnly),
+  });
+  const page = await apiGetPage<FeedCommentResponse>(`/feed/posts/${postId}/comments${query}`);
+  return adaptPage(page, toFeedComment);
+}
+
+/** 원댓글 id로 한 단계 스레드 조회. 답글에 대한 답글도 같은 목록에 온다. */
+export async function fetchFeedReplies(
+  postId: number,
+  rootCommentId: number,
   { cursor, size }: { cursor?: number; size?: number } = {},
 ): Promise<Page<FeedComment>> {
   const page = await apiGetPage<FeedCommentResponse>(
-    `/feed/posts/${postId}/comments${buildQuery({ cursor, size })}`,
+    `/feed/posts/${postId}/comments/${rootCommentId}/replies${buildQuery({ cursor, size })}`,
+    { expectedStatuses: [404] },
   );
   return adaptPage(page, toFeedComment);
 }
@@ -240,7 +281,7 @@ export async function fetchFeedComments(
 /** POST /feed/posts/{postId}/comments — 같은 `clientCommentId` 재시도는 원래 댓글(201). */
 export async function createFeedComment(
   postId: number,
-  input: { clientCommentId: string; content: string },
+  input: FeedCommentRequest,
 ): Promise<FeedComment> {
   const comment = toFeedComment(
     await apiPost<FeedCommentResponse>(`/feed/posts/${postId}/comments`, input),

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import { HouseOrderDots } from '@/components/room/house-order-dots';
+import { HouseSideArrows } from '@/components/screens/house/house-side-arrows';
 import { HouseSwitcher } from '@/components/screens/house/house-switcher';
 import type { PendingJoinHouse } from '@/components/screens/house/types';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -59,9 +60,6 @@ export function PendingHousePage({
         <HouseSwitcher
           icon={<Icon name="lock" size={14} color={t.textMuted} />}
           title={pendingHouse.name}
-          showArrows={totalPages > 1}
-          onPrev={onPrev}
-          onNext={onNext}
         />
         <View style={[styles.pendingCard, { backgroundColor: t.surface }]}>
           <Icon name="lock" size={40} color={t.textDisabled} />
@@ -98,6 +96,9 @@ export function PendingHousePage({
           onReorder={onReorderHouses}
         />
       </View>
+
+      {/* 집 전환 화살표 — 일반 집 페이지와 같은 자리, 화면 가운데 양쪽 (#1575). */}
+      <HouseSideArrows showArrows={totalPages > 1} onPrev={onPrev} onNext={onNext} />
 
       <ConfirmDialog
         visible={pendingToCancel != null}

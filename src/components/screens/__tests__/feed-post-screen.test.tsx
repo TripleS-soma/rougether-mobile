@@ -11,6 +11,73 @@ import {
 
 const [OTHER_POST, MY_POST] = DEMO_FEED_POSTS;
 
+describe('답글 입력 (#1570)', () => {
+  it('답글 대상·입력창을 표시하고 성공할 때만 대상과 본문을 비운다', async () => {
+    const onAddComment = jest.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const ui = await render(
+      <FeedPostScreen
+        post={OTHER_POST}
+        comments={DEMO_FEED_COMMENTS}
+        onAddComment={onAddComment}
+      />,
+    );
+    await fireEvent.press(ui.getByLabelText('이웃에게 답글'));
+    expect(ui.getByText('이웃에게 답글 쓰는 중')).toBeTruthy();
+    expect(ui.getByPlaceholderText('답글 달기…')).toBeTruthy();
+    await fireEvent.changeText(ui.getByLabelText('댓글 입력'), '  나도 해볼게  ');
+    await fireEvent.press(ui.getByLabelText('보내기'));
+    expect(onAddComment).toHaveBeenLastCalledWith('나도 해볼게', 301);
+    expect(ui.getByDisplayValue('  나도 해볼게  ')).toBeTruthy();
+    expect(ui.getByLabelText('답글 취소')).toBeTruthy();
+    await fireEvent.press(ui.getByLabelText('보내기'));
+    await waitFor(() => expect(ui.getByLabelText('댓글 입력').props.value).toBe(''));
+    expect(ui.queryByText('이웃에게 답글 쓰는 중')).toBeNull();
+  });
+
+  it('취소하면 본문은 남기고 일반 댓글로 보낸다', async () => {
+    const onAddComment = jest.fn().mockResolvedValue(true);
+    const ui = await render(
+      <FeedPostScreen
+        post={OTHER_POST}
+        comments={DEMO_FEED_COMMENTS}
+        onAddComment={onAddComment}
+      />,
+    );
+    await fireEvent.press(ui.getByLabelText('이웃에게 답글'));
+    await fireEvent.changeText(ui.getByLabelText('댓글 입력'), '반가워');
+    await fireEvent.press(ui.getByLabelText('답글 취소'));
+    expect(ui.getByDisplayValue('반가워')).toBeTruthy();
+    await fireEvent.press(ui.getByLabelText('보내기'));
+    expect(onAddComment).toHaveBeenCalledWith('반가워');
+  });
+
+  it('전송 중 대상과 본문을 바꾸지 못하고 이중 전송을 막는다', async () => {
+    let finish!: (ok: boolean) => void;
+    const onAddComment = jest.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const ui = await render(
+      <FeedPostScreen
+        post={OTHER_POST}
+        comments={DEMO_FEED_COMMENTS}
+        onAddComment={onAddComment}
+      />,
+    );
+    await fireEvent.press(ui.getByLabelText('이웃에게 답글'));
+    await fireEvent.changeText(ui.getByLabelText('댓글 입력'), '반가워');
+    await fireEvent.press(ui.getByLabelText('보내기'));
+    expect(ui.getByLabelText('댓글 입력').props.editable).toBe(false);
+    expect(ui.getByLabelText('답글 취소').props.accessibilityState.disabled).toBe(true);
+    await fireEvent.press(ui.getByLabelText('보내기'));
+    expect(onAddComment).toHaveBeenCalledTimes(1);
+    finish(true);
+    await waitFor(() => expect(ui.getByLabelText('댓글 입력').props.editable).toBe(true));
+  });
+});
+
 describe('FeedPostScreen (#1409)', () => {
   it('본문·댓글을 그리고, 내 댓글에만 삭제가 있다', async () => {
     const { getByText, getAllByLabelText } = await render(

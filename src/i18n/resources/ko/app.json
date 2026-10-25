@@ -131,6 +131,16 @@
       "confirmTitle": "외부 사이트로 이동할까요?",
       "confirmBody": "{{host}}(으)로 이동해요. 모르는 주소라면 열지 마세요.",
       "open": "열기"
+    },
+    "versionGate": {
+      "blockedTitle": "업데이트가 필요해요",
+      "blockedBody": "지금 설치된 버전으로는 더 이상 이용할 수 없어요. 스토어에서 최신 버전으로 업데이트해 주세요.",
+      "noticeTitle": "새 버전이 나왔어요",
+      "noticeBody": "스토어에서 업데이트하면 새로 추가된 기능을 쓸 수 있어요.",
+      "version": "최신 버전 {{version}}",
+      "update": "스토어로 가기",
+      "later": "나중에",
+      "a11y": "앱 업데이트 안내"
     }
   }
 }

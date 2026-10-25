@@ -1,4 +1,5 @@
 import type { FeedBoardType } from '@/api/types';
+import type { ReactNode } from 'react';
 
 /**
  * 피드 화면의 앱 모델 (#1409) — 서버 응답(`FeedPostResponse` 등)은 전부 옵셔널이라
@@ -115,7 +116,27 @@ export type FeedComment = {
   content: string;
   mine: boolean;
   createdAt: string;
+  parentCommentId: number | null;
+  replyToCommentId: number | null;
+  deleted: boolean;
+  replyCount: number;
 };
+
+/** 원댓글별로 펼쳤을 때만 조회한다. 화면은 쿼리 대신 이 상태와 콜백만 받는다. */
+export type FeedRepliesState = {
+  comments: FeedComment[];
+  loading: boolean;
+  error: boolean;
+  hasMore: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void;
+  onRetry: () => void;
+};
+
+export type FeedRepliesRenderer = (
+  root: FeedComment,
+  render: (state: FeedRepliesState) => ReactNode,
+) => ReactNode;
 
 /**
  * 인증이 필요한 피드 사진을 표시 가능한 주소로 바꾸는 함수 — 셸이 `fetchFeedImage`를,
