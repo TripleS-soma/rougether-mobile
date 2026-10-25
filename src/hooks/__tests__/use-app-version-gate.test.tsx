@@ -121,6 +121,38 @@ describe('useAppVersionGate', () => {
     expect(saveMock).toHaveBeenCalledWith(42, '1.5.4');
   });
 
+  it('기억을 읽기 전에는 안 띄운다 — 이미 미룬 사람의 시트 깜빡임', async () => {
+    // 원격 조회가 AsyncStorage 읽기보다 빠르면, 기억을 모르는 채로 recommended가
+    // 나와 시트가 떴다 닫힌다.
+    runtimeMock.mockReturnValue(STALE);
+    let release: (v: string | undefined) => void = () => {};
+    loadMock.mockReturnValue(new Promise((resolve) => (release = resolve)));
+    const { result } = await mount();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(result.current.verdict.level).toBe('ok');
+    await act(async () => release('1.5.4'));
+    expect(result.current.verdict.level).toBe('ok');
+  });
+
+  it('계정이 바뀌면 새 계정의 기억을 읽기 전까지 띄우지 않는다', async () => {
+    // 앞 계정은 안 미뤄서 시트가 떠 있다. 계정이 바뀌는 순간 들고 있던 기억은
+    // 앞 계정 것이므로, 새 계정의 값을 읽기 전에 그걸로 판정하면 안 된다.
+    runtimeMock.mockReturnValue(STALE);
+    loadMock.mockResolvedValue(undefined);
+    const { result, rerender } = await mount();
+    await waitFor(() => expect(result.current.verdict.level).toBe('recommended'));
+
+    let release: (v: string | undefined) => void = () => {};
+    loadMock.mockReturnValue(new Promise((resolve) => (release = resolve)));
+    mockUserId = 8;
+    await act(async () => rerender(undefined));
+    expect(result.current.verdict.level).toBe('ok');
+
+    // 새 계정이 이미 미뤘다면 끝까지 안 뜬다.
+    await act(async () => release('1.5.4'));
+    expect(result.current.verdict.level).toBe('ok');
+  });
+
   it('스토어 앱이 안 열리면 웹 주소로 떨어뜨린다', async () => {
     runtimeMock.mockReturnValue(STALE);
     const openSpy = jest

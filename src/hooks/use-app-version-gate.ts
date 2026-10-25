@@ -49,13 +49,24 @@ export function useAppVersionGate(): AppVersionGate {
   const [runtime] = useState(() => installedRuntime());
   // 이 세션에서 미뤘는지. 로그인 전의 유일한 기억이다.
   const [laterInSession, setLaterInSession] = useState(false);
-  // 지난 세션에 미룬 버전. 원격의 latestVersion이 달라지면 다시 안내한다.
-  const [dismissedVersion, setDismissedVersion] = useState<string | undefined>(undefined);
+  /**
+   * 지난 세션에 미룬 버전. 원격의 latestVersion이 달라지면 다시 안내한다.
+   *
+   * **누구의 기억인지 함께 들고 있는다.** 값만 들면 두 가지가 샌다 — 로드가
+   * 끝나기 전(원격 조회가 더 빠를 때) 안 미룬 것으로 보여 시트가 떴다 닫히고,
+   * 계정이 바뀐 직후엔 새 값이 올 때까지 이전 계정의 기억이 남는다.
+   */
+  const [dismissed, setDismissed] = useState<{
+    userId: number | undefined;
+    version?: string;
+  } | null>(null);
 
   useEffect(() => {
     let active = true;
+    // 계정이 바뀌면 이전 기억을 즉시 버린다 — 새 값을 기다리는 동안 쓰지 않는다.
+    setDismissed(null);
     void loadDismissedVersion(userId).then((version) => {
-      if (active) setDismissedVersion(version);
+      if (active) setDismissed({ userId, version });
     });
     return () => {
       active = false;
@@ -68,12 +79,17 @@ export function useAppVersionGate(): AppVersionGate {
     // 막는 판정은 미룰 수 없다.
     if (raw.level !== 'recommended') return raw;
     if (laterInSession) return OK;
-    if (dismissedVersion != null && dismissedVersion === raw.latestVersion) return OK;
+    // 이 계정의 기억을 읽기 전에는 띄우지 않는다 — 이미 미룬 사람에게
+    // 시트가 떴다 닫히는 깜빡임이 된다.
+    if (dismissed == null || dismissed.userId !== userId) return OK;
+    if (dismissed.version != null && dismissed.version === raw.latestVersion) return OK;
     return raw;
-  }, [raw, laterInSession, dismissedVersion]);
+  }, [raw, laterInSession, dismissed, userId]);
 
   const later = useCallback(() => {
     setLaterInSession(true);
+    // 원격에 latestVersion이 없으면 저장할 단위가 없어 이 세션만 유효하다.
+    // 랜딩 스모크가 semver를 요구하므로 정상 설정에서는 일어나지 않는다.
     void saveDismissedVersion(userId, raw.latestVersion);
   }, [raw.latestVersion, userId]);
 
