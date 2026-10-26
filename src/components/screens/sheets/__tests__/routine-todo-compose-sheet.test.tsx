@@ -1,4 +1,5 @@
 import { act, fireEvent, render, waitFor, within } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import {
   RoutineTodoComposeSheet,
   type RoutineTodoComposeSheetProps,
@@ -215,4 +216,25 @@ it('할 일 시간을 선택한 뒤 카테고리를 왕복해도 지정한 시�
       time: '19:05',
     }),
   );
+});
+
+/**
+ * 제목 칸 포커스 표시 — 웹 기본 포커스 링(파란 줄 + 흰 줄 2겹)은 묶음의 overflow: hidden에
+ * 위아래가 잘려 양옆 흰 세로줄로만 보였다. 링을 끄고 묶음 테두리 색으로 대신한다.
+ */
+it('제목 칸은 기본 포커스 링 대신 묶음 테두리로 포커스를 보인다', async () => {
+  const ui = await render(<RoutineTodoComposeSheet {...props()} />);
+  const input = ui.getByLabelText('루틴 제목');
+  const inputStyle = StyleSheet.flatten(input.props.style);
+  expect(inputStyle.outlineWidth).toBe(0);
+
+  const border = () =>
+    StyleSheet.flatten(ui.getByTestId('compose-title-group').props.style).borderColor;
+  await fireEvent(input, 'blur');
+  const idle = border();
+  await fireEvent(input, 'focus');
+  const focused = border();
+  expect(focused).not.toBe(idle);
+  await fireEvent(input, 'blur');
+  expect(border()).toBe(idle);
 });

@@ -65,6 +65,8 @@ export function RoutineTodoComposeSheet({
   const insets = useContext(SafeAreaInsetsContext);
   const savingRef = useRef(false);
   const [title, setTitle] = useState('');
+  // 제목 칸 포커스 표시 — 웹 기본 포커스 링 대신 묶음 테두리로 보여 준다(아래 input 스타일).
+  const [titleFocused, setTitleFocused] = useState(false);
   const [kind, setKind] = useState<ComposeKind>(initialKind);
   const [date, setDate] = useState(initialDate);
   const [categoryId, setCategoryId] = useState(initialCategory);
@@ -362,9 +364,13 @@ export function RoutineTodoComposeSheet({
             </View>
           ) : (
             <View pointerEvents={saving ? 'none' : 'auto'} style={styles.form}>
-              <View style={groupStyle}>
+              <View
+                style={[groupStyle, titleFocused ? { borderColor: t.primary } : null]}
+                testID="compose-title-group">
                 <TextInput
                   autoFocus
+                  onFocus={() => setTitleFocused(true)}
+                  onBlur={() => setTitleFocused(false)}
                   accessibilityLabel={tr('routineTodo.compose.titleA11y', { kind: label })}
                   placeholder={
                     kind === 'routine'
@@ -580,7 +586,17 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   divider: { height: StyleSheet.hairlineWidth },
-  input: { paddingVertical: Spacing.four, minHeight: Spacing.six },
+  input: {
+    paddingVertical: Spacing.four,
+    minHeight: Spacing.six,
+    // 웹 기본 포커스 링을 끈다. 크롬의 `outline: auto`는 파란 줄 + 흰 줄 2겹인데, 이 칸은
+    // 묶음(overflow: hidden)을 세로로 꽉 채워 위아래는 잘리고 좌우 패딩 자리에만 드러나
+    // 양옆에 흰 세로줄로 보였다. 포커스 표시는 묶음 테두리 색(titleFocused)이 대신한다.
+    // RN 타입은 'none'을 받지 않아 두께 0으로 지운다 — 작성자 스타일이라 :focus-visible의
+    // 브라우저 기본값(outline: auto)을 이긴다. 네이티브엔 그릴 외곽선이 없다.
+    outlineStyle: 'solid',
+    outlineWidth: 0,
+  },
   label: { flex: 1 },
   categoryLabel: { flex: 1, gap: Spacing.one },
   check: { width: Spacing.four, alignItems: 'center' },
