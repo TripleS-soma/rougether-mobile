@@ -8,6 +8,7 @@ import {
   initPushDisplay,
   onNotificationReceived,
   onNotificationTap,
+  pushDataOf,
   pushTapFrom,
   setForegroundPushFilter,
 } from '@/lib/push-events';
@@ -164,6 +165,91 @@ describe('채팅 푸시 (서버 #435)', () => {
       handler?.({ request: { content: { data: { type: 'CHAT_MESSAGE', roomId } } } });
     expect(await show('7')).toMatchObject({ shouldPlaySound: false, shouldShowList: false });
     expect(await show('8')).toMatchObject({ shouldPlaySound: true, shouldShowList: true });
+    spy.mockRestore();
+  });
+});
+
+describe('iOS FCM 푸시 (#1582)', () => {
+  afterEach(() => setForegroundPushFilter(null));
+
+  // iOS expo-notifications는 원격 푸시의 content.data를 userInfo["body"]에서만 읽는다 — FCM이
+  // APNs userInfo 최상위에 둔 키는 비어 있고 트리거 payload에만 있다.
+  const iosRequest = (identifier: string, payload: Record<string, unknown>) =>
+    ({
+      identifier,
+      content: { title: '우리 집', body: '곰: 안녕', data: {} },
+      trigger: {
+        type: 'push',
+        payload: { aps: { alert: { title: '우리 집', body: '곰: 안녕' } }, ...payload },
+      },
+    }) as never;
+
+  it('data가 비면 푸시 트리거 payload를 읽는다', () => {
+    expect(pushDataOf(iosRequest('a', { type: 'CHAT_MESSAGE', houseId: '3' }))).toMatchObject({
+      type: 'CHAT_MESSAGE',
+      houseId: '3',
+    });
+    // Android·로컬 알림처럼 data가 차 있으면 그대로다.
+    expect(
+      pushDataOf({ content: { data: { type: 'FEED_COMMENT' } }, trigger: null } as never),
+    ).toEqual({ type: 'FEED_COMMENT' });
+  });
+
+  it('채팅 푸시를 누르면 집·방 id를 넘긴다', async () => {
+    const getLast = jest
+      .spyOn(Notifications, 'getLastNotificationResponseAsync')
+      .mockResolvedValue(null as never);
+    let listener: ((r: unknown) => void) | undefined;
+    const subscribe = jest
+      .spyOn(Notifications, 'addNotificationResponseReceivedListener')
+      .mockImplementation((cb) => {
+        listener = cb as unknown as typeof listener;
+        return { remove: jest.fn() } as never;
+      });
+    const received = jest.fn();
+    const stop = onNotificationTap(received);
+    listener?.({
+      notification: {
+        request: iosRequest('chat-1', {
+          type: 'CHAT_MESSAGE',
+          houseId: '3',
+          roomId: '7',
+          'gcm.message_id': '1',
+        }),
+      },
+    });
+    expect(received).toHaveBeenLastCalledWith(
+      expect.objectContaining({ type: 'CHAT_MESSAGE', houseId: 3, roomId: 7 }),
+    );
+    stop();
+    getLast.mockRestore();
+    subscribe.mockRestore();
+  });
+
+  it('보고 있는 방의 푸시는 포그라운드에서 배너·소리 모두 거른다', async () => {
+    let handler: ((n: unknown) => Promise<Record<string, boolean>>) | undefined;
+    const spy = jest.spyOn(Notifications, 'setNotificationHandler').mockImplementation((h) => {
+      handler = h?.handleNotification as unknown as typeof handler;
+    });
+    initPushDisplay();
+    setForegroundPushFilter((tap) => tap.type === 'CHAT_MESSAGE' && tap.roomId === 7);
+    const request = iosRequest('chat-2', { type: 'CHAT_MESSAGE', roomId: '7' });
+    expect(await handler?.({ request })).toMatchObject({ shouldPlaySound: false });
+
+    let listener: ((e: unknown) => void) | undefined;
+    const sub = jest
+      .spyOn(Notifications, 'addNotificationReceivedListener')
+      .mockImplementation((cb: (e: never) => void) => {
+        listener = cb as (e: unknown) => void;
+        return { remove: () => {} } as never;
+      });
+    const got: unknown[] = [];
+    const unsub = onNotificationReceived((n) => got.push(n));
+    listener?.({ request });
+    listener?.({ request: iosRequest('chat-3', { type: 'CHAT_MESSAGE', roomId: '8' }) });
+    expect(got).toEqual([expect.objectContaining({ type: 'CHAT_MESSAGE', roomId: 8 })]);
+    unsub();
+    sub.mockRestore();
     spy.mockRestore();
   });
 });
