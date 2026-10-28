@@ -38,7 +38,11 @@
       "unissued": "{{n}} left in issued stock",
       "ownedReason": "You already own this. You can hold only one of each furniture.",
       "report": "Report",
-      "myOrders": "My orders"
+      "myOrders": "My orders",
+      "buyPending": "Purchase pending",
+      "buyPendingReason": "Your buy order has been submitted. Check its status or cancel it in My orders.",
+      "sellPendingReason": "You have a sell order for this item. Check or cancel it in My orders before buying.",
+      "noSellerReason": "There are no sell orders right now. Your buy order will trade automatically when a matching sell order arrives."
     },
     "order": {
       "buyTitle": "Buy order",
@@ -54,7 +58,7 @@
       "balance": "Your coins {{n}}",
       "total": "Order total {{n}} coins",
       "notEnough": "Not enough coins",
-      "buyNote": "If you bid above the lowest ask, you pay the lower price and get the difference back.",
+      "buyNote": "If no sell order matches, your buy order stays pending. Matching orders trade automatically without seller approval. If you bid above the lowest ask, you pay the lower price and receive the difference back in coins.",
       "proceeds": "Estimated proceeds",
       "proceedsNote": "After a 10% royalty and 5% fee. You get more if a higher bid fills it.",
       "proceedsNoteNoRoyalty": "After a 5% fee (no royalty). You get more if a higher bid fills it.",

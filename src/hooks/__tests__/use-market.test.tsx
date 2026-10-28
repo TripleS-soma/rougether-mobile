@@ -88,6 +88,53 @@ beforeEach(() => {
 });
 
 describe('useMarketActions — 주문 흐름 (#1427)', () => {
+  it('접수 뒤 거래소 재조회가 끝나기 전에는 완료를 반환하지 않는다', async () => {
+    jest.mocked(fetchMarketCommand).mockResolvedValue(applied('OPEN'));
+    const client = createTestQueryClient();
+    let finishRefresh!: () => void;
+    const refresh = new Promise<void>((resolve) => {
+      finishRefresh = resolve;
+    });
+    const invalidate = jest
+      .spyOn(client, 'invalidateQueries')
+      .mockImplementation((filters) =>
+        filters?.queryKey?.[0] === 'market' ? refresh : Promise.resolve(),
+      );
+    const { result } = await setup(client);
+    let completed = false;
+    let request!: ReturnType<typeof result.current.placeOrder>;
+    await act(async () => {
+      request = result.current.placeOrder(BUY).then((value) => {
+        completed = true;
+        return value;
+      });
+    });
+    await waitFor(() => expect(invalidate).toHaveBeenCalled());
+    expect(completed).toBe(false);
+    await act(async () => {
+      finishRefresh();
+      await request;
+    });
+    expect(completed).toBe(true);
+    invalidate.mockRestore();
+  });
+
+  it.each(['MARKET_ALREADY_HOLDING', 'MARKET_OWN_ORDER_CONFLICT'])(
+    '%s 거절이면 오래된 거래소 상태를 갱신한다',
+    async (code) => {
+      jest
+        .mocked(placeMarketOrder)
+        .mockRejectedValue(new ApiError(409, 'POST', '/market/orders', JSON.stringify({ code })));
+      const client = createTestQueryClient();
+      const invalidate = jest.spyOn(client, 'invalidateQueries');
+      const { result } = await setup(client);
+      await act(async () => {
+        await result.current.placeOrder(BUY);
+      });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ['market', undefined] });
+    },
+  );
+
   it('APPLIED + FILLED → "구매 완료", 지갑·인벤토리·방·거래소를 무효화', async () => {
     jest
       .mocked(fetchMarketCommand)
