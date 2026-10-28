@@ -285,4 +285,38 @@ describe('MarketAssetScreen (#1427)', () => {
     await act(async () => finish(true));
     await waitFor(() => expect(ui.queryByText('판매를 취소할까요?')).toBeNull());
   });
+  it('취소 도중 이미 종료된 주문이 목록에서 사라지면 확인창도 닫힌다', async () => {
+    const sale: MarketOrder = {
+      orderId: 81,
+      assetId: 1,
+      name: '고양이 소파',
+      assetKey: null,
+      side: 'SELL',
+      source: 'INVENTORY',
+      price: 50,
+      quantity: 1,
+      filledQuantity: 0,
+      status: 'OPEN',
+      expiresAt: null,
+      createdAt: null,
+    };
+    const onCancelOrder = jest.fn().mockResolvedValue(false);
+    const ui = await render(
+      <MarketAssetScreen
+        asset={{ ...DEMO_MARKET_ASSET, mySellOrders: [sale] }}
+        onCancelOrder={onCancelOrder}
+      />,
+    );
+    await fireEvent.press(ui.getByLabelText('판매 취소'));
+    await fireEvent.press(ui.getAllByLabelText('판매 취소').at(-1)!);
+    await waitFor(() => expect(onCancelOrder).toHaveBeenCalledTimes(1));
+    await ui.rerender(
+      <MarketAssetScreen
+        asset={{ ...DEMO_MARKET_ASSET, mySellOrders: [] }}
+        onCancelOrder={onCancelOrder}
+      />,
+    );
+    expect(ui.queryByText('판매를 취소할까요?')).toBeNull();
+    expect(ui.queryByLabelText('판매 취소')).toBeNull();
+  });
 });

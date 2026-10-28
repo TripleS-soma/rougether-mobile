@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { MarketAsset, MarketOrder, MarketPriceLevel, MarketTrade } from '@/api/market';
+import type { MarketAsset, MarketPriceLevel, MarketTrade } from '@/api/market';
 import type { MarketSide, MarketSource, ReportReason } from '@/api/types';
 import { MarketAssetImage } from '@/components/screens/market/market-asset-image';
 import {
@@ -95,7 +95,9 @@ export function MarketAssetScreen({
   const column = useResponsiveColumn();
   const inset = useHeaderContentInset();
   const screenStyle = useScreenStyle([]);
-  const [confirming, setConfirming] = useState<MarketOrder | null>(null);
+  const [confirmingOrderId, setConfirmingOrderId] = useState<number | null>(null);
+  const confirming =
+    asset?.mySellOrders?.find((order) => order.orderId === confirmingOrderId) ?? null;
   const [cancelling, setCancelling] = useState(false);
   const cancelInFlight = useRef(false);
   const confirmCancel = async () => {
@@ -103,7 +105,7 @@ export function MarketAssetScreen({
     cancelInFlight.current = true;
     setCancelling(true);
     try {
-      if (await onCancelOrder(confirming.orderId)) setConfirming(null);
+      if (await onCancelOrder(confirming.orderId)) setConfirmingOrderId(null);
     } finally {
       cancelInFlight.current = false;
       setCancelling(false);
@@ -296,7 +298,7 @@ export function MarketAssetScreen({
                         variant="secondary"
                         label={tr('market.asset.cancelSale')}
                         disabled={cancelling}
-                        onPress={() => setConfirming(order)}
+                        onPress={() => setConfirmingOrderId(order.orderId)}
                       />
                     ) : null}
                   </View>
@@ -370,7 +372,7 @@ export function MarketAssetScreen({
         destructive
         onConfirm={() => void confirmCancel()}
         onCancel={() => {
-          if (!cancelInFlight.current) setConfirming(null);
+          if (!cancelInFlight.current) setConfirmingOrderId(null);
         }}
       />
       {asset ? (
