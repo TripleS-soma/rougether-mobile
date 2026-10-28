@@ -25,7 +25,7 @@ export function initPushDisplay(): void {
   if (!supportsPushNotifications()) return;
   Notifications.setNotificationHandler({
     handleNotification: async (notification) =>
-      suppressedNow(notification.request.content.data)
+      suppressedNow(pushDataOf(notification.request))
         ? {
             shouldShowBanner: false,
             shouldShowList: false,
@@ -93,8 +93,26 @@ let foregroundFilter: ((tap: PushTap) => boolean) | null = null;
 export function setForegroundPushFilter(filter: ((tap: PushTap) => boolean) | null): void {
   foregroundFilter = filter;
 }
-function suppressedNow(data: unknown): boolean {
-  return foregroundFilter?.(pushTapFrom(data as Record<string, unknown> | undefined)) ?? false;
+function suppressedNow(data: Record<string, unknown> | undefined): boolean {
+  return foregroundFilter?.(pushTapFrom(data)) ?? false;
+}
+
+/**
+ * 푸시의 data (#1582). Android는 `content.data`에 FCM data가 그대로 온다. **iOS는 원격 푸시의
+ * `content.data`를 `userInfo["body"]`(Expo 푸시 서비스 형식)에서만 읽어서**(expo-notifications
+ * `NotificationRecords.swift`), 서버가 FCM으로 보낸 `type`·`houseId`·`postId`(APNs `userInfo`
+ * 최상위)는 거기 없다 — 탭해도 목적지를 몰라 알림함으로 갔다. 원본은 푸시 트리거의 `payload`에 있다.
+ */
+export function pushDataOf(
+  request: Pick<Notifications.NotificationRequest, 'content' | 'trigger'>,
+): Record<string, unknown> | undefined {
+  const data = request.content.data as Record<string, unknown> | null | undefined;
+  if (data && Object.keys(data).length > 0) return data;
+  const trigger = request.trigger as { type?: string; payload?: unknown } | null;
+  if (trigger?.type !== 'push' || !trigger.payload || typeof trigger.payload !== 'object') {
+    return data ?? undefined;
+  }
+  return trigger.payload as Record<string, unknown>;
 }
 
 export function onNotificationTap(cb: (notification?: PushTap) => void): () => void {
@@ -102,10 +120,10 @@ export function onNotificationTap(cb: (notification?: PushTap) => void): () => v
   let alive = true;
   let lastId: string | undefined;
   const receive = (response: Notifications.NotificationResponse) => {
-    const { identifier, content } = response.notification.request;
-    if (!alive || identifier === lastId) return;
-    lastId = identifier;
-    cb(pushTapFrom(content.data as Record<string, unknown> | undefined));
+    const { request } = response.notification;
+    if (!alive || request.identifier === lastId) return;
+    lastId = request.identifier;
+    cb(pushTapFrom(pushDataOf(request)));
   };
   const sub = Notifications.addNotificationResponseReceivedListener(receive);
   void Notifications.getLastNotificationResponseAsync()
@@ -138,8 +156,9 @@ export function onNotificationReceived(
     // 제목·본문이 모두 비면 그릴 게 없다 (data-only 메시지 등) — 조용히 넘긴다.
     if (!title && !body) return;
     // 지금 보고 있는 화면의 내용(그 채팅방 새 메시지)이면 인앱 배너도 띄우지 않는다.
-    if (suppressedNow(content.data)) return;
-    cb({ ...pushTapFrom(content.data as Record<string, unknown> | undefined), title, body });
+    const data = pushDataOf(event.request);
+    if (suppressedNow(data)) return;
+    cb({ ...pushTapFrom(data), title, body });
   });
   return () => sub.remove();
 }
