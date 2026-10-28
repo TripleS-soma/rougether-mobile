@@ -881,6 +881,8 @@ export type MarketAssetResponse = {
   status?: 'ACTIVE' | 'SUSPENDED';
   lastTradePrice?: number | null;
   owned?: boolean;
+  buyPending?: boolean;
+  sellPending?: boolean;
   asks?: PriceLevel[];
   bids?: PriceLevel[];
 };

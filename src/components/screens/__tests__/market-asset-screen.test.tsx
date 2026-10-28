@@ -6,6 +6,45 @@ import { DEMO_MARKET_ASSET, DEMO_MARKET_TRADES } from '@/mocks/fixtures';
 const NOW = new Date('2026-09-29T03:00:00Z');
 
 describe('MarketAssetScreen (#1427)', () => {
+  it('구매 대기는 보유로 표시하지 않고 구매를 막고 내 주문으로 안내한다', async () => {
+    const onOpenOrders = jest.fn();
+    const ui = await render(
+      <MarketAssetScreen
+        asset={{ ...DEMO_MARKET_ASSET, owned: false, buyPending: true }}
+        onOpenOrders={onOpenOrders}
+      />,
+    );
+    expect(ui.getByLabelText('구매 대기 중').props.accessibilityState).toMatchObject({
+      disabled: true,
+    });
+    expect(ui.queryByLabelText('판매하기')).toBeNull();
+    expect(ui.getByText(/체결 상태와 취소는 내 주문/)).toBeTruthy();
+    await fireEvent.press(ui.getByLabelText('내 주문'));
+    expect(onOpenOrders).toHaveBeenCalled();
+  });
+
+  it('판매 대기 중에는 보유 여부와 관계없이 재구매를 막는다', async () => {
+    const ui = await render(
+      <MarketAssetScreen asset={{ ...DEMO_MARKET_ASSET, owned: false, sellPending: true }} />,
+    );
+    expect(ui.getByLabelText('구매하기').props.accessibilityState).toMatchObject({
+      disabled: true,
+    });
+    expect(ui.getByText(/판매 주문이 있어 구매할 수 없어요/)).toBeTruthy();
+  });
+
+  it('판매 주문이 없어도 구매 대기를 걸 수 있고 자동 체결 조건을 설명한다', async () => {
+    const ui = await render(
+      <MarketAssetScreen
+        asset={{ ...DEMO_MARKET_ASSET, owned: false, asks: [], bestAskPrice: null }}
+      />,
+    );
+    expect(ui.getByLabelText('구매하기').props.accessibilityState).toMatchObject({
+      disabled: false,
+    });
+    expect(ui.getByText(/현재 판매 주문이 없어요/)).toBeTruthy();
+  });
+
   it('상세 — 이름·제작자·발행 수·최저 판매가·최근 거래가, 호가 위 3단계, 최근 거래', async () => {
     const ui = await render(
       <MarketAssetScreen asset={DEMO_MARKET_ASSET} trades={DEMO_MARKET_TRADES} now={NOW} />,

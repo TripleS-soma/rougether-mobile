@@ -97,6 +97,27 @@ describe('거래소 API (#1427)', () => {
     });
   });
 
+  it('구매 대기와 판매 대기는 실제 보유 여부와 별도로 유지한다', async () => {
+    mockResponse({
+      assetId: 7,
+      status: 'ACTIVE',
+      owned: false,
+      buyPending: true,
+      sellPending: false,
+    });
+    expect(await fetchMarketAsset(7)).toMatchObject({
+      owned: false,
+      buyPending: true,
+      sellPending: false,
+    });
+    mockResponse({ assetId: 7, status: 'ACTIVE', owned: false, sellPending: true });
+    expect(await fetchMarketAsset(7)).toMatchObject({
+      owned: false,
+      buyPending: false,
+      sellPending: true,
+    });
+  });
+
   it('최근 체결·내 주문·접수 결과 경로', async () => {
     let fetchMock = mockResponse({ items: [{ tradeId: 1, price: 30, quantity: 1 }] });
     await fetchMarketTrades(7, { size: 10 });

@@ -208,10 +208,26 @@ export function MarketAssetScreen({
 
             <View style={styles.actions}>
               <Button
-                label={tr('market.asset.buy')}
+                label={tr(asset.buyPending ? 'market.asset.buyPending' : 'market.asset.buy')}
                 onPress={() => setDraft({ side: 'BUY' })}
-                disabled={suspended || asset.owned}
+                disabled={
+                  submitting || suspended || asset.owned || asset.buyPending || asset.sellPending
+                }
               />
+              {asset.buyPending || asset.sellPending ? (
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  {tr(
+                    asset.buyPending
+                      ? 'market.asset.buyPendingReason'
+                      : 'market.asset.sellPendingReason',
+                  )}
+                </Text>
+              ) : null}
+              {!asset.owned && !asset.sellPending && !suspended && asset.asks.length === 0 ? (
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  {tr('market.asset.noSellerReason')}
+                </Text>
+              ) : null}
               {asset.owned ? (
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
                   {tr('market.asset.ownedReason')}
@@ -222,7 +238,7 @@ export function MarketAssetScreen({
                   label={tr('market.asset.sell')}
                   variant="secondary"
                   onPress={() => setDraft({ side: 'SELL', source: 'INVENTORY' })}
-                  disabled={suspended}
+                  disabled={suspended || asset.buyPending}
                 />
               ) : null}
               {canIssue ? (
@@ -231,7 +247,7 @@ export function MarketAssetScreen({
                     label={tr('market.asset.sellIssuance')}
                     variant="secondary"
                     onPress={() => setDraft({ side: 'SELL', source: 'ISSUANCE' })}
-                    disabled={suspended}
+                    disabled={suspended || asset.buyPending}
                   />
                   <Text style={[Typography.supporting, { color: t.textMuted }]}>
                     {tr('market.asset.unissued', { n: asset.unissuedQuantity })}
