@@ -870,6 +870,7 @@ export type MarketAssetListResponse = {
 };
 
 export type MarketAssetResponse = {
+  mySellOrders?: MarketOrderResponse[];
   assetId?: number;
   itemId?: number;
   name?: string;

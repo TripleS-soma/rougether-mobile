@@ -42,7 +42,13 @@
       "buyPending": "Purchase pending",
       "buyPendingReason": "Your buy order has been submitted. Check its status or cancel it in My orders.",
       "sellPendingReason": "You have a sell order for this item. Check or cancel it in My orders before buying.",
-      "noSellerReason": "There are no sell orders right now. Your buy order will trade automatically when a matching sell order arrives."
+      "noSellerReason": "No sell orders are available. This furniture returns to the market when someone lists it for sale.",
+      "mySales": "My sell orders",
+      "saleLine": "{{price}} coins, {{n}} remaining",
+      "cancelSale": "Cancel sale",
+      "cancelSaleTitle": "Cancel this sale?",
+      "cancelSaleBody": "Unsold furniture will be returned, but room placement will not be restored. If this is the last sell order, the furniture is hidden from the market and all waiting buyers are refunded.",
+      "cancellingSale": "Cancelling..."
     },
     "order": {
       "buyTitle": "Buy order",
@@ -58,7 +64,7 @@
       "balance": "Your coins {{n}}",
       "total": "Order total {{n}} coins",
       "notEnough": "Not enough coins",
-      "buyNote": "If no sell order matches, your buy order stays pending. Matching orders trade automatically without seller approval. If you bid above the lowest ask, you pay the lower price and receive the difference back in coins.",
+      "buyNote": "If no sell order matches, your buy order stays pending. Matching orders trade automatically without seller approval. If you bid above the lowest ask, you pay the lower price and receive the difference back in coins. If all sell orders end, waiting buy orders are automatically cancelled and fully refunded.",
       "proceeds": "Estimated proceeds",
       "proceedsNote": "After a 10% royalty and 5% fee. You get more if a higher bid fills it.",
       "proceedsNoteNoRoyalty": "After a 5% fee (no royalty). You get more if a higher bid fills it.",
@@ -96,7 +102,7 @@
       "cancel": "Cancel",
       "cancelA11y": "Cancel order for {{name}}",
       "cancelTitle": "Cancel this order?",
-      "cancelBody": "Your held coins or furniture will be returned. Cancelling a sale won't restore its room placement.",
+      "cancelBody": "Your held coins or furniture will be returned. Cancelling a sale won't restore its room placement. If the last sell order ends, the furniture is hidden and all waiting buyers are refunded.",
       "cancelConfirm": "Cancel order",
       "cancelKeep": "Keep it",
       "more": "Load more",
@@ -116,13 +122,13 @@
       "open": "View my orders"
     },
     "issue": {
-      "cta": "List on market",
-      "title": "List on market",
+      "cta": "Prepare for sale",
+      "title": "Prepare for sale",
       "supply": "Total supply",
-      "body": "Includes the 1 you keep; the rest is held by the market. You can't issue more later, and listed furniture can't be re-reviewed.",
+      "body": "Includes the 1 you keep; the rest is held by the market. You can't issue more later, and listed furniture can't be re-reviewed. It appears on the market only while sell orders are open.",
       "submit": "Issue {{n}}",
       "submitting": "Listing...",
-      "done": "Listed on the market",
+      "done": "Ready for sale. Place a sell order to appear on the market.",
       "closeA11y": "Close listing"
     },
     "toast": {
@@ -152,7 +158,8 @@
       "VALIDATION_FAILED": "Please check your input.",
       "MARKET_ORDER_NOT_AMENDABLE": "Only sale orders for furniture you issued can change quantity.",
       "MARKET_AMEND_BELOW_FILLED": "You can't go below the quantity already sold.",
-      "generic": "Something went wrong. Please try again shortly."
+      "generic": "Something went wrong. Please try again shortly.",
+      "MARKET_NO_SELL_ORDERS": "There are no sell orders available."
     },
     "reject": {
       "MARKET_SELF_TRADE": "It matched your own order, so it wasn't processed. Your coins or furniture were returned.",
@@ -162,10 +169,14 @@
       "MARKET_ENGINE_ERROR_UNREFUNDED": "Processing failed. Please contact support.",
       "MARKET_AMEND_BELOW_FILLED": "More sold in the meantime, so it could not be reduced that far.",
       "MARKET_INSUFFICIENT_SUPPLY": "Not enough issued stock left to increase.",
-      "generic": "It couldn't be processed. Your coins or furniture were returned."
+      "generic": "It couldn't be processed. Your coins or furniture were returned.",
+      "MARKET_NO_SELL_ORDERS": "All sell orders ended. Your purchase was cancelled and your coins were refunded."
     },
     "screen": {
-      "title": "Furniture market"
+      "title": "Furniture market",
+      "manage": "Manage my sales",
+      "browse": "Browse market",
+      "manageHint": "Furniture you created or own. Place a sell order to list it on the market."
     }
   }
 }

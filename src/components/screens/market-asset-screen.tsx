@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { MarketAsset, MarketPriceLevel, MarketTrade } from '@/api/market';
+import type { MarketAsset, MarketOrder, MarketPriceLevel, MarketTrade } from '@/api/market';
 import type { MarketSide, MarketSource, ReportReason } from '@/api/types';
 import { MarketAssetImage } from '@/components/screens/market/market-asset-image';
 import {
   MarketOrderSheet,
   type MarketOrderDraft,
 } from '@/components/screens/market/market-order-sheet';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Loading } from '@/components/ui/loading';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
@@ -51,6 +52,7 @@ export type MarketAssetScreenProps = {
    * 고칠 수 있다. 결과 안내(토스트)는 호출부 몫.
    */
   onPlaceOrder?: MarketPlaceOrder;
+  onCancelOrder?: (orderId: number) => Promise<boolean> | boolean;
   onOpenOrders?: () => void;
   /**
    * 신고 (App Store 1.2 — 공개 UGC, #1428). 넘겼을 때만 "신고하기"를 보여준다.
@@ -81,6 +83,7 @@ export function MarketAssetScreen({
   onRefresh,
   coinBalance = 0,
   onPlaceOrder,
+  onCancelOrder,
   onOpenOrders,
   onReport,
   onBack,
@@ -92,6 +95,20 @@ export function MarketAssetScreen({
   const column = useResponsiveColumn();
   const inset = useHeaderContentInset();
   const screenStyle = useScreenStyle([]);
+  const [confirming, setConfirming] = useState<MarketOrder | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const cancelInFlight = useRef(false);
+  const confirmCancel = async () => {
+    if (!confirming || !onCancelOrder || cancelInFlight.current) return;
+    cancelInFlight.current = true;
+    setCancelling(true);
+    try {
+      if (await onCancelOrder(confirming.orderId)) setConfirming(null);
+    } finally {
+      cancelInFlight.current = false;
+      setCancelling(false);
+    }
+  };
   const [draft, setDraft] = useState<MarketOrderDraft | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -211,7 +228,12 @@ export function MarketAssetScreen({
                 label={tr(asset.buyPending ? 'market.asset.buyPending' : 'market.asset.buy')}
                 onPress={() => setDraft({ side: 'BUY' })}
                 disabled={
-                  submitting || suspended || asset.owned || asset.buyPending || asset.sellPending
+                  submitting ||
+                  suspended ||
+                  asset.owned ||
+                  asset.buyPending ||
+                  asset.sellPending ||
+                  asset.asks.length === 0
                 }
               />
               {asset.buyPending || asset.sellPending ? (
@@ -256,6 +278,31 @@ export function MarketAssetScreen({
               ) : null}
             </View>
 
+            {(asset.mySellOrders ?? []).length > 0 ? (
+              <View style={[styles.card, { backgroundColor: t.surface }]}>
+                <Text style={[Typography.label, { color: t.text }]}>
+                  {tr('market.asset.mySales')}
+                </Text>
+                {(asset.mySellOrders ?? []).map((order) => (
+                  <View key={order.orderId} style={styles.levelRow}>
+                    <Text style={[Typography.body, styles.flex, { color: t.text }]}>
+                      {tr('market.asset.saleLine', {
+                        price: order.price,
+                        n: order.quantity - order.filledQuantity,
+                      })}
+                    </Text>
+                    {onCancelOrder ? (
+                      <Button
+                        variant="secondary"
+                        label={tr('market.asset.cancelSale')}
+                        disabled={cancelling}
+                        onPress={() => setConfirming(order)}
+                      />
+                    ) : null}
+                  </View>
+                ))}
+              </View>
+            ) : null}
             <View style={[styles.card, { backgroundColor: t.surface }]}>
               <Text style={[Typography.label, { color: t.text }]}>{tr('market.asset.book')}</Text>
               <View style={styles.book}>
@@ -314,6 +361,18 @@ export function MarketAssetScreen({
           onClose={() => setReportOpen(false)}
         />
       ) : null}
+      <ConfirmDialog
+        visible={confirming != null}
+        title={tr('market.asset.cancelSaleTitle')}
+        body={tr('market.asset.cancelSaleBody')}
+        confirmLabel={tr(cancelling ? 'market.asset.cancellingSale' : 'market.asset.cancelSale')}
+        cancelLabel={tr('market.orders.cancelKeep')}
+        destructive
+        onConfirm={() => void confirmCancel()}
+        onCancel={() => {
+          if (!cancelInFlight.current) setConfirming(null);
+        }}
+      />
       {asset ? (
         <MarketOrderSheet
           visible={draft != null}

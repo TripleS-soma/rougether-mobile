@@ -144,10 +144,16 @@ async function sendWithRetry<T>(
 // --- 조회 훅 ------------------------------------------------------------------
 
 /** 거래소 종목 목록 (GET /market/assets). `enabled=false`면 요청하지 않는다. */
-export function useMarketAssets({ enabled = true }: { enabled?: boolean } = {}) {
+export function useMarketAssets({
+  enabled = true,
+  mine = false,
+}: { enabled?: boolean; mine?: boolean } = {}) {
   const qc = useQueryClient();
   const userId = getSessionUserId();
-  const queryKey = useMemo(() => queryKeys.market.assets(userId), [userId]);
+  const queryKey = useMemo(
+    () => (mine ? [...queryKeys.market.assets(userId), 'mine'] : queryKeys.market.assets(userId)),
+    [userId, mine],
+  );
   const {
     data,
     isPending,
@@ -160,7 +166,12 @@ export function useMarketAssets({ enabled = true }: { enabled?: boolean } = {}) 
     refetch,
   } = useInfiniteQuery({
     queryKey,
-    queryFn: ({ pageParam }) => fetchMarketAssets({ page: pageParam, size: MARKET_PAGE_SIZE }),
+    queryFn: ({ pageParam }) =>
+      fetchMarketAssets({
+        page: pageParam,
+        size: MARKET_PAGE_SIZE,
+        ...(mine ? { mine: true } : {}),
+      }),
     initialPageParam: 0,
     getNextPageParam: (last, _all, lastParam) => (last.hasNext ? lastParam + 1 : undefined),
     select: selectCards,
