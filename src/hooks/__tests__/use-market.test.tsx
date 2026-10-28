@@ -363,7 +363,10 @@ describe('useMarketActions — 주문 흐름 (#1427)', () => {
     await waitFor(() =>
       expect(client.getQueryData(['market', undefined, 'asset', 9])).toMatchObject({ assetId: 9 }),
     );
-    expect(toast).toHaveBeenCalledWith('거래소에 올렸어요', 'success');
+    expect(toast).toHaveBeenCalledWith(
+      '판매 준비가 끝났어요. 판매 주문을 등록하면 거래소에 보여요.',
+      'success',
+    );
 
     jest
       .mocked(issueMarketAsset)

@@ -1,4 +1,4 @@
-import { fireEvent, render, renderHook, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, renderHook, waitFor } from '@testing-library/react-native';
 
 import { fetchMarketAssets, fetchMyMarketOrders } from '@/api/market';
 import { NavMenuPopover } from '@/components/app/nav-menu-popover';
@@ -57,6 +57,27 @@ describe('거래소 내비게이션 (#1427 → #1502 독립 화면)', () => {
     expect(ui.getByText('판매 중인 가구 1개')).toBeTruthy();
   });
 
+  it('내 판매 관리로 전환하면 비노출 가구도 조회하는 전용 목록을 사용한다', async () => {
+    jest.mocked(fetchMarketAssets).mockClear();
+    const { result } = await renderHook(
+      () =>
+        useMarketPages({
+          nav: { screen: 'market', setScreen: jest.fn(), goBack: jest.fn() },
+          coinBalance: 0,
+          diamondBalance: 0,
+        }),
+      { wrapper: queryWrapper() },
+    );
+    await act(async () => result.current.subScreen?.props.onToggleManageSales());
+    await waitFor(() =>
+      expect(fetchMarketAssets).toHaveBeenCalledWith(expect.objectContaining({ mine: true })),
+    );
+    expect(result.current.subScreen?.props.managingSales).toBe(true);
+    const ui = await render(<>{result.current.subScreen}</>, { wrapper: queryWrapper() });
+    expect(ui.getByLabelText('거래소 보기')).toBeTruthy();
+    expect(ui.getByText(/판매 주문을 등록하면 거래소에 보여요/)).toBeTruthy();
+  });
+
   it('전체 메뉴에서 "가구 거래소"는 방 꾸미기 바로 아래이고, 누르면 메뉴를 닫고 연다', async () => {
     const onClose = jest.fn();
     const onOpenMarket = jest.fn();
@@ -79,7 +100,7 @@ describe('거래소 내비게이션 (#1427 → #1502 독립 화면)', () => {
   });
 });
 
-describe('스튜디오 "거래소에 올리기" (#1427)', () => {
+describe('스튜디오 "판매 준비하기" (#1427)', () => {
   const jobs = [
     {
       id: 'job-1',
@@ -100,7 +121,7 @@ describe('스튜디오 "거래소에 올리기" (#1427)', () => {
         onIssue={onIssue}
       />,
     );
-    await fireEvent.press(ui.getByLabelText('거래소에 올리기'));
+    await fireEvent.press(ui.getByLabelText('판매 준비하기'));
     expect(ui.getByText(/한 번 올리면 추가 발행할 수 없고/)).toBeTruthy();
     await fireEvent.press(ui.getByLabelText('3개'));
     await fireEvent.press(ui.getByLabelText('3개 발행하기'));
@@ -111,7 +132,7 @@ describe('스튜디오 "거래소에 올리기" (#1427)', () => {
     const ui = await render(
       <FurnitureStudioScreen balance={{ available: 0, reserved: 0 }} jobs={jobs} photo={null} />,
     );
-    expect(ui.queryByLabelText('거래소에 올리기')).toBeNull();
+    expect(ui.queryByLabelText('판매 준비하기')).toBeNull();
   });
 
   it.each(['market', 'marketOrders', 'marketAsset'] as const)(

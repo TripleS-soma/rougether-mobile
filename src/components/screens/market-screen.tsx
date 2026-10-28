@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { MarketAssetCard } from '@/api/market';
+import { Button } from '@/components/ui/button';
 import { MarketList } from '@/components/screens/market/market-list';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -26,6 +27,8 @@ export type MarketScreenProps = {
   diamondBalance?: number;
   /** 판매 중인 내 가구 수 — 서버가 가구함에서 숨기므로 여기서 알린다. 0이면 줄이 없다. */
   sellingCount?: number;
+  managingSales?: boolean;
+  onToggleManageSales?: () => void;
   onBack?: () => void;
 };
 
@@ -49,6 +52,8 @@ export function MarketScreen({
   coinBalance = 0,
   diamondBalance = 0,
   sellingCount = 0,
+  managingSales = false,
+  onToggleManageSales,
   onBack,
 }: MarketScreenProps) {
   const t = useTokens();
@@ -91,6 +96,18 @@ export function MarketScreen({
               </Pressable>
             ) : null}
           </View>
+        ) : null}
+        {onToggleManageSales ? (
+          <Button
+            variant="secondary"
+            label={tr(managingSales ? 'market.screen.browse' : 'market.screen.manage')}
+            onPress={onToggleManageSales}
+          />
+        ) : null}
+        {managingSales ? (
+          <Text style={[Typography.label, { color: t.text }]}>
+            {tr('market.screen.manageHint')}
+          </Text>
         ) : null}
         <MarketList
           assets={assets}
