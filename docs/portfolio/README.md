@@ -43,6 +43,9 @@ Claude(또는 작업자)가 대화·작업 중 아래에 해당한다고 **스�
 
 ## 목록
 
+- [2026-10-28, 구매 대기와 실제 보유 상태 구분](2026-10-28-market-pending-state.md)
+
+- [2026-10-28 · iOS에서 푸시를 눌러도 해당 화면으로 안 가는 문제 — FCM data가 비어 들어오던 원인](2026-10-28-ios-fcm-push-data-empty.md)
 - [2026-10-25 · OTA 레인에서 이탈한 설치본에 말 걸기 — 버전 게이트를 JS만으로 만들기](2026-10-25-ota-stranded-install-version-gate.md)
 - [2026-10-13 · 웹 구글 로그인이 누르자마자 실패 — 구글 버튼이 iframe으로 바뀌어 막힌 "숨은 버튼 클릭"](2026-10-13-web-google-login-gis-iframe.md)
 - [2026-10-12 · 초대 링크를 누르면 방 화면만 뜨는 문제 — 웜 스타트에서 앱 셸이 둘이 되던 딥링크 리다이렉트](2026-10-12-deeplink-warm-start-duplicate-shell.md)

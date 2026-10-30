@@ -870,6 +870,7 @@ export type MarketAssetListResponse = {
 };
 
 export type MarketAssetResponse = {
+  mySellOrders?: MarketOrderResponse[];
   assetId?: number;
   itemId?: number;
   name?: string;
@@ -881,6 +882,8 @@ export type MarketAssetResponse = {
   status?: 'ACTIVE' | 'SUSPENDED';
   lastTradePrice?: number | null;
   owned?: boolean;
+  buyPending?: boolean;
+  sellPending?: boolean;
   asks?: PriceLevel[];
   bids?: PriceLevel[];
 };

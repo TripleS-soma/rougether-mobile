@@ -1,11 +1,51 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
+import type { MarketOrder } from '@/api/market';
 import { MarketAssetScreen } from '@/components/screens/market-asset-screen';
 import { DEMO_MARKET_ASSET, DEMO_MARKET_TRADES } from '@/mocks/fixtures';
 
 const NOW = new Date('2026-09-29T03:00:00Z');
 
 describe('MarketAssetScreen (#1427)', () => {
+  it('구매 대기는 보유로 표시하지 않고 구매를 막고 내 주문으로 안내한다', async () => {
+    const onOpenOrders = jest.fn();
+    const ui = await render(
+      <MarketAssetScreen
+        asset={{ ...DEMO_MARKET_ASSET, owned: false, buyPending: true }}
+        onOpenOrders={onOpenOrders}
+      />,
+    );
+    expect(ui.getByLabelText('구매 대기 중').props.accessibilityState).toMatchObject({
+      disabled: true,
+    });
+    expect(ui.queryByLabelText('판매하기')).toBeNull();
+    expect(ui.getByText(/체결 상태와 취소는 내 주문/)).toBeTruthy();
+    await fireEvent.press(ui.getByLabelText('내 주문'));
+    expect(onOpenOrders).toHaveBeenCalled();
+  });
+
+  it('판매 대기 중에는 보유 여부와 관계없이 재구매를 막는다', async () => {
+    const ui = await render(
+      <MarketAssetScreen asset={{ ...DEMO_MARKET_ASSET, owned: false, sellPending: true }} />,
+    );
+    expect(ui.getByLabelText('구매하기').props.accessibilityState).toMatchObject({
+      disabled: true,
+    });
+    expect(ui.getByText(/판매 주문이 있어 구매할 수 없어요/)).toBeTruthy();
+  });
+
+  it('판매 주문이 없으면 구매를 막고 재판매 시 다시 노출됨을 안내한다', async () => {
+    const ui = await render(
+      <MarketAssetScreen
+        asset={{ ...DEMO_MARKET_ASSET, owned: false, asks: [], bestAskPrice: null }}
+      />,
+    );
+    expect(ui.getByLabelText('구매하기').props.accessibilityState).toMatchObject({
+      disabled: true,
+    });
+    expect(ui.getByText(/현재 판매 주문이 없어 구매할 수 없어요/)).toBeTruthy();
+  });
+
   it('상세 — 이름·제작자·발행 수·최저 판매가·최근 거래가, 호가 위 3단계, 최근 거래', async () => {
     const ui = await render(
       <MarketAssetScreen asset={DEMO_MARKET_ASSET} trades={DEMO_MARKET_TRADES} now={NOW} />,
@@ -148,5 +188,135 @@ describe('MarketAssetScreen (#1427)', () => {
         quantity: 2,
       }),
     );
+  });
+  it('상세에서 내 판매의 가격과 잔량을 보고 선택한 주문만 취소한다', async () => {
+    const sale: MarketOrder = {
+      orderId: 81,
+      assetId: 1,
+      name: '고양이 소파',
+      assetKey: null,
+      side: 'SELL',
+      source: 'ISSUANCE',
+      price: 50,
+      quantity: 3,
+      filledQuantity: 1,
+      status: 'OPEN',
+      expiresAt: null,
+      createdAt: null,
+    };
+    const onCancelOrder = jest.fn().mockResolvedValue(true);
+    const ui = await render(
+      <MarketAssetScreen
+        asset={{ ...DEMO_MARKET_ASSET, mySellOrders: [sale, { ...sale, orderId: 82, price: 60 }] }}
+        onCancelOrder={onCancelOrder}
+      />,
+    );
+    expect(ui.getByText('50코인, 남은 2개')).toBeTruthy();
+    expect(ui.getByText('60코인, 남은 2개')).toBeTruthy();
+    await fireEvent.press(ui.getAllByLabelText('판매 취소')[1]);
+    expect(ui.getByText(/마지막 판매 주문이면 거래소에서 내려가고/)).toBeTruthy();
+    expect(onCancelOrder).not.toHaveBeenCalled();
+    await fireEvent.press(ui.getAllByLabelText('판매 취소').at(-1)!);
+    await waitFor(() => expect(onCancelOrder).toHaveBeenCalledWith(82));
+    await waitFor(() => expect(ui.queryByText('판매를 취소할까요?')).toBeNull());
+  });
+
+  it('판매 취소를 거절하면 확인창을 유지하고 재요청할 수 있다', async () => {
+    const sale: MarketOrder = {
+      orderId: 81,
+      assetId: 1,
+      name: '고양이 소파',
+      assetKey: null,
+      side: 'SELL',
+      source: 'INVENTORY',
+      price: 50,
+      quantity: 1,
+      filledQuantity: 0,
+      status: 'OPEN',
+      expiresAt: null,
+      createdAt: null,
+    };
+    const onCancelOrder = jest.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const ui = await render(
+      <MarketAssetScreen
+        asset={{ ...DEMO_MARKET_ASSET, mySellOrders: [sale] }}
+        onCancelOrder={onCancelOrder}
+      />,
+    );
+    await fireEvent.press(ui.getByLabelText('판매 취소'));
+    await fireEvent.press(ui.getAllByLabelText('판매 취소').at(-1)!);
+    await waitFor(() => expect(onCancelOrder).toHaveBeenCalledTimes(1));
+    expect(ui.getByText('판매를 취소할까요?')).toBeTruthy();
+    await fireEvent.press(ui.getAllByLabelText('판매 취소').at(-1)!);
+    await waitFor(() => expect(onCancelOrder).toHaveBeenCalledTimes(2));
+  });
+  it('판매 취소 처리 중에는 연속 클릭해도 접수를 중복하지 않는다', async () => {
+    const sale: MarketOrder = {
+      orderId: 81,
+      assetId: 1,
+      name: '고양이 소파',
+      assetKey: null,
+      side: 'SELL',
+      source: 'INVENTORY',
+      price: 50,
+      quantity: 1,
+      filledQuantity: 0,
+      status: 'OPEN',
+      expiresAt: null,
+      createdAt: null,
+    };
+    let finish!: (value: boolean) => void;
+    const onCancelOrder = jest.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const ui = await render(
+      <MarketAssetScreen
+        asset={{ ...DEMO_MARKET_ASSET, mySellOrders: [sale] }}
+        onCancelOrder={onCancelOrder}
+      />,
+    );
+    await fireEvent.press(ui.getByLabelText('판매 취소'));
+    await fireEvent.press(ui.getAllByLabelText('판매 취소').at(-1)!);
+    await fireEvent.press(ui.getByLabelText('취소 처리 중...'));
+    expect(onCancelOrder).toHaveBeenCalledTimes(1);
+    await act(async () => finish(true));
+    await waitFor(() => expect(ui.queryByText('판매를 취소할까요?')).toBeNull());
+  });
+  it('취소 도중 이미 종료된 주문이 목록에서 사라지면 확인창도 닫힌다', async () => {
+    const sale: MarketOrder = {
+      orderId: 81,
+      assetId: 1,
+      name: '고양이 소파',
+      assetKey: null,
+      side: 'SELL',
+      source: 'INVENTORY',
+      price: 50,
+      quantity: 1,
+      filledQuantity: 0,
+      status: 'OPEN',
+      expiresAt: null,
+      createdAt: null,
+    };
+    const onCancelOrder = jest.fn().mockResolvedValue(false);
+    const ui = await render(
+      <MarketAssetScreen
+        asset={{ ...DEMO_MARKET_ASSET, mySellOrders: [sale] }}
+        onCancelOrder={onCancelOrder}
+      />,
+    );
+    await fireEvent.press(ui.getByLabelText('판매 취소'));
+    await fireEvent.press(ui.getAllByLabelText('판매 취소').at(-1)!);
+    await waitFor(() => expect(onCancelOrder).toHaveBeenCalledTimes(1));
+    await ui.rerender(
+      <MarketAssetScreen
+        asset={{ ...DEMO_MARKET_ASSET, mySellOrders: [] }}
+        onCancelOrder={onCancelOrder}
+      />,
+    );
+    expect(ui.queryByText('판매를 취소할까요?')).toBeNull();
+    expect(ui.queryByLabelText('판매 취소')).toBeNull();
   });
 });

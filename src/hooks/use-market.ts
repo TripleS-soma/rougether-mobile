@@ -144,10 +144,16 @@ async function sendWithRetry<T>(
 // --- 조회 훅 ------------------------------------------------------------------
 
 /** 거래소 종목 목록 (GET /market/assets). `enabled=false`면 요청하지 않는다. */
-export function useMarketAssets({ enabled = true }: { enabled?: boolean } = {}) {
+export function useMarketAssets({
+  enabled = true,
+  mine = false,
+}: { enabled?: boolean; mine?: boolean } = {}) {
   const qc = useQueryClient();
   const userId = getSessionUserId();
-  const queryKey = useMemo(() => queryKeys.market.assets(userId), [userId]);
+  const queryKey = useMemo(
+    () => (mine ? [...queryKeys.market.assets(userId), 'mine'] : queryKeys.market.assets(userId)),
+    [userId, mine],
+  );
   const {
     data,
     isPending,
@@ -160,7 +166,12 @@ export function useMarketAssets({ enabled = true }: { enabled?: boolean } = {}) 
     refetch,
   } = useInfiniteQuery({
     queryKey,
-    queryFn: ({ pageParam }) => fetchMarketAssets({ page: pageParam, size: MARKET_PAGE_SIZE }),
+    queryFn: ({ pageParam }) =>
+      fetchMarketAssets({
+        page: pageParam,
+        size: MARKET_PAGE_SIZE,
+        ...(mine ? { mine: true } : {}),
+      }),
     initialPageParam: 0,
     getNextPageParam: (last, _all, lastParam) => (last.hasNext ? lastParam + 1 : undefined),
     select: selectCards,
@@ -378,11 +389,12 @@ export function useMarketActions({
 
   /** 에스크로·체결로 바뀐 것 전부 — 지갑·재화 내역·인벤토리·내 방·거래소. */
   const invalidateAfterTrade = useCallback(() => {
-    void qc.invalidateQueries({ queryKey: queryKeys.market.all(userId) });
+    const marketRefresh = qc.invalidateQueries({ queryKey: queryKeys.market.all(userId) });
     void qc.invalidateQueries({ queryKey: queryKeys.myItems.all });
     void qc.invalidateQueries({ queryKey: queryKeys.myRoom.all });
     void qc.invalidateQueries({ queryKey: queryKeys.walletHistory(userId) });
     void refreshWallet();
+    return marketRefresh;
   }, [qc, userId, refreshWallet]);
 
   /** 접수 이후 공통 — 폴링, 결과 토스트, 무효화. */
@@ -392,7 +404,7 @@ export function useMarketActions({
       kind: { side: MarketSide | 'CANCEL' | 'AMEND'; source?: MarketSource },
     ): Promise<MarketOrderOutcome> => {
       const final = await pollMarketCommand(accepted, pollRef.current);
-      invalidateAfterTrade();
+      await invalidateAfterTrade();
       const say = toastRef.current;
       let outcome: MarketOrderOutcome;
       if (final.status === 'REJECTED') {
@@ -447,8 +459,13 @@ export function useMarketActions({
         result: 'error',
         ...(code ? { code } : {}),
       });
-      // 거래 정지·없는 종목은 화면이 들고 있는 상세가 낡았다 — 다시 받게 한다.
-      if (code === ErrorCode.MARKET_ASSET_SUSPENDED || code === ErrorCode.MARKET_ASSET_NOT_FOUND) {
+      // 거래 정지·없는 종목·보유/주문 충돌이면 화면이 들고 있는 상세를 다시 받는다.
+      if (
+        code === ErrorCode.MARKET_ASSET_SUSPENDED ||
+        code === ErrorCode.MARKET_ASSET_NOT_FOUND ||
+        code === ErrorCode.MARKET_ALREADY_HOLDING ||
+        code === ErrorCode.MARKET_OWN_ORDER_CONFLICT
+      ) {
         void qc.invalidateQueries({ queryKey: queryKeys.market.all(userId) });
       }
       const outcome: MarketOrderOutcome = { accepted: false, result: 'error', code };

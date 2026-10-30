@@ -49,11 +49,15 @@ export function useMarketPages({
   const { show: toast } = useToast();
 
   // 목록은 거래소를 처음 열 때부터 받는다 — 셸에 상주하므로 앱 시작 요청을 늘리지 않게.
+  const [managingSales, setManagingSales] = useState(false);
   const [listVisited, setListVisited] = useState(false);
   useEffect(() => {
     if (MARKET_ENABLED && screen === 'market') setListVisited(true);
   }, [screen]);
-  const list = useMarketAssets({ enabled: MARKET_ENABLED && (listVisited || screen === 'market') });
+  const list = useMarketAssets({
+    enabled: MARKET_ENABLED && (listVisited || screen === 'market'),
+    mine: managingSales,
+  });
 
   // 판매 중 수 — 거래소·내 주문에 있을 때만. 내 주문의 대기 중 탭과 같은 캐시.
   const openOrders = useMyMarketOrders('OPEN', {
@@ -141,7 +145,8 @@ export function useMarketPages({
   const cancelAction = actions.cancelOrder;
   const cancel = useCallback(
     async (orderId: number) => {
-      await cancelAction(orderId);
+      const outcome = await cancelAction(orderId);
+      return outcome.accepted && outcome.result !== 'rejected';
     },
     [cancelAction],
   );
@@ -161,6 +166,8 @@ export function useMarketPages({
       coinBalance={coinBalance}
       diamondBalance={diamondBalance}
       sellingCount={sellingCount}
+      managingSales={managingSales}
+      onToggleManageSales={() => setManagingSales((value) => !value)}
       onBack={goBack}
     />
   ) : screen === 'marketAsset' ? (
@@ -173,6 +180,7 @@ export function useMarketPages({
       onRefresh={detail.retry}
       coinBalance={coinBalance}
       onPlaceOrder={placeOrder}
+      onCancelOrder={cancel}
       onOpenOrders={openOrdersScreen}
       onReport={reportAsset}
       onBack={goBack}

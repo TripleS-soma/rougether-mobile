@@ -97,6 +97,27 @@ describe('거래소 API (#1427)', () => {
     });
   });
 
+  it('구매 대기와 판매 대기는 실제 보유 여부와 별도로 유지한다', async () => {
+    mockResponse({
+      assetId: 7,
+      status: 'ACTIVE',
+      owned: false,
+      buyPending: true,
+      sellPending: false,
+    });
+    expect(await fetchMarketAsset(7)).toMatchObject({
+      owned: false,
+      buyPending: true,
+      sellPending: false,
+    });
+    mockResponse({ assetId: 7, status: 'ACTIVE', owned: false, sellPending: true });
+    expect(await fetchMarketAsset(7)).toMatchObject({
+      owned: false,
+      buyPending: false,
+      sellPending: true,
+    });
+  });
+
   it('최근 체결·내 주문·접수 결과 경로', async () => {
     let fetchMock = mockResponse({ items: [{ tradeId: 1, price: 30, quantity: 1 }] });
     await fetchMarketTrades(7, { size: 10 });
@@ -185,5 +206,36 @@ describe('거래소 API (#1427)', () => {
       side: 'SELL',
       status: 'OPEN',
     });
+  });
+  it('내 판매 관리 목록은 사용자별 경로를 조회하고 페이지를 유지한다', async () => {
+    const fetchMock = mockResponse({ items: [], page: 1, size: 10, totalElements: 12 });
+    const page = await fetchMarketAssets({ mine: true, page: 1, size: 10 });
+    expect(call(fetchMock).url).toBe(`${API_BASE}/me/market/assets?page=1&size=10`);
+    expect(page.totalElements).toBe(12);
+  });
+
+  it('상세의 내 판매 주문은 취소에 필요한 id와 수량을 보존한다', async () => {
+    mockResponse({
+      assetId: 7,
+      status: 'ACTIVE',
+      mySellOrders: [
+        {
+          orderId: 12,
+          assetId: 7,
+          side: 'SELL',
+          status: 'OPEN',
+          price: 50,
+          quantity: 3,
+          filledQuantity: 1,
+        },
+        { orderId: 13, assetId: 7, side: 'SELL', status: 'FILLED' },
+        { orderId: 14, assetId: 7, side: 'BUY', status: 'OPEN' },
+      ],
+    });
+    expect((await fetchMarketAsset(7)).mySellOrders).toEqual([
+      expect.objectContaining({ orderId: 12, price: 50, quantity: 3, filledQuantity: 1 }),
+    ]);
+    mockResponse({ assetId: 7, status: 'ACTIVE' });
+    expect((await fetchMarketAsset(7)).mySellOrders).toEqual([]);
   });
 });

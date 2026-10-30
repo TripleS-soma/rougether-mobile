@@ -45,6 +45,11 @@ export type MarketAsset = MarketAssetCard & {
   unissuedQuantity: number;
   /** 인벤토리에 활성 보유 중(판매 등록으로 맡긴 것은 제외). */
   owned: boolean;
+  /** 엔진 처리 전 접수 또는 미체결 주문이 있는지 여부. 구 서버 응답에서는 생략. */
+  buyPending?: boolean;
+  sellPending?: boolean;
+  /** 본인의 미체결 판매 주문. */
+  mySellOrders?: MarketOrder[];
   /** 가격 오름차순. */
   asks: MarketPriceLevel[];
   /** 가격 내림차순. */
@@ -117,6 +122,11 @@ export function toMarketAsset(res: MarketAssetResponse): MarketAsset {
     isCreator: res.isCreator ?? false,
     unissuedQuantity: res.unissuedQuantity ?? 0,
     owned: res.owned ?? false,
+    buyPending: res.buyPending ?? false,
+    sellPending: res.sellPending ?? false,
+    mySellOrders: (res.mySellOrders ?? [])
+      .map(toMarketOrder)
+      .filter((o): o is MarketOrder => o !== null && o.side === 'SELL' && o.status === 'OPEN'),
     asks,
     bids,
   };
@@ -168,9 +178,12 @@ function adaptPage<T, R>(page: Page<T>, adapt: (item: T) => R | null): Page<R> {
 export async function fetchMarketAssets({
   page = 0,
   size,
-}: { page?: number; size?: number } = {}): Promise<Page<MarketAssetCard>> {
+  mine = false,
+}: { page?: number; size?: number; mine?: boolean } = {}): Promise<Page<MarketAssetCard>> {
   return adaptPage(
-    await apiGetPage<AssetCard>(`/market/assets${buildQuery({ page, size })}`),
+    await apiGetPage<AssetCard>(
+      `${mine ? '/me/market/assets' : '/market/assets'}${buildQuery({ page, size })}`,
+    ),
     toMarketAssetCard,
   );
 }
