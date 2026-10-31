@@ -18,6 +18,9 @@ export type BearCheckProps = {
   size?: number;
 };
 
+/** 기본 곰 체크 폭 — 카테고리 헤더가 이 폭에 맞춰 줄을 맞춘다. */
+export const BEAR_CHECK_SIZE = 26;
+
 /**
  * 곰 헤드 체크 토글 (#344, design-sync 시안 A) — 둥근 귀 2개가 달린 헤드
  * 실루엣. 미완료는 윤곽선만, 완료되면 실루엣 전체가 카테고리 색으로 차고
@@ -30,7 +33,7 @@ export function BearCheck({
   color,
   onPress,
   accessibilityLabel,
-  size = 26,
+  size = BEAR_CHECK_SIZE,
 }: BearCheckProps) {
   const t = useTokens();
   const fill = color ?? t.primary;

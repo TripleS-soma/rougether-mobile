@@ -73,6 +73,7 @@ import type { CalendarDayCount } from '@/api/types';
 import { RoomGrowthPill, type RoomGrowthProps } from '@/components/ui/room-growth-pill';
 import { type CalendarFilter, calendarToday } from '@/utils/calendar-progress';
 import { Calendar, type CalendarSelectSource, WEEK_COLLAPSE_MS } from '@/components/ui/calendar';
+import { BEAR_CHECK_SIZE } from '@/components/ui/bear-check';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { CategoryIcon } from '@/components/ui/category-icon';
@@ -1676,6 +1677,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   );
 });
 
+const CAT_DOT_SIZE = 32;
+
 const styles = StyleSheet.create({
   quickAddTrigger: {
     borderRadius: Radius.pill,
@@ -1876,9 +1879,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 24,
   },
+  // 원은 32지만 곰 체크(26) 폭만 차지한다 — 원 중심이 아래 곰 체크 중심에, 카테고리 이름이
+  // 루틴 제목 시작선에 맞는다.
   catDot: {
-    width: 32,
-    height: 32,
+    width: CAT_DOT_SIZE,
+    height: CAT_DOT_SIZE,
+    marginHorizontal: (BEAR_CHECK_SIZE - CAT_DOT_SIZE) / 2,
     borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1894,8 +1900,6 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   // 제목 + 반복 마커 한 줄 (#576) — 마커는 제목 바로 옆, 제목이 길면 잘린다.
-  // Same width as catDot so checkboxes center under the category emoji and
-  // row titles line up with the category label.
   center: {
     textAlign: 'center',
   },
