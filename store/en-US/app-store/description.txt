@@ -1,23 +1,38 @@
-Keep your routines and your room grows!
+Live in one house with your friends and keep your routines together!
 
-Rougether is a routine tracker for habits that fizzle out when you go it alone — you and your friends live in one house and keep your routines together.
+Rougether is a routine app where friends gather in one house to see each other's day, cheer each other on and keep their routines together. Habits that fizzle out alone keep going when you do them together.
 
+■ One house with your friends
+• Create a house and invite friends with a code. iPhone and Android friends can share one house
+• Use the house chat to share what you got done today and everything in between
+• Visit friends' rooms, leave a note in their guestbook and send cheers
+• See how your friends are doing on the routines they share with the house, and keep each other going
+• Fill shared missions together to level up your house
+• A friend's room left empty for too long gets cobwebs. Clear them for coins, and your friend gets a nudge to come back
+• Join more than one house — one for your study group, one for family, one for roommates
+
+■ With the whole Rougether community
+• Share your day and routine proof in the feed and chat in the comments. Proof posts show the routine you completed
+• Buy and sell furniture with other members in the furniture market — even list furniture you made from a photo
+• Chase the all-member leaderboard with your best score in each mini-game
+
+■ Your routines, kept light
 • Check off today's routines and to-dos and build your streak
 • Add routines and to-dos right from your room or the calendar. Pick a category later if you like
 • Start small with a routine that matches your interests
+• Set weekday repeats and reminder times however you like
 • Import events from your device calendar as to-dos. We only read your calendar, never write to it
-• Complete routines to earn coins and collect furniture from the gacha
-• Decorate your room freely with what you collect. Your room is your record
-• Buy and sell furniture with other members in the furniture market — even list furniture you made from a photo
-• Play mini-games in your room: obstacle jump, stair climb, and number merge
-• Chase the all-member leaderboard with your best score in each game
-• Build a house with friends, visit each other's rooms, and send cheers
-• Share your day and routine proof in the feed. Proof posts show the routine you completed
-• Complete shared missions to level up your house
 • Look back on your week with the weekly review: completion rate, by day and by routine
-• A room left empty for too long gets cobwebs. Clear them for coins
 
-The cat app icon changes its expression as you keep (or skip) your routines.
-Routine reminders and a gentle comeback nudge from the cat help you start again.
+■ A room your friends come to visit
+• Complete routines to earn coins and collect furniture from the gacha
+• Decorate your room with what you collect, and your friends drop by to see it
+• Play mini-games in your room: obstacle jump, stair climb, number merge, box tower and yarn color match
+
+■ Never forget
+• Get reminders at your routine and to-do times, and for new house chat messages
+• Turn notification types on or off in Settings, and chat notifications in each chat room
 
 Let's keep them together, today too — on Rougether!
+
+The cat app icon changes its expression as you keep (or skip) your routines.
