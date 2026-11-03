@@ -27,6 +27,7 @@ import { MinigamePreview, MINIGAME_PREVIEW_CATALOG } from '@/dev/minigame-previe
 import { MinigamesScreen } from '@/components/screens/minigames-screen';
 import { YarnGame } from '@/components/minigame/yarn-game';
 import { MinigameRunnerScreen } from '@/components/screens/minigame-runner-screen';
+import { MINIGAME_DEFINITIONS } from '@/constants/minigames';
 import { MinigameLeaderboardScreen } from '@/components/screens/minigame-leaderboard-screen';
 import type { GalleryEntry } from '@/dev/registry/types';
 
@@ -118,6 +119,20 @@ export const roomEntries: GalleryEntry[] = [
     name: 'MinigameRunnerScreen',
     description: '루틴 러너 시작 화면 미리보기.',
     render: () => <MinigameRunnerScreen />,
+  },
+  {
+    name: 'MinigameRunnerScreen · 규칙 카드',
+    description:
+      '게임을 처음 열 때(게임별·계정별 한 번) 시작 전 자리에 뜨는 규칙 카드 — 조작·점수·끝나는 때. [알겠어요]로 닫고 제목줄 ? 로 다시 봐요.',
+    render: () => (
+      <MinigameRunnerScreen
+        gameName={MINIGAME_DEFINITIONS['cat-tower'].name}
+        rules={MINIGAME_DEFINITIONS['cat-tower'].rules}
+        showRules
+        onDismissRules={() => {}}
+        onOpenRules={() => {}}
+      />
+    ),
   },
   {
     name: 'MinigameRunnerScreen · 새 기록 자랑 제안',

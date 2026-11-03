@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MarketAssetCard } from '@/api/market';
 import { MarketAssetImage } from '@/components/screens/market/market-asset-image';
 import { Button } from '@/components/ui/button';
+import { CoachTarget } from '@/components/ui/coach-mark';
 import { Icon } from '@/components/ui/icon';
 import { Loading } from '@/components/ui/loading';
 import { RetryState } from '@/components/ui/retry-state';
@@ -54,16 +55,18 @@ export function MarketList({
   return (
     <View style={styles.wrap} testID="market-list">
       <View style={styles.head}>
-        <Pressable
-          onPress={onOpenOrders}
-          accessibilityRole="button"
-          accessibilityLabel={tr('market.list.myOrders')}
-          style={[styles.chip, { backgroundColor: t.surfaceMuted }]}>
-          <Icon name="list" size={14} color={t.text} />
-          <Text style={[Typography.supporting, { color: t.text }]}>
-            {tr('market.list.myOrders')}
-          </Text>
-        </Pressable>
+        <CoachTarget id="market-orders">
+          <Pressable
+            onPress={onOpenOrders}
+            accessibilityRole="button"
+            accessibilityLabel={tr('market.list.myOrders')}
+            style={[styles.chip, { backgroundColor: t.surfaceMuted }]}>
+            <Icon name="list" size={14} color={t.text} />
+            <Text style={[Typography.supporting, { color: t.text }]}>
+              {tr('market.list.myOrders')}
+            </Text>
+          </Pressable>
+        </CoachTarget>
         {onRefresh ? (
           <Pressable
             onPress={onRefresh}
@@ -93,39 +96,53 @@ export function MarketList({
         </View>
       ) : (
         <View style={styles.grid}>
-          {assets.map((a) => (
-            <Pressable
-              key={a.assetId}
-              onPress={() => onOpenAsset?.(a.assetId)}
-              accessibilityRole="button"
-              accessibilityLabel={tr('market.list.cardA11y', { name: a.name })}
-              style={[styles.card, { backgroundColor: t.surfaceMuted }]}>
-              <MarketAssetImage assetKey={a.assetKey} name={a.name} size={CARD_IMAGE} />
-              <Text numberOfLines={1} style={[Typography.label, { color: t.text }]}>
-                {a.name}
-              </Text>
-              <Text numberOfLines={1} style={[Typography.supporting, { color: t.textMuted }]}>
-                {a.creatorNickname != null
-                  ? tr('market.creator', { name: a.creatorNickname })
-                  : tr('market.creatorUnknown')}
-              </Text>
-              <Text
-                numberOfLines={1}
+          {assets.map((a, i) => {
+            const card = (
+              <Pressable
+                key={a.assetId}
+                onPress={() => onOpenAsset?.(a.assetId)}
+                accessibilityRole="button"
+                accessibilityLabel={tr('market.list.cardA11y', { name: a.name })}
                 style={[
-                  Typography.supporting,
-                  { color: a.bestAskPrice != null ? t.primaryText : t.textMuted },
+                  styles.card,
+                  i === 0 && styles.cardFill,
+                  { backgroundColor: t.surfaceMuted },
                 ]}>
-                {a.bestAskPrice != null
-                  ? tr('market.list.fromPrice', { price: a.bestAskPrice })
-                  : tr('market.list.noAsk')}
-              </Text>
-              <Text numberOfLines={1} style={[Typography.supporting, { color: t.textMuted }]}>
-                {a.lastTradePrice != null
-                  ? tr('market.list.lastPrice', { price: a.lastTradePrice })
-                  : tr('market.list.noTrade')}
-              </Text>
-            </Pressable>
-          ))}
+                <MarketAssetImage assetKey={a.assetKey} name={a.name} size={CARD_IMAGE} />
+                <Text numberOfLines={1} style={[Typography.label, { color: t.text }]}>
+                  {a.name}
+                </Text>
+                <Text numberOfLines={1} style={[Typography.supporting, { color: t.textMuted }]}>
+                  {a.creatorNickname != null
+                    ? tr('market.creator', { name: a.creatorNickname })
+                    : tr('market.creatorUnknown')}
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    Typography.supporting,
+                    { color: a.bestAskPrice != null ? t.primaryText : t.textMuted },
+                  ]}>
+                  {a.bestAskPrice != null
+                    ? tr('market.list.fromPrice', { price: a.bestAskPrice })
+                    : tr('market.list.noAsk')}
+                </Text>
+                <Text numberOfLines={1} style={[Typography.supporting, { color: t.textMuted }]}>
+                  {a.lastTradePrice != null
+                    ? tr('market.list.lastPrice', { price: a.lastTradePrice })
+                    : tr('market.list.noTrade')}
+                </Text>
+              </Pressable>
+            );
+            // 튜토리얼 1단계가 짚는 첫 카드 — 격자 폭(48%)은 래퍼가 갖는다.
+            return i === 0 ? (
+              <CoachTarget key={a.assetId} id="market-card" style={styles.cardSlot}>
+                {card}
+              </CoachTarget>
+            ) : (
+              card
+            );
+          })}
         </View>
       )}
 
@@ -179,4 +196,6 @@ const styles = StyleSheet.create({
     gap: Spacing.half,
     alignItems: 'center',
   },
+  cardSlot: { width: '48%' },
+  cardFill: { width: '100%' },
 });

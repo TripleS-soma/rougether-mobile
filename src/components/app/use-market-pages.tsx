@@ -35,6 +35,7 @@ export function useMarketPages({
   nav,
   coinBalance,
   diamondBalance,
+  onOpenGuide,
 }: {
   nav: {
     screen: Screen;
@@ -44,6 +45,8 @@ export function useMarketPages({
   };
   coinBalance: number;
   diamondBalance: number;
+  /** 거래소 헤더 ? — 튜토리얼 다시 보기(참조 고정). */
+  onOpenGuide?: () => void;
 }) {
   const { screen, setScreen, goBack } = nav;
   const { show: toast } = useToast();
@@ -169,6 +172,7 @@ export function useMarketPages({
       managingSales={managingSales}
       onToggleManageSales={() => setManagingSales((value) => !value)}
       onBack={goBack}
+      onOpenGuide={onOpenGuide}
     />
   ) : screen === 'marketAsset' ? (
     <MarketAssetScreen

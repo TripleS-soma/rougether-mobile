@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { useRef, useState, type ReactNode } from 'react';
 import { View, useWindowDimensions } from 'react-native';
@@ -11,6 +12,7 @@ import {
 } from '@/constants/minigames';
 import type { MinigamePlayerProps } from '@/components/app/minigame-player';
 import { MinigameActiveContext, useMinigameSurface } from '@/components/app/use-minigame-surface';
+import { loadSeenTours, markTourSeen } from '@/lib/feature-tour-store';
 import { createTestQueryClient, queryWrapper } from '@/test-utils/query-wrapper';
 import {
   fetchMinigames,
@@ -24,6 +26,7 @@ jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   default: jest.fn(() => ({ width: 750, height: 1334, scale: 2, fontScale: 1 })),
 }));
 jest.mock('@/api/minigames');
+
 jest.mock('@/api/auth', () => ({ getSessionUserId: () => 7 }));
 const mockTrack = jest.fn();
 jest.mock('@/lib/analytics', () => ({ track: (...args: unknown[]) => mockTrack(...args) }));
@@ -96,8 +99,11 @@ async function setup(retainOutgoing = false, share: Omit<HarnessProps, 'retainOu
   });
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   jest.clearAllMocks();
+  // 규칙 카드는 아래 전용 테스트에서 본다 — 나머지는 이미 본 계정으로.
+  await AsyncStorage.clear();
+  for (const game of PLAYABLE_MINIGAMES) await markTourSeen(7, `minigame:${game.gameCode}`);
   catalog.mockResolvedValue(PLAYABLE_MINIGAMES);
   ranking.mockResolvedValue({ items: [], myEntry: null, totalPlayers: 0 });
   start.mockImplementation(async (gameCode) => ({
@@ -118,6 +124,40 @@ beforeEach(() => {
   });
 });
 afterEach(() => clients.splice(0).forEach((client) => client.clear()));
+
+describe('게임별 첫 진입 규칙 카드', () => {
+  it('처음 열면 규칙 카드, [알겠어요]로 닫으면 다음엔 안 뜨고 ? 로 다시 본다', async () => {
+    await AsyncStorage.clear();
+    const ui = await setup();
+    await waitFor(() => expect(ui.getByLabelText('루틴 러너 시작')).toBeTruthy());
+    await fireEvent.press(ui.getByLabelText('루틴 러너 시작'));
+    await waitFor(() => expect(ui.getByText('이렇게 해요')).toBeTruthy());
+    expect(ui.getByText('장애물에 부딪히면 끝나요')).toBeTruthy();
+    await fireEvent.press(ui.getByText('알겠어요'));
+    expect(ui.queryByText('이렇게 해요')).toBeNull();
+    expect(ui.getByText('탭해서 점프')).toBeTruthy();
+    await waitFor(async () =>
+      expect((await loadSeenTours(7)).has('minigame:room-runner')).toBe(true),
+    );
+    await fireEvent.press(ui.getByLabelText('게임 방법'));
+    expect(ui.getByText('이렇게 해요')).toBeTruthy();
+  });
+
+  it('카드를 둔 채 랭킹 도전을 누르면 읽은 것으로 치고 바로 시작한다', async () => {
+    await AsyncStorage.clear();
+    const ui = await setup();
+    await waitFor(() => expect(ui.getByLabelText('고양이 계단 시작')).toBeTruthy());
+    await fireEvent.press(ui.getByLabelText('고양이 계단 시작'));
+    await waitFor(() => expect(ui.getByText('이렇게 해요')).toBeTruthy());
+    await fireEvent.press(ui.getByLabelText('랭킹 도전'));
+    await waitFor(() =>
+      expect(start).toHaveBeenCalledWith('cat-stairs', CURRENT_MINIGAME_RULES_VERSION),
+    );
+    await waitFor(async () =>
+      expect((await loadSeenTours(7)).has('minigame:cat-stairs')).toBe(true),
+    );
+  });
+});
 
 it('navigates catalog to runner and starts an authenticated run only on an explicit challenge', async () => {
   const ui = await setup();
