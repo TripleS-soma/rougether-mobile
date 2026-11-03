@@ -21,6 +21,7 @@ import { HouseScreen } from '@/components/screens/house-screen';
 import { FeedScreen } from '@/components/screens/feed-screen';
 import type { FeedMinigameRecordDraft } from '@/components/screens/feed/types';
 import { FEED_ENABLED } from '@/constants/feed';
+import { MARKET_ENABLED } from '@/constants/market';
 import { isScheduledOn, MyRoomScreen } from '@/components/screens/my-room-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { useStableCallback } from '@/hooks/use-stable-value';
@@ -48,6 +49,12 @@ import { useResolvedScheme } from '@/hooks/use-tokens';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
 import { usePagerLock } from '@/components/app/use-pager-lock';
 import { tutorialCoachStep } from '@/components/app/use-tutorial-coach';
+import {
+  MARKET_TOUR_ID,
+  MARKET_TOUR_TARGETS,
+  marketTourCoachSteps,
+} from '@/components/app/feature-tours';
+import { useFeatureTour } from '@/hooks/use-feature-tour';
 import { CoachMarkOverlay } from '@/components/ui/coach-mark';
 import { useTabScroll } from '@/components/app/use-tab-scroll';
 import { MinigameActiveContext, useMinigameSurface } from '@/components/app/use-minigame-surface';
@@ -541,10 +548,18 @@ export function AppShell({
 
   // 가구 거래소 배선 (#1427) — 목록(전체 메뉴에서 여는 독립 화면, #1502)·상세·내 주문 서브화면,
   // 스튜디오 발행. MARKET_ENABLED가 꺼져 있으면 요청도 화면도 없다.
+  // 거래소 첫 진입 튜토리얼 — 온보딩 미션(완전 잠금 코치마크)이 도는 동안엔 띄우지 않는다.
+  const onboardingCoaching = missions.step != null && missions.completedIndex == null;
+  const marketTour = useFeatureTour(
+    MARKET_TOUR_ID,
+    MARKET_TOUR_TARGETS.length,
+    MARKET_ENABLED && screen === 'market' && !onboardingCoaching,
+  );
   const marketPages = useMarketPages({
     nav: { screen, setScreen, goBack },
     coinBalance: wallet.coin,
     diamondBalance: wallet.diamond,
+    onOpenGuide: marketTour.replay,
   });
 
   // 코치마크 단계 (#1324) — noHouses를 읽으므로 그 아래에서 계산.
@@ -554,6 +569,7 @@ export function AppShell({
       : null;
   const coachSteps = useMemo(() => (coachStep ? [coachStep] : []), [coachStep]);
   const tr = useT();
+  const marketTourSteps = useMemo(() => marketTourCoachSteps(tr), [tr]);
   useEffect(() => {
     setTutorialLocked(coachStep != null);
   }, [coachStep, setTutorialLocked]);
@@ -790,6 +806,14 @@ export function AppShell({
             index: missions.stepIndex + 1,
             total: missions.totalSteps,
           })}
+        />
+      ) : marketTour.visible ? (
+        <CoachMarkOverlay
+          steps={marketTourSteps}
+          index={marketTour.index}
+          onNext={marketTour.next}
+          onSkip={marketTour.skip}
+          frame={coachFrame}
         />
       ) : null}
     </View>
