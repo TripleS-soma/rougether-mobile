@@ -35,3 +35,17 @@ describe('MarketScreen (#1502 — 전체 메뉴의 독립 화면)', () => {
     expect(onBack).toHaveBeenCalled();
   });
 });
+
+describe('MarketScreen 튜토리얼 다시 보기', () => {
+  it('헤더 ? 를 누르면 onOpenGuide', async () => {
+    const onOpenGuide = jest.fn();
+    const ui = await render(<MarketScreen onOpenGuide={onOpenGuide} />);
+    await fireEvent.press(ui.getByLabelText('거래소 이용 안내'));
+    expect(onOpenGuide).toHaveBeenCalled();
+  });
+
+  it('onOpenGuide가 없으면 ? 도 없다', async () => {
+    const ui = await render(<MarketScreen />);
+    expect(ui.queryByLabelText('거래소 이용 안내')).toBeNull();
+  });
+});

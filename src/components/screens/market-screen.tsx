@@ -2,6 +2,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { MarketAssetCard } from '@/api/market';
 import { Button } from '@/components/ui/button';
+import { CoachTarget } from '@/components/ui/coach-mark';
+import { Icon } from '@/components/ui/icon';
 import { MarketList } from '@/components/screens/market/market-list';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -30,6 +32,8 @@ export type MarketScreenProps = {
   managingSales?: boolean;
   onToggleManageSales?: () => void;
   onBack?: () => void;
+  /** 헤더 ? — 거래소 튜토리얼을 처음부터 다시 본다. */
+  onOpenGuide?: () => void;
 };
 
 /**
@@ -55,6 +59,7 @@ export function MarketScreen({
   managingSales = false,
   onToggleManageSales,
   onBack,
+  onOpenGuide,
 }: MarketScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -68,7 +73,20 @@ export function MarketScreen({
       <ScreenHeader
         title={tr('market.screen.title')}
         onBack={onBack}
-        right={<WalletPills coin={coinBalance} diamond={diamondBalance} compact />}
+        right={
+          <View style={styles.headerRight}>
+            {onOpenGuide ? (
+              <Pressable
+                onPress={onOpenGuide}
+                accessibilityRole="button"
+                accessibilityLabel={tr('market.screen.guideA11y')}
+                hitSlop={8}>
+                <Icon name="help" size={20} color={t.textMuted} />
+              </Pressable>
+            ) : null}
+            <WalletPills coin={coinBalance} diamond={diamondBalance} compact />
+          </View>
+        }
       />
       <PawRefreshScroll
         onRefresh={onRefresh}
@@ -98,11 +116,13 @@ export function MarketScreen({
           </View>
         ) : null}
         {onToggleManageSales ? (
-          <Button
-            variant="secondary"
-            label={tr(managingSales ? 'market.screen.browse' : 'market.screen.manage')}
-            onPress={onToggleManageSales}
-          />
+          <CoachTarget id="market-manage">
+            <Button
+              variant="secondary"
+              label={tr(managingSales ? 'market.screen.browse' : 'market.screen.manage')}
+              onPress={onToggleManageSales}
+            />
+          </CoachTarget>
         ) : null}
         {managingSales ? (
           <Text style={[Typography.label, { color: t.text }]}>
@@ -129,6 +149,7 @@ export function MarketScreen({
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   flex: { flex: 1 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   body: {
     paddingHorizontal: Spacing.four,
     paddingBottom: Spacing.six,

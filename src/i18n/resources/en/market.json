@@ -176,7 +176,22 @@
       "title": "Furniture market",
       "manage": "Manage my sales",
       "browse": "Browse market",
-      "manageHint": "Furniture you created or own. Place a sell order to list it on the market."
+      "manageHint": "Furniture you created or own. Place a sell order to list it on the market.",
+      "guideA11y": "How the market works"
+    },
+    "tour": {
+      "card": {
+        "title": "Tap furniture to see prices",
+        "body": "Check asking prices, buy orders and recent trades, then buy or sell right away. When prices match, the trade happens automatically — no seller approval needed."
+      },
+      "orders": {
+        "title": "Your orders live here",
+        "body": "Check and cancel your buy and sell orders. Orders that don't trade within 7 days are cancelled and returned automatically."
+      },
+      "manage": {
+        "title": "Want to sell your furniture?",
+        "body": "Find furniture you made or own here. It shows up in the market once you place a sell order, and you get coins minus fees when it sells."
+      }
     }
   }
 }

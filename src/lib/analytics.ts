@@ -119,6 +119,7 @@ export type AnalyticsEvent =
   // 가구 거래소 (#1427) — MARKET_ENABLED가 꺼져 있는 동안은 발생하지 않는다.
   /** 거래소 화면 진입 — screen: list(꾸미기 거래소 탭)|asset(상세)|orders(내 주문). */
   | 'market_view'
+  | 'feature_tour'
   /**
    * 주문·취소 결과 — side(BUY|SELL|CANCEL), source(INVENTORY|ISSUANCE|none),
    * result(filled|open|cancelled|rejected|pending|error). rejected면 code에 거절 사유.
@@ -318,6 +319,8 @@ export type AnalyticsParams = {
   content_report: { target: string; reason: string };
   user_block: { via: string } | undefined;
   market_view: { screen: 'list' | 'asset' | 'orders' };
+  /** 기능 첫 진입 튜토리얼 — step은 끝낸(건너뛴) 단계 번호(1부터). */
+  feature_tour: { tour: string; action: 'complete' | 'skip' | 'replay'; step: number };
   market_order: { side: string; source: string; result: string; code?: string };
   market_issue: { total_supply: number; result: string };
   shop_purchase: { itemId: number | string };
