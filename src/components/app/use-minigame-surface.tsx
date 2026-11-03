@@ -32,6 +32,7 @@ import {
   useMinigameLeaderboard,
   useMinigameRun,
 } from '@/hooks/use-minigames';
+import { useFeatureTour } from '@/hooks/use-feature-tour';
 import { track } from '@/lib/analytics';
 
 // Retained transition nodes must match the current session, not just the game screen.
@@ -123,6 +124,24 @@ export function useMinigameSurface({
   const runsRef = useLatestRef(runs);
   const run = runs[gameCode];
   const { abandonUnfinished, finish, session } = run;
+  // 게임별 첫 진입 규칙 카드 — 본 기록은 계정별(feature-tour-store). 게임 중엔 접는다.
+  const rulesCard = useFeatureTour(
+    `minigame:${gameCode}`,
+    1,
+    screen === 'minigameRunner' && !session,
+  );
+  // 카드를 둔 채 시작·연습을 누르면 읽은 것으로 친다(다음 진입에 또 뜨지 않게).
+  const startRef = useLatestRef({ run, rulesCard });
+  const startDismissingRules = useCallback(() => {
+    const { run: r, rulesCard: card } = startRef.current;
+    if (card.visible) card.next();
+    r.start();
+  }, [startRef]);
+  const practiceDismissingRules = useCallback(() => {
+    const { run: r, rulesCard: card } = startRef.current;
+    if (card.visible) card.next();
+    r.practice();
+  }, [startRef]);
   const previous = useRef({ screen, gameCode, abandonUnfinished });
   useEffect(() => {
     if (
@@ -226,6 +245,10 @@ export function useMinigameSurface({
         {...run}
         gameName={definition.name}
         instructions={definition.instructions}
+        rules={definition.rules}
+        showRules={rulesCard.visible}
+        onDismissRules={rulesCard.next}
+        onOpenRules={rulesCard.replay}
         characterPose={definition.pose}
         practice={session?.practice}
         game={
@@ -242,8 +265,8 @@ export function useMinigameSurface({
             />
           ) : undefined
         }
-        onStart={run.start}
-        onPractice={run.practice}
+        onStart={startDismissingRules}
+        onPractice={practiceDismissingRules}
         onRetrySubmit={run.retrySubmit}
         // The runner also shows the button before a game starts — only a finished game is a result.
         onLeaderboard={() => openLeaderboard(gameCode, run.finished ? 'result' : 'runner')}

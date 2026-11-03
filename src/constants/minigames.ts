@@ -14,6 +14,8 @@ export type MinigameDefinition = Minigame & {
   gameCode: MinigameCode;
   maxTicks: number;
   instructions: string;
+  /** 처음 열 때 규칙 카드 세 줄 — 조작·점수·끝나는 때. */
+  rules: string[];
   pose: number;
 };
 
@@ -22,6 +24,12 @@ export type MinigameDefinition = Minigame & {
  * 문구(name·description·instructions)는 getter — 모듈 로드 시점에 번역하면 언어 변경이
  * 반영되지 않는다 (#893).
  */
+const RULE_LINES = ['control', 'score', 'end'] as const;
+
+function minigameRules(game: string): string[] {
+  return RULE_LINES.map((line) => i18n.t(`roomShop.minigame.${game}.rules.${line}`));
+}
+
 export const MINIGAME_DEFINITIONS: Record<MinigameCode, MinigameDefinition> = {
   'room-runner': {
     gameCode: 'room-runner',
@@ -35,6 +43,9 @@ export const MINIGAME_DEFINITIONS: Record<MinigameCode, MinigameDefinition> = {
     maxTicks: 18000,
     get instructions() {
       return i18n.t('roomShop.minigame.runner.instructions');
+    },
+    get rules() {
+      return minigameRules('runner');
     },
     pose: 1,
   },
@@ -51,6 +62,9 @@ export const MINIGAME_DEFINITIONS: Record<MinigameCode, MinigameDefinition> = {
     get instructions() {
       return i18n.t('roomShop.minigame.stairs.instructions');
     },
+    get rules() {
+      return minigameRules('stairs');
+    },
     pose: 2,
   },
   'cat-merge': {
@@ -66,6 +80,9 @@ export const MINIGAME_DEFINITIONS: Record<MinigameCode, MinigameDefinition> = {
     get instructions() {
       return i18n.t('roomShop.minigame.merge.instructions');
     },
+    get rules() {
+      return minigameRules('merge');
+    },
     pose: 3,
   },
   'cat-tower': {
@@ -80,6 +97,9 @@ export const MINIGAME_DEFINITIONS: Record<MinigameCode, MinigameDefinition> = {
     maxTicks: 18000,
     get instructions() {
       return i18n.t('roomShop.minigame.tower.instructions');
+    },
+    get rules() {
+      return minigameRules('tower');
     },
     // 캐릭터 포즈 프레임은 0~3 네 장 — 남은 0번.
     pose: 0,
@@ -97,6 +117,9 @@ export const MINIGAME_DEFINITIONS: Record<MinigameCode, MinigameDefinition> = {
     maxTicks: 2000,
     get instructions() {
       return i18n.t('roomShop.minigame.yarn.instructions');
+    },
+    get rules() {
+      return minigameRules('yarn');
     },
     // 포즈 프레임은 네 장뿐이라 합치기와 같은 3번(생각하는 게임끼리).
     pose: 3,

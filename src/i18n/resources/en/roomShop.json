@@ -333,27 +333,52 @@
       "runner": {
         "name": "Routine Runner",
         "description": "Tap to jump over obstacles and chase your best score.",
-        "instructions": "Tap to jump"
+        "instructions": "Tap to jump",
+        "rules": {
+          "control": "Tap (Space or ↑) to jump",
+          "score": "The longer you run, the higher your score. It keeps getting faster",
+          "end": "The game ends when you hit an obstacle"
+        }
       },
       "stairs": {
         "name": "Cat Stairs",
         "description": "Left, right! Climb higher with the cat.",
-        "instructions": "Move toward the next step"
+        "instructions": "Move toward the next step",
+        "rules": {
+          "control": "Press the button (left or right) on the side of the next step",
+          "score": "Each step is 1 point. The time limit gets shorter as you climb",
+          "end": "The game ends on a wrong direction or when time runs out"
+        }
       },
       "merge": {
         "name": "Cat Merge",
         "description": "Merge cats with the same number to make bigger ones.",
-        "instructions": "Swipe to merge matching numbers"
+        "instructions": "Swipe to merge matching numbers",
+        "rules": {
+          "control": "Swipe (or use arrow keys) to slide every cat that way",
+          "score": "Merging two equal numbers scores that number. An extra tile appears every 8 moves",
+          "end": "The game ends when you can't move or after 5 minutes. You can also stop and save your score"
+        }
       },
       "tower": {
         "name": "Cat Tower",
         "description": "Line up the swinging boxes and stack them high.",
-        "instructions": "Tap to drop the box"
+        "instructions": "Tap to drop the box",
+        "rules": {
+          "control": "Tap (Space) to drop the swinging box",
+          "score": "Only the part that overlaps the box below stays. A perfect drop is 2 points, and 3 in a row widens the box. Otherwise 1 point",
+          "end": "The game ends if you miss the box completely or after 5 minutes"
+        }
       },
       "yarn": {
         "name": "Cat Yarn Sort",
         "description": "Sort yarn balls into matching baskets to fill in a room picture.",
-        "instructions": "Tap to sort the yarn"
+        "instructions": "Tap to sort the yarn",
+        "rules": {
+          "control": "Tap the top yarn on a pile",
+          "score": "Each ball in a matching basket is 1 point, and a full basket is 10. With no matching basket, it goes to the waiting tray",
+          "end": "The game ends if you place one more when the tray is full"
+        }
       },
       "frame": {
         "runner": "Runner game",
@@ -418,7 +443,10 @@
         "restart": "Restart"
       },
       "best": "My best {{score}} · #{{rank}} of {{total}}",
-      "noBest": "No record yet. Set your first!"
+      "noBest": "No record yet. Set your first!",
+      "rulesTitle": "How to play",
+      "rulesOk": "Got it",
+      "rulesA11y": "How to play"
     },
     "speaker": {
       "sheetTitle": "Sounds in your room",

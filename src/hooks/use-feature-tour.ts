@@ -30,6 +30,9 @@ export function useFeatureTour(tourId: string, stepCount: number, active: boolea
 
   useEffect(() => {
     let alive = true;
+    // 같은 화면이 다른 투어로 바뀌면(게임 A → B) 앞 투어의 진행을 버리고 새로 읽는다.
+    setSeen(null);
+    setIndex(null);
     void loadSeenTours(getSessionUserId()).then((set) => {
       if (alive) setSeen(set.has(tourId));
     });

@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { MinigameResult } from '@/api/minigames';
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { MinigameLayout } from '@/components/screens/minigame-layout';
 import { Button } from '@/components/ui/button';
 import { GlassSurface } from '@/components/ui/glass-surface';
+import { Icon } from '@/components/ui/icon';
 import { RetryState } from '@/components/ui/retry-state';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -35,6 +36,13 @@ export type MinigameRunnerScreenProps = {
   onShareRecord?: () => void;
   onDismissShare?: () => void;
   onBack?: () => void;
+  /** 규칙 카드 세 줄 — 조작·점수·끝나는 때. */
+  rules?: string[];
+  /** 규칙 카드를 시작 전 자리에 띄울지 — 게임별 첫 진입이나 ? 다시 보기. */
+  showRules?: boolean;
+  onDismissRules?: () => void;
+  /** 제목줄 ? — 규칙 카드 다시 보기. 게임 중엔 숨긴다. */
+  onOpenRules?: () => void;
 };
 
 export function MinigameRunnerScreen({
@@ -56,6 +64,10 @@ export function MinigameRunnerScreen({
   onShareRecord,
   onDismissShare,
   onBack,
+  rules,
+  showRules = false,
+  onDismissRules,
+  onOpenRules,
 }: MinigameRunnerScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -63,23 +75,54 @@ export function MinigameRunnerScreen({
   const name = gameName ?? tr('roomShop.minigame.runner.name');
   const hint = instructions ?? tr('roomShop.minigame.runner.instructions');
   return (
-    <MinigameLayout title={name} onBack={onBack}>
+    <MinigameLayout
+      title={name}
+      onBack={onBack}
+      right={
+        onOpenRules && !game ? (
+          <Pressable
+            onPress={onOpenRules}
+            accessibilityRole="button"
+            accessibilityLabel={tr('roomShop.minigame.rulesA11y')}
+            hitSlop={8}>
+            <Icon name="help" size={20} color={t.textMuted} />
+          </Pressable>
+        ) : undefined
+      }>
       {practice ? (
         <Text accessibilityRole="alert" style={[Typography.label, { color: t.primaryText }]}>
           {tr('roomShop.minigame.practiceSection')}
         </Text>
       ) : null}
       {!result &&
-        (game ?? (
-          <GlassSurface
-            interactive={false}
-            glassEffectStyle="clear"
-            fallbackColor={t.surface}
-            style={styles.welcome}>
-            <CharacterAvatar characterId="cat" pose={characterPose} size={Spacing.six * 2} />
-            <Text style={[Typography.body, { color: t.textMuted }]}>{hint}</Text>
-          </GlassSurface>
-        ))}
+        (game ??
+          (showRules && rules ? (
+            <GlassSurface
+              interactive={false}
+              glassEffectStyle="clear"
+              fallbackColor={t.surface}
+              style={styles.rules}>
+              <Text style={[Typography.h3, { color: t.text }]}>
+                {tr('roomShop.minigame.rulesTitle')}
+              </Text>
+              {rules.map((line, i) => (
+                <View key={RULE_ICONS[i] ?? i} style={styles.ruleRow}>
+                  <Text style={Typography.body}>{RULE_ICONS[i]}</Text>
+                  <Text style={[Typography.body, styles.flex, { color: t.text }]}>{line}</Text>
+                </View>
+              ))}
+              <Button label={tr('roomShop.minigame.rulesOk')} onPress={onDismissRules} />
+            </GlassSurface>
+          ) : (
+            <GlassSurface
+              interactive={false}
+              glassEffectStyle="clear"
+              fallbackColor={t.surface}
+              style={styles.welcome}>
+              <CharacterAvatar characterId="cat" pose={characterPose} size={Spacing.six * 2} />
+              <Text style={[Typography.body, { color: t.textMuted }]}>{hint}</Text>
+            </GlassSurface>
+          )))}
       {pending ? (
         <ActivityIndicator
           color={t.primaryText}
@@ -203,6 +246,9 @@ export function MinigameRunnerScreen({
   );
 }
 
+/** 규칙 줄 앞 표식 — 조작·점수·끝나는 때 (아이콘은 이모지 플레이스홀더). */
+const RULE_ICONS = ['👆', '⭐', '🏁'];
+
 const styles = StyleSheet.create({
   welcome: {
     padding: Spacing.four,
@@ -210,6 +256,9 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     borderRadius: Radius.xl,
   },
+  rules: { padding: Spacing.four, gap: Spacing.three, borderRadius: Radius.xl },
+  ruleRow: { flexDirection: 'row', gap: Spacing.two, alignItems: 'flex-start' },
+  flex: { flex: 1 },
   result: { padding: Spacing.four, gap: Spacing.two, borderRadius: Radius.xl },
   actions: { gap: Spacing.two },
   share: { padding: Spacing.three, gap: Spacing.three, borderRadius: Radius.xl },
