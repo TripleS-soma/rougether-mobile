@@ -28,18 +28,25 @@ export function useFeatureTour(tourId: string, stepCount: number, active: boolea
   const indexRef = useRef<number | null>(null);
   indexRef.current = index;
 
+  // 렌더마다 읽는다 — 세션이 늦게 붙거나 계정이 바뀌면 다음 렌더에서 다시 판단한다.
+  const userId = getSessionUserId();
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
+
   useEffect(() => {
     let alive = true;
-    // 같은 화면이 다른 투어로 바뀌면(게임 A → B) 앞 투어의 진행을 버리고 새로 읽는다.
+    // 같은 화면이 다른 투어·계정으로 바뀌면(게임 A → B) 앞 진행을 버리고 새로 읽는다.
     setSeen(null);
     setIndex(null);
-    void loadSeenTours(getSessionUserId()).then((set) => {
+    // 계정을 모르면 보류 — 본 기록을 남길 곳이 없어 매번 뜬다.
+    if (userId == null) return;
+    void loadSeenTours(userId).then((set) => {
       if (alive) setSeen(set.has(tourId));
     });
     return () => {
       alive = false;
     };
-  }, [tourId]);
+  }, [tourId, userId]);
 
   useEffect(() => {
     if (active && seen === false && indexRef.current == null) setIndex(0);
@@ -50,7 +57,7 @@ export function useFeatureTour(tourId: string, stepCount: number, active: boolea
       const step = (indexRef.current ?? 0) + 1;
       setIndex(null);
       setSeen(true);
-      void markTourSeen(getSessionUserId(), tourId);
+      void markTourSeen(userIdRef.current, tourId);
       track('feature_tour', { tour: tourId, action, step });
     },
     [tourId],

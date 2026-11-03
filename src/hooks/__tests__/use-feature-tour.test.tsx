@@ -88,13 +88,35 @@ describe('useFeatureTour', () => {
 
   it('투어 id가 바뀌면(게임 A → B) 앞 투어의 진행을 버리고 새로 판단한다', async () => {
     await markTourSeen(7, 'minigame:b');
-    const { result, rerender } = await renderHook(
+    const { result, rerender, unmount } = await renderHook(
       ({ id }: { id: string }) => useFeatureTour(id, 1, true),
       { initialProps: { id: 'minigame:a' } },
     );
     await waitFor(() => expect(result.current.visible).toBe(true));
-    rerender({ id: 'minigame:b' });
+    await rerender({ id: 'minigame:b' });
     await act(async () => {});
     expect(result.current.visible).toBe(false);
+    await unmount();
+  });
+});
+
+describe('useFeatureTour 계정·저장 경계', () => {
+  it('세션 계정을 모르면 띄우지 않다가, 계정이 붙으면 띄운다', async () => {
+    mockUserId = undefined;
+    const { result, rerender, unmount } = await renderHook(
+      ({ tick }: { tick: number }) => (void tick, useFeatureTour('market', 3, true)),
+      { initialProps: { tick: 0 } },
+    );
+    await act(async () => {});
+    expect(result.current.visible).toBe(false);
+    mockUserId = 7;
+    await rerender({ tick: 1 });
+    await waitFor(() => expect(result.current.visible).toBe(true));
+    await unmount();
+  });
+
+  it('다른 투어를 동시에 기록해도 둘 다 남는다', async () => {
+    await Promise.all([markTourSeen(7, 'a'), markTourSeen(7, 'b'), markTourSeen(7, 'c')]);
+    expect([...(await loadSeenTours(7))].sort()).toEqual(['a', 'b', 'c']);
   });
 });

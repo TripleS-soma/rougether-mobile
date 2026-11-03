@@ -147,6 +147,25 @@ describe('MinigameRunnerScreen 규칙 카드', () => {
     expect(onOpenRules).toHaveBeenCalled();
   });
 
+  it('결과 화면에서도 ? 를 숨긴다 — 카드 자리가 없다', async () => {
+    const ui = await render(
+      <MinigameRunnerScreen
+        finished
+        result={{
+          runId: 'r',
+          score: 10,
+          bestScore: 10,
+          personalBest: false,
+          rank: 3,
+          playCount: 2,
+        }}
+        rules={rules}
+        onOpenRules={jest.fn()}
+      />,
+    );
+    expect(ui.queryByLabelText('게임 방법')).toBeNull();
+  });
+
   it('게임 중엔 ? 를 숨긴다', async () => {
     const ui = await render(
       <MinigameRunnerScreen game={<View />} rules={rules} onOpenRules={jest.fn()} />,

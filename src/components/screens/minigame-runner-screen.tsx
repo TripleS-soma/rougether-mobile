@@ -79,7 +79,8 @@ export function MinigameRunnerScreen({
       title={name}
       onBack={onBack}
       right={
-        onOpenRules && !game ? (
+        // 결과 화면엔 카드 자리가 없다 — 눌러도 반응 없다가 다시 시작할 때 튀어나왔다.
+        onOpenRules && !game && !result ? (
           <Pressable
             onPress={onOpenRules}
             accessibilityRole="button"

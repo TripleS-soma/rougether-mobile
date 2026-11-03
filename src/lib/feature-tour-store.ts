@@ -17,8 +17,16 @@ export async function loadSeenTours(userId: number | undefined): Promise<Set<str
   }
 }
 
-export async function markTourSeen(userId: number | undefined, tourId: string): Promise<void> {
-  if (userId == null) return;
+/** 쓰기를 한 줄로 세운다 — 읽고 고쳐 쓰는 사이에 다른 투어 기록이 덮이지 않게. */
+let writes: Promise<void> = Promise.resolve();
+
+export function markTourSeen(userId: number | undefined, tourId: string): Promise<void> {
+  if (userId == null) return Promise.resolve();
+  writes = writes.then(() => writeSeen(userId, tourId));
+  return writes;
+}
+
+async function writeSeen(userId: number, tourId: string): Promise<void> {
   try {
     const seen = await loadSeenTours(userId);
     if (seen.has(tourId)) return;
