@@ -9,10 +9,13 @@ import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style'
 export function MinigameLayout({
   title,
   onBack,
+  right,
   children,
 }: {
   title: string;
   onBack?: () => void;
+  /** 제목줄 오른쪽 — 예: 게임 방법 ?. */
+  right?: ReactNode;
   children: ReactNode;
 }) {
   const column = useResponsiveColumn();
@@ -20,7 +23,7 @@ export function MinigameLayout({
   const screenStyle = useScreenStyle(['bottom']);
   return (
     <View style={[styles.screen, screenStyle]}>
-      <ScreenHeader title={title} onBack={onBack} />
+      <ScreenHeader title={title} onBack={onBack} right={right} />
       <ScrollView contentContainerStyle={[styles.body, column, { paddingTop: inset }]}>
         {children}
       </ScrollView>

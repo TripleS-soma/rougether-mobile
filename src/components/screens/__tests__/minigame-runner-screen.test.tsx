@@ -1,5 +1,5 @@
 import { fireEvent, render } from '@testing-library/react-native';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import { MinigameRunnerScreen } from '@/components/screens/minigame-runner-screen';
 import { PLAYABLE_MINIGAMES } from '@/constants/minigames';
 
@@ -120,4 +120,44 @@ it('새 최고 기록 자랑 제안 — 셸이 켤 때만 보이고 두 버튼�
   expect(onShare).toHaveBeenCalledTimes(1);
   await fireEvent.press(ui.getByText('괜찮아요'));
   expect(onDismiss).toHaveBeenCalledTimes(1);
+});
+
+describe('MinigameRunnerScreen 규칙 카드', () => {
+  const rules = ['탭하면 점프해요', '오래 달릴수록 점수가 올라가요', '장애물에 부딪히면 끝나요'];
+
+  it('showRules면 시작 전 자리에 규칙 세 줄과 [알겠어요]', async () => {
+    const onDismissRules = jest.fn();
+    const ui = await render(
+      <MinigameRunnerScreen rules={rules} showRules onDismissRules={onDismissRules} />,
+    );
+    expect(ui.getByText('이렇게 해요')).toBeTruthy();
+    rules.forEach((line) => expect(ui.getByText(line)).toBeTruthy());
+    await fireEvent.press(ui.getByText('알겠어요'));
+    expect(onDismissRules).toHaveBeenCalled();
+  });
+
+  it('카드가 없으면 한 줄 설명, 제목줄 ? 로 다시 연다', async () => {
+    const onOpenRules = jest.fn();
+    const ui = await render(
+      <MinigameRunnerScreen instructions="탭해서 점프" rules={rules} onOpenRules={onOpenRules} />,
+    );
+    expect(ui.queryByText('이렇게 해요')).toBeNull();
+    expect(ui.getByText('탭해서 점프')).toBeTruthy();
+    await fireEvent.press(ui.getByLabelText('게임 방법'));
+    expect(onOpenRules).toHaveBeenCalled();
+  });
+
+  it('게임 중엔 ? 를 숨긴다', async () => {
+    const ui = await render(
+      <MinigameRunnerScreen game={<View />} rules={rules} onOpenRules={jest.fn()} />,
+    );
+    expect(ui.queryByLabelText('게임 방법')).toBeNull();
+  });
+});
+
+it('플레이 가능한 게임마다 규칙이 세 줄(조작·점수·끝)이다', () => {
+  for (const game of PLAYABLE_MINIGAMES) {
+    expect(game.rules).toHaveLength(3);
+    game.rules.forEach((line) => expect(line.length).toBeGreaterThan(0));
+  }
 });

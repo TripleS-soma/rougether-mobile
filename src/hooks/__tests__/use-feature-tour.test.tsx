@@ -85,4 +85,16 @@ describe('useFeatureTour', () => {
     expect(result.current.replay).toBe(replay);
     expect(result.current.skip).toBe(skip);
   });
+
+  it('투어 id가 바뀌면(게임 A → B) 앞 투어의 진행을 버리고 새로 판단한다', async () => {
+    await markTourSeen(7, 'minigame:b');
+    const { result, rerender } = await renderHook(
+      ({ id }: { id: string }) => useFeatureTour(id, 1, true),
+      { initialProps: { id: 'minigame:a' } },
+    );
+    await waitFor(() => expect(result.current.visible).toBe(true));
+    rerender({ id: 'minigame:b' });
+    await act(async () => {});
+    expect(result.current.visible).toBe(false);
+  });
 });
