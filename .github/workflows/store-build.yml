@@ -176,6 +176,11 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
+      - name: 기존 Apple 키로 서명 설정 읽기 전용 확인
+        if: inputs.action == 'inspect'
+        run: node "$GITHUB_WORKSPACE/scripts/inspect-ios-signing.js"
+        env:
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
       - name: 명시한 iOS 후보 조회 또는 빌드 (제출·OTA 없음)
         run: node "$GITHUB_WORKSPACE/scripts/check-testflight-build.js"
         env:

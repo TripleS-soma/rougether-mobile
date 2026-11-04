@@ -259,13 +259,16 @@ describe('store-build workflow boundaries', () => {
     expect(JSON.stringify(production)).not.toContain('testflight');
   });
 
-  it('uses read-only permissions, shared dev lock, and no ASC credentials for the separate lane', () => {
+  it('uses read-only permissions, shared dev lock, and ASC only in read-only signing inspection', () => {
     const lane = workflow.jobs['testflight-build-only'];
     expect(workflow.on.workflow_dispatch.inputs.action.default).toBe('inspect');
     expect(lane.permissions).toEqual({ contents: 'read', actions: 'read', checks: 'read' });
     expect(lane.concurrency).toEqual({ group: 'eas-deploy-dev', 'cancel-in-progress': false });
     expect(lane['timeout-minutes']).toBe(90);
-    expect(JSON.stringify(lane)).not.toMatch(/ASC_API_KEY|asc-api-key|eas update|auto-submit/);
+    expect(JSON.stringify(lane)).not.toMatch(/asc-api-key|eas update|auto-submit/);
+    const signing = lane.steps.find((step) => step.name?.includes('서명 설정'));
+    expect(signing.if).toBe("inputs.action == 'inspect'");
+    expect(signing.env.ASC_API_KEY_P8).toBe('${{ secrets.ASC_API_KEY_P8 }}');
   });
 
   it('tests and builds the exact candidate head instead of a moving PR merge ref', () => {
