@@ -15,7 +15,10 @@ export type HouseCover = {
   coverImageKey: string;
 };
 
-export type HouseCoverPickerProps = Pick<HouseFrameOptions, 'maxMembers' | 'enabled'> & {
+export type HouseCoverPickerProps = Pick<
+  HouseFrameOptions,
+  'maxMembers' | 'enabled' | 'displayMode'
+> & {
   /** Cover catalog, server order. Empty = still loading (renders nothing). */
   covers: HouseCover[];
   /** Currently selected cover key; undefined = none picked yet. */
@@ -33,6 +36,7 @@ export function HouseCoverPicker({
   selectedKey,
   onSelect,
   maxMembers,
+  displayMode,
   enabled,
 }: HouseCoverPickerProps) {
   const t = useTokens();
@@ -66,6 +70,7 @@ export function HouseCoverPicker({
             <HouseCoverArt
               coverImageKey={c.coverImageKey}
               maxMembers={maxMembers}
+              displayMode={displayMode}
               enabled={enabled}
               style={styles.art}
               name={name}

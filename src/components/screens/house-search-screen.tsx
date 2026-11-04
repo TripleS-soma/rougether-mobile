@@ -1,3 +1,4 @@
+import type { HouseDisplayMode } from '@/resources/house-display-mode';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -36,6 +37,7 @@ export type SearchHouse = {
   tags?: string[];
   /** Server cover art; the pictogram tile is the fallback. */
   coverImageKey?: string;
+  displayMode?: HouseDisplayMode;
   icon: PictogramName;
   bg: string;
   border: string;
@@ -64,6 +66,7 @@ export type HousePreviewDetail = {
   name: string;
   description?: string;
   coverImageKey?: string;
+  displayMode?: HouseDisplayMode;
   members: number;
   capacity?: number;
   level?: number;
@@ -457,6 +460,7 @@ export function HouseSearchScreen({
                   {isCdnKey(h.coverImageKey) ? (
                     <HouseCoverArt
                       coverImageKey={h.coverImageKey}
+                      displayMode={h.displayMode}
                       maxMembers={h.capacity}
                       legacyContentFit="cover"
                       style={styles.houseCover}
@@ -571,6 +575,7 @@ export function HouseSearchScreen({
                 실제 방을 그리고 (#386), 없으면 인원수 목업으로 폴백. */}
             <HousePreviewFrame
               coverImageKey={housePreview.coverImageKey}
+              displayMode={housePreview.displayMode}
               memberCount={housePreview.members}
               maxMembers={housePreview.capacity}
               rooms={housePreview.rooms}

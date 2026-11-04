@@ -57,6 +57,7 @@ export function HousePreviewFrame({
   maxMembers,
   enabled,
   previewTheme,
+  displayMode,
 }: HousePreviewFrameProps) {
   const t = useTokens();
   const tr = useT();
@@ -68,6 +69,7 @@ export function HousePreviewFrame({
     minimumSeats: seats,
     enabled,
     previewTheme,
+    displayMode,
   });
   const coverKey = frame.assetKey;
   const slotRooms = useMemo(() => {
@@ -94,7 +96,7 @@ export function HousePreviewFrame({
       ),
     [slotRooms, rooms, furniture, wallpapers, floors, backgrounds],
   );
-  const diorama = houseDioramaTheme(coverImageKey, enabled);
+  const diorama = houseDioramaTheme(coverImageKey, enabled, displayMode);
   if (diorama)
     return (
       <HouseDioramaPreview

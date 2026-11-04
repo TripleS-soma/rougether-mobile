@@ -628,6 +628,7 @@ export type HouseDetailResponse = {
   myRole?: 'OWNER' | 'MEMBER';
   inviteCode?: string;
   inviteExpiresAt?: string;
+  displayMode?: 'DIORAMA' | 'CLASSIC';
 };
 
 export type HouseJoinByCodeRequest = {
@@ -748,6 +749,7 @@ export type HousePreviewDetailResponse = {
   myJoinRequestStatus?: 'PENDING' | 'ACCEPTED' | 'REJECTED';
   missions?: MissionSummary[];
   memberRooms?: MemberRoomSummary[];
+  displayMode?: 'DIORAMA' | 'CLASSIC';
 };
 
 export type HousePreviewResponse = {
@@ -758,6 +760,7 @@ export type HousePreviewResponse = {
   maxMembers?: number;
   inviteExpired?: boolean;
   requiresApproval?: boolean;
+  displayMode?: 'DIORAMA' | 'CLASSIC';
 };
 
 export type HouseSummary = {
@@ -769,6 +772,7 @@ export type HouseSummary = {
   level?: number;
   goals?: GoalSummary[];
   myJoinRequestStatus?: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  displayMode?: 'DIORAMA' | 'CLASSIC';
 };
 
 export type HouseUpdateRequest = {
@@ -777,6 +781,7 @@ export type HouseUpdateRequest = {
   coverImageKey?: string;
   maxMembers?: number;
   isPublic?: boolean;
+  displayMode?: 'DIORAMA' | 'CLASSIC';
 };
 
 export type HouseUpdateResponse = {
@@ -786,6 +791,7 @@ export type HouseUpdateResponse = {
   coverImageKey?: string;
   maxMembers?: number;
   isPublic?: boolean;
+  displayMode?: 'DIORAMA' | 'CLASSIC';
 };
 
 export type InviteCodeResponse = {
@@ -1074,6 +1080,7 @@ export type MyHouseSummary = {
   isPublic?: boolean;
   myRole?: 'OWNER' | 'MEMBER';
   joinedAt?: string;
+  displayMode?: 'DIORAMA' | 'CLASSIC';
 };
 
 export type MyInviteCodeResponse = {
@@ -1118,6 +1125,7 @@ export type MyJoinRequestSummary = {
   goals?: GoalSummary[];
   status?: 'PENDING' | 'ACCEPTED' | 'REJECTED';
   requestedAt?: string;
+  displayMode?: 'DIORAMA' | 'CLASSIC';
 };
 
 export type MyMarketOrderListResponse = {
