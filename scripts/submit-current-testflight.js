@@ -175,8 +175,9 @@ function execute(env, app, eas, run = command, report = console.log, useKey = wi
         c,
       );
     const prior = history();
+    report(JSON.stringify({ existingSubmissions: metadata(prior) }));
     const before = apple();
-    report(JSON.stringify({ existingSubmissions: metadata(prior), appleTestFlight: before }));
+    report(JSON.stringify({ appleTestFlight: before }));
     if (env.SUBMIT_ACTION === 'inspect') return;
     guard(prior.length === 0, 'A submission already exists. Inspect it instead of resubmitting.');
     if (before) {

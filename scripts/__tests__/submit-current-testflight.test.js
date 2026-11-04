@@ -64,6 +64,7 @@ function setup({
   pending = false,
   wrongBuild = {},
   appleProcessingState = 'VALID',
+  appleThrows = false,
 } = {}) {
   let submitted = false;
   const run = jest.fn((file, args) => {
@@ -95,8 +96,10 @@ function setup({
             ]
           : existing,
       );
-    if (args[0] === 'submit:status')
+    if (args[0] === 'submit:status') {
+      if (appleThrows) throw new Error('PRIVATE APPLE SERVICE DETAIL');
       return JSON.stringify(apple(appleBefore || submitted, appleProcessingState));
+    }
     if (args[0] === 'submit') {
       submitted = true;
       if (uploadThrows) throw new Error('PRIVATE SERVICE DETAIL');
@@ -219,4 +222,17 @@ it('keeps production and the frozen 115 lane separate from the opt-in current ca
       (s) => s.run === 'node scripts/submit-testflight-build.js',
     ),
   ).toBe(true);
+});
+
+it('keeps the known submission status when the independent Apple lookup fails', () => {
+  const f = setup({
+    existing: [{ id: 'submission-id', status: 'IN_QUEUE', submittedBuild: build }],
+    appleThrows: true,
+  });
+  expect(() => f.execute({ SUBMIT_ACTION: 'inspect', SUBMIT_AUTHORIZED: 'false' })).toThrow(
+    'could not be verified',
+  );
+  expect(JSON.stringify(f.report.mock.calls)).toContain('IN_QUEUE');
+  expect(JSON.stringify(f.report.mock.calls)).not.toContain('PRIVATE APPLE SERVICE DETAIL');
+  expect(submitCalls(f.run)).toHaveLength(0);
 });
