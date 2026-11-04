@@ -1,3 +1,4 @@
+import type { HouseDisplayMode } from '@/resources/house-display-mode';
 /**
  * 집 도메인 모델 (#리팩토링 4묶음) — 종전엔 house-screen.tsx 안에 있어 훅·어댑터·유틸이
  * **화면 모듈**을 import했다. 화면은 순수 prop 컴포넌트여야 하므로 타입을 여기로 떼고,
@@ -78,6 +79,7 @@ export type House = {
   memberCount?: number;
   /** Current cover art key — prefill for the owner's edit form. */
   coverImageKey?: string;
+  displayMode?: HouseDisplayMode;
   /**
    * 공개 범위 (#1266) — true: 집 탐색·비구성원 미리보기 노출, false: 초대코드로만.
    * 서버가 GET에 안 실어 주면 undefined(알 수 없음) — 수정 시트는 미선택으로 연다.
@@ -94,6 +96,7 @@ export type HouseEditInput = {
   maxMembers?: number;
   /** Cover from GET /houses/cover-images; omitted = keep the current one. */
   coverImageKey?: string;
+  displayMode?: HouseDisplayMode;
   /** 공개 범위 (#1266); omitted = keep the current one. */
   isPublic?: boolean;
   /** 온보딩 자동 입주 허용 (#1407, `PUT /houses/{id}/auto-join`); omitted = keep. */

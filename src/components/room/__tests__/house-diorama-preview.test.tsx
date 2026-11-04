@@ -22,3 +22,16 @@ it('does not invent occupants or furniture for an empty house', async () => {
   expect(ui.queryByTestId('preview-room')).toBeNull();
   expect(ui.queryByTestId('diorama-character')).toBeNull();
 });
+
+it('uses full rooms for a classic house and updates when the same house changes mode', async () => {
+  const props = {
+    coverImageKey: FOREST_CANOPY_COVER_KEY,
+    rooms: [{ placements: [] }, { placements: [] }],
+  };
+  const ui = await render(<HousePreviewFrame {...props} />);
+  expect(ui.getAllByTestId('diorama-member')).toHaveLength(2);
+  await ui.rerender(<HousePreviewFrame {...props} displayMode="CLASSIC" />);
+  expect(ui.getByTestId('house-preview-frame')).toBeTruthy();
+  expect(ui.getAllByTestId('preview-room')).toHaveLength(2);
+  expect(ui.queryByTestId('diorama-member')).toBeNull();
+});

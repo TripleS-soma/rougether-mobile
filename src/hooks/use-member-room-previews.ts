@@ -13,8 +13,8 @@ import {
   fromRoomPlacements,
   type ShopCatalogue,
 } from '@/api/adapters';
-import type { House, MemberRoomPreview, RoomCell } from '@/components/screens/house/types';
-import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import type { House, MemberRoomPreview } from '@/components/screens/house/types';
+import type { CharacterId } from '@/constants/characters';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 import { fetchHouseMemberRoom } from '@/api';
 import { queryKeys } from '@/lib/query-keys';
@@ -51,16 +51,7 @@ export function withMyCharacter(
  * 캐릭터가 없어, 프리뷰가 아직 없으면 내 좌석만 내 캐릭터고 남은 기본 캐릭터.
  * 집 화면 좌석 타일과 구성원 관리 화면(#753에서 셸 화면으로 승격)이 공유한다.
  */
-export function characterIdForMember(
-  member: RoomCell,
-  previews: Record<number, MemberRoomPreview> | undefined,
-  myCharacterId: CharacterId,
-): CharacterId {
-  return (
-    (member.membershipId != null ? previews?.[member.membershipId]?.characterId : undefined) ??
-    (member.isMine ? myCharacterId : DEFAULT_CHARACTER_ID)
-  );
-}
+export { characterIdForMember } from '@/resources/member-character';
 
 /**
  * 구성원 방 응답은 30초 동안 좌석 미리보기와 친구 방 방문이 나눠 쓴다 (성능 장부 N5) — 좌석을

@@ -24,7 +24,7 @@ export function HouseCoverArt({
   ...options
 }: Props) {
   const { frame, onFrameError } = useHouseFrame(coverImageKey, options);
-  const diorama = houseDioramaTheme(coverImageKey, options.enabled);
+  const diorama = houseDioramaTheme(coverImageKey, options.enabled, options.displayMode);
   return (
     <Image
       key={diorama?.id ?? frame.assetKey}

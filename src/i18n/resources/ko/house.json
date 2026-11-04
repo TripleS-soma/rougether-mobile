@@ -158,7 +158,14 @@
         "autoJoin": "자동 입주 허용",
         "autoJoinHint": "온보딩에서 '좋아요'를 고른 새 사용자가 승인 없이 들어와요",
         "autoJoinPrivateHint": "공개 집에만 적용돼요",
-        "autoJoinA11y": "자동 입주 허용"
+        "autoJoinA11y": "자동 입주 허용",
+        "displayMode": "집 보기 방식",
+        "diorama": "그림 같은 집",
+        "dioramaHint": "가구와 캐릭터가 어우러지는 아늑한 집",
+        "classic": "내 방 그대로",
+        "classicHint": "각자 꾸민 방 전체를 함께 보는 집",
+        "displayModeShared": "방장이 선택한 방식으로 모든 구성원에게 보여요.",
+        "classicCoverFallback": "이 테마는 ‘내 방 그대로’에서 기본 집 외관으로 보여요. 원래 테마는 그대로 보관돼요."
       }
     },
     "missions": {
@@ -499,7 +506,8 @@
       "main": "본채",
       "annex": "별채 {{number}}",
       "more": "다른 별채에 {{count}}명",
-      "pageA11y": "{{name}} 보기"
+      "pageA11y": "{{name}} 보기",
+      "navigation": "우리 집과 별채"
     }
   }
 }
