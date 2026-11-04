@@ -7,7 +7,7 @@ import { CoachTarget } from '@/components/ui/coach-mark';
 import { Icon } from '@/components/ui/icon';
 import { Loading } from '@/components/ui/loading';
 import { RetryState } from '@/components/ui/retry-state';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, TabularNums } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
 
@@ -121,13 +121,16 @@ export function MarketList({
                   numberOfLines={1}
                   style={[
                     Typography.supporting,
+                    TabularNums,
                     { color: a.bestAskPrice != null ? t.primaryText : t.textMuted },
                   ]}>
                   {a.bestAskPrice != null
                     ? tr('market.list.fromPrice', { price: a.bestAskPrice })
                     : tr('market.list.noAsk')}
                 </Text>
-                <Text numberOfLines={1} style={[Typography.supporting, { color: t.textMuted }]}>
+                <Text
+                  numberOfLines={1}
+                  style={[Typography.supporting, TabularNums, { color: t.textMuted }]}>
                   {a.lastTradePrice != null
                     ? tr('market.list.lastPrice', { price: a.lastTradePrice })
                     : tr('market.list.noTrade')}
@@ -193,6 +196,7 @@ const styles = StyleSheet.create({
     width: '48%',
     padding: Spacing.two,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     gap: Spacing.half,
     alignItems: 'center',
   },

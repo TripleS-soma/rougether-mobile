@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { SheetHandle } from '@/components/ui/sheet-handle';
 import { MARKET_MAX_SUPPLY, MARKET_PRICE_MAX } from '@/constants/market';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, TabularNums } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
 
@@ -175,11 +175,16 @@ export function MarketOrderSheet({
 
         {side === 'BUY' ? (
           <View style={[styles.box, { backgroundColor: t.surfaceMuted }]}>
-            <Text style={[Typography.label, { color: t.text }]}>
+            <Text style={[Typography.label, TabularNums, { color: t.text }]}>
               {tr('market.order.balance', { n: coinBalance })}
             </Text>
             {price != null ? (
-              <Text style={[Typography.supporting, { color: notEnough ? t.danger : t.textMuted }]}>
+              <Text
+                style={[
+                  Typography.supporting,
+                  TabularNums,
+                  { color: notEnough ? t.danger : t.textMuted },
+                ]}>
                 {notEnough ? tr('market.order.notEnough') : tr('market.order.total', { n: total })}
               </Text>
             ) : null}
@@ -233,6 +238,7 @@ const styles = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: Radius.xl,
     borderTopRightRadius: Radius.xl,
+    borderCurve: 'continuous',
     paddingTop: Spacing.two,
     paddingBottom: Spacing.five,
   },
@@ -247,6 +253,7 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },

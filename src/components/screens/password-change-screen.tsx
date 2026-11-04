@@ -123,6 +123,7 @@ const styles = StyleSheet.create({
   },
   notice: {
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     borderWidth: 1,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,

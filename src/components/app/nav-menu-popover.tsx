@@ -165,6 +165,7 @@ const styles = StyleSheet.create({
     right: Spacing.four,
     minWidth: 176,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     overflow: 'hidden',
     elevation: 6,
     shadowColor: ShadowColor,

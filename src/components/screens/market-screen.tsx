@@ -161,6 +161,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     padding: Spacing.three,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
   },
   sellingBtn: {
     paddingHorizontal: Spacing.three,

@@ -1189,6 +1189,7 @@ const styles = StyleSheet.create({
   iconBtnFace: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1260,6 +1261,7 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.three,
     marginTop: Spacing.two,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     padding: Spacing.three,
     gap: Spacing.three,
   },

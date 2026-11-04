@@ -563,6 +563,7 @@ const styles = StyleSheet.create({
     maxHeight: '85%',
     borderTopLeftRadius: Radius.xl,
     borderTopRightRadius: Radius.xl,
+    borderCurve: 'continuous',
     overflow: 'hidden',
   },
   header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, padding: Spacing.three },
@@ -581,6 +582,7 @@ const styles = StyleSheet.create({
   hidden: { display: 'none' },
   group: {
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: Spacing.four,
     overflow: 'hidden',

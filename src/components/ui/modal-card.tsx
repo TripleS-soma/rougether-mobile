@@ -74,6 +74,7 @@ const styles = StyleSheet.create({
     maxWidth: 360,
     maxHeight: '85%',
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     padding: Spacing.four,
   },
   actions: {

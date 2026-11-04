@@ -4,6 +4,12 @@ import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
+import { hapticSelection } from '@/utils/haptics';
+
+jest.mock('@/utils/haptics', () => ({
+  ...jest.requireActual('@/utils/haptics'),
+  hapticSelection: jest.fn(),
+}));
 
 /** 맨 위에서 translationY만큼 당겼다 놓는 팬 시퀀스. */
 const pullAndRelease = (translationY: number) =>
@@ -184,5 +190,19 @@ describe('PawRefreshScroll — 제스처 참조 고정', () => {
     );
     expect(spy.mock.calls.length).toBe(after);
     spy.mockRestore();
+  });
+
+  it('발동 지점을 넘는 순간 한 번 햅틱, 넘지 못하면 없다 (2026-11-04)', async () => {
+    const haptic = hapticSelection as jest.Mock;
+    haptic.mockClear();
+    await render(
+      <PawRefreshScroll onRefresh={jest.fn(() => Promise.resolve())}>
+        <Text>콘텐츠</Text>
+      </PawRefreshScroll>,
+    );
+    pullAndRelease(80); // 저항 후 40px < 56px
+    expect(haptic).not.toHaveBeenCalled();
+    pullAndRelease(140);
+    expect(haptic).toHaveBeenCalledTimes(1);
   });
 });

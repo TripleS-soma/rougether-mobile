@@ -197,6 +197,7 @@ const styles = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,
+    borderCurve: 'continuous',
     maxHeight: '92%',
     paddingBottom: Spacing.four,
   },
@@ -227,6 +228,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.three,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     padding: Spacing.three,
   },
   wheelWrap: {
@@ -243,6 +245,7 @@ const styles = StyleSheet.create({
     top: (WHEEL_ITEM_HEIGHT * (WHEEL_VISIBLE_ROWS - 1)) / 2,
     height: WHEEL_ITEM_HEIGHT,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
   },
   footer: {
     paddingHorizontal: Spacing.four,

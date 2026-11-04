@@ -256,6 +256,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.three,
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
   },
   rules: { padding: Spacing.four, gap: Spacing.three, borderRadius: Radius.xl },
   ruleRow: { flexDirection: 'row', gap: Spacing.two, alignItems: 'flex-start' },

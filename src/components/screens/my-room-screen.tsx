@@ -97,7 +97,7 @@ import {
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
 import { ScalePressable } from '@/components/ui/scale-pressable';
-import { ContentMaxWidth, Radius, Spacing } from '@/constants/theme';
+import { ContentMaxWidth, Radius, Spacing, TabularNums } from '@/constants/theme';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 import { useBottomNavInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { APP_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
@@ -999,7 +999,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           {/* 미분류(pseudo) 그룹은 실제 카테고리가 아니라 표시하지 않는다. */}
           {meta.id ? <VisibilityMark visibility={meta.visibility} /> : null}
           {tab === 'room' && rows.length > 0 ? (
-            <Text style={[Typography.supporting, { color: t.textDisabled }]}>
+            <Text style={[Typography.supporting, TabularNums, { color: t.textDisabled }]}>
               {doneCount}/{rows.length}
             </Text>
           ) : null}
@@ -1299,7 +1299,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             </Text>
             <View style={styles.sectionHeadRight}>
               {roomRoutines.length > 0 ? (
-                <Text style={[Typography.label, { color: t.primaryText }]}>
+                <Text style={[Typography.label, TabularNums, { color: t.primaryText }]}>
                   {completedCount} / {roomRoutines.length}
                 </Text>
               ) : null}

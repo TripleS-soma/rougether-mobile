@@ -388,6 +388,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     padding: Spacing.four,
     gap: Spacing.two,
     alignItems: 'center',
@@ -414,6 +415,7 @@ const styles = StyleSheet.create({
   input: {
     alignSelf: 'stretch',
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     textAlign: 'center',

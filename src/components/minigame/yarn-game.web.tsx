@@ -109,6 +109,7 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 420 / 600,
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
     overflow: 'hidden',
   },
 });

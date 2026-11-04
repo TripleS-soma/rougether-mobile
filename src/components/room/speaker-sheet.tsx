@@ -67,6 +67,7 @@ function SpeakerSheetBase({
         maxHeight: '92%',
         borderTopLeftRadius: Radius.xl,
         borderTopRightRadius: Radius.xl,
+        borderCurve: 'continuous',
         overflow: 'hidden',
         backgroundColor: t.surface,
       }}>
@@ -204,6 +205,7 @@ const styles = StyleSheet.create({
   track: {
     borderWidth: 1,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     padding: Spacing.three,
     flexDirection: 'row',
     alignItems: 'center',

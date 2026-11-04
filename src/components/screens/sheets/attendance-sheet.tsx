@@ -279,6 +279,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,
+    borderCurve: 'continuous',
   },
   head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   title: { flex: 1 },

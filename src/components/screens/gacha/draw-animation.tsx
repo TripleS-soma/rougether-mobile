@@ -381,6 +381,7 @@ const styles = StyleSheet.create({
     width: 132,
     height: 132,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -395,6 +396,7 @@ const styles = StyleSheet.create({
   revealCard: {
     width: 104,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     borderWidth: 2,
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.two,
@@ -441,5 +443,6 @@ const styles = StyleSheet.create({
     right: -5,
     bottom: -5,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
   },
 });

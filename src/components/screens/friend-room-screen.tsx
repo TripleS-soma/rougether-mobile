@@ -737,6 +737,7 @@ const styles = StyleSheet.create({
   gbInput: {
     flex: 1,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     fontSize: 16,
@@ -766,6 +767,7 @@ const styles = StyleSheet.create({
   },
   gbRow: {
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     padding: Spacing.three,
     gap: Spacing.one,
   },
@@ -780,6 +782,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.one,
     paddingVertical: Spacing.half,
     borderRadius: Radius.sm,
+    borderCurve: 'continuous',
   },
   gbMore: {
     borderRadius: Radius.pill,
@@ -806,6 +809,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: Radius.sm,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
   },

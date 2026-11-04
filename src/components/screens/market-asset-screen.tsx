@@ -16,7 +16,7 @@ import { ReportSheet } from '@/components/ui/report-sheet';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { MARKET_BOOK_DEPTH } from '@/constants/market';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, TabularNums } from '@/constants/theme';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -207,7 +207,7 @@ export function MarketAssetScreen({
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
                   {tr('market.asset.bestAsk')}
                 </Text>
-                <Text style={[Typography.h3, { color: t.primaryText }]}>
+                <Text style={[Typography.h3, TabularNums, { color: t.primaryText }]}>
                   {asset.bestAskPrice != null
                     ? tr('market.coins', { n: asset.bestAskPrice })
                     : tr('market.asset.none')}
@@ -217,7 +217,7 @@ export function MarketAssetScreen({
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
                   {tr('market.asset.lastTrade')}
                 </Text>
-                <Text style={[Typography.h3, { color: t.text }]}>
+                <Text style={[Typography.h3, TabularNums, { color: t.text }]}>
                   {asset.lastTradePrice != null
                     ? tr('market.coins', { n: asset.lastTradePrice })
                     : tr('market.asset.none')}

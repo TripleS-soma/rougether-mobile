@@ -265,6 +265,7 @@ const styles = StyleSheet.create({
     aspectRatio: 1080 / 2192,
     maxHeight: 460,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     borderWidth: 1,
     overflow: 'hidden',
     alignSelf: 'center',

@@ -136,6 +136,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     paddingVertical: Spacing.six,
     paddingHorizontal: Spacing.four,
     marginTop: Spacing.three,

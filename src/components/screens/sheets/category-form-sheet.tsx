@@ -243,6 +243,7 @@ const styles = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,
+    borderCurve: 'continuous',
     maxHeight: '88%',
   },
   head: {
@@ -269,6 +270,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.three,
   },
   nameInput: { fontSize: 18, paddingVertical: Spacing.three },
@@ -283,6 +285,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: Radius.sm,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -312,6 +315,7 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
     paddingVertical: Spacing.three,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
   },
   segDesc: { textAlign: 'center' },
   footer: {

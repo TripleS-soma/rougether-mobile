@@ -34,6 +34,7 @@ import {
   PagerScrollView,
   usePagerNativeGesture,
 } from '@/components/ui/pager-scroll-view';
+import { hapticSelection } from '@/utils/haptics';
 
 /** 당김 저항 — 손가락 이동의 절반만 따라온다 (고무줄 감). */
 const DAMPING = 0.5;
@@ -108,6 +109,9 @@ export function PawRefreshScroll({
   const beat = useRef(useSharedValue(1)).current;
   // 제스처를 재생성하지 않고 잠근다 — 활성 제스처 취소 사고 방지 (#333 계약).
   const disabledSV = useRef(useSharedValue(false)).current;
+  // 발동 지점(TRIGGER)을 넘었는가 — 넘는 순간 한 번 햅틱으로 "놓으면 새로고침"을 알린다
+  // (2026-11-04). 다시 아래로 내려가면 풀려, 또 넘으면 다시 울린다.
+  const armed = useRef(useSharedValue(false)).current;
   useEffect(() => {
     disabledSV.value = refreshDisabled;
     if (refreshDisabled) pull.value = 0;
@@ -182,6 +186,7 @@ export function PawRefreshScroll({
       .onBegin(() => {
         'worklet';
         engaged.value = false;
+        armed.value = false;
       })
       .onUpdate((e) => {
         'worklet';
@@ -199,6 +204,12 @@ export function PawRefreshScroll({
         }
         const raw = (e.translationY - baseY.value) * DAMPING;
         pull.value = Math.max(0, Math.min(MAX_PULL, raw));
+        if (!armed.value && pull.value >= TRIGGER) {
+          armed.value = true;
+          runOnJS(hapticSelection)();
+        } else if (armed.value && pull.value < TRIGGER) {
+          armed.value = false;
+        }
       })
       .onEnd(() => {
         'worklet';
@@ -225,6 +236,7 @@ export function PawRefreshScroll({
     nativeScroll,
     pager,
     engaged,
+    armed,
     baseY,
     pull,
     scrollY,

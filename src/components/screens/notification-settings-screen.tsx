@@ -217,6 +217,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     overflow: 'hidden',
   },
   // 조회 실패 배너 (#549).

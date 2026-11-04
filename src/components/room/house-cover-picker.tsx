@@ -96,6 +96,7 @@ const styles = StyleSheet.create({
     width: '47%',
     flexGrow: 1,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     borderWidth: 2,
     padding: Spacing.one,
     alignItems: 'center',
@@ -105,6 +106,7 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: FRAME_ASPECT,
     borderRadius: Radius.sm,
+    borderCurve: 'continuous',
   },
   label: { textAlign: 'center' },
 });

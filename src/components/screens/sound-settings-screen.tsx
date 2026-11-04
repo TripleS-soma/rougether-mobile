@@ -166,6 +166,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     overflow: 'hidden',
   },
   row: {

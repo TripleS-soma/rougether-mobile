@@ -36,6 +36,7 @@ const styles = StyleSheet.create({
   swatch: {
     height: 48,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.12)',
   },

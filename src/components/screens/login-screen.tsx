@@ -491,6 +491,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     padding: Spacing.four,
     gap: Spacing.three,
     shadowOpacity: 0.08,
@@ -512,6 +513,7 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: Radius.sm,
+    borderCurve: 'continuous',
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
@@ -549,6 +551,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SOCIAL_SIDE_PAD,
     gap: Spacing.two,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
   },
   socialCardPressed: {
     opacity: 0.85,

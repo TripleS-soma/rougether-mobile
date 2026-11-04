@@ -86,6 +86,7 @@ export function AppearancePreview({
 const styles = StyleSheet.create({
   preview: {
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     borderWidth: StyleSheet.hairlineWidth,
     padding: Spacing.three,
     gap: Spacing.three,
@@ -142,6 +143,7 @@ const styles = StyleSheet.create({
   },
   cta: {
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     paddingVertical: Spacing.three,
     alignItems: 'center',
   },

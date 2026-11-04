@@ -302,9 +302,11 @@ const styles = StyleSheet.create({
     width: THUMB_SIZE,
     height: THUMB_SIZE,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
   },
   thumbImage: {
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
   },
   addTile: {
     alignItems: 'center',
@@ -314,6 +316,7 @@ const styles = StyleSheet.create({
   thumbState: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.half,
@@ -331,6 +334,7 @@ const styles = StyleSheet.create({
   content: {
     minHeight: 160,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     padding: Spacing.three,
     textAlignVertical: 'top',
   },

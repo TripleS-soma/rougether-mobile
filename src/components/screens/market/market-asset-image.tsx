@@ -45,6 +45,7 @@ export function MarketAssetImage({
 const styles = StyleSheet.create({
   frame: {
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',

@@ -298,6 +298,7 @@ const styles = StyleSheet.create({
   hero: {
     padding: Spacing.four,
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
     gap: Spacing.three,
     alignItems: 'center',
   },
