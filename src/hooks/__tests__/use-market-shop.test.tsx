@@ -13,6 +13,12 @@ jest.mock('@/api/market-shop', () => ({ purchaseShopListing: jest.fn() }));
 
 describe('고정가 구매 요청', () => {
   beforeEach(() => jest.mocked(purchaseShopListing).mockReset());
+  it('비활성화된 상세 조회를 로딩으로 표시하지 않는다', async () => {
+    const { result } = await renderHook(() => useMarketShop(false, false, null), {
+      wrapper: queryWrapper(),
+    });
+    expect(result.current.detailLoading).toBe(false);
+  });
   it('응답을 잃고 재시도하면 같은 멱등 키를 사용한다', async () => {
     jest
       .mocked(purchaseShopListing)

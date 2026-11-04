@@ -6,6 +6,7 @@ import type { ReportReason } from '@/api/types';
 import { MarketAssetImage } from '@/components/screens/market/market-asset-image';
 import { parseOrderPrice } from '@/components/screens/market/economics';
 import { Button } from '@/components/ui/button';
+import { CoachTarget } from '@/components/ui/coach-mark';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { ReportSheet } from '@/components/ui/report-sheet';
@@ -31,11 +32,12 @@ export type FixedPriceMarketScreenProps = {
   onLoadMore?: () => void;
   onOpen?: (id: number) => void;
   onBack?: () => void;
+  onOpenGuide?: () => void;
 };
 
 export function FixedPriceMarketScreen(p: FixedPriceMarketScreenProps) {
   const t = useTokens(),
-    font = useTypography(),
+    Typography = useTypography(),
     tr = useT();
   const column = useResponsiveColumn(),
     inset = useHeaderContentInset(),
@@ -50,43 +52,58 @@ export function FixedPriceMarketScreen(p: FixedPriceMarketScreenProps) {
       <PawRefreshScroll
         onRefresh={p.onRefresh}
         contentContainerStyle={[styles.body, column, { paddingTop: inset || Spacing.four }]}>
-        <Button
-          label={tr(p.mine ? 'market.screen.browse' : 'market.screen.manage')}
-          variant="secondary"
-          onPress={p.onToggleMine}
-        />
-        <Text style={[font.body, { color: t.textMuted }]}>{tr('market.shop.intro')}</Text>
+        {p.onOpenGuide ? (
+          <Button
+            label={tr('market.screen.guideA11y')}
+            variant="secondary"
+            onPress={p.onOpenGuide}
+          />
+        ) : null}
+        <CoachTarget id="market-manage">
+          <Button
+            label={tr(p.mine ? 'market.screen.browse' : 'market.screen.manage')}
+            variant="secondary"
+            onPress={p.onToggleMine}
+          />
+        </CoachTarget>
+        <Text style={[Typography.body, { color: t.textMuted }]}>{tr('market.shop.intro')}</Text>
         {p.loading ? <ActivityIndicator /> : null}
         {p.error ? (
           <Button label={tr('market.shop.retry')} onPress={() => void p.onRefresh?.()} />
         ) : null}
         {!p.loading && !p.error && !p.listings.length ? (
-          <Text style={[font.body, { color: t.textMuted }]}>{tr('market.list.empty')}</Text>
+          <Text style={[Typography.body, { color: t.textMuted }]}>{tr('market.list.empty')}</Text>
         ) : null}
-        {p.listings.map((item) => (
-          <View key={item.assetId} style={[styles.card, { backgroundColor: t.surface }]}>
-            <MarketAssetImage assetKey={item.assetKey} name={item.name} size={Spacing.six * 4} />
-            <Text style={[font.h3, { color: t.text }]}>{item.name}</Text>
-            <Text style={[font.supporting, { color: t.textMuted }]}>
-              {tr('market.creator', { name: item.creatorNickname ?? tr('market.creatorUnknown') })}
-            </Text>
-            <Text style={[font.label, { color: t.text }]}>
-              {item.price == null
-                ? tr('market.shop.notListed')
-                : tr('market.coins', { n: item.price })}
-            </Text>
-            <Button
-              label={tr(
-                item.isCreator
-                  ? 'market.shop.manage'
-                  : item.owned
-                    ? 'market.shop.owned'
-                    : 'market.shop.view',
-              )}
-              variant="secondary"
-              onPress={() => p.onOpen?.(item.assetId)}
-            />
-          </View>
+        {p.listings.map((item, index) => (
+          <CoachTarget
+            key={item.assetId}
+            id={index === 0 ? 'market-card' : `market-card-${item.assetId}`}>
+            <View style={[styles.card, { backgroundColor: t.surface }]}>
+              <MarketAssetImage assetKey={item.assetKey} name={item.name} size={Spacing.six * 4} />
+              <Text style={[Typography.h3, { color: t.text }]}>{item.name}</Text>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                {tr('market.creator', {
+                  name: item.creatorNickname ?? tr('market.creatorUnknown'),
+                })}
+              </Text>
+              <Text style={[Typography.label, { color: t.text }]}>
+                {item.price == null
+                  ? tr('market.shop.notListed')
+                  : tr('market.coins', { n: item.price })}
+              </Text>
+              <Button
+                label={tr(
+                  item.isCreator
+                    ? 'market.shop.manage'
+                    : item.owned
+                      ? 'market.shop.owned'
+                      : 'market.shop.view',
+                )}
+                variant="secondary"
+                onPress={() => p.onOpen?.(item.assetId)}
+              />
+            </View>
+          </CoachTarget>
         ))}
         {p.hasNext ? (
           <Button label={tr('market.list.more')} onPress={p.onLoadMore} disabled={p.loadingMore} />
@@ -111,7 +128,7 @@ export type FixedPriceListingScreenProps = {
 
 export function FixedPriceListingScreen(p: FixedPriceListingScreenProps) {
   const t = useTokens(),
-    font = useTypography(),
+    Typography = useTypography(),
     tr = useT();
   const column = useResponsiveColumn(),
     inset = useHeaderContentInset(),
@@ -149,20 +166,20 @@ export function FixedPriceListingScreen(p: FixedPriceListingScreenProps) {
           <Button label={tr('market.shop.retry')} onPress={() => void p.onRefresh?.()} />
         ) : null}
         {p.actionError ? (
-          <Text accessibilityRole="alert" style={[font.body, { color: t.danger }]}>
+          <Text accessibilityRole="alert" style={[Typography.body, { color: t.danger }]}>
             {p.actionError}
           </Text>
         ) : null}
         {item ? (
           <>
             <MarketAssetImage assetKey={item.assetKey} name={item.name} size={Spacing.six * 8} />
-            <Text style={[font.h2, { color: t.text }]}>{item.name}</Text>
-            <Text style={[font.body, { color: t.textMuted }]}>
+            <Text style={[Typography.h2, { color: t.text }]}>{item.name}</Text>
+            <Text style={[Typography.body, { color: t.textMuted }]}>
               {tr('market.creator', { name: item.creatorNickname ?? tr('market.creatorUnknown') })}
             </Text>
             {item.isCreator ? (
               <>
-                <Text style={[font.body, { color: t.textMuted }]}>
+                <Text style={[Typography.body, { color: t.textMuted }]}>
                   {tr('market.shop.originalKept')}
                 </Text>
                 <TextInput
@@ -174,9 +191,9 @@ export function FixedPriceListingScreen(p: FixedPriceListingScreenProps) {
                   accessibilityLabel={tr('market.order.price')}
                   placeholder={tr('market.order.pricePlaceholder')}
                   placeholderTextColor={t.textMuted}
-                  style={[font.h3, styles.input, { color: t.text, borderColor: t.border }]}
+                  style={[Typography.h3, styles.input, { color: t.text, borderColor: t.border }]}
                 />
-                <Text style={[font.supporting, { color: t.textMuted }]}>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
                   {tr('market.shop.fee')}
                 </Text>
                 <Button
@@ -197,12 +214,12 @@ export function FixedPriceListingScreen(p: FixedPriceListingScreenProps) {
               </>
             ) : (
               <>
-                <Text style={[font.h3, { color: t.text }]}>
+                <Text style={[Typography.h3, { color: t.text }]}>
                   {item.price == null
                     ? tr('market.shop.notListed')
                     : tr('market.coins', { n: item.price })}
                 </Text>
-                <Text style={[font.body, { color: t.textMuted }]}>
+                <Text style={[Typography.body, { color: t.textMuted }]}>
                   {tr('market.shop.purchaseNote')}
                 </Text>
                 <Button
@@ -224,7 +241,7 @@ export function FixedPriceListingScreen(p: FixedPriceListingScreenProps) {
                   onPress={() => setConfirmPrice(item.price)}
                 />
                 {item.price != null && p.coinBalance < item.price && !item.owned ? (
-                  <Text style={[font.supporting, { color: t.danger }]}>
+                  <Text style={[Typography.supporting, { color: t.danger }]}>
                     {tr('market.order.notEnough')}
                   </Text>
                 ) : null}

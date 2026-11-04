@@ -19,6 +19,12 @@ const item: MarketListing = {
 };
 
 describe('고정가 거래소', () => {
+  it('거래소 이용 안내를 다시 열 수 있다', async () => {
+    const guide = jest.fn();
+    const ui = await render(<FixedPriceMarketScreen listings={[item]} onOpenGuide={guide} />);
+    await fireEvent.press(ui.getByLabelText('거래소 이용 안내'));
+    expect(guide).toHaveBeenCalledTimes(1);
+  });
   it('구매자는 표시 가격만 확인하고 구매하며 가격과 수량을 입력하지 않는다', async () => {
     const buy = jest.fn().mockResolvedValue(true);
     const ui = await render(

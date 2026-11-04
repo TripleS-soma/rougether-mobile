@@ -18,6 +18,7 @@ export function useMarketPages({
   nav,
   coinBalance,
   diamondBalance,
+  onOpenGuide,
 }: {
   nav: { screen: Screen; setScreen: Dispatch<SetStateAction<Screen>>; goBack: () => void };
   coinBalance: number;
@@ -154,6 +155,7 @@ export function useMarketPages({
       }}
       coinBalance={coinBalance}
       diamondBalance={diamondBalance}
+      onOpenGuide={onOpenGuide}
       onRefresh={shop.refresh}
       onLoadMore={shop.loadMore}
       onOpen={openAsset}
