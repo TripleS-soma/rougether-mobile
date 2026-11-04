@@ -16,21 +16,22 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: production 빌드, TestFlight 빌드 전용, 또는 기존 115 제출 전용
+        description: production 빌드, TestFlight 빌드 전용, 기존 115 또는 현재 후보 제출
         type: choice
-        options: [production, testflight-build-only, testflight-submit-only]
+        options:
+          [production, testflight-build-only, testflight-submit-only, testflight-current-submit]
         default: production
       action:
-        description: TestFlight 전용 (inspect 조회, build 새 빌드, submit 기존 115 제출)
+        description: TestFlight 전용 (inspect 조회, build 새 빌드, submit 지정 후보 제출)
         type: choice
         options: [inspect, build, submit]
         default: inspect
       expected_app_version:
-        description: '빌드 전용 후보 앱 버전 (기존 115 제출에는 적용 안 됨)'
+        description: '빌드 전용 또는 current-submit 후보 앱 버전 (기존 115 제출에는 적용 안 됨)'
         type: string
         default: '1.5.0'
       expected_source_sha:
-        description: 'TestFlight 대상 앱 소스 SHA (40자리, 제출 시 기존 115의 앱 소스)'
+        description: 'TestFlight 대상 앱 소스 SHA (40자리, 제출할 바이너리의 소스)'
         type: string
         required: false
       platform:
@@ -45,15 +46,20 @@ on:
         type: boolean
         default: false
       expected_ios_build:
-        description: '빌드 시 예상 다음 번호(선택), submit-only에서는 기존 번호 115(필수)'
+        description: '빌드 시 예상 다음 번호(선택), 제출 시 명시한 기존 빌드 번호(115 또는 현재 후보)'
         type: string
         required: false
       existing_build_id:
-        description: 'testflight-submit-only로 제출할 기존 115번 EAS 빌드 ID'
+        description: 'submit-only 또는 current-submit으로 제출할 정확한 기존 EAS 빌드 ID'
         type: string
         required: false
       expected_tooling_sha:
         description: 'testflight-submit-only 실행 코드 SHA (기존 앱 source SHA와 별개)'
+        type: string
+        required: false
+
+      expected_ios_runtime:
+        description: 'current-submit 후보의 정확한 iOS 런타임 지문 (40자리)'
         type: string
         required: false
 
@@ -209,3 +215,49 @@ jobs:
       - name: 임시 ASC 개인키 제거
         if: always()
         run: node scripts/submit-testflight-build.js cleanup
+
+  testflight-current-submit:
+    if: inputs.mode == 'testflight-current-submit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      checks: read
+    concurrency:
+      group: eas-deploy-dev
+      cancel-in-progress: false
+    env:
+      SUBMIT_MODE: ${{ inputs.mode }}
+      SUBMIT_ACTION: ${{ inputs.action }}
+      SUBMIT_PLATFORM: ${{ inputs.platform }}
+      SUBMIT_AUTHORIZED: ${{ inputs.submit }}
+      EXISTING_BUILD_ID: ${{ inputs.existing_build_id }}
+      EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
+      EXPECTED_APP_VERSION: ${{ inputs.expected_app_version }}
+      EXPECTED_IOS_BUILD: ${{ inputs.expected_ios_build }}
+      EXPECTED_IOS_RUNTIME: ${{ inputs.expected_ios_runtime }}
+      EXPECTED_TOOLING_SHA: ${{ inputs.expected_tooling_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: 명시한 현재 후보와 실행 코드 확인
+        run: node scripts/submit-current-testflight.js validate
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: 23.2.0
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: 현재 iOS 후보 조회 또는 TestFlight 제출
+        run: node scripts/submit-current-testflight.js
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+      - name: 임시 ASC 개인키 제거
+        if: always()
+        run: node scripts/submit-current-testflight.js cleanup
