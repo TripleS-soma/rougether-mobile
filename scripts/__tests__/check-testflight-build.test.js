@@ -4,6 +4,7 @@ const path = require('node:path');
 const yaml = require('js-yaml');
 const {
   REQUIRED_CHECKS,
+  safeFailureDetail,
   validateConfiguration,
   validateChecks,
   nextBuildNumber,
@@ -306,4 +307,45 @@ it('requires an explicit version when building a newer candidate while preservin
   expect(() =>
     validateConfiguration({ ...env, EXPECTED_APP_VERSION: '1.5.2' }, sha, nextApp, eas),
   ).toThrow();
+});
+
+describe('separate workflow tooling for an already verified binary source', () => {
+  const tooling = 'c'.repeat(40);
+  const separate = {
+    ...env,
+    GITHUB_SHA: tooling,
+    EXPECTED_TOOLING_SHA: tooling,
+    TOOLING_CHECKOUT_SHA: tooling,
+  };
+  it('keeps the exact verified source while requiring exact workflow and tooling identities', () => {
+    expect(() => validateConfiguration(separate, sha, app, eas)).not.toThrow();
+    expect(() =>
+      validateConfiguration({ ...separate, TOOLING_CHECKOUT_SHA: sha }, sha, app, eas),
+    ).toThrow();
+    expect(() => validateConfiguration({ ...separate, GITHUB_SHA: sha }, sha, app, eas)).toThrow();
+    expect(() => validateConfiguration(separate, tooling, app, eas)).toThrow();
+  });
+  it('executes build commands within the source checkout and keeps tools outside its archive', () => {
+    const lane = yaml.load(
+      fs.readFileSync(path.join(__dirname, '../../.github/workflows/store-build.yml'), 'utf8'),
+    ).jobs['testflight-build-only'];
+    const candidate = lane.steps.find((step) => step.with?.path === '.candidate');
+    expect(candidate.with.ref).toBe('${{ inputs.expected_source_sha }}');
+    expect(lane.defaults.run['working-directory']).toContain("'.candidate'");
+    expect(lane.steps.find((step) => step.name?.startsWith('명시한 iOS')).run).toContain(
+      '$GITHUB_WORKSPACE/scripts/check-testflight-build.js',
+    );
+  });
+  it('retains a useful diagnostic while removing keys, environment secrets, signed URLs, emails and opaque identifiers', () => {
+    const detail = safeFailureDetail(
+      {
+        stderr:
+          '-----BEGIN PRIVATE KEY-----\nerror secret-data\n-----END PRIVATE KEY-----\nError: Invalid provisioning profile for user@example.com https://example.com?token=abc token=shortkey actual-secret-value ' +
+          'b'.repeat(40),
+      },
+      { EXPO_TOKEN: 'actual-secret-value' },
+    );
+    expect(detail).toContain('Invalid provisioning profile');
+    expect(detail).not.toMatch(/secret-data|user@example|https:|shortkey|actual-secret-value|bbbb/);
+  });
 });
