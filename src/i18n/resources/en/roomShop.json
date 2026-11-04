@@ -16,7 +16,10 @@
         "SHOP_PURCHASE": "Shop purchase",
         "other": "Other",
         "FURNITURE_GENERATION": "AI furniture creation",
-        "FURNITURE_GENERATION_REFUND": "AI furniture generation refund"
+        "FURNITURE_GENERATION_REFUND": "AI furniture generation refund",
+        "MARKET_PURCHASE": "Furniture purchase",
+        "MARKET_SALE": "Furniture sales",
+        "MARKET_ESCROW_REFUND": "Previous trade refund"
       },
       "historyTitle": "Currency history",
       "closeA11y": "Close currency history",

@@ -6,10 +6,10 @@ import type { CoachStep } from '@/components/ui/coach-mark';
  */
 export const MARKET_TOUR_ID = 'market';
 
-/** 거래소: 첫 가구 카드 → 내 주문 칩 → 내 판매 관리. 목록이 비면 1단계는 가운데 말풍선만. */
-export const MARKET_TOUR_TARGETS = ['market-card', 'market-orders', 'market-manage'] as const;
+/** 거래소: 첫 가구 카드 → 내 판매 관리. 목록이 비면 1단계는 가운데 말풍선만. */
+export const MARKET_TOUR_TARGETS = ['market-card', 'market-manage'] as const;
 
-const MARKET_TOUR_COPY = ['card', 'orders', 'manage'] as const;
+const MARKET_TOUR_COPY = ['card', 'manage'] as const;
 
 export function marketTourCoachSteps(tr: (key: string) => string): CoachStep[] {
   return MARKET_TOUR_TARGETS.map((target, i) => ({

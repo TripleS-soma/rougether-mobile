@@ -16,7 +16,10 @@
         "SHOP_PURCHASE": "상점 구매",
         "other": "기타",
         "FURNITURE_GENERATION": "AI 가구 만들기",
-        "FURNITURE_GENERATION_REFUND": "AI 가구 생성 실패 환급"
+        "FURNITURE_GENERATION_REFUND": "AI 가구 생성 실패 환급",
+        "MARKET_PURCHASE": "가구 거래소 구매",
+        "MARKET_SALE": "가구 판매 수익",
+        "MARKET_ESCROW_REFUND": "이전 거래 환불"
       },
       "historyTitle": "재화 내역",
       "closeA11y": "재화 내역 닫기",
