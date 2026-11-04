@@ -4,6 +4,7 @@ import { Modal, Platform, Pressable, StyleSheet, View, useWindowDimensions } fro
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
@@ -77,7 +78,11 @@ export function LandscapeStage({
             accessibilityRole="button"
             accessibilityLabel={tr('roomShop.minigame.play.exitA11y')}
             hitSlop={Spacing.two}
-            style={[styles.exit, { backgroundColor: t.surface }]}>
+            style={({ pressed }) => [
+              styles.exit,
+              { backgroundColor: t.surface },
+              pressed && pressedStyle('dim', t),
+            ]}>
             <Icon name="close" size={20} color={t.textMuted} />
           </Pressable>
         </View>

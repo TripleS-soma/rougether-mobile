@@ -7,6 +7,7 @@ import { MinigameLayout } from '@/components/screens/minigame-layout';
 import { Button } from '@/components/ui/button';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon, type IconName } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { RetryState } from '@/components/ui/retry-state';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -85,7 +86,8 @@ export function MinigameRunnerScreen({
             onPress={onOpenRules}
             accessibilityRole="button"
             accessibilityLabel={tr('roomShop.minigame.rulesA11y')}
-            hitSlop={8}>
+            hitSlop={8}
+            style={({ pressed }) => pressed && pressedStyle('dim', t)}>
             <Icon name="help" size={20} color={t.textMuted} />
           </Pressable>
         ) : undefined

@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
 import { HouseCoverArt } from '@/components/room/house-cover-art';
 import { Field } from '@/components/ui/field';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { CrownPictogram, Pictogram } from '@/components/ui/pictograms';
 import { PrivacyCard } from '@/components/screens/house/privacy-card';
@@ -181,12 +182,13 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
                   onPress={() => setThemeId(x.id)}
                   accessibilityRole="radio"
                   accessibilityState={{ selected }}
-                  style={[
+                  style={({ pressed }) => [
                     styles.themeCell,
                     {
                       backgroundColor: selected ? x.bg : t.surfaceMuted,
                       borderColor: selected ? t.primary : 'transparent',
                     },
+                    pressed && pressedStyle('dim', t),
                   ]}>
                   <Pictogram name={x.icon} size={22} />
                   <Text style={[Typography.supporting, emph('semibold'), { color: t.text }]}>
@@ -223,9 +225,10 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
                   onPress={() => setCapacity(n)}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
-                  style={[
+                  style={({ pressed }) => [
                     styles.capBtn,
                     { backgroundColor: selected ? t.primary : t.surfaceMuted },
+                    pressed && pressedStyle('dim', t),
                   ]}>
                   <Text style={[Typography.label, { color: selected ? t.onPrimary : t.textMuted }]}>
                     {n}
@@ -300,7 +303,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
           style={({ pressed }) => [
             styles.submit,
             { backgroundColor: canSubmit ? t.primary : t.disabledBg },
-            pressed && canSubmit && { backgroundColor: t.primaryActive },
+            pressed && canSubmit && pressedStyle('fill', t),
           ]}>
           <Text style={[Typography.label, { color: canSubmit ? t.onPrimary : t.textMuted }]}>
             {tr('house.create.submit')}

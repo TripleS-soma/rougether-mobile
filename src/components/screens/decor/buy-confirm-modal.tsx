@@ -4,6 +4,7 @@ import Animated, { ZoomIn } from 'react-native-reanimated';
 
 import { confirmStyles as styles } from '@/components/screens/decor/confirm-modal-styles';
 import { Icon } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
@@ -48,9 +49,10 @@ export function BuyConfirmModal({ item, phase, onCancel, onConfirm }: BuyConfirm
               disabled={phase !== 'idle'}
               accessibilityRole="button"
               accessibilityLabel={tr('roomShop.decor.buy.cancelA11y')}
-              style={[
+              style={({ pressed }) => [
                 local.confirmBtn,
                 { backgroundColor: t.surfaceMuted, opacity: phase === 'idle' ? 1 : 0.4 },
+                pressed && pressedStyle('dim', t),
               ]}>
               <Text style={[Typography.label, { color: t.text }]}>{tr('common.cancel')}</Text>
             </Pressable>
@@ -60,10 +62,11 @@ export function BuyConfirmModal({ item, phase, onCancel, onConfirm }: BuyConfirm
               accessibilityRole="button"
               accessibilityLabel={tr('roomShop.decor.buy.confirmA11y')}
               accessibilityState={{ disabled: phase !== 'idle' }}
-              style={[
+              style={({ pressed }) => [
                 local.confirmBtn,
                 { backgroundColor: t.primary },
                 phase === 'buying' && local.confirmBtnPressed,
+                pressed && pressedStyle('fill', t),
               ]}>
               {phase === 'done' ? (
                 // 성공 확인 후에만 체크 팝 (#453) — 눌림에서 튀어오르는 변신.

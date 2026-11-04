@@ -5,6 +5,7 @@ import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { MissionFlagPictogram } from '@/components/ui/pictograms';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
@@ -59,7 +60,7 @@ export function MissionBanner({
           onPress={onPress}
           accessibilityRole="button"
           accessibilityLabel={tr('house.missionBanner.a11y', { n: stepIndex + 1, label })}
-          style={styles.goArea}>
+          style={({ pressed }) => [styles.goArea, pressed && pressedStyle('dim', t)]}>
           <MissionFlagPictogram size={26} />
           <View style={styles.texts}>
             {/* 탭 어포던스 (#571 후속) — 배너가 실행 화면으로 데려다주는
@@ -78,7 +79,8 @@ export function MissionBanner({
             onPress={() => setConfirming(true)}
             accessibilityRole="button"
             accessibilityLabel={tr('house.missionBanner.skipA11y')}
-            hitSlop={8}>
+            hitSlop={8}
+            style={({ pressed }) => pressed && pressedStyle('dim', t)}>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
               {tr('house.missionBanner.skip')}
             </Text>

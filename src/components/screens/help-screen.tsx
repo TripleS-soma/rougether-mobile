@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Radius, Spacing } from '@/constants/theme';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
@@ -78,7 +79,7 @@ export function HelpScreen({ appVersion = '1.0.0', onContact, onBack }: HelpScre
                   accessibilityRole="button"
                   accessibilityState={{ expanded: open }}
                   accessibilityLabel={faq.q}
-                  style={styles.qRow}>
+                  style={({ pressed }) => [styles.qRow, pressed && pressedStyle('row', t)]}>
                   <Text style={[Typography.body, styles.flex, { color: t.text }]}>{faq.q}</Text>
                   <View style={open ? styles.chevronOpen : undefined}>
                     <Icon name="forward" size={16} color={t.textMuted} />
@@ -108,7 +109,7 @@ export function HelpScreen({ appVersion = '1.0.0', onContact, onBack }: HelpScre
             onPress={onContact}
             accessibilityRole="button"
             accessibilityLabel={tr('member.help.contact')}
-            style={styles.linkRow}>
+            style={({ pressed }) => [styles.linkRow, pressed && pressedStyle('row', t)]}>
             <Text style={[Typography.body, { color: t.text }]}>{tr('member.help.contact')}</Text>
             <Icon name="forward" size={16} color={t.textDisabled} />
           </Pressable>

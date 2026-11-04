@@ -10,6 +10,7 @@ import type {
 import { Icon } from '@/components/ui/icon';
 import { LinkifiedText } from '@/components/ui/linkified-text';
 import { Loading } from '@/components/ui/loading';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { RetryState } from '@/components/ui/retry-state';
 import { Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -74,7 +75,7 @@ function CommentRow({
             accessibilityLabel={tr('feed.post.replyA11y', { name })}
             accessibilityState={{ disabled: !!replyDisabled }}
             hitSlop={Spacing.two}
-            style={styles.action}>
+            style={({ pressed }) => [styles.action, pressed && pressedStyle('dim', t)]}>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
               {tr('feed.post.reply')}
             </Text>
@@ -86,7 +87,8 @@ function CommentRow({
           onPress={() => onDelete(comment.commentId)}
           accessibilityRole="button"
           accessibilityLabel={tr('feed.post.deleteCommentA11y')}
-          hitSlop={Spacing.two}>
+          hitSlop={Spacing.two}
+          style={({ pressed }) => pressed && pressedStyle('dim', t)}>
           <Text style={[Typography.supporting, { color: t.danger }]}>
             {tr('feed.post.deleteComment')}
           </Text>
@@ -97,7 +99,8 @@ function CommentRow({
           onPress={() => onMenu(comment)}
           accessibilityRole="button"
           accessibilityLabel={tr('member.moderation.commentMenuA11y')}
-          hitSlop={Spacing.two}>
+          hitSlop={Spacing.two}
+          style={({ pressed }) => pressed && pressedStyle('dim', t)}>
           <Icon name="kebab" size={18} color={t.textMuted} />
         </Pressable>
       ) : null}
@@ -144,7 +147,7 @@ function ReplyList({
           disabled={state.loadingMore}
           accessibilityRole="button"
           accessibilityState={{ disabled: state.loadingMore }}
-          style={styles.action}>
+          style={({ pressed }) => [styles.action, pressed && pressedStyle('dim', t)]}>
           <Text style={[Typography.label, { color: t.primaryText }]}>
             {tr('feed.post.moreReplies')}
           </Text>
@@ -184,7 +187,7 @@ export function FeedCommentThread({
           accessibilityRole="button"
           accessibilityState={{ expanded }}
           hitSlop={Spacing.two}
-          style={styles.toggle}>
+          style={({ pressed }) => [styles.toggle, pressed && pressedStyle('dim', t)]}>
           <Text style={[Typography.supporting, { color: t.primaryText }]}>
             {expanded
               ? tr('feed.post.hideReplies')

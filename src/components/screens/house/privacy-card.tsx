@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
@@ -29,9 +30,10 @@ export function PrivacyCard({
       onPress={onPress}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
-      style={[
+      style={({ pressed }) => [
         styles.privacyCard,
         { backgroundColor: t.surfaceMuted, borderColor: selected ? accent : 'transparent' },
+        pressed && pressedStyle('dim', t),
       ]}>
       <Text style={[Typography.label, { color: t.text }]}>{title}</Text>
       <Text style={[styles.privacySub, emph('normal'), { color: t.textMuted }]}>{subtitle}</Text>

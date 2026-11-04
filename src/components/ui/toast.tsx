@@ -12,6 +12,7 @@ import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { GlassSurface } from '@/components/ui/glass-surface';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
@@ -138,7 +139,8 @@ function ToastView({
         <Pressable
           onPress={onPress}
           accessibilityRole="button"
-          accessibilityLabel={tr('app.ui.closeToast')}>
+          accessibilityLabel={tr('app.ui.closeToast')}
+          style={({ pressed }) => pressed && pressedStyle('dim', t)}>
           <Text style={[Typography.label, styles.text, { color: ink }]} numberOfLines={2}>
             {toast.message}
           </Text>

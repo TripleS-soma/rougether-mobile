@@ -5,6 +5,7 @@ import type { Routine } from '@/constants/routines';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 export type RenameDialogProps = {
   /** 이름을 바꿀 루틴/투두 — null이면 다이얼로그가 닫힌다. */
@@ -51,7 +52,11 @@ export function RenameDialog({ item, onClose, onRename }: RenameDialogProps) {
               onPress={onClose}
               accessibilityRole="button"
               accessibilityLabel={tr('app.rename.cancel')}
-              style={[styles.dialogBtn, { backgroundColor: t.surfaceMuted }]}>
+              style={({ pressed }) => [
+                styles.dialogBtn,
+                { backgroundColor: t.surfaceMuted },
+                pressed && pressedStyle('dim', t),
+              ]}>
               <Text style={[Typography.label, { color: t.text }]}>{tr('app.rename.cancel')}</Text>
             </Pressable>
             <Pressable
@@ -63,9 +68,10 @@ export function RenameDialog({ item, onClose, onRename }: RenameDialogProps) {
               disabled={!text.trim()}
               accessibilityRole="button"
               accessibilityLabel={tr('app.rename.save')}
-              style={[
+              style={({ pressed }) => [
                 styles.dialogBtn,
                 { backgroundColor: text.trim() ? t.primary : t.surfaceMuted },
+                pressed && !!text.trim() && pressedStyle('fill', t),
               ]}>
               <Text style={[Typography.label, { color: text.trim() ? t.onPrimary : t.textMuted }]}>
                 {tr('app.rename.save')}

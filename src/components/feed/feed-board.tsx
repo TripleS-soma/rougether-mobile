@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { FeedBoardFilter, FeedBoardType } from '@/components/screens/feed/types';
 import { Badge } from '@/components/ui/badge';
 import { GlassSurface } from '@/components/ui/glass-surface';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
@@ -67,7 +68,11 @@ export function FeedBoardTabs<K extends FeedBoardFilter>({
               accessibilityState={{ selected: active, disabled: off }}
               accessibilityLabel={tr('feed.board.tabA11y', { label })}
               testID={testID ? `${testID}-${key}` : undefined}
-              style={[styles.item, active && { backgroundColor: t.surfaceMuted }]}>
+              style={({ pressed }) => [
+                styles.item,
+                active && { backgroundColor: t.surfaceMuted },
+                pressed && pressedStyle('dim', t),
+              ]}>
               <Text
                 style={[
                   Typography.label,

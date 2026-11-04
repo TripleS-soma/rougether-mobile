@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { getCurrencyGuides } from '@/constants/currency';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -36,7 +37,8 @@ export function CurrencyGuide({ initialOpen = false }: CurrencyGuideProps) {
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         accessibilityLabel={tr('app.currency.guideA11y')}
-        style={styles.head}>
+        // 카드에 overflow 클립이 없어 배경 칠하면 모서리가 각진다 — 투명도로.
+        style={({ pressed }) => [styles.head, pressed && pressedStyle('dim', t)]}>
         <Icon name="help" size={16} color={t.textMuted} />
         <Text style={[Typography.body, styles.flex, { color: t.text }]}>
           {tr('app.currency.guideA11y')}

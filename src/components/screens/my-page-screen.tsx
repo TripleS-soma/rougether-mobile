@@ -1,6 +1,7 @@
 import { memo, useRef } from 'react';
 import { Pressable, type ScrollView, StyleSheet, Text, View } from 'react-native';
 import { PagerScrollView } from '@/components/ui/pager-scroll-view';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { formatAmount } from '@/constants/currency';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
@@ -173,7 +174,7 @@ export const MyPageScreen = memo(function MyPageScreen({
             accessibilityRole="button"
             accessibilityLabel={tr('member.myPage.settingsA11y')}
             testID="my-page-settings"
-            style={styles.headerBtn}>
+            style={({ pressed }) => [styles.headerBtn, pressed && pressedStyle('dim', t)]}>
             <GlassSurface style={styles.headerFace} fallbackColor={t.surface}>
               <Icon name="settings" size={20} color={t.text} />
             </GlassSurface>
@@ -266,7 +267,7 @@ export const MyPageScreen = memo(function MyPageScreen({
                 accessibilityLabel={
                   tile.dot ? `${tile.label}, ${tr('nav.badgeAbsent')}` : tile.label
                 }
-                style={styles.tile}>
+                style={({ pressed }) => [styles.tile, pressed && pressedStyle('dim', t)]}>
                 <GlassSurface fallbackColor={t.surface} style={styles.tileFace}>
                   <View style={[styles.iconCircle, { backgroundColor: t.primarySoft }]}>
                     <Icon name={tile.icon} size={20} color={t.primaryText} />

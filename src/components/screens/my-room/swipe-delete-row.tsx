@@ -9,6 +9,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
 import { hapticSelection } from '@/utils/haptics';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 /**
  * 루틴/할일 행 스와이프 삭제 (#566) — 왼쪽으로 밀면 빨간 '삭제' 액션이
@@ -59,7 +60,11 @@ export function SwipeDeleteRow({
                 }}
                 accessibilityRole="button"
                 accessibilityLabel={tr('routineTodo.swipeDelete.a11y', { label })}
-                style={[styles.deleteAction, { backgroundColor: t.danger }]}>
+                style={({ pressed }) => [
+                  styles.deleteAction,
+                  { backgroundColor: t.danger },
+                  pressed && pressedStyle('dim', t),
+                ]}>
                 <Text style={[Typography.label, { color: t.onPrimary }]}>
                   {tr('routineTodo.swipeDelete.label')}
                 </Text>

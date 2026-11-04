@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 export type PickerRowProps = {
   /** 견본 슬롯 — 테마는 색 원, 폰트는 글자 타일. 행의 나머지는 공유한다. */
@@ -31,10 +32,11 @@ export function PickerRow({ swatch, name, selected, accessibilityLabel, onPress 
       accessibilityRole="radio"
       accessibilityState={{ selected }}
       accessibilityLabel={accessibilityLabel}
-      style={[
+      style={({ pressed }) => [
         styles.row,
         { backgroundColor: t.surface, borderColor: selected ? t.primary : t.border },
         selected && styles.rowSelected,
+        pressed && pressedStyle('row', t),
       ]}>
       {swatch}
       <Text

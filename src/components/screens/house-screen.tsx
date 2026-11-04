@@ -21,6 +21,7 @@ import Reanimated from 'react-native-reanimated';
 
 import { type HouseCover } from '@/components/room/house-cover-picker';
 import { HouseOrderDots } from '@/components/room/house-order-dots';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { useHouseFrame } from '@/hooks/use-house-frame';
 import { type HouseFrameOptions, houseWindowSeats } from '@/resources/house-frame';
 import { CoachTarget } from '@/components/ui/coach-mark';
@@ -786,7 +787,7 @@ export const HouseScreen = memo(function HouseScreen({
                   onPress={resetCam}
                   accessibilityRole="button"
                   accessibilityLabel={tr('house.screen.zoomExit')}
-                  style={styles.camReset}>
+                  style={({ pressed }) => [styles.camReset, pressed && pressedStyle('dim', t)]}>
                   <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
                     <Icon name="refresh" size={16} color={t.text} />
                   </GlassSurface>

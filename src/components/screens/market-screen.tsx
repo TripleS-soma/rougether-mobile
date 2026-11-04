@@ -6,6 +6,7 @@ import { CoachTarget } from '@/components/ui/coach-mark';
 import { Icon } from '@/components/ui/icon';
 import { MarketList } from '@/components/screens/market/market-list';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { WalletPills } from '@/components/ui/wallet-pills';
 import { Radius, Spacing } from '@/constants/theme';
@@ -80,7 +81,8 @@ export function MarketScreen({
                 onPress={onOpenGuide}
                 accessibilityRole="button"
                 accessibilityLabel={tr('market.screen.guideA11y')}
-                hitSlop={8}>
+                hitSlop={8}
+                style={({ pressed }) => pressed && pressedStyle('dim', t)}>
                 <Icon name="help" size={20} color={t.textMuted} />
               </Pressable>
             ) : null}
@@ -107,7 +109,11 @@ export function MarketScreen({
                 onPress={onOpenOrders}
                 accessibilityRole="button"
                 accessibilityLabel={tr('market.selling.open')}
-                style={[styles.sellingBtn, { backgroundColor: t.surface }]}>
+                style={({ pressed }) => [
+                  styles.sellingBtn,
+                  { backgroundColor: t.surface },
+                  pressed && pressedStyle('card', t),
+                ]}>
                 <Text style={[Typography.supporting, { color: t.primaryText }]}>
                   {tr('market.selling.open')}
                 </Text>

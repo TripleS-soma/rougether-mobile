@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
@@ -47,7 +48,11 @@ export function RetryState({ message, detail, onRetry, retryLabel }: RetryStateP
           onPress={onRetry}
           accessibilityRole="button"
           accessibilityLabel={label}
-          style={[styles.retryBtn, { backgroundColor: t.primary }]}>
+          style={({ pressed }) => [
+            styles.retryBtn,
+            { backgroundColor: t.primary },
+            pressed && pressedStyle('fill', t),
+          ]}>
           <Text style={[Typography.label, { color: t.onPrimary }]}>{label}</Text>
         </Pressable>
       ) : null}

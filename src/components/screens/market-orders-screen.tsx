@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Loading } from '@/components/ui/loading';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Radius, Spacing } from '@/constants/theme';
@@ -122,7 +123,11 @@ export function MarketOrdersScreen({
                 accessibilityRole="button"
                 accessibilityLabel={tr('market.orders.tabA11y', { label })}
                 accessibilityState={{ selected: active }}
-                style={[styles.segBtn, { backgroundColor: active ? t.primary : t.surfaceMuted }]}>
+                style={({ pressed }) => [
+                  styles.segBtn,
+                  { backgroundColor: active ? t.primary : t.surfaceMuted },
+                  pressed && pressedStyle('dim', t),
+                ]}>
                 <Text
                   style={[Typography.supporting, { color: active ? t.onPrimary : t.textMuted }]}>
                   {label}
@@ -156,7 +161,7 @@ export function MarketOrdersScreen({
                   disabled={!onOpenAsset}
                   accessibilityRole="button"
                   accessibilityLabel={tr('market.orders.rowA11y', { name: o.name })}
-                  style={styles.rowMain}>
+                  style={({ pressed }) => [styles.rowMain, pressed && pressedStyle('dim', t)]}>
                   <MarketAssetImage assetKey={o.assetKey} name={o.name} size={ROW_IMAGE} />
                   <View style={styles.flex}>
                     <Text numberOfLines={1} style={[Typography.label, { color: t.text }]}>
@@ -191,7 +196,11 @@ export function MarketOrdersScreen({
                       onPress={() => setAmending(o)}
                       accessibilityRole="button"
                       accessibilityLabel={tr('market.orders.amendA11y', { name: o.name })}
-                      style={[styles.cancelBtn, { backgroundColor: t.surfaceMuted }]}>
+                      style={({ pressed }) => [
+                        styles.cancelBtn,
+                        { backgroundColor: t.surfaceMuted },
+                        pressed && pressedStyle('dim', t),
+                      ]}>
                       <Text style={[Typography.supporting, { color: t.primaryText }]}>
                         {tr('market.orders.amend')}
                       </Text>
@@ -204,7 +213,11 @@ export function MarketOrdersScreen({
                       accessibilityRole="button"
                       accessibilityLabel={tr('market.orders.cancelA11y', { name: o.name })}
                       accessibilityState={{ disabled: cancelling != null }}
-                      style={[styles.cancelBtn, { backgroundColor: t.surfaceMuted }]}>
+                      style={({ pressed }) => [
+                        styles.cancelBtn,
+                        { backgroundColor: t.surfaceMuted },
+                        pressed && pressedStyle('dim', t),
+                      ]}>
                       <Text
                         style={[
                           Typography.supporting,

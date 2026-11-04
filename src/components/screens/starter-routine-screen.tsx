@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import type { StarterRoutine } from '@/constants/starter-routines';
 import { Radius, Spacing } from '@/constants/theme';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
@@ -68,12 +69,13 @@ export function StarterRoutineScreen({
               aria-checked={checked}
               disabled={busy}
               onPress={() => setSelectedId(item.id)}
-              style={[
+              style={({ pressed }) => [
                 styles.card,
                 {
                   backgroundColor: t.surface,
                   borderColor: checked ? t.primary : t.border,
                 },
+                pressed && pressedStyle('card', t),
               ]}>
               <View style={styles.cardCopy}>
                 <Text style={[Typography.supporting, { color: t.primary }]}>{item.goalLabel}</Text>
@@ -116,9 +118,10 @@ export function StarterRoutineScreen({
           accessibilityState={{ disabled: busy || (!needsReload && !selected), busy: saving }}
           disabled={busy || (!needsReload && !selected)}
           onPress={() => (needsReload ? onReload?.() : selected && onStart?.(selected))}
-          style={[
+          style={({ pressed }) => [
             styles.primary,
             { backgroundColor: t.primary, opacity: busy || (!needsReload && !selected) ? 0.5 : 1 },
+            pressed && pressedStyle('fill', t),
           ]}>
           <Text style={[Typography.label, { color: t.onPrimary }]}>
             {saving
@@ -136,7 +139,7 @@ export function StarterRoutineScreen({
             disabled={saving}
             accessibilityState={{ disabled: saving }}
             onPress={onSkip}
-            style={styles.skip}>
+            style={({ pressed }) => [styles.skip, pressed && pressedStyle('dim', t)]}>
             <Text style={[Typography.label, { color: t.textMuted }]}>
               {tr('member.starterRoutine.later')}
             </Text>

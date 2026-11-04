@@ -7,6 +7,7 @@ import type {
   FeedRoutineCompletion,
 } from '@/components/screens/feed/types';
 import { Icon } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Loading } from '@/components/ui/loading';
 import { weekdayLabelKey } from '@/constants/routines';
 import { FEED_ROUTINE_WINDOW_DAYS } from '@/constants/feed';
@@ -114,7 +115,11 @@ export function FeedRoutinePicker({
           <Pressable
             onPress={onRetry}
             accessibilityRole="button"
-            style={[styles.retry, { backgroundColor: t.surfaceMuted }]}>
+            style={({ pressed }) => [
+              styles.retry,
+              { backgroundColor: t.surfaceMuted },
+              pressed && pressedStyle('dim', t),
+            ]}>
             <Text style={[Typography.label, { color: t.primaryText }]}>{tr('app.ui.retry')}</Text>
           </Pressable>
         ) : null}
@@ -146,7 +151,11 @@ export function FeedRoutinePicker({
                 accessibilityState={{ selected: active, disabled }}
                 accessibilityLabel={tr('feed.routine.dayA11y', { label, count })}
                 testID={`feed-routine-day-${day}`}
-                style={[styles.day, active && { backgroundColor: t.primarySoft }]}>
+                style={({ pressed }) => [
+                  styles.day,
+                  active && { backgroundColor: t.primarySoft },
+                  pressed && pressedStyle('dim', t),
+                ]}>
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
                   {tr(weekdayLabelKey(weekdayOf(day)))}
                 </Text>
@@ -186,12 +195,13 @@ export function FeedRoutinePicker({
                     title: option.title,
                     date: feedRoutineDateLabel(option.date),
                   })}
-                  style={[
+                  style={({ pressed }) => [
                     styles.option,
                     {
                       backgroundColor: selected ? t.primarySoft : t.surfaceMuted,
                       borderColor: selected ? t.primary : t.surfaceMuted,
                     },
+                    pressed && pressedStyle('dim', t),
                   ]}>
                   <Icon
                     name={selected ? 'check' : 'checkbox-off'}

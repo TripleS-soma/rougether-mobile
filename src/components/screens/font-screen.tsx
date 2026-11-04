@@ -5,6 +5,7 @@ import { AppearancePreview } from '@/components/screens/settings/appearance-prev
 import { PickerRow, pickerStyles } from '@/components/screens/settings/picker-row';
 import { ActionBar } from '@/components/ui/action-bar';
 import { GlassSurface } from '@/components/ui/glass-surface';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import type { CharacterId } from '@/constants/characters';
 import {
@@ -108,7 +109,8 @@ export function FontScreen({
           accessibilityRole="button"
           accessibilityLabel={tr('common.apply')}
           accessibilityState={{ disabled: !canApply }}
-          style={styles.apply}>
+          // 채움색이 안쪽 GlassSurface에 있어 배경 대신 투명도로
+          style={({ pressed }) => [styles.apply, pressed && canApply && pressedStyle('dim', t)]}>
           <GlassSurface
             style={styles.applyFace}
             tintColor={canApply ? t.primary : undefined}
