@@ -8,7 +8,7 @@ const { validateChannelMapping, execute } = require('../check-ota-channel');
 
 const response = (name = 'dev', overrides = {}) => ({
   currentPage: {
-    name,
+    name: name === 'dev' ? 'internal' : name,
     isPaused: false,
     branchMapping: JSON.stringify({
       version: 0,
@@ -21,11 +21,16 @@ const response = (name = 'dev', overrides = {}) => ({
 
 describe('OTA channel mapping guard', () => {
   it.each(['dev', 'production'])(
-    'accepts the active %s channel pointing only at itself',
+    'accepts the current channel pointing only at the %s branch',
     (name) => {
       expect(validateChannelMapping(response(name), name)).toBe(true);
     },
   );
+
+  it('never treats the legacy dev channel serving production as the internal test lane', () => {
+    expect(validateChannelMapping(response('production', { name: 'dev' }), 'dev')).toBe(false);
+    expect(validateChannelMapping(response('dev', { name: 'dev' }), 'dev')).toBe(false);
+  });
 
   it.each([undefined, '', 'preview', 'dev; echo private'])(
     'rejects unsupported target %s',
@@ -81,7 +86,7 @@ describe('OTA channel mapping guard', () => {
     expect(run).toHaveBeenCalledTimes(1);
     expect(run).toHaveBeenCalledWith(
       'eas',
-      ['channel:view', 'dev', '--json', '--non-interactive'],
+      ['channel:view', 'internal', '--json', '--non-interactive'],
       {
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'pipe'],
