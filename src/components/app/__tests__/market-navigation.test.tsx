@@ -78,7 +78,7 @@ describe('거래소 내비게이션 (#1427 → #1502 독립 화면)', () => {
     expect(ui.getByText(/판매 주문을 등록하면 거래소에 보여요/)).toBeTruthy();
   });
 
-  it('전체 메뉴에서 "가구 거래소"는 방 꾸미기 바로 아래이고, 누르면 메뉴를 닫고 연다', async () => {
+  it('전체 메뉴에서 "가구 거래소"는 관리 항목보다 위이고, 누르면 메뉴를 닫고 연다', async () => {
     const onClose = jest.fn();
     const onOpenMarket = jest.fn();
     const ui = await render(
@@ -86,14 +86,15 @@ describe('거래소 내비게이션 (#1427 → #1502 독립 화면)', () => {
         visible
         top={0}
         onClose={onClose}
-        onEditRoom={jest.fn()}
         onOpenMarket={onOpenMarket}
         onOpenCategoryManager={jest.fn()}
         onManageRoutines={jest.fn()}
       />,
     );
     const labels = ui.getAllByRole('button').map((b) => b.props.accessibilityLabel);
-    expect(labels.indexOf('가구 거래소')).toBe(labels.indexOf('방 꾸미기') + 1);
+    // 꾸미기는 오른쪽 버튼 열에만 남았다(2026-11-04) — 거래소가 메뉴 첫 방 작업.
+    expect(labels.indexOf('가구 거래소')).toBeGreaterThanOrEqual(0);
+    expect(labels.indexOf('가구 거래소')).toBeLessThan(labels.indexOf('카테고리 관리'));
     await fireEvent.press(ui.getByLabelText('가구 거래소'));
     expect(onClose).toHaveBeenCalled();
     expect(onOpenMarket).toHaveBeenCalled();

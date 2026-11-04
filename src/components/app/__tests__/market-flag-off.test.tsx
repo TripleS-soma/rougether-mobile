@@ -46,12 +46,11 @@ describe('MARKET_ENABLED=false (#1427)', () => {
         visible
         top={0}
         onClose={jest.fn()}
-        onEditRoom={jest.fn()}
         onOpenMarket={undefined}
         onOpenCategoryManager={jest.fn()}
       />,
     );
-    expect(ui.getByLabelText('방 꾸미기')).toBeTruthy();
+    expect(ui.getByLabelText('카테고리 관리')).toBeTruthy();
     expect(ui.queryByLabelText('가구 거래소')).toBeNull();
   });
 });

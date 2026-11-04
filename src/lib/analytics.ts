@@ -24,6 +24,20 @@ import { Platform } from 'react-native';
  * **실패**: 통과 이벤트만 보면 "어디서 빠졌는지"는 알아도 "왜"를 모른다.
  * 에러로 터지지 않고 조용히 포기하는 순간(로그인 취소·잔액 부족)이 특히 그렇다.
  */
+/** 방 화면 버튼 — 오른쪽 열 6개 + 메뉴(☰) 항목은 `menu_` 접두. */
+export type RoomAction =
+  | 'menu'
+  | 'notifications'
+  | 'minigames'
+  | 'decor'
+  | 'studio'
+  | 'gacha'
+  | 'menu_character'
+  | 'menu_market'
+  | 'menu_save_image'
+  | 'menu_categories'
+  | 'menu_routines';
+
 export type AnalyticsEvent =
   // 로그인 전 (#1282) — 설치 후 로그인 전에 떠나는 사람이 소개에서 떠나는지,
   // 로그인 화면에서 떠나는지, 버튼을 눌렀다가 계정 선택·동의 화면에서 물러나는지를 가른다.
@@ -120,6 +134,8 @@ export type AnalyticsEvent =
   /** 거래소 화면 진입 — screen: list(꾸미기 거래소 탭)|asset(상세)|orders(내 주문). */
   | 'market_view'
   | 'feature_tour'
+  /** 방 화면 버튼 탭 (2026-11-04) — 오른쪽 열·메뉴 항목. 배치를 실측으로 다시 정한다. */
+  | 'room_action_tap'
   /**
    * 주문·취소 결과 — side(BUY|SELL|CANCEL), source(INVENTORY|ISSUANCE|none),
    * result(filled|open|cancelled|rejected|pending|error). rejected면 code에 거절 사유.
@@ -320,6 +336,7 @@ export type AnalyticsParams = {
   user_block: { via: string } | undefined;
   market_view: { screen: 'list' | 'asset' | 'orders' };
   /** 기능 첫 진입 튜토리얼 — step은 끝낸(건너뛴) 단계 번호(1부터). */
+  room_action_tap: { action: RoomAction };
   feature_tour: { tour: string; action: 'complete' | 'skip' | 'replay'; step: number };
   market_order: { side: string; source: string; result: string; code?: string };
   market_issue: { total_supply: number; result: string };
