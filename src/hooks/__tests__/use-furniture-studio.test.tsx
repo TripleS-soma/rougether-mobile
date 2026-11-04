@@ -219,3 +219,35 @@ it('does not invent a coin balance when the wallet fails and no credit is availa
   });
   expect(createFurniture).not.toHaveBeenCalled();
 });
+
+it('refreshes the shared wallet when submission finishes after leaving Studio', async () => {
+  (fetchFurnitureCredits as jest.Mock).mockResolvedValue({ available: 0, reserved: 0 });
+  (fetchWallets as jest.Mock).mockResolvedValue([{ currencyType: 'COIN', balance: 100 }]);
+  let resolve!: (value: unknown) => void;
+  const response = new Promise((r) => {
+    resolve = r;
+  });
+  (createFurniture as jest.Mock).mockReturnValue(response);
+  const { result, unmount } = await renderHook(() => useFurnitureStudio(), {
+    wrapper: queryWrapper(queryClient),
+  });
+  await waitFor(() => expect(result.current.coinBalance).toBe(100));
+  await act(async () => {
+    await result.current.choosePhoto();
+  });
+  let submission!: Promise<void>;
+  await act(async () => {
+    submission = result.current.submit();
+  });
+  await waitFor(() => expect(createFurniture).toHaveBeenCalledTimes(1));
+  await unmount();
+  (fetchWallets as jest.Mock).mockResolvedValue([{ currencyType: 'COIN', balance: 0 }]);
+  await act(async () => {
+    resolve({ id: 'coin-job', status: 'QUEUED' });
+    await submission;
+  });
+  expect(queryClient.getQueryData(queryKeys.wallet(getSessionUserId()))).toEqual({
+    coin: 0,
+    diamond: 0,
+  });
+});

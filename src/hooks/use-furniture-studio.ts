@@ -171,7 +171,19 @@ export function useFurnitureStudio() {
         queryClient.cancelQueries({ queryKey: walletKey }),
       ]);
       const job = await mutateAsync({ selectedPhoto: photo, id: pendingId.current });
-      if (!mounted.current) return;
+      if (getSessionUserId() !== userId) return;
+      void queryClient.invalidateQueries({ queryKey: queryKeys.walletHistory(userId) });
+      if (!mounted.current) {
+        // The room's disabled wallet observer still needs the settled balance after leaving Studio.
+        await queryClient
+          .fetchQuery({
+            queryKey: walletKey,
+            queryFn: async () => toWallet(await fetchWallets()),
+            staleTime: 0,
+          })
+          .catch(() => undefined);
+        return;
+      }
       queryClient.setQueryData<StudioData>(
         queryKey,
         (previous) =>
@@ -180,7 +192,6 @@ export function useFurnitureStudio() {
             jobs: [job, ...previous.jobs.filter((j) => j.id !== job.id)],
           },
       );
-      void queryClient.invalidateQueries({ queryKey: queryKeys.walletHistory(userId) });
       setPhoto(null);
       pendingId.current = requestId();
       await refresh();
