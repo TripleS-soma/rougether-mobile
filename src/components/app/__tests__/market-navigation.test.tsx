@@ -1,11 +1,11 @@
-import { act, fireEvent, render, renderHook, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, renderHook, waitFor } from '@testing-library/react-native';
 
-import { fetchMarketAssets, fetchMyMarketOrders } from '@/api/market';
+import { fetchMyMarketOrders } from '@/api/market';
 import { NavMenuPopover } from '@/components/app/nav-menu-popover';
 import { backTargetFor, TAB_FOR_SCREEN } from '@/components/app/navigation';
 import { useMarketPages } from '@/components/app/use-market-pages';
 import { FurnitureStudioScreen } from '@/components/screens/furniture-studio-screen';
-import { DEMO_MARKET_ORDERS } from '@/mocks/fixtures';
+import { fetchShopListings } from '@/api/market-shop';
 import { queryWrapper } from '@/test-utils/query-wrapper';
 
 // 가구 거래소 (#1427) — 이 파일은 MARKET_ENABLED를 켠 상태를 본다. 꺼진 상태는 market-flag-off.test.tsx.
@@ -20,6 +20,14 @@ jest.mock('@/api/market', () => ({
   fetchMyMarketOrders: jest.fn(async () => ({ items: [], hasNext: false })),
 }));
 
+jest.mock('@/api/market-shop', () => ({
+  fetchShopListings: jest.fn(async () => ({ items: [], hasNext: false })),
+  fetchShopListing: jest.fn(async () => null),
+  sellShopListing: jest.fn(),
+  purchaseShopListing: jest.fn(),
+  updateShopListing: jest.fn(),
+}));
+
 describe('거래소 내비게이션 (#1427 → #1502 독립 화면)', () => {
   it('목록·상세·내 주문은 하단 탭 없는 서브화면 — 상세·내 주문의 뒤로는 거래소, 거래소의 뒤로는 방', () => {
     for (const screen of ['market', 'marketAsset', 'marketOrders'] as const) {
@@ -30,11 +38,7 @@ describe('거래소 내비게이션 (#1427 → #1502 독립 화면)', () => {
     expect(backTargetFor('marketOrders', 'myRoom', false)).toBe('market');
   });
 
-  it('켜져 있으면 메뉴 진입·스튜디오 발행이 배선되고, 거래소 화면에 판매 중 수가 뜬다', async () => {
-    jest.mocked(fetchMyMarketOrders).mockResolvedValue({
-      items: DEMO_MARKET_ORDERS,
-      hasNext: false,
-    });
+  it('새 거래소는 고정가 목록을 조회하고 주문 대기 목록은 조회하지 않는다', async () => {
     const setScreen = jest.fn();
     const { result } = await renderHook(
       () =>
@@ -45,37 +49,11 @@ describe('거래소 내비게이션 (#1427 → #1502 독립 화면)', () => {
         }),
       { wrapper: queryWrapper() },
     );
-    expect(result.current.onIssue).toBeDefined();
     result.current.openMarket?.();
     expect(setScreen).toHaveBeenCalledWith('market');
-    await waitFor(() => expect(fetchMarketAssets).toHaveBeenCalled());
-    expect(fetchMyMarketOrders).toHaveBeenCalledWith(expect.objectContaining({ status: 'OPEN' }));
-    // 판매 중 = 대기 중 판매(INVENTORY) 주문 — 구매 주문은 세지 않는다. subScreen은 그 순간의
-    // 요소라 주문이 도착한 뒤에 꺼내야 한다(먼저 꺼내면 0개로 굳어 가끔 실패했다).
-    await waitFor(() => expect(result.current.subScreen?.props.sellingCount).toBe(1));
-    const ui = await render(<>{result.current.subScreen}</>, { wrapper: queryWrapper() });
-    expect(ui.getByText('판매 중인 가구 1개')).toBeTruthy();
-  });
-
-  it('내 판매 관리로 전환하면 비노출 가구도 조회하는 전용 목록을 사용한다', async () => {
-    jest.mocked(fetchMarketAssets).mockClear();
-    const { result } = await renderHook(
-      () =>
-        useMarketPages({
-          nav: { screen: 'market', setScreen: jest.fn(), goBack: jest.fn() },
-          coinBalance: 0,
-          diamondBalance: 0,
-        }),
-      { wrapper: queryWrapper() },
-    );
-    await act(async () => result.current.subScreen?.props.onToggleManageSales());
-    await waitFor(() =>
-      expect(fetchMarketAssets).toHaveBeenCalledWith(expect.objectContaining({ mine: true })),
-    );
-    expect(result.current.subScreen?.props.managingSales).toBe(true);
-    const ui = await render(<>{result.current.subScreen}</>, { wrapper: queryWrapper() });
-    expect(ui.getByLabelText('거래소 보기')).toBeTruthy();
-    expect(ui.getByText(/판매 주문을 등록하면 거래소에 보여요/)).toBeTruthy();
+    await waitFor(() => expect(fetchShopListings).toHaveBeenCalledWith(0, false));
+    expect(fetchMyMarketOrders).not.toHaveBeenCalled();
+    expect(result.current.onIssue).toBeDefined();
   });
 
   it('전체 메뉴에서 "가구 거래소"는 관리 항목보다 위이고, 누르면 메뉴를 닫고 연다', async () => {
@@ -112,7 +90,7 @@ describe('스튜디오 "판매 준비하기" (#1427)', () => {
     },
   ];
 
-  it('onIssue를 넘기면 완성된 가구에 버튼 → 수량 선택 → 발행', async () => {
+  it('onIssue를 넘기면 완성된 가구에 버튼 → 가격 입력 → 판매', async () => {
     const onIssue = jest.fn(async () => true);
     const ui = await render(
       <FurnitureStudioScreen
@@ -122,18 +100,18 @@ describe('스튜디오 "판매 준비하기" (#1427)', () => {
         onIssue={onIssue}
       />,
     );
-    await fireEvent.press(ui.getByLabelText('판매 준비하기'));
-    expect(ui.getByText(/한 번 올리면 추가 발행할 수 없고/)).toBeTruthy();
-    await fireEvent.press(ui.getByLabelText('3개'));
-    await fireEvent.press(ui.getByLabelText('3개 발행하기'));
-    await waitFor(() => expect(onIssue).toHaveBeenCalledWith(77, 3));
+    await fireEvent.press(ui.getByLabelText('판매하기'));
+    expect(ui.getByText(/원본은 계속 보관하고/)).toBeTruthy();
+    await fireEvent.changeText(ui.getByLabelText('개당 가격 (코인)'), '30');
+    await fireEvent.press(ui.getByLabelText('30코인에 판매하기'));
+    await waitFor(() => expect(onIssue).toHaveBeenCalledWith(77, 30));
   });
 
   it('onIssue가 없으면 버튼이 없다', async () => {
     const ui = await render(
       <FurnitureStudioScreen balance={{ available: 0, reserved: 0 }} jobs={jobs} photo={null} />,
     );
-    expect(ui.queryByLabelText('판매 준비하기')).toBeNull();
+    expect(ui.queryByLabelText('판매하기')).toBeNull();
   });
 
   it.each(['market', 'marketOrders', 'marketAsset'] as const)(

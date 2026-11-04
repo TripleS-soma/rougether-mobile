@@ -1698,7 +1698,8 @@ export type WalletHistoryResponse = {
     | 'SHOP_PURCHASE'
     | 'FURNITURE_GENERATION'
     | 'FURNITURE_GENERATION_REFUND'
-    | 'MARKET_ORDER_ESCROW';
+    | 'MARKET_ORDER_ESCROW'
+    | 'MARKET_PURCHASE';
   balanceAfter?: number;
   createdAt?: string;
 };

@@ -122,13 +122,13 @@
       "open": "View my orders"
     },
     "issue": {
-      "cta": "Prepare for sale",
-      "title": "Prepare for sale",
+      "cta": "Sell",
+      "title": "Sell furniture",
       "supply": "Total supply",
-      "body": "Includes the 1 you keep; the rest is held by the market. You can't issue more later, and listed furniture can't be re-reviewed. It appears on the market only while sell orders are open.",
-      "submit": "Issue {{n}}",
+      "body": "Keep your original and sell unlimited copies at your price. Each buyer can own one. You receive the price minus a 5% fee. Listed furniture cannot be reviewed again.",
+      "submit": "Sell for {{n}} coins",
       "submitting": "Listing...",
-      "done": "Ready for sale. Place a sell order to appear on the market.",
+      "done": "Your furniture is on sale.",
       "closeA11y": "Close listing"
     },
     "toast": {
@@ -159,7 +159,11 @@
       "MARKET_ORDER_NOT_AMENDABLE": "Only sale orders for furniture you issued can change quantity.",
       "MARKET_AMEND_BELOW_FILLED": "You can't go below the quantity already sold.",
       "generic": "Something went wrong. Please try again shortly.",
-      "MARKET_NO_SELL_ORDERS": "There are no sell orders available."
+      "MARKET_NO_SELL_ORDERS": "There are no sell orders available.",
+      "MARKET_ORDERBOOK_RETIRED": "The market now uses fixed prices. Please update the app.",
+      "MARKET_NOT_FOR_SALE": "This furniture is not for sale.",
+      "MARKET_PRICE_CHANGED": "The price changed. Check the new price before buying again.",
+      "MARKET_TRANSITION_PENDING": "Previous trades are being settled. Please try again shortly."
     },
     "reject": {
       "MARKET_SELF_TRADE": "It matched your own order, so it wasn't processed. Your coins or furniture were returned.",
@@ -192,6 +196,25 @@
         "title": "Want to sell your furniture?",
         "body": "Find furniture you made or own here. It shows up in the market once you place a sell order, and you get coins minus fees when it sells."
       }
+    },
+    "shop": {
+      "intro": "Buy furniture at the creator’s price. You can own one of each item.",
+      "retry": "Reload",
+      "notListed": "Not for sale",
+      "manage": "Manage sale",
+      "owned": "Owned",
+      "view": "View furniture",
+      "originalKept": "You keep your original. There is no limit on sales.",
+      "fee": "You receive the sale price minus a 5% fee.",
+      "savePrice": "Sell at this price",
+      "stop": "Stop selling",
+      "purchaseNote": "Purchased furniture goes straight to your inventory and cannot be resold.",
+      "buy": "Buy for {{n}} coins",
+      "confirmTitle": "Buy this furniture?",
+      "confirmBody": "Pay {{n}} coins and add it to your inventory. Purchased furniture cannot be resold.",
+      "confirmBuy": "Buy",
+      "buying": "Buying...",
+      "cancel": "Cancel"
     }
   }
 }
