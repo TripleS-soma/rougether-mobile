@@ -6,7 +6,7 @@ import { CharacterAvatar } from '@/components/room/character-avatar';
 import { MinigameLayout } from '@/components/screens/minigame-layout';
 import { Button } from '@/components/ui/button';
 import { GlassSurface } from '@/components/ui/glass-surface';
-import { Icon } from '@/components/ui/icon';
+import { Icon, type IconName } from '@/components/ui/icon';
 import { RetryState } from '@/components/ui/retry-state';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -108,7 +108,7 @@ export function MinigameRunnerScreen({
               </Text>
               {rules.map((line, i) => (
                 <View key={RULE_ICONS[i] ?? i} style={styles.ruleRow}>
-                  <Text style={Typography.body}>{RULE_ICONS[i]}</Text>
+                  <Icon name={RULE_ICONS[i] ?? 'star'} size={20} color={t.primary} />
                   <Text style={[Typography.body, styles.flex, { color: t.text }]}>{line}</Text>
                 </View>
               ))}
@@ -247,8 +247,8 @@ export function MinigameRunnerScreen({
   );
 }
 
-/** 규칙 줄 앞 표식 — 조작·점수·끝나는 때 (아이콘은 이모지 플레이스홀더). */
-const RULE_ICONS = ['👆', '⭐', '🏁'];
+/** 규칙 줄 앞 표식 — 조작·점수·끝나는 때 (#1613). */
+const RULE_ICONS: readonly IconName[] = ['tap', 'star', 'finish'];
 
 const styles = StyleSheet.create({
   welcome: {

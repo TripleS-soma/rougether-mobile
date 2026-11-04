@@ -346,7 +346,7 @@ function CalendarBase({
               style={[StyleSheet.absoluteFill, styles.glassControl]}
             />
           ) : null}
-          <Text style={[styles.navGlyph, { color: t.text }]}>‹</Text>
+          <Icon name="back" size={20} color={t.text} />
         </Pressable>
         <View style={styles.headCenter}>
           <Text
@@ -393,7 +393,7 @@ function CalendarBase({
               style={[StyleSheet.absoluteFill, styles.glassControl]}
             />
           ) : null}
-          <Text style={[styles.navGlyph, { color: t.text }]}>›</Text>
+          <Icon name="forward" size={20} color={t.text} />
         </Pressable>
       </View>
 
@@ -710,10 +710,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  navGlyph: {
-    fontSize: 22,
-    lineHeight: 24,
   },
   grid: {
     // 주 줄을 세로로 쌓는다 — 가로 wrap을 쓰지 않는 게 #845 수정의 핵심.

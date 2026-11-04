@@ -395,8 +395,8 @@
       "cannotUncomplete": "Routines that contributed to a mission can't be un-completed"
     },
     "missionSheet": {
-      "allDone": "🎉 All missions complete!",
-      "stepDone": "✅ Mission {{n}} complete!",
+      "allDone": "All missions complete!",
+      "stepDone": "Mission {{n}} complete!",
       "allDoneBody": "You finished all {{n}} missions. Now build up routines, decorate your room, and enjoy Rougether!",
       "next": "Next mission: {{label}}",
       "laterA11y": "Do it later",
@@ -428,7 +428,7 @@
       "codeNotFound": "No invite code found. Copy the code again from the invite page."
     },
     "inviteArrival": {
-      "title": "🎁 You were invited by {{inviter}}",
+      "title": "You were invited by {{inviter}}",
       "body": "Use the invite code to get {{n}} coins. It can only be used once.",
       "laterA11y": "Accept invite later",
       "later": "Later",

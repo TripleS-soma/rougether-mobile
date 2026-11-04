@@ -16,7 +16,7 @@ describe('MissionSheet (#571)', () => {
         onClose={onClose}
       />,
     );
-    expect(getByText('✅ 미션 1 완료!')).toBeTruthy();
+    expect(getByText('미션 1 완료!')).toBeTruthy();
     expect(getByText('다음 미션: 뽑기 1회 해보기')).toBeTruthy();
 
     await fireEvent.press(getByLabelText('다음 미션 하러 가기'));
@@ -31,7 +31,7 @@ describe('MissionSheet (#571)', () => {
     const { getByText, getByLabelText, queryByLabelText } = await render(
       <MissionSheet visible completedStep={4} totalSteps={4} nextLabel={null} onClose={onClose} />,
     );
-    expect(getByText('🎉 모든 미션 완료!')).toBeTruthy();
+    expect(getByText('모든 미션 완료!')).toBeTruthy();
     expect(queryByLabelText('다음 미션 하러 가기')).toBeNull();
 
     await fireEvent.press(getByLabelText('미션 마치기'));
@@ -42,7 +42,7 @@ describe('MissionSheet (#571)', () => {
     const { queryByText } = await render(
       <MissionSheet visible={false} completedStep={1} totalSteps={4} nextLabel="다음" />,
     );
-    expect(queryByText('✅ 미션 1 완료!')).toBeNull();
+    expect(queryByText('미션 1 완료!')).toBeNull();
   });
 
   it('다음 미션의 방법 한 줄(nextHint)을 함께 보여준다 (#571 후속)', async () => {

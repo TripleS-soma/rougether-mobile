@@ -18,18 +18,11 @@ const EXEMPT = [/^src\/widgets\//, /^src\/dev\//];
 const FONT_SOURCES = ['Typography', 'emph(', 'displayFace', 'fontPreview', 'fontFamily'];
 
 /**
- * 글리프 전용 예외 — 본문 텍스트가 아니라 기호·이모지를 그리는 스타일.
- * `›` `‹` `＋` 같은 문자는 한글 웹폰트에 없을 수 있어 패밀리를 강제하면
- * 오히려 폴백이 더 튄다. 파일+스타일 키로 적어 줄 이동에 흔들리지 않게 한다.
+ * 글리프 전용 예외 — 본문 텍스트가 아니라 기호를 그리는 스타일. 파일+스타일
+ * 키로 적어 줄 이동에 흔들리지 않게 한다. 지금은 비어 있다 — `›` `▲` `＋` 같은
+ * 텍스트 기호는 전부 `Icon`으로 옮겼고(#1613) `icon-hygiene.test.ts`가 막는다.
  */
-const GLYPH_ONLY: Record<string, string[]> = {
-  'src/components/ui/mission-banner.tsx': ['emoji'],
-  'src/components/ui/calendar.tsx': ['navGlyph'],
-  'src/components/screens/add-routine-screen.tsx': ['chevron'],
-  'src/components/screens/routine-manage-screen.tsx': ['chevron'],
-  'src/components/screens/category-manage-screen.tsx': ['moveGlyph'],
-  'src/components/screens/settings/appearance-preview.tsx': ['avatarGlyph', 'addGlyph'],
-};
+const GLYPH_ONLY: Record<string, string[]> = {};
 
 function sourceFiles(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
