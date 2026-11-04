@@ -108,3 +108,13 @@ describe('Calendar — 접히는 동안 선택 표시 (2026-11-04 원 튐)', () 
     expect(cellFill(ui, '2026-09-16')).toBeUndefined();
   });
 });
+
+it('주 이동으로 남는 줄이 바뀌면 그 줄을 새로 그린다 — 접혀 있던 높이가 남지 않게 (#1603 리뷰)', async () => {
+  const ui = await render(<Calendar value="2026-09-16" onSelect={jest.fn()} weekOf="2026-09-16" />);
+  const before = ui.getByTestId('calendar-week-row-3', { includeHiddenElements: true });
+  await ui.rerender(<Calendar value="2026-09-23" onSelect={jest.fn()} weekOf="2026-09-23" />);
+  const after = ui.getByTestId('calendar-week-row-3');
+  // 접힌 줄(숨김)이던 3번째 줄이 남는 줄이 되면서 다른 인스턴스로 바뀐다.
+  expect(after).not.toBe(before);
+  expect(after.props.accessibilityElementsHidden).toBe(false);
+});
