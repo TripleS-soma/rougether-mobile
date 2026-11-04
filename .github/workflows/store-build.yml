@@ -141,7 +141,7 @@ jobs:
       actions: read
       checks: read
     concurrency:
-      group: eas-deploy-dev
+      group: ${{ inputs.action == 'inspect' && 'eas-testflight-inspect' || 'eas-deploy-dev' }}
       cancel-in-progress: false
     env:
       EXPECTED_APP_VERSION: ${{ inputs.expected_app_version }}

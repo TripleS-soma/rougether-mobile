@@ -263,7 +263,10 @@ describe('store-build workflow boundaries', () => {
     const lane = workflow.jobs['testflight-build-only'];
     expect(workflow.on.workflow_dispatch.inputs.action.default).toBe('inspect');
     expect(lane.permissions).toEqual({ contents: 'read', actions: 'read', checks: 'read' });
-    expect(lane.concurrency).toEqual({ group: 'eas-deploy-dev', 'cancel-in-progress': false });
+    expect(lane.concurrency).toEqual({
+      group: "${{ inputs.action == 'inspect' && 'eas-testflight-inspect' || 'eas-deploy-dev' }}",
+      'cancel-in-progress': false,
+    });
     expect(lane['timeout-minutes']).toBe(90);
     expect(JSON.stringify(lane)).not.toMatch(/asc-api-key|eas update|auto-submit/);
     const signing = lane.steps.find((step) => step.name?.includes('서명 설정'));

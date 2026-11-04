@@ -28,16 +28,13 @@ async function inspect(env = process.env, request = fetch, report = console.log)
     const bundles = await get(
       `bundleIds?filter[identifier]=${identifier}&fields[bundleIds]=identifier`,
     );
-    if (
-      bundles.length !== 1 ||
-      bundles[0].attributes?.identifier !== identifier ||
-      !/^[a-z0-9]+$/i.test(bundles[0].id)
-    ) {
+    const exact = bundles.filter((bundle) => bundle.attributes?.identifier === identifier);
+    if (exact.length !== 1 || !/^[a-z0-9]+$/i.test(exact[0].id)) {
       report(JSON.stringify({ identifier, registered: false }));
       continue;
     }
     const profiles = await get(
-      `bundleIds/${bundles[0].id}/profiles?fields[profiles]=profileState,profileType,expirationDate&limit=200`,
+      `bundleIds/${exact[0].id}/profiles?fields[profiles]=profileState,profileType,expirationDate&limit=200`,
     );
     report(
       JSON.stringify({

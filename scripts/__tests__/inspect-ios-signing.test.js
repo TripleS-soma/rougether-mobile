@@ -60,3 +60,26 @@ it('fails before network calls if the designated key is missing', async () => {
   await expect(inspect({}, request, jest.fn())).rejects.toThrow();
   expect(request).not.toHaveBeenCalled();
 });
+
+it('selects the exact app identifier when Apple also returns its widget prefix match', async () => {
+  const report = jest.fn();
+  const request = jest.fn(async (url) => ({
+    ok: true,
+    json: async () => ({
+      data: url.includes('/profiles?')
+        ? []
+        : [
+            { id: 'MAIN123', attributes: { identifier: 'com.triples.rougether' } },
+            { id: 'WIDGET123', attributes: { identifier: 'com.triples.rougether.widget' } },
+          ],
+    }),
+  }));
+  await inspect({ ASC_API_KEY_P8: key }, request, report);
+  expect(
+    request.mock.calls.map(([url]) => url).filter((url) => url.includes('/profiles?')),
+  ).toEqual([
+    expect.stringContaining('/MAIN123/profiles?'),
+    expect.stringContaining('/WIDGET123/profiles?'),
+  ]);
+  expect(report.mock.calls.every(([line]) => JSON.parse(line).registered === true)).toBe(true);
+});
