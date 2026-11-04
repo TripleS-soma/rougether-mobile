@@ -19,13 +19,7 @@ on:
         description: production 빌드, TestFlight 빌드 전용, 기존 115 또는 현재 후보 제출
         type: choice
         options:
-          [
-            production,
-            testflight-build-only,
-            testflight-submit-only,
-            testflight-current-submit,
-            testflight-direct-133,
-          ]
+          [production, testflight-build-only, testflight-submit-only, testflight-current-submit]
         default: production
       action:
         description: TestFlight 전용 (inspect 조회, build 새 빌드, submit 지정 후보 제출)
@@ -282,48 +276,3 @@ jobs:
       - name: 임시 ASC 개인키 제거
         if: always()
         run: node scripts/submit-current-testflight.js cleanup
-
-  direct-133:
-    if: inputs.mode == 'testflight-direct-133'
-    runs-on: macos-15
-    timeout-minutes: 65
-    permissions:
-      contents: read
-      checks: read
-    concurrency:
-      group: ${{ inputs.action == 'inspect' && 'testflight-direct-133-inspect' || 'eas-deploy-dev' }}
-      cancel-in-progress: false
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
-      DIRECT_ACTION: ${{ inputs.action == 'submit' && 'upload' || inputs.action }}
-      SUBMIT_PLATFORM: ${{ inputs.platform }}
-      SUBMIT_AUTHORIZED: ${{ inputs.submit }}
-      EXPECTED_TOOLING_SHA: ${{ inputs.expected_tooling_sha }}
-      EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
-      EXISTING_BUILD_ID: ${{ inputs.existing_build_id }}
-      EXPECTED_SUBMISSION_ID: f4abe01f-06f9-4b45-844e-49e51c22b957
-      EXPECTED_APP_VERSION: ${{ inputs.expected_app_version }}
-      EXPECTED_IOS_BUILD: ${{ inputs.expected_ios_build }}
-      EXPECTED_IOS_RUNTIME: ${{ inputs.expected_ios_runtime }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - uses: expo/expo-github-action@v8
-        with:
-          eas-version: 23.2.0
-          token: ${{ secrets.EXPO_TOKEN }}
-      - name: 기존 133번 확인 또는 Apple 전송
-        run: node scripts/direct-testflight-133.js
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          GH_TOKEN: ${{ github.token }}
-          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
-      - name: 임시 IPA와 개인키 제거
-        if: always()
-        run: node scripts/direct-testflight-133.js cleanup
