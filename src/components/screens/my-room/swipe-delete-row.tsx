@@ -8,6 +8,7 @@ import { PagerGestureContext } from '@/components/ui/pager-scroll-view';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
+import { hapticSelection } from '@/utils/haptics';
 
 /**
  * 루틴/할일 행 스와이프 삭제 (#566) — 왼쪽으로 밀면 빨간 '삭제' 액션이
@@ -45,6 +46,8 @@ export function SwipeDeleteRow({
       ref={swipeRef}
       enabled={!!onDelete}
       overshootRight={false}
+      // 삭제 버튼 쪽으로 열리기로 정해지는 순간 한 번 (2026-11-04) — 손끝에 "걸렸다"를 알린다.
+      onSwipeableWillOpen={onDelete ? hapticSelection : undefined}
       blocksExternalGesture={pager}
       renderRightActions={
         onDelete
@@ -75,6 +78,7 @@ const styles = StyleSheet.create({
     width: Spacing.six,
     marginLeft: Spacing.two,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
   },

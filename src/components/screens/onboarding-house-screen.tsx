@@ -143,6 +143,7 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     padding: Spacing.five,
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
     borderWidth: Spacing.half,
   },
   resultEmoji: { fontSize: Spacing.six },
@@ -154,10 +155,12 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.four,
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
   },
   primary: {
     alignItems: 'center',
     paddingVertical: Spacing.three,
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
   },
 });

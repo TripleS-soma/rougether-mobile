@@ -971,6 +971,7 @@ const styles = StyleSheet.create({
   windowFiller: {
     flex: 1,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     opacity: 0.6,
   },
   // 창문용 타일 — 슬롯을 가득 채운다 (정사각형 비율 대신).

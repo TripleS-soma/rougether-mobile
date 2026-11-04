@@ -340,9 +340,11 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
   },
   cardContent: {
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
     overflow: 'hidden',
   },
   profile: {
@@ -397,6 +399,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     paddingVertical: Spacing.three,
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
   },
   // 미출석 점 — 방 메뉴 버튼에 있던 점(#1055)과 같은 결.
   tileDot: {

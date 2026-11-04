@@ -196,6 +196,7 @@ const styles = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,
+    borderCurve: 'continuous',
     maxHeight: '92%',
     paddingBottom: Spacing.four,
   },
@@ -228,6 +229,7 @@ const styles = StyleSheet.create({
   tab: {
     flex: 1,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     borderWidth: 2,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
@@ -238,6 +240,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.three,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     padding: Spacing.three,
   },
   footer: {

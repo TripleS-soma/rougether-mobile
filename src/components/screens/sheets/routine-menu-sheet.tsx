@@ -176,6 +176,7 @@ const styles = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.two,
     paddingBottom: Spacing.six,
@@ -191,6 +192,7 @@ const styles = StyleSheet.create({
   sheetAction: {
     flex: 1,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     paddingVertical: Spacing.four,
     alignItems: 'center',
     gap: Spacing.two,

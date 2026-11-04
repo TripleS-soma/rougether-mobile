@@ -1,5 +1,7 @@
 import '@/global.css';
 
+import type { TextStyle } from 'react-native';
+
 import { i18n } from '@/i18n';
 
 export const Colors = {
@@ -693,6 +695,12 @@ export const Radius = {
  * Font weights. Astryx scale: normal / medium / semibold / bold.
  * String values are what React Native's `fontWeight` expects.
  */
+/**
+ * 값이 바뀌는 숫자(코인·진행 수·레벨·가격)용 고정폭 숫자 (2026-11-04) — 비례폭이면 1→2처럼
+ * 자릿값이 바뀔 때마다 글자 폭이 달라져 옆 글자가 좌우로 흔들린다.
+ */
+export const TabularNums: TextStyle = { fontVariant: ['tabular-nums'] };
+
 export const FontWeight = {
   normal: '400',
   medium: '500',

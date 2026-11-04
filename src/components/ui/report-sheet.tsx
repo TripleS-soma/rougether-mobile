@@ -163,6 +163,7 @@ const styles = StyleSheet.create({
     maxHeight: '90%',
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.two,
     paddingBottom: Spacing.six,
@@ -181,6 +182,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
   },
   radio: {
     width: RADIO_SIZE,
@@ -200,6 +202,7 @@ const styles = StyleSheet.create({
     maxHeight: 140,
     marginTop: Spacing.two,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     textAlignVertical: 'top',

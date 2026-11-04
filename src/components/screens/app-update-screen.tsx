@@ -98,6 +98,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     borderTopLeftRadius: Radius.xl,
     borderTopRightRadius: Radius.xl,
+    borderCurve: 'continuous',
   },
   body: { marginBottom: Spacing.one },
   actions: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.two },

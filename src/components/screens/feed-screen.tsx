@@ -371,6 +371,7 @@ const styles = StyleSheet.create({
   rowFirst: {
     borderTopLeftRadius: Radius.xl,
     borderTopRightRadius: Radius.xl,
+    borderCurve: 'continuous',
   },
   rowLast: {
     borderBottomLeftRadius: Radius.xl,
@@ -398,6 +399,7 @@ const styles = StyleSheet.create({
   },
   thumb: {
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
   },
   countBadge: {
     position: 'absolute',

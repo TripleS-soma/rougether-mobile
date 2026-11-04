@@ -149,6 +149,7 @@ const styles = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,
+    borderCurve: 'continuous',
     paddingTop: Spacing.four,
     maxHeight: '75%',
   },
@@ -191,6 +192,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },
@@ -204,6 +206,7 @@ const styles = StyleSheet.create({
   moreBtn: {
     marginTop: Spacing.two,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     paddingVertical: Spacing.two,
     alignItems: 'center',
   },

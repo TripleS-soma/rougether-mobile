@@ -130,6 +130,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.three,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     borderWidth: 1,
     padding: Spacing.three,
   },

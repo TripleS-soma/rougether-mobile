@@ -28,6 +28,7 @@ const styles = StyleSheet.create({
   notice: {
     borderWidth: 1,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.three,
   },

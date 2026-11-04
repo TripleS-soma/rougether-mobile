@@ -166,6 +166,7 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     gap: Spacing.two,
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
     overflow: 'hidden',
   },
   scene: {

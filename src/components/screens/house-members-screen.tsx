@@ -747,6 +747,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.five,
     padding: Spacing.four,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     borderWidth: 1,
     gap: Spacing.two,
   },
@@ -765,6 +766,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderStyle: 'dashed',
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     paddingVertical: Spacing.three,
     alignItems: 'center',
   },
@@ -803,6 +805,7 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     padding: Spacing.three,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
   },
   memberAvatar: {
     width: 44,
@@ -861,6 +864,7 @@ const styles = StyleSheet.create({
   },
   missionInput: {
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     fontSize: 16,

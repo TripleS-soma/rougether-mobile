@@ -159,6 +159,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     overflow: 'hidden',
     borderRadius: Radius.sm,
+    borderCurve: 'continuous',
   },
   windowBare: {
     borderWidth: 2,

@@ -444,6 +444,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: Radius.sm,
+    borderCurve: 'continuous',
     overflow: 'hidden',
   },
   room: {

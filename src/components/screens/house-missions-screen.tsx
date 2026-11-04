@@ -716,6 +716,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 340,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     padding: Spacing.four,
     gap: Spacing.three,
   },
@@ -766,6 +767,7 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     padding: Spacing.three,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
   },
   goalHead: {
     flexDirection: 'row',
@@ -803,6 +805,7 @@ const styles = StyleSheet.create({
   },
   missionInput: {
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     fontSize: 16,
@@ -811,6 +814,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
   },
   missionInputField: { flex: 1 },
   missionUnit: { paddingRight: Spacing.three },
