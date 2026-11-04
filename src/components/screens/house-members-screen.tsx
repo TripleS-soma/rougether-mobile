@@ -1,3 +1,5 @@
+import { usesClassicCoverFallback } from '@/resources/house-frame';
+import { houseDisplayMode, type HouseDisplayMode } from '@/resources/house-display-mode';
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -153,6 +155,7 @@ export function HouseMembersScreen({
   const [editDesc, setEditDesc] = useState('');
   const [editMax, setEditMax] = useState<number | undefined>(undefined);
   const [editCover, setEditCover] = useState<string | undefined>(undefined);
+  const [editMode, setEditMode] = useState<HouseDisplayMode>('DIORAMA');
   const [transferTarget, setTransferTarget] = useState<RoomCell | null>(null);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showReissueConfirm, setShowReissueConfirm] = useState(false);
@@ -166,12 +169,14 @@ export function HouseMembersScreen({
     setEditDesc(currentHouse.description ?? '');
     setEditMax(currentHouse.maxMembers);
     setEditCover(currentHouse.coverImageKey);
+    setEditMode(houseDisplayMode(currentHouse.displayMode));
     setEditPublic(currentHouse.isPublic);
     setEditAutoJoin(undefined);
     setShowEditHouse(true);
   };
   const editNameValid = editName.trim().length >= 2 && editName.trim().length <= 30;
   const submitEditHouse = () => {
+    if (!isOwner) return;
     if (!editNameValid) return toast(tr('house.members.nameLengthError'), 'error');
     if (!currentHouse.houseId) return;
     onUpdateHouse?.(currentHouse.houseId, {
@@ -180,6 +185,7 @@ export function HouseMembersScreen({
       maxMembers: editMax,
       // Omitted keeps the server value — only send an actual pick.
       coverImageKey: editCover,
+      displayMode: editMode,
       // 공개 범위도 고른 경우에만 — 미선택(현재 값 모름)이면 유지.
       ...(editPublic === undefined ? {} : { isPublic: editPublic }),
       // 자동 입주도 토글을 건드린 경우에만 (#1407).
@@ -672,6 +678,8 @@ export function HouseMembersScreen({
                     }
                     accessibilityRole="radio"
                     accessibilityState={{ selected, disabled: tooSmall }}
+                    aria-checked={selected}
+                    aria-disabled={tooSmall}
                     accessibilityLabel={tr('house.members.edit.capacityOptionA11y', { n })}
                     style={({ pressed }) => [
                       styles.capacityBtn,
@@ -737,6 +745,38 @@ export function HouseMembersScreen({
                 accessibilityLabel={tr('house.members.edit.autoJoinA11y')}
               />
             </View>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {tr('house.members.edit.displayMode')}
+            </Text>
+            <View
+              style={styles.privacyRow}
+              accessibilityRole="radiogroup"
+              accessibilityLabel={tr('house.members.edit.displayMode')}>
+              <PrivacyCard
+                selected={editMode === 'DIORAMA'}
+                accent={t.primary}
+                title={tr('house.members.edit.diorama')}
+                subtitle={tr('house.members.edit.dioramaHint')}
+                onPress={() => setEditMode('DIORAMA')}
+                t={t}
+              />
+              <PrivacyCard
+                selected={editMode === 'CLASSIC'}
+                accent={t.primary}
+                title={tr('house.members.edit.classic')}
+                subtitle={tr('house.members.edit.classicHint')}
+                onPress={() => setEditMode('CLASSIC')}
+                t={t}
+              />
+            </View>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {tr('house.members.edit.displayModeShared')}
+            </Text>
+            {usesClassicCoverFallback(editCover, editMode) ? (
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                {tr('house.members.edit.classicCoverFallback')}
+              </Text>
+            ) : null}
             {covers.length > 0 ? (
               <>
                 {/* 커버는 집의 겉모습 자체라 "집 테마"로 (#1112). */}
@@ -747,6 +787,7 @@ export function HouseMembersScreen({
                   covers={covers}
                   selectedKey={editCover}
                   maxMembers={editMax}
+                  displayMode={editMode}
                   onSelect={setEditCover}
                 />
               </>

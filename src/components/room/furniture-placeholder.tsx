@@ -40,6 +40,8 @@ export const FurniturePlaceholder = memo(function FurniturePlaceholder({
       <View accessibilityLabel={item.name} style={[styles.tile, style]}>
         <Image
           source={isSpeakerFurniture(item) ? SPEAKER_IMAGE : assetSource(item.assetKey)}
+          alt=""
+          accessibilityLabel=""
           style={styles.art}
           contentFit="contain"
           transition={120}

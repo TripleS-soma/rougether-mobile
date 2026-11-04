@@ -1,3 +1,4 @@
+import { houseDisplayMode } from '@/resources/house-display-mode';
 /**
  * House adapters — house grid / presence / missions / covers / previews /
  * search cards / join requests, plus a member's day and activity for the
@@ -163,6 +164,7 @@ export function toHouse(
     maxMembers: detail.maxMembers ?? undefined,
     memberCount: detail.currentMemberCount ?? active.length,
     coverImageKey: detail.coverImageKey ?? undefined,
+    displayMode: houseDisplayMode(detail.displayMode),
     isPublic: detail.isPublic ?? undefined,
     growthPoints: detail.growthPoints ?? undefined,
     joinRequests: joinRequests
@@ -289,6 +291,7 @@ export function toHousePreviewDetail(
     name: p.name ?? '',
     description: p.description || undefined,
     coverImageKey: p.coverImageKey ?? undefined,
+    displayMode: houseDisplayMode(p.displayMode),
     members: p.currentMemberCount ?? 0,
     capacity: p.maxMembers ?? undefined,
     level: p.level ?? undefined,
@@ -315,6 +318,7 @@ export function toSearchHouse(h: HouseSummary, index = 0): SearchHouse {
     // 검색용 — 목표 전부 (#1110). 칩은 대표 하나만 보여도 검색은 다 잡혀야 한다.
     tags: (h.goals ?? []).map((g) => g.name ?? '').filter((n) => n.length > 0),
     coverImageKey: h.coverImageKey ?? undefined,
+    displayMode: houseDisplayMode(h.displayMode),
     icon: HOUSE_ICONS[index % HOUSE_ICONS.length],
     bg: HouseBgs[index % HouseBgs.length],
     border: HouseBorders[index % HouseBorders.length],

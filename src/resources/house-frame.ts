@@ -1,4 +1,5 @@
 import { ROOM_ASPECT_RATIO } from '@/components/room/room-render-contract';
+import type { HouseDisplayMode } from '@/resources/house-display-mode';
 import { i18n } from '@/i18n';
 import { isCdnKey } from '@/resources/asset';
 
@@ -99,6 +100,7 @@ const stackedGeometry = (capacity: 2 | 4 | 6) => {
 const GEOMETRY = { 2: stackedGeometry(2), 4: stackedGeometry(4), 6: stackedGeometry(6) };
 
 export type HouseFrameOptions = {
+  displayMode?: HouseDisplayMode;
   maxMembers?: number;
   /** Never hide members when a stale capacity is smaller than the room list. */
   minimumSeats?: number;
@@ -117,11 +119,18 @@ export type HouseFrame = {
   windowRects: readonly HouseWindowRect[];
 };
 
+export function usesClassicCoverFallback(key?: string | null, displayMode?: HouseDisplayMode) {
+  return displayMode === 'CLASSIC' && /^house\/(forest-canopy|evening-brick)\//.test(key ?? '');
+}
+
 export function resolveHouseFrame(
   key?: string | null,
   options: HouseFrameOptions = {},
 ): HouseFrame {
-  const canonicalKey = houseCoverKey(key);
+  // New illustration-only themes have no transparent classic frame. Keep the
+  // stored theme intact; use the original default frame when viewing full rooms.
+  const classicFallback = usesClassicCoverFallback(key, options.displayMode);
+  const canonicalKey = houseCoverKey(classicFallback ? undefined : key);
   const legacy: HouseFrame = {
     kind: 'legacy',
     assetKey: canonicalKey,

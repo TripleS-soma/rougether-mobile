@@ -48,7 +48,7 @@ import { Icon } from '@/components/ui/icon';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { CrownPictogram, HousePictogram, TargetPictogram } from '@/components/ui/pictograms';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
-import { characterIdForMember } from '@/hooks/use-member-room-previews';
+import { characterIdForMember } from '@/resources/member-character';
 import { FixedOverlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useBottomNavInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
@@ -353,12 +353,17 @@ export const HouseScreen = memo(function HouseScreen({
     failureScope: currentHouse?.houseId ?? houseIndex,
     maxMembers: currentHouse?.maxMembers,
     minimumSeats: displayCells.length,
+    displayMode: currentHouse?.displayMode,
     enabled,
     previewTheme,
   });
-  const diorama = houseDioramaTheme(currentHouse?.coverImageKey, enabled);
+  const diorama = houseDioramaTheme(
+    currentHouse?.coverImageKey,
+    enabled,
+    currentHouse?.displayMode,
+  );
   const [annex, setAnnex] = useState(0);
-  useEffect(() => setAnnex(0), [currentHouse?.houseId, houseIndex]);
+  useEffect(() => setAnnex(0), [currentHouse?.houseId, houseIndex, currentHouse?.displayMode]);
   const annexPages = useMemo(() => dioramaSeatPages(seatRows), [seatRows]);
   const currentAnnex = Math.min(annex, annexPages.length - 1);
   const frame = useMemo(
@@ -595,6 +600,8 @@ export const HouseScreen = memo(function HouseScreen({
         {backgroundKey ? (
           <Image
             source={assetSource(backgroundKey)}
+            alt=""
+            accessibilityLabel=""
             style={StyleSheet.absoluteFill}
             contentFit="cover"
             contentPosition="center"
@@ -710,6 +717,7 @@ export const HouseScreen = memo(function HouseScreen({
                           <View style={StyleSheet.absoluteFill} pointerEvents="none">
                             <Image
                               source={diorama.source}
+                              alt=""
                               style={StyleSheet.absoluteFill}
                               contentFit="contain"
                               accessibilityLabel={tr('house.screen.houseA11y', {
@@ -759,6 +767,7 @@ export const HouseScreen = memo(function HouseScreen({
                             <Image
                               key={coverKey}
                               source={assetSource(coverKey)}
+                              alt=""
                               style={StyleSheet.absoluteFill}
                               contentFit="fill"
                               transition={frame.kind === 'stacked' ? 0 : 120}
@@ -796,7 +805,11 @@ export const HouseScreen = memo(function HouseScreen({
             </Animated.View>
           </CoachTarget>
           {diorama && annexPages.length > 1 ? (
-            <View style={styles.annexTabs} testID="diorama-annexes">
+            <View
+              style={styles.annexTabs}
+              accessibilityRole="tablist"
+              accessibilityLabel={tr('house.diorama.navigation')}
+              testID="diorama-annexes">
               {annexPages.map((_, index) => {
                 const name =
                   index === 0
@@ -807,6 +820,7 @@ export const HouseScreen = memo(function HouseScreen({
                     key={index}
                     accessibilityRole="tab"
                     accessibilityState={{ selected: currentAnnex === index }}
+                    aria-selected={currentAnnex === index}
                     accessibilityLabel={tr('house.diorama.pageA11y', { name })}
                     disabled={dragSeat != null}
                     onPress={() => {

@@ -158,7 +158,14 @@
         "autoJoin": "Allow auto move-in",
         "autoJoinHint": "New users who say yes during onboarding join without approval",
         "autoJoinPrivateHint": "Only applies to public houses",
-        "autoJoinA11y": "Allow auto move-in"
+        "autoJoinA11y": "Allow auto move-in",
+        "displayMode": "House view",
+        "diorama": "Illustrated house",
+        "dioramaHint": "A cozy house with furniture and characters",
+        "classic": "Full room view",
+        "classicHint": "See everyone’s entire decorated room",
+        "displayModeShared": "The owner’s choice is shared with every member.",
+        "classicCoverFallback": "This theme uses the default exterior in full room view. Your original theme is kept."
       }
     },
     "missions": {
@@ -499,7 +506,8 @@
       "main": "Main house",
       "annex": "Annex {{number}}",
       "more": "{{count}} more in other houses",
-      "pageA11y": "View {{name}}"
+      "pageA11y": "View {{name}}",
+      "navigation": "Main house and annexes"
     }
   }
 }
