@@ -157,11 +157,8 @@ describe('MyRoomScreen', () => {
     );
 
     await fireEvent.press(getByLabelText('메뉴'));
-    // '방 꾸미기'는 플로팅 버튼(#727)과 메뉴 항목 둘 다 존재 — 메뉴(모달,
-    // 트리상 뒤)의 항목을 집어 메뉴 경로가 살아 있음을 검증한다.
-    const decorItems = getAllByLabelText('방 꾸미기');
-    await fireEvent.press(decorItems[decorItems.length - 1]);
-    expect(onEdit).toHaveBeenCalledTimes(1);
+    // '방 꾸미기'는 오른쪽 버튼 열(#727)에만 — 메뉴의 중복 항목은 뺐다(2026-11-04).
+    expect(getAllByLabelText('방 꾸미기')).toHaveLength(1);
 
     // 메뉴의 루틴 관리는 onManageRoutines로 — +의 바로 추가와 분리 (#335).
     await fireEvent.press(getByLabelText('메뉴'));
@@ -261,7 +258,7 @@ describe('MyRoomScreen', () => {
     );
     expect(queryByLabelText(/오늘 미출석/)).toBeNull();
     await fireEvent.press(getByLabelText('메뉴'));
-    expect(getByLabelText('방 꾸미기')).toBeTruthy();
+    expect(getByLabelText('루틴 관리')).toBeTruthy();
     expect(queryByLabelText(/출석 이벤트/)).toBeNull();
     expect(queryByLabelText('재화 내역')).toBeNull();
   });

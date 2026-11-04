@@ -6,6 +6,7 @@ import { Overlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useAppFrame } from '@/hooks/use-app-frame';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
+import { track, type RoomAction } from '@/lib/analytics';
 
 export type NavMenuPopoverProps = {
   visible: boolean;
@@ -27,7 +28,6 @@ export type NavMenuPopoverProps = {
   /** 캐릭터 교체가 레벨 10 전이라 잠김 — 자물쇠 아이콘으로 보인다(누르면 안내 토스트). */
   characterPickerLocked?: boolean;
   /** 방 꾸미기. */
-  onEditRoom?: () => void;
   /** 가구 거래소 (#1502) — 꾸미기 바로 아래. 없으면 숨김(거래소 꺼짐). */
   onOpenMarket?: () => void;
   /** 방 이미지 저장 (#245). 없으면 항목을 숨긴다 — 웹(view-shot 없음). */
@@ -53,7 +53,6 @@ export function NavMenuPopover({
   onClose,
   onOpenCharacterPicker,
   characterPickerLocked = false,
-  onEditRoom,
   onOpenMarket,
   onSaveRoomImage,
   onOpenCategoryManager,
@@ -91,20 +90,17 @@ export function NavMenuPopover({
                     {
                       icon: characterPickerLocked ? ('lock' as const) : ('profile' as const),
                       label: tr('app.navMenu.changeCharacter'),
+                      action: 'menu_character' as const,
                       onPress: () => onOpenCharacterPicker(),
                     },
                   ]
                 : []),
-              {
-                icon: 'edit' as const,
-                label: tr('app.navMenu.decorate'),
-                onPress: () => onEditRoom?.(),
-              },
               ...(onOpenMarket
                 ? [
                     {
                       icon: 'shop' as const,
                       label: tr('app.navMenu.market'),
+                      action: 'menu_market' as const,
                       onPress: () => onOpenMarket(),
                     },
                   ]
@@ -114,6 +110,7 @@ export function NavMenuPopover({
                     {
                       icon: 'camera' as const,
                       label: tr('app.navMenu.saveImage'),
+                      action: 'menu_save_image' as const,
                       onPress: () => onSaveRoomImage(),
                     },
                   ]
@@ -121,18 +118,21 @@ export function NavMenuPopover({
               {
                 icon: 'folder' as const,
                 label: tr('app.navMenu.manageCategories'),
+                action: 'menu_categories' as const,
                 onPress: () => onOpenCategoryManager(),
               },
               {
                 icon: 'list' as const,
                 label: tr('app.navMenu.manageRoutines'),
+                action: 'menu_routines' as const,
                 onPress: () => onManageRoutines?.(),
               },
-            ] as { icon: IconName; label: string; onPress: () => void }[]
+            ] as { icon: IconName; label: string; action: RoomAction; onPress: () => void }[]
           ).map((item, idx, arr) => (
             <Pressable
               key={item.label}
               onPress={() => {
+                track('room_action_tap', { action: item.action });
                 onClose();
                 item.onPress();
               }}

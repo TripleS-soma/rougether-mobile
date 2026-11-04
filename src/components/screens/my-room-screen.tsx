@@ -75,6 +75,7 @@ import { type CalendarFilter, calendarToday } from '@/utils/calendar-progress';
 import { Calendar, type CalendarSelectSource, WEEK_COLLAPSE_MS } from '@/components/ui/calendar';
 import { BEAR_CHECK_SIZE } from '@/components/ui/bear-check';
 import { CoachTarget } from '@/components/ui/coach-mark';
+import { track, type RoomAction } from '@/lib/analytics';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { CategoryIcon } from '@/components/ui/category-icon';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
@@ -481,6 +482,11 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const [navMenuRight, setNavMenuRight] = useState<number | undefined>(undefined);
   const menuBtnRef = useRef<View>(null);
   const [characterSheetOpen, setCharacterSheetOpen] = useState(false);
+  /** 버튼별 탭 기록 (2026-11-04) — 화면 조회로는 어느 버튼으로 왔는지 몰라 배치를 추정만 했다. */
+  const tapAction = (action: RoomAction, run?: () => void) => {
+    track('room_action_tap', { action });
+    run?.();
+  };
   const openNavMenu = () => {
     setNavMenuOpen(true);
     // measureInWindow is a no-op in tests/web — the fallback top then applies.
@@ -1104,7 +1110,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             style={split ? undefined : styles.roomFullBleed}
           />
         </View>
-        {/* 오른쪽 버튼 열 (#1055) — 메뉴·알림(헤더에서 이동)·꾸미기·뽑기.
+        {/* 오른쪽 버튼 열 (#1055) — 메뉴·알림(헤더에서 이동) | 미니게임·꾸미기·AI 스튜디오·뽑기.
                     방 이미지 저장 중에는 통째로 빼서 사진에서 제외한다 (#475).
                     opacity로 숨기면 글래스 면(#1050)이 안 그려지고 복귀가 불안정. */}
         {capturing ? null : (
@@ -1114,7 +1120,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             <CoachTarget id="room-menu">
               <Pressable
                 ref={menuBtnRef}
-                onPress={openNavMenu}
+                onPress={() => tapAction('menu', openNavMenu)}
                 accessibilityRole="button"
                 accessibilityLabel={tr('routineTodo.myRoom.menu')}
                 style={styles.floatBtn}>
@@ -1125,7 +1131,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             </CoachTarget>
             {onOpenNotifications ? (
               <Pressable
-                onPress={onOpenNotifications}
+                onPress={() => tapAction('notifications', onOpenNotifications)}
                 accessibilityRole="button"
                 accessibilityLabel={tr('routineTodo.myRoom.notifications')}
                 style={styles.floatBtn}>
@@ -1137,12 +1143,26 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 </GlassSurface>
               </Pressable>
             ) : null}
+            {/* 두 묶음 (2026-11-04, GA 28일): 위는 시스템(메뉴·알림), 틈 뒤로 방에서 하는 일을
+                반복 사용 순으로 — 미니게임(1인 31회)·꾸미기·AI 스튜디오·뽑기(대부분 온보딩 1회). */}
+            <View style={split ? styles.btnGroupGapRow : styles.btnGroupGap} />
+            {onOpenMinigames ? (
+              <Pressable
+                onPress={() => tapAction('minigames', onOpenMinigames)}
+                accessibilityRole="button"
+                accessibilityLabel={tr('routineTodo.myRoom.minigames')}
+                style={styles.floatBtn}>
+                <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
+                  <Icon name="gamepad" size={20} color={t.primaryText} />
+                </GlassSurface>
+              </Pressable>
+            ) : null}
             {/* 방 꾸미기 1탭 승격 (#727) — 보상 루프의 종착지를 뽑기 옆에. */}
             {onEdit ? (
               // 버튼 전체를 짚는다 — 안쪽 아이콘만 재면 강조 테두리가 원형 버튼 안에 작게 뜬다.
               <CoachTarget id="room-decor">
                 <Pressable
-                  onPress={onEdit}
+                  onPress={() => tapAction('decor', onEdit)}
                   accessibilityRole="button"
                   accessibilityLabel={tr('routineTodo.myRoom.decorate')}
                   style={styles.floatBtn}>
@@ -1154,7 +1174,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             ) : null}
             {onOpenFurnitureStudio ? (
               <Pressable
-                onPress={onOpenFurnitureStudio}
+                onPress={() => tapAction('studio', onOpenFurnitureStudio)}
                 accessibilityRole="button"
                 accessibilityLabel={tr('routineTodo.myRoom.furnitureStudio')}
                 style={styles.floatBtn}>
@@ -1163,20 +1183,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 </GlassSurface>
               </Pressable>
             ) : null}
-            {onOpenMinigames ? (
-              <Pressable
-                onPress={onOpenMinigames}
-                accessibilityRole="button"
-                accessibilityLabel={tr('routineTodo.myRoom.minigames')}
-                style={styles.floatBtn}>
-                <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
-                  <Icon name="gamepad" size={20} color={t.primaryText} />
-                </GlassSurface>
-              </Pressable>
-            ) : null}
             <CoachTarget id="room-gacha">
               <Pressable
-                onPress={onOpenGacha}
+                onPress={() => tapAction('gacha', onOpenGacha)}
                 accessibilityRole="button"
                 accessibilityLabel={tr('routineTodo.myRoom.gacha')}
                 style={styles.floatBtn}>
@@ -1643,7 +1652,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           characterPickerLocked={
             !(ownedCharacters && onSelectCharacter) && characterLockLevel != null
           }
-          onEditRoom={onEdit}
           onOpenMarket={onOpenMarket}
           // 웹은 view-shot이 없어 항목을 숨긴다 — 눌러서 '지원 안 함' 토스트를 보이는 것보다 낫다.
           onSaveRoomImage={supportsRoomImageSave() ? () => void onSaveRoomImage() : undefined}
@@ -1790,7 +1798,10 @@ const styles = StyleSheet.create({
     bottom: Spacing.three,
     gap: Spacing.two,
   },
-  // 2단 (#1230 후속) — 방 아래 가운데 한 줄. 같은 버튼·같은 순서(메뉴·알림·꾸미기·AI·뽑기).
+  // 2단 (#1230 후속) — 방 아래 가운데 한 줄. 같은 버튼·같은 순서·같은 두 묶음.
+  // 시스템 묶음과 방 묶음 사이 틈 — 열의 gap(Spacing.two) 위에 더한다.
+  btnGroupGap: { height: Spacing.two },
+  btnGroupGapRow: { width: Spacing.three },
   btnRow: {
     flexDirection: 'row',
     justifyContent: 'center',
