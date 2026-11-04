@@ -433,7 +433,10 @@ function CalendarBase({
               const folding = keptWeek >= 0 && wi !== keptWeek;
               return (
                 <FoldRow
-                  key={`week-${wi}`}
+                  // 접히는 줄 ↔ 남는 줄이 바뀌면(주 이동·펼침) 새로 마운트 — Reanimated는 반환에서
+                  // 빠진 style 키(height)를 되돌리지 않아, 접혀 있던 줄이 남는 줄이 되면 높이 0이
+                  // 그대로 남아 선택 주가 사라졌다(#1603 리뷰). 새 뷰엔 낡은 값이 없다.
+                  key={`week-${wi}-${folding ? 'fold' : 'keep'}`}
                   testID={`calendar-week-row-${wi}`}
                   fold={fold}
                   rowH={rowH}
