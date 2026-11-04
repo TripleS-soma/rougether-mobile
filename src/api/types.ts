@@ -1696,6 +1696,8 @@ export type WalletHistoryResponse = {
     | 'MARKET_ROYALTY'
     | 'GACHA_DRAW'
     | 'SHOP_PURCHASE'
+    | 'FURNITURE_GENERATION'
+    | 'FURNITURE_GENERATION_REFUND'
     | 'MARKET_ORDER_ESCROW';
   balanceAfter?: number;
   createdAt?: string;

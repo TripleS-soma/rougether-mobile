@@ -2,7 +2,7 @@ import { fireEvent, render } from '@testing-library/react-native';
 
 import { FurnitureStudioScreen } from '@/components/screens/furniture-studio-screen';
 
-it('shows credits and prevents generation without a credit', async () => {
+it('prevents generation without either credits or enough coins', async () => {
   const choose = jest.fn();
   const ui = await render(
     <FurnitureStudioScreen
@@ -78,7 +78,7 @@ it('shows the photo rejection reason, how to fix it, and credit return', async (
   expect(
     ui.getByText('만들 대상 하나가 또렷하게 보이도록 사진을 잘라 다시 선택해주세요.'),
   ).toBeTruthy();
-  expect(ui.getByText('실패한 작업의 생성권은 돌려드렸어요.')).toBeTruthy();
+  expect(ui.getByText('실패한 작업에 사용한 생성권이나 코인은 돌려드렸어요.')).toBeTruthy();
   await fireEvent.press(ui.getByLabelText('다시 만들 사진 선택'));
   expect(choose).toHaveBeenCalledTimes(1);
   expect(ui.queryByText('PHOTO_REJECTED')).toBeNull();
@@ -163,7 +163,7 @@ it('preserves the completed furniture after a failed re-review without claiming 
   expect(
     ui.queryByText('대상의 형태가 선명하고 배경이 단순한 사진으로 다시 시도해주세요.'),
   ).toBeNull();
-  expect(ui.queryByText('실패한 작업의 생성권은 돌려드렸어요.')).toBeNull();
+  expect(ui.queryByText('실패한 작업에 사용한 생성권이나 코인은 돌려드렸어요.')).toBeNull();
   await fireEvent.press(ui.getByLabelText('방에 배치하기'));
   expect(place).toHaveBeenCalledTimes(1);
 });
@@ -209,4 +209,52 @@ it.each([
   );
   expect(ui.getByText(reason)).toBeTruthy();
   expect(ui.getByText(hint)).toBeTruthy();
+});
+
+it('allows photo selection and clearly labels a 100-coin submission without credits', async () => {
+  const choose = jest.fn();
+  const submit = jest.fn();
+  const ui = await render(
+    <FurnitureStudioScreen
+      balance={{ available: 0, reserved: 0 }}
+      coinBalance={100}
+      jobs={[]}
+      photo={{ uri: 'file:///chair.jpg', name: 'chair.jpg', type: 'image/jpeg' }}
+      onChoosePhoto={choose}
+      onSubmit={submit}
+    />,
+  );
+  expect(ui.getByText('보유 코인 100')).toBeTruthy();
+  await fireEvent.press(ui.getByLabelText('사진 바꾸기'));
+  await fireEvent.press(ui.getByLabelText('100코인으로 만들기'));
+  expect(choose).toHaveBeenCalledTimes(1);
+  expect(submit).toHaveBeenCalledTimes(1);
+});
+
+it('keeps the credit label when both payment methods are available', async () => {
+  const ui = await render(
+    <FurnitureStudioScreen
+      balance={{ available: 1, reserved: 0 }}
+      coinBalance={100}
+      jobs={[]}
+      photo={{ uri: 'file:///chair.jpg', name: 'chair.jpg', type: 'image/jpeg' }}
+    />,
+  );
+  expect(ui.getByLabelText('생성권 1회로 만들기')).toBeTruthy();
+  expect(ui.queryByLabelText('100코인으로 만들기')).toBeNull();
+});
+
+it('disables coin creation at 99 coins', async () => {
+  const submit = jest.fn();
+  const ui = await render(
+    <FurnitureStudioScreen
+      balance={{ available: 0, reserved: 0 }}
+      coinBalance={99}
+      jobs={[]}
+      photo={{ uri: 'file:///chair.jpg', name: 'chair.jpg', type: 'image/jpeg' }}
+      onSubmit={submit}
+    />,
+  );
+  await fireEvent.press(ui.getByLabelText('100코인으로 만들기'));
+  expect(submit).not.toHaveBeenCalled();
 });
