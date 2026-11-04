@@ -74,6 +74,19 @@ npx --no-install storybook build --output-dir web-build/storybook
 스토리는 Expo Router의 `src/app/` 밖에 둡니다. 새 파일은
 `stories/**/*.stories.tsx` 패턴으로 자동 검색됩니다.
 
+## 집 에셋을 마케팅 자료에 사용하기
+
+왼쪽 **에셋 → 공동집 → 6종 원본과 다운로드**에서 초록 나무집, 저녁빛 벽돌집과 기존 리뉴얼 4종을 비교한다. 각 카드에서 **원본 PNG 다운로드** 또는 **앱 WebP 다운로드**를 누르면 된다.
+
+- PNG는 가구와 캐릭터가 없는 1024×1536 원본이다. 배경이 포함되어 있으며 투명 이미지가 아니다.
+- WebP는 실제 앱의 768×1152 이미지다.
+- **인원과 가구 조절하기**에서는 실제 HouseDioramaPreview의 테마, 인원 0~10, 가구 표시를 Controls에서 바꿀 수 있다. 인원 4명 초과는 별채 인원으로 표시한다.
+- 다운로드 파일은 배경만 포함한다. 조절판의 멤버와 배치는 샘플이며 가구는 실제 CDN 에셋이다.
+
+원본과 파일 해시는 [design-assets/houses](../design-assets/houses/README.md)에 보관한다. Storybook 정적 빌드에도 원본 PNG와 앱 WebP를 함께 복사하므로 CI artifact를 받은 마케팅 작업자도 같은 파일을 사용할 수 있다. 원본 PNG는 모바일 코드에서 import하지 않는다.
+
+이 디자인은 아직 출시 전이다. 마케팅 문구에서 실제 배포 여부는 별도로 확인한다.
+
 ## 스토리 추가하기
 
 `stories/components/`에 kebab-case 이름의 `*.stories.tsx` 파일을 추가합니다. `Meta`와

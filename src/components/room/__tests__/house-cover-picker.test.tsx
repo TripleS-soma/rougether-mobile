@@ -1,7 +1,6 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
-import { FRAME_ASPECT } from '@/components/room/house-preview-frame';
 import { i18n } from '@/i18n';
 
 const COVERS: HouseCover[] = [
@@ -66,7 +65,7 @@ describe('HouseCoverPicker', () => {
     expect(art.props.contentFit).toBe('contain');
     const flat = art.props.style.flat ? art.props.style.flat() : [].concat(art.props.style);
     const aspect = flat.find((s: { aspectRatio?: number }) => s && s.aspectRatio != null)?.aspectRatio; // prettier-ignore
-    expect(aspect).toBeCloseTo(FRAME_ASPECT, 5);
+    expect(aspect).toBeCloseTo(2 / 3, 5);
   });
 
   it('marks the selected cover and renders nothing while the catalog is empty', async () => {

@@ -462,7 +462,9 @@
       "coastal-lighthouse": "Seaside Lighthouse",
       "snowy-cabin": "Snowy Log Cabin",
       "herb-greenhouse": "Herb Greenhouse",
-      "clockwork-cottage": "Clockwork Cottage"
+      "clockwork-cottage": "Clockwork Cottage",
+      "forest-canopy": "Forest Canopy House",
+      "evening-brick": "Evening Brick House"
     },
     "chat": {
       "title": "House chat",
@@ -492,6 +494,12 @@
       "range": "{{sm}}/{{sd}} – {{em}}/{{ed}}",
       "done": "{{n}} done",
       "none": "Nothing done"
+    },
+    "diorama": {
+      "main": "Main house",
+      "annex": "Annex {{number}}",
+      "more": "{{count}} more in other houses",
+      "pageA11y": "View {{name}}"
     }
   }
 }

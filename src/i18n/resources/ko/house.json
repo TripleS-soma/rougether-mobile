@@ -462,7 +462,9 @@
       "coastal-lighthouse": "바닷바람 등대집",
       "snowy-cabin": "눈꽃 통나무집",
       "herb-greenhouse": "허브 온실집",
-      "clockwork-cottage": "태엽 시계집"
+      "clockwork-cottage": "태엽 시계집",
+      "forest-canopy": "초록 나무집",
+      "evening-brick": "저녁빛 벽돌집"
     },
     "chat": {
       "title": "집 채팅",
@@ -492,6 +494,12 @@
       "range": "{{sm}}월 {{sd}}일 – {{em}}월 {{ed}}일",
       "done": "{{n}}개 완료",
       "none": "완료 없음"
+    },
+    "diorama": {
+      "main": "본채",
+      "annex": "별채 {{number}}",
+      "more": "다른 별채에 {{count}}명",
+      "pageA11y": "{{name}} 보기"
     }
   }
 }
