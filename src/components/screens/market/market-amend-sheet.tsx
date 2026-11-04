@@ -5,6 +5,7 @@ import type { MarketOrder } from '@/api/market';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { SheetHandle } from '@/components/ui/sheet-handle';
 import { MARKET_MAX_SUPPLY } from '@/constants/market';
 import { Radius, Spacing } from '@/constants/theme';
@@ -60,7 +61,11 @@ export function MarketAmendSheet({
           accessibilityRole="button"
           accessibilityLabel={tr('market.order.closeA11y')}
           hitSlop={8}
-          style={[styles.closeBtn, { backgroundColor: t.surfaceMuted }]}>
+          style={({ pressed }) => [
+            styles.closeBtn,
+            { backgroundColor: t.surfaceMuted },
+            pressed && pressedStyle('dim', t),
+          ]}>
           <Icon name="close" size={14} color={t.text} />
         </Pressable>
       </View>
@@ -79,7 +84,11 @@ export function MarketAmendSheet({
             accessibilityRole="button"
             accessibilityLabel={tr('market.orders.decrease')}
             accessibilityState={{ disabled: quantity <= min || submitting }}
-            style={[styles.stepBtn, { backgroundColor: t.surfaceMuted }]}>
+            style={({ pressed }) => [
+              styles.stepBtn,
+              { backgroundColor: t.surfaceMuted },
+              pressed && pressedStyle('dim', t),
+            ]}>
             <Text style={[Typography.label, { color: quantity <= min ? t.textDisabled : t.text }]}>
               -
             </Text>
@@ -95,7 +104,11 @@ export function MarketAmendSheet({
             accessibilityRole="button"
             accessibilityLabel={tr('market.orders.increase')}
             accessibilityState={{ disabled: quantity >= max || submitting }}
-            style={[styles.stepBtn, { backgroundColor: t.surfaceMuted }]}>
+            style={({ pressed }) => [
+              styles.stepBtn,
+              { backgroundColor: t.surfaceMuted },
+              pressed && pressedStyle('dim', t),
+            ]}>
             <Text style={[Typography.label, { color: quantity >= max ? t.textDisabled : t.text }]}>
               +
             </Text>

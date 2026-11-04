@@ -14,6 +14,7 @@ import { readableTextColor } from '@/utils/color';
 import { formatTime } from '@/utils/datetime';
 import { useT } from '@/i18n';
 import { groupByCategory } from '@/utils/category-groups';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 export type RoutineManageScreenProps = {
   routines?: Routine[];
@@ -67,7 +68,11 @@ export function RoutineManageScreen({
             onPress={onAdd}
             accessibilityRole="button"
             accessibilityLabel={tr('routineTodo.routineManage.addA11y')}
-            style={[styles.iconBtn, { backgroundColor: t.primary }]}>
+            style={({ pressed }) => [
+              styles.iconBtn,
+              { backgroundColor: t.primary },
+              pressed && pressedStyle('fill', t),
+            ]}>
             <Icon name="add" size={20} color={t.onPrimary} />
           </Pressable>
         }
@@ -135,7 +140,11 @@ export function RoutineManageScreen({
                         key={routine.id}
                         onPress={() => onEdit?.(routine)}
                         accessibilityRole="button"
-                        style={[styles.row, { borderLeftColor: cat.color }]}>
+                        style={({ pressed }) => [
+                          styles.row,
+                          { borderLeftColor: cat.color },
+                          pressed && pressedStyle('row', t),
+                        ]}>
                         <View style={styles.flex}>
                           <Text style={[Typography.body, { color: t.text }]}>{routine.title}</Text>
                           {routine.alarmEnabled && routine.time ? (

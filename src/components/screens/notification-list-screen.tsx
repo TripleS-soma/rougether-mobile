@@ -26,6 +26,7 @@ import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
 import { DEMO_NOTIFICATIONS } from '@/mocks/fixtures';
 import { useLatestRef } from '@/hooks/use-stable-value';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 /** One notification row (server GET /notifications). */
 export type NotificationEntry = {
@@ -115,7 +116,11 @@ function DeleteAction({
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={tr('notification.list.deleteRowA11y', { label })}
-        style={[styles.deleteAction, { backgroundColor: t.danger }]}>
+        style={({ pressed }) => [
+          styles.deleteAction,
+          { backgroundColor: t.danger },
+          pressed && pressedStyle('dim', t),
+        ]}>
         <Text style={[Typography.label, { color: t.onPrimary }]}>
           {tr('notification.list.delete')}
         </Text>
@@ -245,7 +250,11 @@ export function NotificationListScreen({
                 onPress={onReadAllAnnouncements}
                 accessibilityRole="button"
                 accessibilityLabel={tr('notification.list.readAllNewsA11y')}
-                style={[styles.headerBtn, { backgroundColor: t.surfaceMuted }]}>
+                style={({ pressed }) => [
+                  styles.headerBtn,
+                  { backgroundColor: t.surfaceMuted },
+                  pressed && pressedStyle('dim', t),
+                ]}>
                 <Text style={[Typography.label, { color: t.primaryText }]}>
                   {tr('notification.list.readAll')}
                 </Text>
@@ -258,7 +267,11 @@ export function NotificationListScreen({
                   onPress={onReadAll}
                   accessibilityRole="button"
                   accessibilityLabel={tr('notification.list.readAll')}
-                  style={[styles.headerBtn, { backgroundColor: t.surfaceMuted }]}>
+                  style={({ pressed }) => [
+                    styles.headerBtn,
+                    { backgroundColor: t.surfaceMuted },
+                    pressed && pressedStyle('dim', t),
+                  ]}>
                   <Text style={[Typography.label, { color: t.primaryText }]}>
                     {tr('notification.list.readAll')}
                   </Text>
@@ -268,7 +281,11 @@ export function NotificationListScreen({
                 onPress={() => setConfirmDeleteAll(true)}
                 accessibilityRole="button"
                 accessibilityLabel={tr('notification.list.deleteAllA11y')}
-                style={[styles.headerBtn, { backgroundColor: t.surfaceMuted }]}>
+                style={({ pressed }) => [
+                  styles.headerBtn,
+                  { backgroundColor: t.surfaceMuted },
+                  pressed && pressedStyle('dim', t),
+                ]}>
                 <Text style={[Typography.label, { color: t.danger }]}>
                   {tr('notification.list.deleteAll')}
                 </Text>
@@ -326,7 +343,11 @@ export function NotificationListScreen({
                 onPress={onLoadMore}
                 accessibilityRole="button"
                 accessibilityLabel={tr('notification.list.moreA11y')}
-                style={[styles.more, { backgroundColor: t.surfaceMuted }]}>
+                style={({ pressed }) => [
+                  styles.more,
+                  { backgroundColor: t.surfaceMuted },
+                  pressed && pressedStyle('dim', t),
+                ]}>
                 <Text style={[Typography.label, { color: t.primaryText }]}>
                   {tr('notification.list.more')}
                 </Text>
@@ -347,9 +368,11 @@ export function NotificationListScreen({
                 onAccessibilityAction={(e) => {
                   if (e.nativeEvent.actionName === 'delete') onDelete?.(n.id);
                 }}
-                style={[
+                style={({ pressed }) => [
                   styles.row,
                   { backgroundColor: n.read ? t.surfaceMuted : t.surface, borderColor: t.border },
+                  // 읽은 행은 이미 surfaceMuted라 투명도로
+                  pressed && pressedStyle(n.read ? 'dim' : 'card', t),
                 ]}>
                 <View style={[styles.rowIcon, { backgroundColor: t.surfaceMuted }]}>
                   <Icon name={notificationIcon(n.type)} size={18} color={t.text} />

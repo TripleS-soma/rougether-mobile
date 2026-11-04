@@ -4,6 +4,7 @@ import { WEEKDAY_KEYS, weekdayLongLabelKey } from '@/constants/routines';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 /** 반복 종류 순서 — 라벨은 `routineTodo.repeat.<id>` (#893). */
 export const REPEAT_KINDS: RepeatKind[] = ['daily', 'weekly', 'biweekly', 'monthly', 'yearly'];
@@ -27,7 +28,11 @@ export function ComposeRepeatFields({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ selected }}
-      style={[styles.choice, { backgroundColor: selected ? t.primarySoft : t.surfaceMuted }]}>
+      style={({ pressed }) => [
+        styles.choice,
+        { backgroundColor: selected ? t.primarySoft : t.surfaceMuted },
+        pressed && pressedStyle('dim', t),
+      ]}>
       <Text style={[Typography.label, { color: selected ? t.primaryText : t.text }]}>{label}</Text>
     </Pressable>
   );

@@ -5,6 +5,7 @@ import { AppearancePreview } from '@/components/screens/settings/appearance-prev
 import { PickerRow, pickerStyles } from '@/components/screens/settings/picker-row';
 import { ActionBar } from '@/components/ui/action-bar';
 import { GlassSurface } from '@/components/ui/glass-surface';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import type { CharacterId } from '@/constants/characters';
 import { DEFAULT_THEME_ID, Radius, THEME_OPTIONS, type ThemeId } from '@/constants/theme';
@@ -90,7 +91,7 @@ export function ThemeScreen({
           accessibilityRole="button"
           accessibilityLabel={tr('common.apply')}
           accessibilityState={{ disabled: !canApply }}
-          style={styles.apply}>
+          style={({ pressed }) => [styles.apply, pressed && pressedStyle('dim', t)]}>
           <GlassSurface
             style={styles.applyFace}
             tintColor={canApply ? t.primary : undefined}

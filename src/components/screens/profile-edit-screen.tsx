@@ -21,6 +21,7 @@ import { useActionBarInset, useHeaderContentInset, useScreenStyle } from '@/hook
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 export type ProfileEditScreenProps = {
   initialNickname?: string;
@@ -113,7 +114,8 @@ export function ProfileEditScreen({
             disabled={!canSave}
             accessibilityRole="button"
             accessibilityLabel={tr('member.profileEdit.saveA11y')}
-            style={styles.save}>
+            // 배경은 GlassSurface가 칠하므로 투명도로
+            style={({ pressed }) => [styles.save, pressed && canSave && pressedStyle('dim', t)]}>
             <GlassSurface
               style={styles.saveFace}
               tintColor={canSave ? t.primary : undefined}

@@ -1,6 +1,7 @@
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { WalletHistoryEntry } from '@/api/adapters';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { formatAmount } from '@/constants/currency';
 import { Loading } from '@/components/ui/loading';
 import { BottomSheet, SheetDragExclude } from '@/components/ui/bottom-sheet';
@@ -57,7 +58,11 @@ export function WalletHistorySheet({
           onPress={onClose}
           accessibilityRole="button"
           accessibilityLabel={tr('roomShop.wallet.closeA11y')}
-          style={[styles.closeBtn, { backgroundColor: t.surfaceMuted }]}>
+          style={({ pressed }) => [
+            styles.closeBtn,
+            { backgroundColor: t.surfaceMuted },
+            pressed && pressedStyle('dim', t),
+          ]}>
           <Icon name="close" size={16} color={t.text} />
         </Pressable>
       </View>
@@ -127,7 +132,11 @@ export function WalletHistorySheet({
                   disabled={loading}
                   accessibilityRole="button"
                   accessibilityLabel={tr('roomShop.wallet.moreA11y')}
-                  style={[styles.moreBtn, { backgroundColor: t.surfaceMuted }]}>
+                  style={({ pressed }) => [
+                    styles.moreBtn,
+                    { backgroundColor: t.surfaceMuted },
+                    pressed && pressedStyle('dim', t),
+                  ]}>
                   {loading ? (
                     <Loading size="small" />
                   ) : (

@@ -6,6 +6,7 @@ import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 export type InviteArrivalSheetProps = {
   visible: boolean;
@@ -57,7 +58,11 @@ export function InviteArrivalSheet({
           disabled={busy}
           accessibilityRole="button"
           accessibilityLabel={tr('house.inviteArrival.laterA11y')}
-          style={[styles.btn, { backgroundColor: t.surfaceMuted }]}>
+          style={({ pressed }) => [
+            styles.btn,
+            { backgroundColor: t.surfaceMuted },
+            pressed && pressedStyle('dim', t),
+          ]}>
           <Text style={[Typography.label, { color: t.text }]}>
             {tr('house.inviteArrival.later')}
           </Text>
@@ -68,7 +73,11 @@ export function InviteArrivalSheet({
           accessibilityRole="button"
           accessibilityLabel={tr('house.inviteArrival.acceptA11y')}
           accessibilityState={{ disabled: busy }}
-          style={[styles.btn, { backgroundColor: busy ? t.disabledBg : t.primary }]}>
+          style={({ pressed }) => [
+            styles.btn,
+            { backgroundColor: busy ? t.disabledBg : t.primary },
+            pressed && !busy && pressedStyle('fill', t),
+          ]}>
           <Text style={[Typography.label, { color: busy ? t.textMuted : t.onPrimary }]}>
             {busy
               ? tr('house.inviteArrival.accepting')

@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { GlassSurface } from '@/components/ui/glass-surface';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
@@ -41,7 +42,11 @@ export function NotificationTabs({ value, onChange, unread }: NotificationTabsPr
               accessibilityRole="tab"
               accessibilityState={{ selected: active }}
               accessibilityLabel={tr('notification.tabs.a11y', { label })}
-              style={[styles.item, active && { backgroundColor: t.surfaceMuted }]}>
+              style={({ pressed }) => [
+                styles.item,
+                active && { backgroundColor: t.surfaceMuted },
+                pressed && pressedStyle('dim', t),
+              ]}>
               <Text style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
                 {label}
               </Text>

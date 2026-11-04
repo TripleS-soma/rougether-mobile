@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
@@ -57,7 +58,12 @@ export function HouseSideArrows({ showArrows, onPrev, onNext, top }: HouseSideAr
         accessibilityRole="button"
         accessibilityLabel={tr('house.switcher.prev')}
         hitSlop={8}
-        style={[styles.button, styles.left, placed]}>
+        style={({ pressed }) => [
+          styles.button,
+          styles.left,
+          placed,
+          pressed && pressedStyle('dim', t),
+        ]}>
         <GlassSurface style={styles.face} fallbackColor={t.surface}>
           <Icon name="back" size={18} color={t.text} />
         </GlassSurface>
@@ -67,7 +73,12 @@ export function HouseSideArrows({ showArrows, onPrev, onNext, top }: HouseSideAr
         accessibilityRole="button"
         accessibilityLabel={tr('house.switcher.next')}
         hitSlop={8}
-        style={[styles.button, styles.right, placed]}>
+        style={({ pressed }) => [
+          styles.button,
+          styles.right,
+          placed,
+          pressed && pressedStyle('dim', t),
+        ]}>
         <GlassSurface style={styles.face} fallbackColor={t.surface}>
           <Icon name="forward" size={18} color={t.text} />
         </GlassSurface>

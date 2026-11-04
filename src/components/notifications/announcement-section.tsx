@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import {
   RECENT_ANNOUNCEMENT_COUNT,
   announcementDateLabel,
@@ -68,9 +69,11 @@ export function AnnouncementSection({
           accessibilityRole="button"
           accessibilityLabel={a.title}
           accessibilityState={{ selected: !a.read }}
-          style={[
+          style={({ pressed }) => [
             styles.row,
             { backgroundColor: a.read ? t.surfaceMuted : t.surface, borderColor: t.border },
+            // 읽은 행은 이미 surfaceMuted라 card 눌림이 안 보인다 → dim
+            pressed && pressedStyle(a.read ? 'dim' : 'card', t),
           ]}>
           <View style={[styles.rowIcon, { backgroundColor: t.primarySoft }]}>
             <Icon name="sparkles" size={18} color={t.primaryText} />
@@ -101,7 +104,11 @@ export function AnnouncementSection({
               ? tr('notification.news.collapseA11y')
               : tr('notification.news.moreOlder', { count: hidden })
           }
-          style={[styles.more, { backgroundColor: t.surfaceMuted }]}>
+          style={({ pressed }) => [
+            styles.more,
+            { backgroundColor: t.surfaceMuted },
+            pressed && pressedStyle('dim', t),
+          ]}>
           <Text style={[Typography.label, { color: t.primaryText }]}>
             {expanded
               ? tr('notification.news.collapse')

@@ -1,5 +1,6 @@
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import type { SocialProvider } from '@/lib/last-login';
@@ -70,7 +71,11 @@ export function LoginConflictDialog({
                 accessibilityLabel={tr('member.login.conflict.loginWith', {
                   provider: providerLabel(existing),
                 })}
-                style={[styles.btn, { backgroundColor: t.primary }]}>
+                style={({ pressed }) => [
+                  styles.btn,
+                  { backgroundColor: t.primary },
+                  pressed && pressedStyle('fill', t),
+                ]}>
                 <Text style={[Typography.label, { color: t.onPrimary }]}>
                   {tr('member.login.conflict.loginWith', { provider: providerLabel(existing) })}
                 </Text>
@@ -80,7 +85,11 @@ export function LoginConflictDialog({
               onPress={onContinueAsNew}
               accessibilityRole="button"
               accessibilityLabel={tr('member.login.conflict.continueAsNew')}
-              style={[styles.btn, { backgroundColor: t.surfaceMuted }]}>
+              style={({ pressed }) => [
+                styles.btn,
+                { backgroundColor: t.surfaceMuted },
+                pressed && pressedStyle('dim', t),
+              ]}>
               <Text style={[Typography.label, { color: t.text }]}>
                 {tr('member.login.conflict.continueAsNew')}
               </Text>
@@ -89,7 +98,7 @@ export function LoginConflictDialog({
               onPress={onDismiss}
               accessibilityRole="button"
               accessibilityLabel={tr('member.common.close')}
-              style={styles.textBtn}>
+              style={({ pressed }) => [styles.textBtn, pressed && pressedStyle('dim', t)]}>
               <Text style={[Typography.label, { color: t.textMuted }]}>
                 {tr('member.common.close')}
               </Text>

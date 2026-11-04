@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import type { ReportReason } from '@/api/types';
 import { BottomSheet, SheetDragExclude } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { SheetHandle } from '@/components/ui/sheet-handle';
 import { REPORT_DETAIL_MAX } from '@/constants/moderation';
 import { Radius, Spacing } from '@/constants/theme';
@@ -101,9 +102,10 @@ export function ReportSheet({
                   accessibilityState={{ checked: selected, disabled: submitting }}
                   // RN Web은 accessibilityState를 DOM으로 옮기지 않는다(bear-check와 같은 이유).
                   aria-checked={selected}
-                  style={[
+                  style={({ pressed }) => [
                     styles.reasonRow,
                     { backgroundColor: selected ? t.primarySoft : t.surfaceMuted },
+                    pressed && pressedStyle('dim', t),
                   ]}>
                   <View style={[styles.radio, { borderColor: selected ? t.primary : t.textMuted }]}>
                     {selected ? (

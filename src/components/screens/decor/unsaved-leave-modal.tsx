@@ -1,6 +1,7 @@
 import { Modal, Pressable, Text, View } from 'react-native';
 
 import { confirmStyles as styles } from '@/components/screens/decor/confirm-modal-styles';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
 
@@ -40,7 +41,11 @@ export function UnsavedLeaveModal({
               onPress={onSaveAndLeave}
               accessibilityRole="button"
               accessibilityLabel={tr('roomShop.decor.leave.saveAndLeave')}
-              style={[styles.leaveBtn, { backgroundColor: t.primary }]}>
+              style={({ pressed }) => [
+                styles.leaveBtn,
+                { backgroundColor: t.primary },
+                pressed && pressedStyle('fill', t),
+              ]}>
               <Text style={[Typography.label, { color: t.onPrimary }]}>
                 {tr('roomShop.decor.leave.saveAndLeave')}
               </Text>
@@ -49,7 +54,11 @@ export function UnsavedLeaveModal({
               onPress={onLeaveWithoutSaving}
               accessibilityRole="button"
               accessibilityLabel={tr('roomShop.decor.leave.leaveWithoutSaving')}
-              style={[styles.leaveBtn, { backgroundColor: t.surfaceMuted }]}>
+              style={({ pressed }) => [
+                styles.leaveBtn,
+                { backgroundColor: t.surfaceMuted },
+                pressed && pressedStyle('dim', t),
+              ]}>
               <Text style={[Typography.label, { color: t.text }]}>
                 {tr('roomShop.decor.leave.leaveWithoutSaving')}
               </Text>
@@ -58,7 +67,7 @@ export function UnsavedLeaveModal({
               onPress={onStay}
               accessibilityRole="button"
               accessibilityLabel={tr('roomShop.decor.leave.stay')}
-              style={styles.leaveStay}>
+              style={({ pressed }) => [styles.leaveStay, pressed && pressedStyle('dim', t)]}>
               <Text style={[Typography.label, { color: t.textMuted }]}>
                 {tr('roomShop.decor.leave.stay')}
               </Text>

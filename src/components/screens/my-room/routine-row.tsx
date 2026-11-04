@@ -13,6 +13,7 @@ import { SwipeDeleteRow } from '@/components/screens/my-room/swipe-delete-row';
 import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
 import { CoachTarget } from '@/components/ui/coach-mark';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Spacing } from '@/constants/theme';
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -160,7 +161,11 @@ function RoutineRowBase({
           onPress={menuEnabled ? openMenu : undefined}
           accessibilityRole="button"
           accessibilityLabel={tr('routineTodo.row.menuA11y', { title })}
-          style={[styles.flex, styles.rowBody]}>
+          style={({ pressed }) => [
+            styles.flex,
+            styles.rowBody,
+            pressed && menuEnabled && pressedStyle('dim', t),
+          ]}>
           {/* 반복 마커(#576)는 제목과 같은 줄 — 아랫줄(알림 배지)에 두면
               시간까지 겹쳐 부제 줄이 길어진다. 긴 제목은 마커가 밀리지 않게
               한 줄로 잘라낸다. */}

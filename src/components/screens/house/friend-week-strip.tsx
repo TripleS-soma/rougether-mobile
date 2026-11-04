@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 
 import { Icon } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { weekdayLabelKey } from '@/constants/routines';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -61,7 +62,7 @@ export function FriendWeekStrip({ selected, today, doneCounts, onSelect }: Frien
             accessibilityRole="button"
             accessibilityLabel={tr('routineTodo.calendar.prevWeek')}
             hitSlop={Spacing.two}
-            style={styles.arrow}>
+            style={({ pressed }) => [styles.arrow, pressed && pressedStyle('dim', t)]}>
             <Icon name="back" size={18} color={t.textMuted} />
           </Pressable>
           <Text style={[Typography.label, { color: t.text }]}>
@@ -72,7 +73,7 @@ export function FriendWeekStrip({ selected, today, doneCounts, onSelect }: Frien
             accessibilityRole="button"
             accessibilityLabel={tr('routineTodo.calendar.nextWeek')}
             hitSlop={Spacing.two}
-            style={styles.arrow}>
+            style={({ pressed }) => [styles.arrow, pressed && pressedStyle('dim', t)]}>
             <Icon name="forward" size={18} color={t.textMuted} />
           </Pressable>
         </View>
@@ -104,7 +105,7 @@ export function FriendWeekStrip({ selected, today, doneCounts, onSelect }: Frien
                 accessibilityLabel={a11y}
                 accessibilityState={{ selected: isSelected }}
                 aria-selected={isSelected}
-                style={styles.cell}>
+                style={({ pressed }) => [styles.cell, pressed && pressedStyle('dim', t)]}>
                 <Text
                   style={[
                     Typography.supporting,

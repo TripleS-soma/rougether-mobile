@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { DEFAULT_HAPTIC_STRENGTH, type HapticStrength } from '@/utils/haptics';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
@@ -128,9 +129,10 @@ export function SoundSettingsScreen({
                   accessibilityRole="radio"
                   accessibilityState={{ selected: active }}
                   accessibilityLabel={tr('member.soundSettings.hapticA11y', { label: opt.label })}
-                  style={[
+                  style={({ pressed }) => [
                     styles.strengthChip,
                     { backgroundColor: active ? t.primary : t.surfaceMuted },
+                    pressed && pressedStyle('dim', t),
                   ]}>
                   <Text style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
                     {opt.label}

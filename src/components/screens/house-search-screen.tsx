@@ -7,6 +7,7 @@ import type { RoomCatalogProps } from '@/components/room/room';
 import type { HouseMission, MemberRoomPreview } from '@/components/screens/house/types';
 import { Loading } from '@/components/ui/loading';
 import { Icon } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { RetryState } from '@/components/ui/retry-state';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
@@ -327,9 +328,10 @@ export function HouseSearchScreen({
                     disabled={joining}
                     accessibilityRole="button"
                     accessibilityState={{ disabled: code.trim().length === 0 }}
-                    style={[
+                    style={({ pressed }) => [
                       styles.sideBtn,
                       { backgroundColor: code.trim().length === 0 ? t.disabledBg : t.primary },
+                      pressed && code.trim().length > 0 && pressedStyle('fill', t),
                     ]}>
                     <Text
                       style={[
@@ -373,7 +375,11 @@ export function HouseSearchScreen({
                         onPress={() => setPreview(null)}
                         accessibilityRole="button"
                         accessibilityLabel={tr('house.search.cancelJoinA11y')}
-                        style={[styles.previewBtn, { backgroundColor: t.surface }]}>
+                        style={({ pressed }) => [
+                          styles.previewBtn,
+                          { backgroundColor: t.surface },
+                          pressed && pressedStyle('card', t),
+                        ]}>
                         <Text style={[Typography.label, { color: t.text }]}>
                           {tr('common.cancel')}
                         </Text>
@@ -383,7 +389,11 @@ export function HouseSearchScreen({
                         disabled={joining}
                         accessibilityRole="button"
                         accessibilityLabel={tr('house.search.joinThisA11y')}
-                        style={[styles.previewBtn, { backgroundColor: t.primary }]}>
+                        style={({ pressed }) => [
+                          styles.previewBtn,
+                          { backgroundColor: t.primary },
+                          pressed && pressedStyle('fill', t),
+                        ]}>
                         <Text style={[Typography.label, { color: t.onPrimary }]}>
                           {tr('house.search.joinThis')}
                         </Text>
@@ -451,7 +461,11 @@ export function HouseSearchScreen({
                 accessibilityRole="button"
                 accessibilityLabel={tr('house.search.previewA11y', { name: h.name })}
                 accessibilityState={{ busy: previewingHouseId === h.id }}
-                style={[styles.flex, styles.houseBody]}>
+                style={({ pressed }) => [
+                  styles.flex,
+                  styles.houseBody,
+                  pressed && pressedStyle('dim', t),
+                ]}>
                 <View style={[styles.houseEmoji, { backgroundColor: h.bg, borderColor: h.border }]}>
                   {/* Server cover art first; the pictogram tile is the fallback. */}
                   {isCdnKey(h.coverImageKey) ? (
@@ -510,11 +524,12 @@ export function HouseSearchScreen({
                 }
                 accessibilityRole="button"
                 accessibilityState={{ disabled: pending || accepted }}
-                style={[
+                style={({ pressed }) => [
                   styles.joinBtn,
                   {
                     backgroundColor: pending || accepted ? t.surfaceMuted : t.primary,
                   },
+                  pressed && pressedStyle(pending || accepted ? 'dim' : 'fill', t),
                 ]}>
                 <Text
                   style={[
@@ -549,7 +564,11 @@ export function HouseSearchScreen({
             <Pressable
               onPress={onCreate}
               accessibilityRole="button"
-              style={[styles.createBtn, { borderColor: t.disabledBg }]}>
+              style={({ pressed }) => [
+                styles.createBtn,
+                { borderColor: t.disabledBg },
+                pressed && pressedStyle('card', t),
+              ]}>
               <View style={styles.iconLabelRow}>
                 <CrownPictogram size={14} />
                 <Text style={[Typography.label, { color: t.textMuted }]}>
@@ -660,7 +679,11 @@ export function HouseSearchScreen({
                 onPress={() => setHousePreview(null)}
                 accessibilityRole="button"
                 accessibilityLabel={tr('house.search.closeA11y')}
-                style={[styles.hpBtn, { backgroundColor: t.surfaceMuted }]}>
+                style={({ pressed }) => [
+                  styles.hpBtn,
+                  { backgroundColor: t.surfaceMuted },
+                  pressed && pressedStyle('dim', t),
+                ]}>
                 <Text style={[Typography.label, { color: t.text }]}>
                   {tr('house.search.close')}
                 </Text>
@@ -681,9 +704,10 @@ export function HouseSearchScreen({
                   accessibilityRole="button"
                   accessibilityLabel={tr('house.search.joinPreviewA11y')}
                   accessibilityState={{ disabled: !!housePreview.isFull }}
-                  style={[
+                  style={({ pressed }) => [
                     styles.hpBtn,
                     { backgroundColor: housePreview.isFull ? t.disabledBg : t.primary },
+                    pressed && !housePreview.isFull && pressedStyle('fill', t),
                   ]}>
                   <Text
                     style={[

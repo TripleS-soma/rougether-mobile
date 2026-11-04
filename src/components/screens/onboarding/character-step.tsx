@@ -15,6 +15,7 @@ import { onboardingStyles as styles } from '@/components/screens/onboarding/onbo
 import { type CharacterId, STARTER_CHARACTER_OPTIONS } from '@/constants/characters';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { i18n, useT } from '@/i18n';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 type CharacterOption = (typeof STARTER_CHARACTER_OPTIONS)[number];
 
@@ -114,10 +115,11 @@ export function CharacterStep({
               accessibilityRole="radio"
               accessibilityLabel={`${c.name}. ${c.description}`}
               accessibilityState={{ selected: isActive }}
-              style={[
+              style={({ pressed }) => [
                 styles.characterSlide,
                 { width: cardW, backgroundColor: t.surface },
                 { borderColor: isActive ? t.primary : t.border },
+                pressed && pressedStyle('card', t),
               ]}>
               <View style={[styles.characterStage, { backgroundColor: c.bg }]}>
                 <CharacterAvatar
@@ -147,11 +149,12 @@ export function CharacterStep({
             onPress={() => focusCharacter(i)}
             accessibilityRole="button"
             accessibilityLabel={tr('member.onboarding.goToCard', { name: c.name })}
-            style={[
+            style={({ pressed }) => [
               styles.dot,
               i === activeIndex
                 ? { width: 24, backgroundColor: t.primary }
                 : { width: 8, backgroundColor: t.border },
+              pressed && pressedStyle('dim', t),
             ]}
           />
         ))}

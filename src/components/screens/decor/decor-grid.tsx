@@ -6,6 +6,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { Icon } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { Radius, Spacing } from '@/constants/theme';
 import { assetSource, isCdnKey } from '@/resources/asset';
@@ -107,7 +108,13 @@ const ClearTile = memo(function ClearTile({ onClear, t }: { onClear?: () => void
       onPress={onClear}
       accessibilityRole="button"
       accessibilityLabel={tr('roomShop.decor.grid.clear')}
-      style={[styles.tile, tileWidth, styles.clearTile, { borderColor: t.border }]}>
+      style={({ pressed }) => [
+        styles.tile,
+        tileWidth,
+        styles.clearTile,
+        { borderColor: t.border },
+        pressed && pressedStyle('card', t),
+      ]}>
       <View style={[styles.thumbWrap, styles.clearThumb]}>
         <Icon name="close" size={18} color={t.textMuted} />
       </View>

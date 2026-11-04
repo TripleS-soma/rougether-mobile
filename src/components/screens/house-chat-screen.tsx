@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { LinkifiedText } from '@/components/ui/linkified-text';
 import { weekdayLongLabelKey } from '@/constants/routines';
@@ -210,7 +211,10 @@ export function HouseChatScreen({
         {tr('house.chat.loadFailed')}
       </Text>
       {onRetryLoad ? (
-        <Pressable onPress={onRetryLoad} accessibilityRole="button" style={styles.retry}>
+        <Pressable
+          onPress={onRetryLoad}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.retry, pressed && pressedStyle('dim', t)]}>
           <Text style={[Typography.label, { color: t.primaryText }]}>{tr('house.chat.retry')}</Text>
         </Pressable>
       ) : null}
@@ -286,7 +290,11 @@ export function HouseChatScreen({
               accessibilityRole="button"
               accessibilityLabel={tr('house.chat.send')}
               accessibilityState={{ disabled: !canSend }}
-              style={[styles.sendBtn, { backgroundColor: canSend ? t.primary : t.surfaceMuted }]}>
+              style={({ pressed }) => [
+                styles.sendBtn,
+                { backgroundColor: canSend ? t.primary : t.surfaceMuted },
+                pressed && canSend && pressedStyle('fill', t),
+              ]}>
               <Icon name="send" size={20} color={canSend ? t.onPrimary : t.textMuted} />
             </Pressable>
           </View>
@@ -304,7 +312,11 @@ export function HouseChatScreen({
               accessibilityState={{ checked: !muted }}
               aria-checked={!muted}
               hitSlop={Spacing.two}
-              style={[styles.muteBtn, { backgroundColor: t.surface }]}>
+              style={({ pressed }) => [
+                styles.muteBtn,
+                { backgroundColor: t.surface },
+                pressed && pressedStyle('card', t),
+              ]}>
               <Icon
                 name={muted ? 'bell-off' : 'bell'}
                 size={20}
@@ -363,7 +375,8 @@ const ChatRow = memo(function ChatRow({
         onPress={() => clientMessageId && onRetrySend?.(clientMessageId)}
         accessibilityRole="button"
         accessibilityLabel={tr('house.chat.retryA11y')}
-        hitSlop={Spacing.two}>
+        hitSlop={Spacing.two}
+        style={({ pressed }) => pressed && pressedStyle('dim', t)}>
         <Text style={[Typography.supporting, emph('semibold'), { color: t.dangerText }]}>
           {tr('house.chat.failed')}
         </Text>

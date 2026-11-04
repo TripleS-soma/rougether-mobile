@@ -9,6 +9,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
 import { useT } from '@/i18n';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 /** One owned character (server GET /me/characters). */
 export type OwnedCharacter = {
@@ -59,7 +60,11 @@ export function CharacterPickerSheet({
           onPress={onClose}
           accessibilityRole="button"
           accessibilityLabel={tr('app.characterPicker.close')}
-          style={[styles.close, { backgroundColor: t.surfaceMuted }]}>
+          style={({ pressed }) => [
+            styles.close,
+            { backgroundColor: t.surfaceMuted },
+            pressed && pressedStyle('dim', t),
+          ]}>
           <Icon name="close" size={16} color={t.text} />
         </Pressable>
       </View>
@@ -86,12 +91,13 @@ export function CharacterPickerSheet({
                     // The avatar art inside already carries the bare name label.
                     accessibilityLabel={tr('app.characterPicker.wearA11y', { name: c.name })}
                     accessibilityState={{ selected: c.selected }}
-                    style={[
+                    style={({ pressed }) => [
                       styles.cell,
                       {
                         backgroundColor: t.surface,
                         borderColor: c.selected ? t.primary : 'transparent',
                       },
+                      pressed && pressedStyle('card', t),
                     ]}>
                     <View style={[styles.avatar, { backgroundColor: meta?.bg ?? t.surfaceMuted }]}>
                       {/* Server CDN art first; the bundled sprite is the fallback. */}

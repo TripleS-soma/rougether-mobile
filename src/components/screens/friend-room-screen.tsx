@@ -21,6 +21,7 @@ import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/con
 import { type Routine, type RoutineCategoryMeta, weekdayLabelKey } from '@/constants/routines';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Loading } from '@/components/ui/loading';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { BearCheck } from '@/components/ui/bear-check';
 import { CategoryIcon } from '@/components/ui/category-icon';
 import { GlassSurface } from '@/components/ui/glass-surface';
@@ -607,7 +608,11 @@ export function FriendRoomScreen({
                     onPress={onLoadMoreGuestbook}
                     accessibilityRole="button"
                     accessibilityLabel={tr('roomShop.friendRoom.guestbookMoreA11y')}
-                    style={[styles.gbMore, { backgroundColor: t.surfaceMuted }]}>
+                    style={({ pressed }) => [
+                      styles.gbMore,
+                      { backgroundColor: t.surfaceMuted },
+                      pressed && pressedStyle('dim', t),
+                    ]}>
                     <Text style={[Typography.label, { color: t.primaryText }]}>
                       {tr('roomShop.friendRoom.more')}
                     </Text>
