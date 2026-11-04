@@ -27,8 +27,7 @@ export type NavMenuPopoverProps = {
   onOpenCharacterPicker?: () => void;
   /** 캐릭터 교체가 레벨 10 전이라 잠김 — 자물쇠 아이콘으로 보인다(누르면 안내 토스트). */
   characterPickerLocked?: boolean;
-  /** 방 꾸미기. */
-  /** 가구 거래소 (#1502) — 꾸미기 바로 아래. 없으면 숨김(거래소 꺼짐). */
+  /** 가구 거래소 (#1502) — 캐릭터 바꾸기 다음, 방 작업의 첫 항목. 없으면 숨김(거래소 꺼짐). */
   onOpenMarket?: () => void;
   /** 방 이미지 저장 (#245). 없으면 항목을 숨긴다 — 웹(view-shot 없음). */
   onSaveRoomImage?: () => void;

@@ -13,17 +13,6 @@ import { Platform } from 'react-native';
  * 어떤 경우에도 앱을 죽이면 안 된다는 게 이 파일의 계약이다.
  */
 
-/**
- * 계측하는 이벤트 — 추가할 때 여기 유니온부터 넓힌다.
- *
- * **퍼널** (#799): 설치 → `login_success` → `onboarding_complete` →
- * `routine_create` → `routine_complete` → `gacha_draw` → `room_save` → 재방문.
- * "첫 …" 은 이벤트를 따로 만들지 않는다 — GA4에서 사용자별 최초 발생으로 보면
- * 되고, 앱이 first 여부를 따로 기억하면 기기 교체·재설치에서 어긋난다.
- *
- * **실패**: 통과 이벤트만 보면 "어디서 빠졌는지"는 알아도 "왜"를 모른다.
- * 에러로 터지지 않고 조용히 포기하는 순간(로그인 취소·잔액 부족)이 특히 그렇다.
- */
 /** 방 화면 버튼 — 오른쪽 열 6개 + 메뉴(☰) 항목은 `menu_` 접두. */
 export type RoomAction =
   | 'menu'
@@ -38,6 +27,17 @@ export type RoomAction =
   | 'menu_categories'
   | 'menu_routines';
 
+/**
+ * 계측하는 이벤트 — 추가할 때 여기 유니온부터 넓힌다.
+ *
+ * **퍼널** (#799): 설치 → `login_success` → `onboarding_complete` →
+ * `routine_create` → `routine_complete` → `gacha_draw` → `room_save` → 재방문.
+ * "첫 …" 은 이벤트를 따로 만들지 않는다 — GA4에서 사용자별 최초 발생으로 보면
+ * 되고, 앱이 first 여부를 따로 기억하면 기기 교체·재설치에서 어긋난다.
+ *
+ * **실패**: 통과 이벤트만 보면 "어디서 빠졌는지"는 알아도 "왜"를 모른다.
+ * 에러로 터지지 않고 조용히 포기하는 순간(로그인 취소·잔액 부족)이 특히 그렇다.
+ */
 export type AnalyticsEvent =
   // 로그인 전 (#1282) — 설치 후 로그인 전에 떠나는 사람이 소개에서 떠나는지,
   // 로그인 화면에서 떠나는지, 버튼을 눌렀다가 계정 선택·동의 화면에서 물러나는지를 가른다.
@@ -335,8 +335,8 @@ export type AnalyticsParams = {
   content_report: { target: string; reason: string };
   user_block: { via: string } | undefined;
   market_view: { screen: 'list' | 'asset' | 'orders' };
-  /** 기능 첫 진입 튜토리얼 — step은 끝낸(건너뛴) 단계 번호(1부터). */
   room_action_tap: { action: RoomAction };
+  /** 기능 첫 진입 튜토리얼 — step은 끝낸(건너뛴) 단계 번호(1부터). */
   feature_tour: { tour: string; action: 'complete' | 'skip' | 'replay'; step: number };
   market_order: { side: string; source: string; result: string; code?: string };
   market_issue: { total_supply: number; result: string };
