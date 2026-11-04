@@ -33,6 +33,10 @@ const REQUIRED = [
   ['NSRemindersFullAccessUsageDescription', '위와 같은 이유(iOS 17+).'],
   ['NSPhotoLibraryAddUsageDescription', '방 사진 앨범 저장.'],
   ['NSPhotoLibraryUsageDescription', '버그 제보 스크린샷 첨부.'],
+  [
+    'NSUserTrackingUsageDescription',
+    'Meta 설치 광고 측정 ATT 요청(#1616). 없으면 requestTrackingPermissionsAsync가 앱을 죽인다.',
+  ],
 ];
 
 if (!existsSync(PLIST)) {

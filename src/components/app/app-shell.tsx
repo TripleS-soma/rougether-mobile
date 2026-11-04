@@ -60,6 +60,7 @@ import { useTabScroll } from '@/components/app/use-tab-scroll';
 import { MinigameActiveContext, useMinigameSurface } from '@/components/app/use-minigame-surface';
 import { notificationDestination } from '@/components/app/notification-destination';
 import type { NotificationEntry } from '@/components/screens/notification-list-screen';
+import { requestAdTrackingOnce } from '@/lib/ad-tracking';
 
 // 내비게이션 상수·backTargetFor는 navigation.ts로 이동 (#692) — 기존
 // 임포터(테스트 등)를 위한 재수출.
@@ -272,6 +273,11 @@ export function AppShell({
     setFloorId(placement.floorId);
     setBackgroundId(placement.backgroundId);
   }, [placement]);
+
+  // Meta 설치 광고 측정의 ATT 요청 (#1616) — 메인 화면 진입 때 한 번(결정되면 다시 안 묻는다).
+  useEffect(() => {
+    void requestAdTrackingOnce();
+  }, []);
 
   // 꾸미기 진입 (#630·#897·#1043) — 뽑기에서 온 NEW 강조·열 탭·진입 계측. use-decor-entry.ts (장부 5번).
   const {
