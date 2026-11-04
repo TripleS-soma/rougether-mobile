@@ -88,24 +88,22 @@ describe('Calendar — 주 접힘 모드 (#1327)', () => {
 });
 
 describe('Calendar — 접히는 동안 선택 표시 (2026-11-04 원 튐)', () => {
-  const cellFill = (ui: Awaited<ReturnType<typeof render>>, date: string) => {
-    const cell = ui.getByLabelText(new RegExp(`^${date}(,|$)`));
-    const circle = cell.children[0] as unknown as { props: { style: unknown } };
-    return StyleSheet.flatten(circle.props.style as StyleProp<ViewStyle>)?.backgroundColor;
-  };
-
-  it('접힘이 멈추기 전엔 떠 있는 원 대신 선택 칸을 칠한다 — 칸은 줄과 같이 움직인다', async () => {
+  it('접힘이 멈추기 전엔 떠 있는 원 대신 선택 칸에 둥근 채움을 띄운다 — 칸은 줄과 같이 움직인다', async () => {
     // 테스트 환경엔 레이아웃이 없어 줄 높이를 모르므로 접힘이 시작 전(멈추지 않은) 상태로 남는다.
     const ui = await render(
       <Calendar value="2026-09-16" onSelect={jest.fn()} weekOf="2026-09-16" />,
     );
-    expect(cellFill(ui, '2026-09-16')).toBeTruthy();
-    expect(cellFill(ui, '2026-09-17')).toBeUndefined();
+    const fill = ui.getByTestId('calendar-selected-fill-2026-09-16');
+    // 모서리와 배경을 한 뷰가 처음부터 함께 가진다(Android 네모 회귀 방지).
+    const style = StyleSheet.flatten(fill.props.style as StyleProp<ViewStyle>);
+    expect(style.borderRadius).toBeGreaterThan(0);
+    expect(style.backgroundColor).toBeTruthy();
+    expect(ui.queryByTestId('calendar-selected-fill-2026-09-17')).toBeNull();
   });
 
   it('월 보기(멈춘 상태)에선 칸을 칠하지 않는다 — 떠 있는 원이 맡는다', async () => {
     const ui = await render(<Calendar value="2026-09-16" onSelect={jest.fn()} />);
-    expect(cellFill(ui, '2026-09-16')).toBeUndefined();
+    expect(ui.queryByTestId('calendar-selected-fill-2026-09-16')).toBeNull();
   });
 });
 

@@ -260,6 +260,9 @@ function CalendarBase({
   const selPos = useAnimatedValueXY({ x: -999, y: -999 });
   const selOpacity = useAnimatedValue(0);
   const selVisibleRef = useRef(false);
+  // 마운트 뒤 첫 배치는 페이드 없이 — 화면이 다시 마운트될 때(주간 보기 → 달력 복귀) 원이
+  // 0에서 서서히 나타나 깜빡임으로 보였다. 월 이동 복귀의 페이드는 그대로.
+  const placedOnceRef = useRef(false);
   const dayLayouts = useRef<
     Record<string, { x: number; y: number; width: number; height: number; row: number }>
   >({});
@@ -293,12 +296,15 @@ function CalendarBase({
     }
     if (appearing) {
       selVisibleRef.current = true;
-      Animated.timing(selOpacity, {
-        toValue: 1,
-        duration: 140,
-        useNativeDriver: NATIVE_DRIVER,
-      }).start();
+      if (!placedOnceRef.current) selOpacity.setValue(1);
+      else
+        Animated.timing(selOpacity, {
+          toValue: 1,
+          duration: 140,
+          useNativeDriver: NATIVE_DRIVER,
+        }).start();
     }
+    placedOnceRef.current = true;
   };
   useEffect(() => {
     if (!selectedInView) {
@@ -507,8 +513,17 @@ function CalendarBase({
                               styles.dayCircle,
                               progressByDate && styles.progressDate,
                               progressByDate && isSelected && { backgroundColor: t.primary },
-                              fillSelectedCell && isSelected && { backgroundColor: t.primary },
                             ]}>
+                            {/* 접힘·펼침 중 선택 칸 채움 — 기존 뷰에 배경만 덧칠하면 Android Fabric이
+                                (배경 없던 뷰를 평탄화했다 되살리며) 모서리를 잃어 네모로 그렸다
+                                (2026-11-04 녹화). 둥근 모서리와 배경을 처음부터 가진 뷰를 따로 띄운다. */}
+                            {fillSelectedCell && isSelected ? (
+                              <View
+                                pointerEvents="none"
+                                testID={`calendar-selected-fill-${date}`}
+                                style={[styles.selectedFill, { backgroundColor: t.primary }]}
+                              />
+                            ) : null}
                             {progress && progress.total > 0 && !future ? (
                               <Svg
                                 width={PROGRESS_RING_SIZE}
@@ -728,6 +743,10 @@ const styles = StyleSheet.create({
   todayRing: {
     borderRadius: SEL_SIZE / 2,
     borderWidth: 2,
+  },
+  selectedFill: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: SEL_SIZE / 2,
   },
   dayCircle: {
     width: SEL_SIZE,
