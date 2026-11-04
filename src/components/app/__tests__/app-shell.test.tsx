@@ -9,6 +9,7 @@ import { ToastProvider } from '@/components/ui/toast';
 import { AuthProvider } from '@/hooks/use-auth';
 import { QueryProvider } from '@/test-utils/query-wrapper';
 import { renderWithProviders } from '@/test-utils/render';
+import { todayIso } from '@/utils/datetime';
 
 // 푸시 탭 콜백을 붙잡아 테스트에서 직접 발화한다 (#405).
 let notificationTapCb: ((n?: { type?: string; refId?: number }) => void) | null = null;
@@ -683,5 +684,24 @@ describe('AppShell — 완료 후 재조회 (성능 장부 N2)', () => {
       ).toBe(true),
     );
     expect(after.some((c) => c.url.includes('/wallets'))).toBe(false);
+  });
+});
+
+describe('AppShell — 주간 보기는 달력 탭 제자리 전환 (2026-11-04)', () => {
+  it('날짜를 누르면 페이저를 그대로 둔 채 주간 보기가 되고, 뒤로 오면 같은 페이저의 월 달력', async () => {
+    const view = await renderWithProviders(<AppShell />);
+    await fireEvent.press(view.getByLabelText('달력'));
+    const pager = view.getByTestId('tab-pager');
+    await fireEvent.press(view.getByLabelText(new RegExp(`^${todayIso()}(?:,|$)`)));
+    await waitFor(() => expect(view.getByText('주간 보기')).toBeTruthy());
+    // 새 화면을 마운트하지 않는다 — 다섯 탭 페이저가 같은 인스턴스로 남는다.
+    expect(view.getByTestId('tab-pager')).toBe(pager);
+    // 주간 보기 동안 하단 탭 바는 숨는다(종전과 같음).
+    expect(view.queryByLabelText('나의 방')).toBeNull();
+
+    await fireEvent.press(view.getByLabelText('뒤로 가기'));
+    await waitFor(() => expect(view.queryByText('주간 보기')).toBeNull());
+    expect(view.getByTestId('tab-pager')).toBe(pager);
+    expect(view.getByLabelText('나의 방')).toBeTruthy();
   });
 });
