@@ -5,6 +5,7 @@ import night_observatory from '@/assets/houses/shared-v1/night-observatory.webp'
 import forest_canopy from '@/assets/houses/shared-v1/forest-canopy.webp';
 import evening_brick from '@/assets/houses/shared-v1/evening-brick.webp';
 
+import { houseDisplayMode, type HouseDisplayMode } from '@/resources/house-display-mode';
 import type { HouseWindowRect } from '@/resources/house-frame';
 import type { FurnitureItem, PlacedFurniture } from '@/resources/furniture';
 import { DEFAULT_HOUSE_COVER_KEY } from '@/resources/house-frame';
@@ -67,8 +68,17 @@ export const HOUSE_DIORAMA_THEMES: readonly HouseDioramaTheme[] = [
   },
 ];
 
-export function houseDioramaTheme(key?: string | null, enabled = true) {
-  if (!enabled || process.env.EXPO_PUBLIC_HOUSE_DIORAMA === '0') return undefined;
+export function houseDioramaTheme(
+  key?: string | null,
+  enabled = true,
+  displayMode?: HouseDisplayMode,
+) {
+  if (
+    !enabled ||
+    houseDisplayMode(displayMode) === 'CLASSIC' ||
+    process.env.EXPO_PUBLIC_HOUSE_DIORAMA === '0'
+  )
+    return undefined;
   return HOUSE_DIORAMA_THEMES.find(
     (theme) => theme.coverImageKey === (key || DEFAULT_HOUSE_COVER_KEY),
   );

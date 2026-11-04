@@ -133,6 +133,7 @@ describe('HouseMembersScreen — 구성원 관리 (구 house-screen 흐름, #753
       name: '저녁 루틴 하우스',
       description: '저녁 루틴으로 바꿨어요',
       maxMembers: 6,
+      displayMode: 'DIORAMA',
     });
     // 공개 범위를 안 건드렸으면 보내지 않는다(서버 값 유지) — 현재 값을 모를 수 있어서.
     expect(Object.keys(onUpdateHouse.mock.calls[0][1])).not.toContain('isPublic');
@@ -455,5 +456,47 @@ describe('HouseMembersScreen — 구성원 관리 (구 house-screen 흐름, #753
       const { getByLabelText } = await render(screenFor(withBot, { onKickMember: jest.fn() }));
       expect(getByLabelText('루티 강퇴')).toBeTruthy();
     });
+  });
+});
+
+describe('집별 보기 방식', () => {
+  it('opens with the shared saved mode and sends the owner’s selection', async () => {
+    const onUpdateHouse = jest.fn();
+    const ui = await render(
+      screenFor({ ...MISSION_HOUSE, displayMode: 'CLASSIC' }, { onUpdateHouse }),
+    );
+    await fireEvent.press(ui.getByLabelText('집 정보 수정'));
+    expect(ui.getByRole('radio', { name: /내 방 그대로/ }).props.accessibilityState.checked).toBe(
+      true,
+    );
+    await fireEvent.press(ui.getByText('그림 같은 집'));
+    await fireEvent.press(ui.getByLabelText('집 정보 저장'));
+    expect(onUpdateHouse).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({ displayMode: 'DIORAMA' }),
+    );
+  });
+  it('allows the owner to select classic without changing the stored cover or room data', async () => {
+    const onUpdateHouse = jest.fn();
+    const house = {
+      ...MISSION_HOUSE,
+      coverImageKey: 'house/forest-canopy/house-forest-canopy-frame-v1.png',
+    };
+    const ui = await render(screenFor(house, { onUpdateHouse }));
+    await fireEvent.press(ui.getByLabelText('집 정보 수정'));
+    await fireEvent.press(ui.getByText('내 방 그대로'));
+    await fireEvent.press(ui.getByLabelText('집 정보 저장'));
+    expect(onUpdateHouse).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({ displayMode: 'CLASSIC', coverImageKey: house.coverImageKey }),
+    );
+    expect(house.floors).toBe(MISSION_HOUSE.floors);
+  });
+  it('does not expose mode editing to ordinary members', async () => {
+    const ui = await render(
+      screenFor({ ...MISSION_HOUSE, myRole: 'MEMBER' }, { onUpdateHouse: jest.fn() }),
+    );
+    expect(ui.queryByLabelText('집 정보 수정')).toBeNull();
+    expect(ui.queryByText('집 보기 방식')).toBeNull();
   });
 });

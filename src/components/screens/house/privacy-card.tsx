@@ -29,7 +29,8 @@ export function PrivacyCard({
     <Pressable
       onPress={onPress}
       accessibilityRole="radio"
-      accessibilityState={{ selected }}
+      accessibilityState={{ checked: selected }}
+      aria-checked={selected}
       style={({ pressed }) => [
         styles.privacyCard,
         { backgroundColor: t.surfaceMuted, borderColor: selected ? accent : 'transparent' },
