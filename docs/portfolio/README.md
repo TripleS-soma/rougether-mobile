@@ -43,6 +43,7 @@ Claude(또는 작업자)가 대화·작업 중 아래에 해당한다고 **스�
 
 ## 목록
 
+- [2026-11-04 · Meta SDK를 넣자 iOS Release 링크가 깨진 문제 — 미리 컴파일된 RN 코어와 옛 podspec](2026-11-04-fbsdk-prebuilt-rn-link-failure.md)
 - [2026-11-04 · 달력 날짜를 누르면 원이 튀고 버벅이던 문제 — 늦게 오는 onLayout과 JS 스레드 경합](2026-11-04-calendar-week-circle-jank.md)
 - [2026-10-28, 구매 대기와 실제 보유 상태 구분](2026-10-28-market-pending-state.md)
 
