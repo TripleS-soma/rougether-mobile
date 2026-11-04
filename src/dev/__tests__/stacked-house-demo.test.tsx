@@ -3,6 +3,12 @@ import { fireEvent, render } from '@testing-library/react-native';
 import { StackedHouseDemo } from '@/dev/stacked-house-demo';
 
 describe('StackedHouseDemo', () => {
+  beforeEach(() => {
+    process.env.EXPO_PUBLIC_HOUSE_DIORAMA = '0';
+  });
+  afterEach(() => {
+    delete process.env.EXPO_PUBLIC_HOUSE_DIORAMA;
+  });
   it('switches capacity, theme and legacy mode without changing a real house', async () => {
     const ui = await render(<StackedHouseDemo />);
     expect(ui.getAllByTestId('preview-room')).toHaveLength(6);

@@ -67,3 +67,11 @@ describe('stacked frame consumers', () => {
     expect(ui.getByTestId('cover-art').props.recyclingKey).toBe(coverKey);
   });
 });
+
+// Explicit rollback-renderer coverage. The default shared renderer has its own integration suite.
+beforeEach(() => {
+  process.env.EXPO_PUBLIC_HOUSE_DIORAMA = '0';
+});
+afterEach(() => {
+  delete process.env.EXPO_PUBLIC_HOUSE_DIORAMA;
+});

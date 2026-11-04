@@ -1,4 +1,6 @@
 import { Image } from 'expo-image';
+import { HouseDioramaPreview } from '@/components/room/house-diorama-preview';
+import { houseDioramaTheme } from '@/resources/house-diorama';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -92,6 +94,18 @@ export function HousePreviewFrame({
       ),
     [slotRooms, rooms, furniture, wallpapers, floors, backgrounds],
   );
+  const diorama = houseDioramaTheme(coverImageKey, enabled);
+  if (diorama)
+    return (
+      <HouseDioramaPreview
+        theme={diorama}
+        rooms={rooms}
+        furniture={furniture}
+        memberCount={memberCount}
+        maxMembers={maxMembers}
+        name={name}
+      />
+    );
   return (
     <View
       style={[
