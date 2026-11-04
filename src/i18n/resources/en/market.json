@@ -185,8 +185,8 @@
     },
     "tour": {
       "card": {
-        "title": "Tap furniture to see prices",
-        "body": "Check asking prices, buy orders and recent trades, then buy or sell right away. When prices match, the trade happens automatically — no seller approval needed."
+        "title": "Choose furniture you like",
+        "body": "Buy at the creator's price. You can buy one of each item. Purchased furniture cannot be resold."
       },
       "orders": {
         "title": "Your orders live here",
@@ -194,7 +194,7 @@
       },
       "manage": {
         "title": "Want to sell your furniture?",
-        "body": "Find furniture you made or own here. It shows up in the market once you place a sell order, and you get coins minus fees when it sells."
+        "body": "Set a price for furniture you created. You keep the original and can sell unlimited copies. You receive the sale price minus a 5% fee."
       }
     },
     "shop": {
