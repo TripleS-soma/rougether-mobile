@@ -26,6 +26,7 @@ const ICONS = {
   ticket: 'ticket-outline',
   trash: 'trash-outline',
   check: 'checkmark',
+  success: 'checkmark-circle',
   copy: 'copy-outline',
   'checkbox-off': 'square-outline',
   bell: 'notifications-outline',
@@ -47,6 +48,9 @@ const ICONS = {
   'rotate-cw': 'arrow-redo-outline',
   'layer-up': 'arrow-up',
   'layer-down': 'arrow-down',
+  // 카테고리 순서 옮기기 (#1613)
+  'move-up': 'caret-up',
+  'move-down': 'caret-down',
   // Currency + shop
   coin: 'ellipse', // 실제 렌더는 CoinIcon(#512) — IconName 타입 유지용 매핑.
   diamond: 'diamond',
@@ -66,6 +70,10 @@ const ICONS = {
   // 집 채팅 (#1408)
   chat: 'chatbubbles-outline',
   send: 'send',
+  // 미니게임 규칙 표식 (#1613)
+  tap: 'hand-left-outline',
+  finish: 'flag',
+  home: 'home-outline',
   // Bottom-nav
   myRoom: 'home',
   house: 'business',

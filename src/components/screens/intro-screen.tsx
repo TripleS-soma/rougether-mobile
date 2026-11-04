@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 
 import { PrimaryButton, TextButton } from '@/components/screens/onboarding/onboarding-buttons';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useScreenStyle } from '@/hooks/use-screen-style';
@@ -162,7 +163,8 @@ export function IntroScreen({
             onPress={onSkip}
             accessibilityRole="button"
             accessibilityLabel={tr('member.intro.skipA11y')}
-            hitSlop={8}>
+            hitSlop={8}
+            style={({ pressed }) => pressed && pressedStyle('dim', t)}>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
               {tr('member.common.skip')}
             </Text>
@@ -206,11 +208,12 @@ export function IntroScreen({
             onPress={() => setIndex(i)}
             accessibilityRole="button"
             accessibilityLabel={tr('member.intro.goToSlide', { n: i + 1 })}
-            style={[
+            style={({ pressed }) => [
               styles.dot,
               i === index
                 ? { width: 24, backgroundColor: t.primary }
                 : { width: 8, backgroundColor: t.border },
+              pressed && pressedStyle('dim', t),
             ]}
           />
         ))}

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
@@ -64,7 +65,11 @@ export const QuickAddRow = forwardRef<View, QuickAddRowProps>(function QuickAddR
         onPress={onOpenDatePicker}
         accessibilityRole="button"
         accessibilityLabel={tr('routineTodo.quickAdd.pickDateA11y')}
-        style={[styles.dateChip, { backgroundColor: t.surfaceMuted }]}>
+        style={({ pressed }) => [
+          styles.dateChip,
+          { backgroundColor: t.surfaceMuted },
+          pressed && pressedStyle('dim', t),
+        ]}>
         <Icon name="calendar" size={13} color={t.textMuted} />
         <Text style={[Typography.supporting, { color: t.textMuted }]}>{dateLabel}</Text>
       </Pressable>

@@ -42,7 +42,7 @@ describe('InviteArrivalSheet (#1007)', () => {
     const ui = await render(
       <InviteArrivalSheet visible preview={PREVIEW} onAccept={onAccept} onLater={onLater} />,
     );
-    expect(ui.getByText('🎁 소마님의 초대로 오셨어요')).toBeTruthy();
+    expect(ui.getByText('소마님의 초대로 오셨어요')).toBeTruthy();
     expect(ui.getByText(/코인 50개를 받아요/)).toBeTruthy();
 
     await fireEvent.press(ui.getByLabelText('초대 코인 받기'));
@@ -55,7 +55,7 @@ describe('InviteArrivalSheet (#1007)', () => {
     const ui = await render(
       <InviteArrivalSheet visible preview={{ ...PREVIEW, inviterNickname: null }} />,
     );
-    expect(ui.getByText('🎁 친구의 초대로 오셨어요')).toBeTruthy();
+    expect(ui.getByText('친구의 초대로 오셨어요')).toBeTruthy();
   });
 
   it('받는 중에는 버튼이 잠긴다 — 두 번 누르지 못한다', async () => {

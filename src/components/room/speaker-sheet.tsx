@@ -3,6 +3,7 @@ import { memo, useRef } from 'react';
 import { PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { SpeakerSprite } from '@/components/room/speaker-sprite';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
@@ -85,7 +86,7 @@ function SpeakerSheetBase({
             accessibilityRole="button"
             accessibilityLabel={tr('roomShop.speaker.closeA11y')}
             onPress={onClose}
-            style={styles.smallButton}>
+            style={({ pressed }) => [styles.smallButton, pressed && pressedStyle('dim', t)]}>
             <Ionicons name="close" size={Spacing.four} color={t.text} />
           </Pressable>
         </View>
@@ -102,12 +103,13 @@ function SpeakerSheetBase({
               accessibilityLabel={track.name}
               accessibilityState={{ checked: track.id === trackId }}
               onPress={() => onSelectTrack(track.id)}
-              style={[
+              style={({ pressed }) => [
                 styles.track,
                 {
                   borderColor: track.id === trackId ? t.primary : t.border,
                   backgroundColor: t.card,
                 },
+                pressed && pressedStyle('card', t),
               ]}>
               <View style={styles.flex}>
                 <Text style={[Typography.label, { color: t.text }]}>{track.name}</Text>
@@ -131,7 +133,7 @@ function SpeakerSheetBase({
             accessibilityRole="button"
             accessibilityLabel={tr('roomShop.speaker.volumeDownA11y')}
             onPress={() => onVolumeChange(clampVolume(volume - 0.1))}
-            style={styles.smallButton}>
+            style={({ pressed }) => [styles.smallButton, pressed && pressedStyle('dim', t)]}>
             <Ionicons name="remove" size={Spacing.four} color={t.text} />
           </Pressable>
           <View
@@ -157,8 +159,8 @@ function SpeakerSheetBase({
             accessibilityRole="button"
             accessibilityLabel={tr('roomShop.speaker.volumeUpA11y')}
             onPress={() => onVolumeChange(clampVolume(volume + 0.1))}
-            style={styles.smallButton}>
-            <Text style={[Typography.h3, { color: t.text }]}>+</Text>
+            style={({ pressed }) => [styles.smallButton, pressed && pressedStyle('dim', t)]}>
+            <Ionicons name="add" size={Spacing.four} color={t.text} />
           </Pressable>
         </View>
         {error ? (
@@ -169,7 +171,11 @@ function SpeakerSheetBase({
         <Pressable
           accessibilityRole="button"
           onPress={playing || loading ? onStop : onPlay}
-          style={[styles.play, { backgroundColor: t.primary }]}>
+          style={({ pressed }) => [
+            styles.play,
+            { backgroundColor: t.primary },
+            pressed && pressedStyle('fill', t),
+          ]}>
           <Text style={[Typography.label, { color: t.onPrimary }]}>
             {tr(
               loading

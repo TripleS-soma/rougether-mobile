@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
@@ -42,7 +43,11 @@ export function ModalCard({ title, children, cancel, confirm }: ModalCardProps) 
             onPress={cancel.onPress}
             accessibilityRole="button"
             accessibilityLabel={cancel.accessibilityLabel ?? cancel.label}
-            style={[styles.btn, { backgroundColor: t.surfaceMuted }]}>
+            style={({ pressed }) => [
+              styles.btn,
+              { backgroundColor: t.surfaceMuted },
+              pressed && pressedStyle('dim', t),
+            ]}>
             <Text style={[Typography.label, { color: t.text }]}>{cancel.label}</Text>
           </Pressable>
           <Pressable
@@ -50,7 +55,11 @@ export function ModalCard({ title, children, cancel, confirm }: ModalCardProps) 
             accessibilityRole="button"
             accessibilityState={{ disabled: confirmOff }}
             accessibilityLabel={confirm.accessibilityLabel ?? confirm.label}
-            style={[styles.btn, { backgroundColor: confirmOff ? t.disabledBg : t.primary }]}>
+            style={({ pressed }) => [
+              styles.btn,
+              { backgroundColor: confirmOff ? t.disabledBg : t.primary },
+              pressed && !confirmOff && pressedStyle('fill', t),
+            ]}>
             <Text style={[Typography.label, { color: confirmOff ? t.textMuted : t.onPrimary }]}>
               {confirm.label}
             </Text>

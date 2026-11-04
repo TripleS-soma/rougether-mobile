@@ -25,6 +25,7 @@ import {
 import { Icon } from '@/components/ui/icon';
 import { ActionBar } from '@/components/ui/action-bar';
 import { GlassSurface } from '@/components/ui/glass-surface';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { CategoryIcon } from '@/components/ui/category-icon';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -272,7 +273,7 @@ export function AddRoutineScreen({
               accessibilityRole="button"
               accessibilityLabel={tr('routineTodo.addRoutine.newCategoryA11y')}
               hitSlop={8}
-              style={styles.manageBtn}>
+              style={({ pressed }) => [styles.manageBtn, pressed && pressedStyle('dim', t)]}>
               <Icon name="add" size={16} color={t.primaryText} />
               <Text style={[Typography.label, { color: t.primaryText }]}>
                 {tr('routineTodo.addRoutine.add')}
@@ -288,7 +289,11 @@ export function AddRoutineScreen({
               accessibilityRole="button"
               accessibilityLabel={tr('routineTodo.category.uncategorized')}
               accessibilityState={{ selected: !category }}
-              style={[styles.chip, { backgroundColor: !category ? t.primarySoft : t.surface }]}>
+              style={({ pressed }) => [
+                styles.chip,
+                { backgroundColor: !category ? t.primarySoft : t.surface },
+                pressed && pressedStyle('dim', t),
+              ]}>
               <Text style={[Typography.label, { color: t.text }]}>
                 {tr('routineTodo.category.uncategorized')}
               </Text>
@@ -302,7 +307,11 @@ export function AddRoutineScreen({
                   accessibilityRole="button"
                   accessibilityLabel={c.name}
                   accessibilityState={{ selected: active }}
-                  style={[styles.chip, { backgroundColor: active ? c.color : t.surface }]}>
+                  style={({ pressed }) => [
+                    styles.chip,
+                    { backgroundColor: active ? c.color : t.surface },
+                    pressed && pressedStyle('dim', t),
+                  ]}>
                   <CategoryIcon
                     name={c.icon}
                     color={c.color}
@@ -332,7 +341,7 @@ export function AddRoutineScreen({
               accessibilityRole="button"
               accessibilityLabel={tr('routineTodo.addRoutine.presetsTitle')}
               accessibilityState={{ expanded: presetsOpen }}
-              style={styles.presetHead}>
+              style={({ pressed }) => [styles.presetHead, pressed && pressedStyle('dim', t)]}>
               <Text style={[Typography.label, { color: t.text }]}>
                 {tr('routineTodo.addRoutine.presetsTitle')}
               </Text>
@@ -356,12 +365,13 @@ export function AddRoutineScreen({
                         );
                         if (match) setCategory(match.id);
                       }}
-                      style={[
+                      style={({ pressed }) => [
                         styles.preset,
                         {
                           backgroundColor: t.surface,
                           borderColor: title === presetTitle ? t.primary : 'transparent',
                         },
+                        pressed && pressedStyle('card', t),
                       ]}>
                       <Text
                         style={[Typography.body, styles.flex, { color: t.text }]}
@@ -392,7 +402,11 @@ export function AddRoutineScreen({
                   accessibilityRole="button"
                   accessibilityLabel={optLabel}
                   accessibilityState={{ selected: active }}
-                  style={[styles.repeatChip, { backgroundColor: active ? t.primary : t.surface }]}>
+                  style={({ pressed }) => [
+                    styles.repeatChip,
+                    { backgroundColor: active ? t.primary : t.surface },
+                    pressed && pressedStyle('dim', t),
+                  ]}>
                   <Text style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
                     {optLabel}
                   </Text>
@@ -420,7 +434,11 @@ export function AddRoutineScreen({
                       onPress={() => toggleDay(i)}
                       accessibilityRole="button"
                       accessibilityState={{ selected: active }}
-                      style={[styles.day, { backgroundColor: bg }]}>
+                      style={({ pressed }) => [
+                        styles.day,
+                        { backgroundColor: bg },
+                        pressed && pressedStyle('dim', t),
+                      ]}>
                       <Text
                         style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
                         {tr(weekdayLabelKey(i))}
@@ -446,9 +464,10 @@ export function AddRoutineScreen({
                       accessibilityRole="button"
                       accessibilityLabel={tr('routineTodo.repeat.monthLabel', { month: m })}
                       accessibilityState={{ selected: active }}
-                      style={[
+                      style={({ pressed }) => [
                         styles.monthCell,
                         { backgroundColor: active ? t.primary : t.surface },
+                        pressed && pressedStyle('dim', t),
                       ]}>
                       <Text
                         style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
@@ -475,9 +494,10 @@ export function AddRoutineScreen({
                       accessibilityRole="button"
                       accessibilityLabel={tr('routineTodo.repeat.dayOfMonthLabel', { day: d })}
                       accessibilityState={{ selected: active }}
-                      style={[
+                      style={({ pressed }) => [
                         styles.dateCell,
                         { backgroundColor: active ? t.primary : t.surface },
+                        pressed && pressedStyle('dim', t),
                       ]}>
                       <Text
                         style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
@@ -522,7 +542,11 @@ export function AddRoutineScreen({
               }}
               accessibilityRole="button"
               accessibilityLabel={tr('routineTodo.addRoutine.durationPickA11y')}
-              style={[styles.infoRow, { backgroundColor: t.surface }]}>
+              style={({ pressed }) => [
+                styles.infoRow,
+                { backgroundColor: t.surface },
+                pressed && pressedStyle('row', t),
+              ]}>
               <View style={[styles.infoIcon, { backgroundColor: t.surfaceMuted }]}>
                 <Icon name="calendar" size={16} color={t.icon} />
               </View>
@@ -535,7 +559,7 @@ export function AddRoutineScreen({
                   {tr('routineTodo.addRoutine.pickPeriod')}
                 </Text>
               </View>
-              <Text style={[styles.chevron, { color: t.textDisabled }]}>›</Text>
+              <Icon name="forward" size={16} color={t.textDisabled} />
             </Pressable>
           ) : null}
         </View>
@@ -568,7 +592,11 @@ export function AddRoutineScreen({
               }}
               accessibilityRole="button"
               accessibilityLabel={tr('routineTodo.addRoutine.alarmPickA11y')}
-              style={[styles.infoRow, { backgroundColor: t.surface }]}>
+              style={({ pressed }) => [
+                styles.infoRow,
+                { backgroundColor: t.surface },
+                pressed && pressedStyle('row', t),
+              ]}>
               <View style={[styles.infoIcon, { backgroundColor: t.surfaceMuted }]}>
                 <Icon name="bell" size={16} color={t.icon} />
               </View>
@@ -578,7 +606,7 @@ export function AddRoutineScreen({
                   {tr('routineTodo.addRoutine.pickTime')}
                 </Text>
               </View>
-              <Text style={[styles.chevron, { color: t.textDisabled }]}>›</Text>
+              <Icon name="forward" size={16} color={t.textDisabled} />
             </Pressable>
           ) : null}
         </View>
@@ -625,7 +653,8 @@ export function AddRoutineScreen({
           onPress={submit}
           accessibilityRole="button"
           accessibilityState={{ disabled: !canSubmit }}
-          style={styles.submit}>
+          // 채움색이 안쪽 GlassSurface에 있어 배경 대신 투명도로
+          style={({ pressed }) => [styles.submit, pressed && canSubmit && pressedStyle('dim', t)]}>
           <GlassSurface
             style={styles.submitFace}
             tintColor={canSubmit ? t.primary : undefined}
@@ -642,7 +671,7 @@ export function AddRoutineScreen({
             onPress={() => setConfirmDelete(true)}
             accessibilityRole="button"
             accessibilityLabel={tr('routineTodo.addRoutine.deleteA11y')}
-            style={styles.deleteBtn}>
+            style={({ pressed }) => [styles.deleteBtn, pressed && pressedStyle('dim', t)]}>
             <GlassSurface
               fallbackColor={t.screen}
               style={[styles.deleteFace, { borderColor: t.danger }]}>
@@ -801,7 +830,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chevron: { fontSize: 22 },
   footer: {
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,

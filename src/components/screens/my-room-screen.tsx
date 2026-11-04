@@ -41,6 +41,7 @@ import { isScheduledOn } from '@/components/screens/my-room/schedule';
 import type { GroupSlot } from '@/components/screens/my-room/routine-drag';
 import { useRoutineRowDrag } from '@/components/screens/my-room/use-routine-row-drag';
 import { useCategoryHeaderDrag } from '@/components/screens/my-room/use-category-header-drag';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { useConstant, useLatestRef, useStableCallback } from '@/hooks/use-stable-value';
 import { CategoryDragHandle } from '@/components/screens/my-room/category-drag-handle';
 import { RoutineRow } from '@/components/screens/my-room/routine-row';
@@ -979,7 +980,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           onDragFinalize={dispatchCatDragFinalize}>
           {/* 미분류(pseudo) 그룹은 실제 카테고리가 아니라 수정 진입이 없다 (#541). */}
           <Pressable
-            style={styles.catHeaderTap}
+            style={({ pressed }) => [styles.catHeaderTap, pressed && pressedStyle('dim', t)]}
             disabled={!meta.id || !onUpdateCategory}
             onPress={() => setEditingCategory(meta)}
             accessibilityRole="button"
@@ -1131,7 +1132,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 onPress={() => tapAction('menu', openNavMenu)}
                 accessibilityRole="button"
                 accessibilityLabel={tr('routineTodo.myRoom.menu')}
-                style={styles.floatBtn}>
+                style={({ pressed }) => [styles.floatBtn, pressed && pressedStyle('dim', t)]}>
                 <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                   <Icon name="menu" size={20} color={t.text} />
                 </GlassSurface>
@@ -1142,7 +1143,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 onPress={() => tapAction('notifications', onOpenNotifications)}
                 accessibilityRole="button"
                 accessibilityLabel={tr('routineTodo.myRoom.notifications')}
-                style={styles.floatBtn}>
+                style={({ pressed }) => [styles.floatBtn, pressed && pressedStyle('dim', t)]}>
                 <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                   <Icon name="bell" size={20} color={t.text} />
                   {unreadNotificationCount > 0 ? (
@@ -1159,7 +1160,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 onPress={() => tapAction('minigames', onOpenMinigames)}
                 accessibilityRole="button"
                 accessibilityLabel={tr('routineTodo.myRoom.minigames')}
-                style={styles.floatBtn}>
+                style={({ pressed }) => [styles.floatBtn, pressed && pressedStyle('dim', t)]}>
                 <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                   <Icon name="gamepad" size={20} color={t.primaryText} />
                 </GlassSurface>
@@ -1173,7 +1174,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                   onPress={() => tapAction('decor', onEdit)}
                   accessibilityRole="button"
                   accessibilityLabel={tr('routineTodo.myRoom.decorate')}
-                  style={styles.floatBtn}>
+                  style={({ pressed }) => [styles.floatBtn, pressed && pressedStyle('dim', t)]}>
                   <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                     <Icon name="edit" size={20} color={t.text} />
                   </GlassSurface>
@@ -1185,7 +1186,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 onPress={() => tapAction('studio', onOpenFurnitureStudio)}
                 accessibilityRole="button"
                 accessibilityLabel={tr('routineTodo.myRoom.furnitureStudio')}
-                style={styles.floatBtn}>
+                style={({ pressed }) => [styles.floatBtn, pressed && pressedStyle('dim', t)]}>
                 <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                   <Icon name="sparkles" size={20} color={t.primaryText} />
                 </GlassSurface>
@@ -1196,7 +1197,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 onPress={() => tapAction('gacha', onOpenGacha)}
                 accessibilityRole="button"
                 accessibilityLabel={tr('routineTodo.myRoom.gacha')}
-                style={styles.floatBtn}>
+                style={({ pressed }) => [styles.floatBtn, pressed && pressedStyle('dim', t)]}>
                 <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                   <Icon name="gift" size={20} color={t.text} />
                 </GlassSurface>
@@ -1215,7 +1216,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               onPress={leaveWeek}
               accessibilityRole="button"
               accessibilityLabel={tr('common.back')}
-              hitSlop={8}>
+              hitSlop={8}
+              style={({ pressed }) => pressed && pressedStyle('dim', t)}>
               <GlassSurface fallbackColor={t.surface} style={styles.weekBack}>
                 <Icon name="back" size={20} color={t.text} />
               </GlassSurface>
@@ -1242,7 +1244,10 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                   accessibilityRole="tab"
                   accessibilityState={{ selected: calendarFilter === filter }}
                   onPress={() => setCalendarFilter(filter)}
-                  style={styles.calendarFilter}>
+                  style={({ pressed }) => [
+                    styles.calendarFilter,
+                    pressed && pressedStyle('dim', t),
+                  ]}>
                   {calendarFilter === filter ? (
                     <GlassSurface
                       testID={`calendar-filter-glass-${filter}`}
@@ -1279,7 +1284,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               onPress={onRetryCalendarMonth}
               accessibilityRole="button"
               accessibilityLabel={tr('routineTodo.myRoom.monthRetryA11y')}
-              style={styles.calendarRetry}>
+              style={({ pressed }) => [styles.calendarRetry, pressed && pressedStyle('dim', t)]}>
               <Text style={[Typography.label, { color: t.primaryText }]}>
                 {tr('routineTodo.myRoom.retry')}
               </Text>
@@ -1307,7 +1312,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 <Pressable
                   onPress={() => openCompose(today)}
                   accessibilityRole="button"
-                  accessibilityLabel={tr('routineTodo.myRoom.addTodayA11y')}>
+                  accessibilityLabel={tr('routineTodo.myRoom.addTodayA11y')}
+                  style={({ pressed }) => pressed && pressedStyle('dim', t)}>
                   <GlassSurface fallbackColor={t.surface} style={styles.quickAddTrigger}>
                     <Icon name="add" size={22} color={t.text} />
                   </GlassSurface>
@@ -1371,7 +1377,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             <Pressable
               onPress={() => openCompose(selectedDate)}
               accessibilityRole="button"
-              accessibilityLabel={tr('routineTodo.myRoom.addSelectedA11y')}>
+              accessibilityLabel={tr('routineTodo.myRoom.addSelectedA11y')}
+              style={({ pressed }) => pressed && pressedStyle('dim', t)}>
               <GlassSurface fallbackColor={t.surface} style={styles.quickAddTrigger}>
                 <Icon name="add" size={22} color={t.text} />
               </GlassSurface>
@@ -1387,7 +1394,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               accessibilityRole="button"
               accessibilityLabel={tr('routineTodo.myRoom.dayRetryA11y')}
               onPress={calendarTodayError ? onRetry : onRetryCalendarDay}
-              style={styles.calendarRetry}>
+              style={({ pressed }) => [styles.calendarRetry, pressed && pressedStyle('dim', t)]}>
               <Text style={[Typography.label, { color: t.primaryText }]}>
                 {tr('routineTodo.myRoom.retry')}
               </Text>
@@ -1503,7 +1510,11 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
                   accessibilityLabel={label}
-                  style={[styles.segmentItem, active && { backgroundColor: t.surfaceMuted }]}>
+                  style={({ pressed }) => [
+                    styles.segmentItem,
+                    active && { backgroundColor: t.surfaceMuted },
+                    pressed && pressedStyle('dim', t),
+                  ]}>
                   <Text style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
                     {label}
                   </Text>

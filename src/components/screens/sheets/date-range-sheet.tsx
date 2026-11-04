@@ -9,6 +9,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatDate } from '@/utils/datetime';
 import { useT } from '@/i18n';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 export type DateRangeSheetProps = {
   visible: boolean;
@@ -85,7 +86,11 @@ export function DateRangeSheet({
           onPress={onClose}
           accessibilityRole="button"
           accessibilityLabel={tr('routineTodo.dateRange.close')}
-          style={[styles.close, { backgroundColor: t.surfaceMuted }]}>
+          style={({ pressed }) => [
+            styles.close,
+            { backgroundColor: t.surfaceMuted },
+            pressed && pressedStyle('dim', t),
+          ]}>
           <Icon name="close" size={16} color={t.text} />
         </Pressable>
       </View>
@@ -148,7 +153,11 @@ export function DateRangeSheet({
           disabled={!endValid}
           accessibilityRole="button"
           accessibilityLabel={tr('routineTodo.dateRange.saveA11y')}
-          style={[styles.save, { backgroundColor: endValid ? t.primary : t.textDisabled }]}>
+          style={({ pressed }) => [
+            styles.save,
+            { backgroundColor: endValid ? t.primary : t.textDisabled },
+            pressed && endValid && pressedStyle('fill', t),
+          ]}>
           <Text style={[Typography.label, { color: t.onPrimary }]}>
             {tr('routineTodo.dateRange.save')}
           </Text>
@@ -179,9 +188,10 @@ function Tab({
       disabled={disabled}
       accessibilityRole="button"
       accessibilityState={{ selected: active, disabled }}
-      style={[
+      style={({ pressed }) => [
         styles.tab,
         { backgroundColor: t.surface, borderColor: active ? t.primary : 'transparent' },
+        pressed && pressedStyle('card', t),
       ]}>
       <Text style={[Typography.supporting, { color: t.textMuted }]}>{label}</Text>
       <Text style={[Typography.label, { color: disabled ? t.textDisabled : t.text }]}>{value}</Text>

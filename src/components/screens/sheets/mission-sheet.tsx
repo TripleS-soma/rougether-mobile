@@ -2,9 +2,11 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 export type MissionSheetProps = {
   visible: boolean;
@@ -45,11 +47,14 @@ function MissionSheetBase({
       onClose={onClose}
       cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
       <View style={[styles.handle, { backgroundColor: t.border }]} />
-      <Text style={[Typography.h2, { color: t.text }]}>
-        {last
-          ? tr('house.missionSheet.allDone')
-          : tr('house.missionSheet.stepDone', { n: completedStep })}
-      </Text>
+      <View style={styles.titleRow}>
+        <Icon name={last ? 'sparkles' : 'success'} size={24} color={t.primary} />
+        <Text style={[Typography.h2, styles.title, { color: t.text }]}>
+          {last
+            ? tr('house.missionSheet.allDone')
+            : tr('house.missionSheet.stepDone', { n: completedStep })}
+        </Text>
+      </View>
       {last ? (
         <Text style={[Typography.body, styles.body, { color: t.textMuted }]}>
           {tr('house.missionSheet.allDoneBody', { n: totalSteps })}
@@ -67,7 +72,11 @@ function MissionSheetBase({
             onPress={onClose}
             accessibilityRole="button"
             accessibilityLabel={tr('house.missionSheet.laterA11y')}
-            style={[styles.btn, { backgroundColor: t.surfaceMuted }]}>
+            style={({ pressed }) => [
+              styles.btn,
+              { backgroundColor: t.surfaceMuted },
+              pressed && pressedStyle('dim', t),
+            ]}>
             <Text style={[Typography.label, { color: t.text }]}>
               {tr('house.missionSheet.later')}
             </Text>
@@ -79,7 +88,11 @@ function MissionSheetBase({
           accessibilityLabel={
             last ? tr('house.missionSheet.finishA11y') : tr('house.missionSheet.goA11y')
           }
-          style={[styles.btn, { backgroundColor: t.primary }]}>
+          style={({ pressed }) => [
+            styles.btn,
+            { backgroundColor: t.primary },
+            pressed && pressedStyle('fill', t),
+          ]}>
           <Text style={[Typography.label, { color: t.onPrimary }]}>
             {last ? tr('house.missionSheet.finish') : tr('house.missionSheet.go')}
           </Text>
@@ -90,6 +103,8 @@ function MissionSheetBase({
 }
 
 const styles = StyleSheet.create({
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  title: { flexShrink: 1 },
   sheet: {
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,

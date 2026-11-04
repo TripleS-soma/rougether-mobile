@@ -190,13 +190,25 @@ export const roomEntries: GalleryEntry[] = [
   },
   {
     name: 'FurnitureStudio',
-    description: '7일 출석 생성권으로 사진 속 가구 만들기 (#1173).',
+    description: '출석 생성권 또는 100코인으로 사진 속 가구 만들기.',
     render: () => (
       <FurnitureStudioScreen
         balance={{ available: 1, reserved: 0 }}
         jobs={[]}
         photo={null}
         onAttendance={() => {}}
+      />
+    ),
+  },
+  {
+    name: 'FurnitureStudioCoins',
+    description: '생성권 없이 100코인으로 가구를 만드는 상태.',
+    render: () => (
+      <FurnitureStudioScreen
+        balance={{ available: 0, reserved: 0 }}
+        coinBalance={100}
+        jobs={[]}
+        photo={{ uri: 'https://placehold.co/300x300.png', name: 'chair.png', type: 'image/png' }}
       />
     ),
   },

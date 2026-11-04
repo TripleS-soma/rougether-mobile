@@ -1,3 +1,4 @@
+import { HouseDioramaDemo } from '@/dev/house-diorama-demo';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
@@ -115,6 +116,11 @@ function HouseCoverPickerDemo() {
 }
 
 export const houseEntries: GalleryEntry[] = [
+  {
+    name: 'HouseDioramaRenewal',
+    description: '공동 공간 6종 · 실제 앱 에셋 · 가구 없음 · 별채 · 방 방문/자리 이동',
+    render: () => <HouseDioramaDemo />,
+  },
   {
     name: 'HouseSixSeatViewport',
     description: '6인 집 최초 구도 · viewport=1로 화면 전체와 안전영역 검증 (#1163).',

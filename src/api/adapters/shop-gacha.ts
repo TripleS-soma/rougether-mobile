@@ -33,6 +33,8 @@ const WALLET_REASONS = [
   'INVITE_REWARD',
   'GACHA_DRAW',
   'SHOP_PURCHASE',
+  'FURNITURE_GENERATION',
+  'FURNITURE_GENERATION_REFUND',
 ] as const;
 
 /** 사유 → 표시 라벨. 미지의 enum은 원문, 빈 값은 '기타'. */

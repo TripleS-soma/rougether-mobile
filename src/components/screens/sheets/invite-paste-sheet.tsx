@@ -6,6 +6,7 @@ import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 /** iOS 시스템 붙여넣기 버튼은 크기를 직접 줘야 보인다(ClipboardPasteButton 문서). */
 const PASTE_BUTTON_H = 48;
@@ -71,7 +72,11 @@ export function InvitePasteSheet({ visible, onPaste, onDismiss, error }: InviteP
             onPress={() => void pasteFromClipboard()}
             accessibilityRole="button"
             accessibilityLabel={tr('house.invitePaste.pasteA11y')}
-            style={[styles.pasteBtn, { backgroundColor: t.primary }]}>
+            style={({ pressed }) => [
+              styles.pasteBtn,
+              { backgroundColor: t.primary },
+              pressed && pressedStyle('fill', t),
+            ]}>
             <Icon name="copy" size={16} color={t.onPrimary} />
             <Text style={[Typography.label, { color: t.onPrimary }]}>
               {tr('house.invitePaste.paste')}
@@ -86,7 +91,7 @@ export function InvitePasteSheet({ visible, onPaste, onDismiss, error }: InviteP
         onPress={onDismiss}
         accessibilityRole="button"
         accessibilityLabel={tr('house.invitePaste.dismissA11y')}
-        style={styles.dismiss}>
+        style={({ pressed }) => [styles.dismiss, pressed && pressedStyle('dim', t)]}>
         <Text style={[Typography.supporting, { color: t.textMuted }]}>
           {tr('house.invitePaste.dismiss')}
         </Text>

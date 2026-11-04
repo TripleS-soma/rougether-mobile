@@ -1,16 +1,20 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 import {
   createFurniture,
+  FURNITURE_GENERATION_COIN_COST,
   fetchFurnitureCredits,
   fetchFurnitureJobs,
   isFurnitureJobActive,
-  type FurnitureCreditBalance,
-  type FurnitureJob,
   type FurniturePhoto,
 } from '@/api/furniture-generation';
+import { fetchWallets } from '@/api/me';
+import { getSessionUserId } from '@/api/auth';
+import { toWallet } from '@/api/adapters';
+import { queryKeys } from '@/lib/query-keys';
 import { ApiError } from '@/api/http';
 import { i18n } from '@/i18n';
 
@@ -41,39 +45,69 @@ function errorMessage(error: unknown) {
   return i18n.t('roomShop.studio.error.network');
 }
 
+type StudioData = Awaited<ReturnType<typeof fetchStudio>>;
+const NO_JOBS: StudioData['jobs'] = [];
+
+async function fetchStudio() {
+  const [balance, jobs] = await Promise.all([fetchFurnitureCredits(), fetchFurnitureJobs()]);
+  return { balance, jobs };
+}
+
 export function useFurnitureStudio() {
-  const [balance, setBalance] = useState<FurnitureCreditBalance | null>(null);
-  const [jobs, setJobs] = useState<FurnitureJob[]>([]);
+  const queryClient = useQueryClient();
+  const userId = getSessionUserId();
+  const queryKey = useMemo(() => queryKeys.furnitureStudio(userId), [userId]);
+  const walletKey = useMemo(() => queryKeys.wallet(userId), [userId]);
   const [photo, setPhoto] = useState<FurniturePhoto | null>(null);
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setError] = useState<string | null>(null);
   const busy = useRef(false);
   const mounted = useRef(true);
   const pendingId = useRef(requestId());
-  const refreshSequence = useRef(0);
+  const {
+    data,
+    isPending,
+    error: loadError,
+    refetch,
+  } = useQuery({
+    queryKey,
+    queryFn: fetchStudio,
+    staleTime: 0,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const {
+    data: wallet,
+    isPending: walletPending,
+    error: walletError,
+    refetch: refetchWallet,
+  } = useQuery({
+    queryKey: walletKey,
+    queryFn: async () => toWallet(await fetchWallets()),
+    staleTime: 0,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const { mutateAsync } = useMutation({
+    mutationKey: queryKey,
+    mutationFn: ({ selectedPhoto, id }: { selectedPhoto: FurniturePhoto; id: string }) =>
+      createFurniture(selectedPhoto, id),
+    retry: false,
+  });
+  const balance = data?.balance ?? null;
+  const jobs = data?.jobs ?? NO_JOBS;
+  const coinBalance = walletError ? null : (wallet?.coin ?? null);
+  const loading = isPending || ((balance?.available ?? 0) < 1 && walletPending);
+  const queryError = loadError ?? ((balance?.available ?? 0) < 1 ? walletError : null);
+  const error = localError ?? (queryError ? errorMessage(queryError) : null);
 
   const refresh = useCallback(async () => {
-    const sequence = ++refreshSequence.current;
-    try {
-      const [nextBalance, nextJobs] = await Promise.all([
-        fetchFurnitureCredits(),
-        fetchFurnitureJobs(),
-      ]);
-      if (!mounted.current || sequence !== refreshSequence.current) return;
-      setBalance(nextBalance);
-      setJobs(nextJobs);
-      setError(null);
-    } catch (e) {
-      if (mounted.current && sequence === refreshSequence.current) setError(errorMessage(e));
-    } finally {
-      if (mounted.current) setLoading(false);
-    }
-  }, []);
+    setError(null);
+    await Promise.all([refetch(), refetchWallet()]);
+  }, [refetch, refetchWallet]);
 
   useEffect(() => {
     mounted.current = true;
-    void refresh();
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active' && !busy.current) void refresh();
     });
@@ -124,27 +158,76 @@ export function useFurnitureStudio() {
   }, []);
 
   const submit = useCallback(async () => {
-    if (busy.current || !photo || !balance || balance.available < 1 || active) return;
+    const canAfford =
+      (balance?.available ?? 0) > 0 || (coinBalance ?? 0) >= FURNITURE_GENERATION_COIN_COST;
+    if (busy.current || !photo || !balance || !canAfford || active) return;
     busy.current = true;
     setSubmitting(true);
     setError(null);
-    // Invalidate any older reads before reserving a credit.
-    refreshSequence.current += 1;
+    // Cancel older reads before reserving a credit or coins.
     try {
-      const job = await createFurniture(photo, pendingId.current);
-      if (!mounted.current) return;
-      setJobs((previous) => [job, ...previous.filter((j) => j.id !== job.id)]);
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey }),
+        queryClient.cancelQueries({ queryKey: walletKey }),
+      ]);
+      const job = await mutateAsync({ selectedPhoto: photo, id: pendingId.current });
+      if (getSessionUserId() !== userId) return;
+      void queryClient.invalidateQueries({ queryKey: queryKeys.walletHistory(userId) });
+      if (!mounted.current) {
+        // The room's disabled wallet observer still needs the settled balance after leaving Studio.
+        await queryClient
+          .fetchQuery({
+            queryKey: walletKey,
+            queryFn: async () => toWallet(await fetchWallets()),
+            staleTime: 0,
+          })
+          .catch(() => undefined);
+        return;
+      }
+      queryClient.setQueryData<StudioData>(
+        queryKey,
+        (previous) =>
+          previous && {
+            ...previous,
+            jobs: [job, ...previous.jobs.filter((j) => j.id !== job.id)],
+          },
+      );
       setPhoto(null);
       pendingId.current = requestId();
       await refresh();
     } catch (e) {
       if (mounted.current) setError(errorMessage(e));
-      // Keep the photo and request ID: a lost response must not spend a second credit.
+      // Keep the photo and request ID: a lost response must not charge twice.
     } finally {
       busy.current = false;
       if (mounted.current) setSubmitting(false);
     }
-  }, [active, balance, photo, refresh]);
+  }, [
+    active,
+    balance,
+    coinBalance,
+    photo,
+    queryClient,
+    queryKey,
+    walletKey,
+    mutateAsync,
+    refresh,
+    userId,
+  ]);
 
-  return { balance, jobs, photo, loading, submitting, error, choosePhoto, submit, refresh };
+  return useMemo(
+    () => ({
+      balance,
+      coinBalance,
+      jobs,
+      photo,
+      loading,
+      submitting,
+      error,
+      choosePhoto,
+      submit,
+      refresh,
+    }),
+    [balance, coinBalance, jobs, photo, loading, submitting, error, choosePhoto, submit, refresh],
+  );
 }

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { FeedBoardBadge } from '@/components/feed/feed-board';
 import type { FeedAuthor, FeedBoardType } from '@/components/screens/feed/types';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -108,7 +109,7 @@ export function FeedActionRow({
         accessibilityLabel={liked ? tr('feed.unlikeA11y') : tr('feed.likeA11y')}
         accessibilityState={{ selected: liked }}
         hitSlop={Spacing.two}
-        style={styles.action}>
+        style={({ pressed }) => [styles.action, pressed && pressedStyle('dim', t)]}>
         <Icon
           name={liked ? 'heart' : 'heart-outline'}
           size={22}
@@ -123,7 +124,10 @@ export function FeedActionRow({
         disabled={!onOpenComments}
         accessibilityRole={onOpenComments ? 'button' : undefined}
         hitSlop={Spacing.two}
-        style={styles.action}>
+        style={({ pressed }) => [
+          styles.action,
+          pressed && !!onOpenComments && pressedStyle('dim', t),
+        ]}>
         <Icon name="comment" size={20} color={t.icon} />
         <Text style={[Typography.supporting, { color: t.textMuted }]}>
           {tr('feed.commentCount', { count: commentCount })}

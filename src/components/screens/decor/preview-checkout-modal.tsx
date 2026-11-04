@@ -2,6 +2,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { confirmStyles as styles } from '@/components/screens/decor/confirm-modal-styles';
 import { Icon } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
@@ -79,9 +80,10 @@ export function PreviewCheckoutModal({
               accessibilityRole="button"
               accessibilityLabel={tr('roomShop.decor.checkout.buyAllA11y')}
               accessibilityState={{ disabled: buyAllDisabled }}
-              style={[
+              style={({ pressed }) => [
                 styles.leaveBtn,
                 { backgroundColor: buyAllDisabled ? t.disabledBg : t.primary },
+                pressed && !buyAllDisabled && pressedStyle('fill', t),
               ]}>
               <Text
                 style={[Typography.label, { color: buyAllDisabled ? t.textMuted : t.onPrimary }]}>
@@ -99,7 +101,11 @@ export function PreviewCheckoutModal({
               disabled={buying}
               accessibilityRole="button"
               accessibilityLabel={tr('roomShop.decor.checkout.saveWithoutA11y')}
-              style={[styles.leaveBtn, { backgroundColor: t.surfaceMuted }]}>
+              style={({ pressed }) => [
+                styles.leaveBtn,
+                { backgroundColor: t.surfaceMuted },
+                pressed && pressedStyle('dim', t),
+              ]}>
               <Text style={[Typography.label, { color: t.text }]}>
                 {tr('roomShop.decor.checkout.saveWithout')}
               </Text>
@@ -108,7 +114,7 @@ export function PreviewCheckoutModal({
               onPress={onDismiss}
               accessibilityRole="button"
               accessibilityLabel={tr('roomShop.decor.checkout.stayA11y')}
-              style={styles.leaveStay}>
+              style={({ pressed }) => [styles.leaveStay, pressed && pressedStyle('dim', t)]}>
               <Text style={[Typography.label, { color: t.textMuted }]}>
                 {tr('roomShop.decor.checkout.stay')}
               </Text>

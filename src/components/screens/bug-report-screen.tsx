@@ -4,6 +4,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { useToast } from '@/components/ui/toast';
@@ -190,7 +191,11 @@ export function BugReportScreen({
               <View key={`${img.uri}-${idx}`} style={styles.shot}>
                 <Image source={{ uri: img.uri }} style={styles.shotImg} contentFit="cover" />
                 <Pressable
-                  style={[styles.shotRemove, { backgroundColor: t.text }]}
+                  style={({ pressed }) => [
+                    styles.shotRemove,
+                    { backgroundColor: t.text },
+                    pressed && pressedStyle('dim', t),
+                  ]}
                   hitSlop={8}
                   onPress={() => setImages((prev) => prev.filter((_, i) => i !== idx))}
                   accessibilityRole="button"
@@ -201,7 +206,11 @@ export function BugReportScreen({
             ))}
             {images.length < MAX_BUG_REPORT_IMAGES && onPickImage ? (
               <Pressable
-                style={[styles.shotAdd, { borderColor: t.border }]}
+                style={({ pressed }) => [
+                  styles.shotAdd,
+                  { borderColor: t.border },
+                  pressed && pressedStyle('card', t),
+                ]}
                 onPress={addImage}
                 accessibilityRole="button"
                 accessibilityLabel={tr('member.bugReport.addShotA11y')}>
@@ -235,7 +244,8 @@ export function BugReportScreen({
                 <Pressable
                   onPress={() => setShowDiagnostics((v) => !v)}
                   accessibilityRole="button"
-                  hitSlop={8}>
+                  hitSlop={8}
+                  style={({ pressed }) => pressed && pressedStyle('dim', t)}>
                   <Text style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}>
                     {diagnosticsText == null
                       ? tr('member.bugReport.diagnosticsShow')
@@ -267,7 +277,7 @@ export function BugReportScreen({
             style={({ pressed }) => [
               styles.submit,
               { backgroundColor: canSubmit ? t.primary : t.disabledBg },
-              pressed && canSubmit && { backgroundColor: t.primaryActive },
+              pressed && canSubmit && pressedStyle('fill', t),
             ]}>
             <Text
               style={[
@@ -367,6 +377,7 @@ const EntryScreenshots = memo(function EntryScreenshots({
   onOpen: (uri: string) => void;
 }) {
   const tr = useT();
+  const t = useTokens();
   const [uris, setUris] = useState<Record<string, string>>({});
   useEffect(() => {
     let alive = true;
@@ -393,7 +404,8 @@ const EntryScreenshots = memo(function EntryScreenshots({
           onPress={() => onOpen(uris[key])}
           accessibilityRole="button"
           accessibilityLabel={tr('member.bugReport.openShotA11y')}
-          testID={`bug-shot-${key}`}>
+          testID={`bug-shot-${key}`}
+          style={({ pressed }) => pressed && pressedStyle('dim', t)}>
           <Image source={{ uri: uris[key] }} style={styles.shotThumb} contentFit="cover" />
         </Pressable>
       ))}

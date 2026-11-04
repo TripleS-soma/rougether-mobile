@@ -155,3 +155,11 @@ describe('HouseScreen — 배경 테마·다크 모드', () => {
   // 사라졌다 — 넘길 수 없으니 "안 보인다"를 런타임에서 단언할 수 없고, 타입이
   // 컴파일 단계에서 막는다. 무의미해질 테스트를 두는 대신 여기 근거만 남긴다.
 });
+
+// Explicit rollback-renderer coverage. The default shared renderer has its own integration suite.
+beforeEach(() => {
+  process.env.EXPO_PUBLIC_HOUSE_DIORAMA = '0';
+});
+afterEach(() => {
+  delete process.env.EXPO_PUBLIC_HOUSE_DIORAMA;
+});

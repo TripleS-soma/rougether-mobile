@@ -105,7 +105,6 @@ npm run typecheck && npm run lint && npm run format:check && npm test
 네 가지가 전부 초록이어야 한다. 그리고 **동작 무변경의 근거**를 하나 이상 확보한다:
 
 - 테스트 수가 줄지 않았는가 (줄었으면 왜인지 PR에 쓴다)
-- 화면을 만졌으면 `/web-smoke` 로 실서버 기준 스모크 (사용자가 띄운 8081 재사용)
 - 렌더 안정성을 건드렸으면 `app-shell-render-stability.test.tsx` 통과 확인
 
 ## 6. PR

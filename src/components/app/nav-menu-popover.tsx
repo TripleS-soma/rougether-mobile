@@ -2,6 +2,7 @@ import { Modal, Pressable, StyleSheet, Text, useWindowDimensions } from 'react-n
 
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon, type IconName } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Overlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useAppFrame } from '@/hooks/use-app-frame';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -137,12 +138,13 @@ export function NavMenuPopover({
               }}
               accessibilityRole="button"
               accessibilityLabel={item.label}
-              style={[
+              style={({ pressed }) => [
                 styles.popoverItem,
                 idx !== arr.length - 1 && {
                   borderBottomColor: t.border,
                   borderBottomWidth: StyleSheet.hairlineWidth,
                 },
+                pressed && pressedStyle('row', t),
               ]}>
               <Icon name={item.icon} size={18} color={t.text} />
               <Text style={[Typography.body, { color: t.text }]}>{item.label}</Text>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { formatAmount } from '@/constants/currency';
 import { Radius, Spacing, TabularNums } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -105,7 +106,12 @@ function Pill({
       accessibilityRole="button"
       // Screen readers always get the real balance — the cap is visual only.
       accessibilityLabel={`${label} ${safeValue}`}
-      style={[styles.pill, compact && styles.pillCompact, { backgroundColor: t.surfaceMuted }]}>
+      style={({ pressed }) => [
+        styles.pill,
+        compact && styles.pillCompact,
+        { backgroundColor: t.surfaceMuted },
+        pressed && pressedStyle('dim', t),
+      ]}>
       <Icon name={icon} size={compact ? 12 : 14} color={color} />
       <Text
         style={[

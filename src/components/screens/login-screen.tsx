@@ -17,6 +17,7 @@ import appIcon from '@/assets/images/login-app-icon.webp';
 import { LoginConflictDialog } from '@/components/screens/login/login-conflict-dialog';
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { useToast } from '@/components/ui/toast';
 import { OAuthBrand, Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
@@ -235,7 +236,10 @@ export function LoginScreen({
                   onChangeText={setPassword}
                   secureTextEntry={!showPw}
                   trailing={
-                    <Pressable onPress={() => setShowPw((v) => !v)} accessibilityRole="button">
+                    <Pressable
+                      onPress={() => setShowPw((v) => !v)}
+                      accessibilityRole="button"
+                      style={({ pressed }) => pressed && pressedStyle('dim', t)}>
                       <Text
                         style={[Typography.supporting, emph('semibold'), { color: t.textMuted }]}>
                         {showPw ? tr('member.common.hide') : tr('member.common.show')}
@@ -246,7 +250,7 @@ export function LoginScreen({
 
                 <View style={styles.row}>
                   <Pressable
-                    style={styles.checkboxRow}
+                    style={({ pressed }) => [styles.checkboxRow, pressed && pressedStyle('dim', t)]}
                     onPress={() => setKeepLogin((v) => !v)}
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: keepLogin }}>
@@ -262,7 +266,10 @@ export function LoginScreen({
                       {tr('member.login.keepLogin')}
                     </Text>
                   </Pressable>
-                  <Pressable accessibilityRole="button" onPress={notReady}>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={notReady}
+                    style={({ pressed }) => pressed && pressedStyle('dim', t)}>
                     <Text
                       style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}>
                       {tr('member.login.findPassword')}

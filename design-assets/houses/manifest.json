@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "kind": "opaque-unfurnished-house-backgrounds",
+  "assets": [
+    {
+      "id": "cloud-balloon",
+      "name": "구름 풍선집",
+      "png": "cloud-balloon.png",
+      "pngSize": [1024, 1536],
+      "pngSha256": "e2f1c7a814aa1313c332e9a11e04abcb0b5fddd049f299e96584c8f927f872be",
+      "appWebp": "assets/houses/shared-v1/cloud-balloon.webp",
+      "appWebpSize": [768, 1152],
+      "webpSha256": "9b42c6993c85e61503b9360327f1ee94b7bdf0ce99c19f10f968dca48b2d26ea"
+    },
+    {
+      "id": "coral-aquarium",
+      "name": "산호 수족관 집",
+      "png": "coral-aquarium.png",
+      "pngSize": [1024, 1536],
+      "pngSha256": "c9b80b51de6dd9d208733385895986f84a8d5bfadb6f4ce9b07b5bef6f057d77",
+      "appWebp": "assets/houses/shared-v1/coral-aquarium.webp",
+      "appWebpSize": [768, 1152],
+      "webpSha256": "be6d6cd8839e0d4a8364aef79365701df9347f4456ba4a01e73d9835c156c87d"
+    },
+    {
+      "id": "mushroom-forest",
+      "name": "버섯 숲집",
+      "png": "mushroom-forest.png",
+      "pngSize": [1024, 1536],
+      "pngSha256": "f105495473b0cab2f57be8e13ea152a77cab10bfa45c8b9a4459edaf57fc55e3",
+      "appWebp": "assets/houses/shared-v1/mushroom-forest.webp",
+      "appWebpSize": [768, 1152],
+      "webpSha256": "7eba7cbb0ab3245e9578aa1bc50682e74388f88d325d0ef4dc785b682e18d035"
+    },
+    {
+      "id": "night-observatory",
+      "name": "밤의 천문대 집",
+      "png": "night-observatory.png",
+      "pngSize": [1024, 1536],
+      "pngSha256": "20bd53657eaf7605a1fb8b62e5c76f5265e72ce45f5e8bd5e09fd890e55e65c3",
+      "appWebp": "assets/houses/shared-v1/night-observatory.webp",
+      "appWebpSize": [768, 1152],
+      "webpSha256": "69f4f7002d2d0aa7bbeb738dcccc7aeb9afac1ba30e297b7209656dfd0ab002f"
+    },
+    {
+      "id": "forest-canopy",
+      "name": "초록 나무집",
+      "png": "forest-canopy.png",
+      "pngSize": [1024, 1536],
+      "pngSha256": "9b101beeef080bd1d409a464a2fdc7032d27166e5b15ade1b7b36ec58c064f9f",
+      "appWebp": "assets/houses/shared-v1/forest-canopy.webp",
+      "appWebpSize": [768, 1152],
+      "webpSha256": "99a8adf20da822ab94c9b8296133ab413bf3edcc8623f261fa67b684993cffaf"
+    },
+    {
+      "id": "evening-brick",
+      "name": "저녁빛 벽돌집",
+      "png": "evening-brick.png",
+      "pngSize": [1024, 1536],
+      "pngSha256": "3c4165cbe81555c38751667b76ef88ced0ca5f3a841e8930b1c7e68b9d95921e",
+      "appWebp": "assets/houses/shared-v1/evening-brick.webp",
+      "appWebpSize": [768, 1152],
+      "webpSha256": "af140fc86da553796637896db019db058a6c192eea1e07e23e75714b5c01e69a"
+    }
+  ]
+}

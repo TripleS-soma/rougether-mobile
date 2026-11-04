@@ -1,3 +1,9 @@
+import {
+  houseDioramaTheme,
+  HOUSE_DIORAMA_ASPECT,
+  dioramaWindowRects,
+  dioramaSeatPages,
+} from '@/resources/house-diorama';
 import { Image } from 'expo-image';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -15,6 +21,7 @@ import Reanimated from 'react-native-reanimated';
 
 import { type HouseCover } from '@/components/room/house-cover-picker';
 import { HouseOrderDots } from '@/components/room/house-order-dots';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { useHouseFrame } from '@/hooks/use-house-frame';
 import { type HouseFrameOptions, houseWindowSeats } from '@/resources/house-frame';
 import { CoachTarget } from '@/components/ui/coach-mark';
@@ -342,13 +349,31 @@ export const HouseScreen = memo(function HouseScreen({
   const seatRows = useMemo(() => seatRowsFor(rowShapes), [rowShapes]);
   // Resolve the asset and its cutouts together. Legacy art keeps its lower
   // two rows plus overflow; stacked art contains all supported capacity rows.
-  const { frame, onFrameError } = useHouseFrame(currentHouse?.coverImageKey, {
+  const { frame: legacyFrame, onFrameError } = useHouseFrame(currentHouse?.coverImageKey, {
     failureScope: currentHouse?.houseId ?? houseIndex,
     maxMembers: currentHouse?.maxMembers,
     minimumSeats: displayCells.length,
     enabled,
     previewTheme,
   });
+  const diorama = houseDioramaTheme(currentHouse?.coverImageKey, enabled);
+  const [annex, setAnnex] = useState(0);
+  useEffect(() => setAnnex(0), [currentHouse?.houseId, houseIndex]);
+  const annexPages = useMemo(() => dioramaSeatPages(seatRows), [seatRows]);
+  const currentAnnex = Math.min(annex, annexPages.length - 1);
+  const frame = useMemo(
+    () =>
+      diorama
+        ? {
+            ...legacyFrame,
+            kind: 'diorama' as const,
+            aspectRatio: HOUSE_DIORAMA_ASPECT,
+            sourceAspectRatio: HOUSE_DIORAMA_ASPECT,
+            windowRects: dioramaWindowRects(diorama),
+          }
+        : legacyFrame,
+    [diorama, legacyFrame],
+  );
   const coverKey = frame.assetKey;
   const isThreeStorey = frame.kind === 'stacked' && frame.windowRects.length === 6;
   const frameBottomGap = isThreeStorey ? Spacing.three : Spacing.six;
@@ -366,15 +391,19 @@ export const HouseScreen = memo(function HouseScreen({
       : undefined;
   // 서버가 가진 coverImageKey의 테마 경로에서 전면 배경을 파생한다. 집 전환과
   // 같은 렌더에 키가 바뀌므로 별도 저장 상태 없이 항상 프레임과 맞는다.
-  const backgroundKey = houseBackgroundKey(frame.canonicalKey, scheme);
+  const backgroundKey = diorama ? undefined : houseBackgroundKey(frame.canonicalKey, scheme);
   // Preserve adapter row order; first members stay on the bottom story.
   const windowSlots = useMemo(
-    () => houseWindowSeats(seatRows, frame.windowRects.length),
-    [seatRows, frame.windowRects],
+    () =>
+      diorama ? annexPages[currentAnnex] : houseWindowSeats(seatRows, frame.windowRects.length),
+    [diorama, annexPages, currentAnnex, seatRows, frame.windowRects],
   );
   const { roomPairs, rowOffsets } = useMemo(
-    () => gridRoomPairs(seatRows, displayCells, frame.windowRects.length),
-    [seatRows, displayCells, frame.windowRects],
+    () =>
+      diorama
+        ? { roomPairs: [], rowOffsets: [] }
+        : gridRoomPairs(seatRows, displayCells, frame.windowRects.length),
+    [diorama, seatRows, displayCells, frame.windowRects],
   );
 
   // --- 타일 드래그 앤 드롭 (자리 맞바꾸기, #278) — house/use-seat-drag (장부 15번) ---
@@ -501,7 +530,7 @@ export const HouseScreen = memo(function HouseScreen({
   // 더블탭 줌 제거 (#727) — 판정 대기(260ms) 때문에 방문 탭 반응이 늦었다.
   // 줌은 핀치 전용으로 남고, 탭은 즉시 방문한다.
 
-  const renderSeatTile = (room: RoomCell, seatIdx: number, fill = false) => {
+  const renderSeatTile = (room: RoomCell, seatIdx: number, fill = false, dioramaSide?: 0 | 1) => {
     seatRooms.set(seatIdx, room);
     const empty = room.vacant || !!isKickedMember?.(room.name);
     // 내 타일 이름은 라이브 userName(=현재 닉네임)으로 — houses는 프로필 저장 시
@@ -524,6 +553,7 @@ export const HouseScreen = memo(function HouseScreen({
         color={room.color}
         fill={fill}
         squareFrame={frame.kind === 'stacked'}
+        dioramaSide={dioramaSide}
         dragging={dragSeat === seatIdx}
         zoomed={zoomed}
         preview={preview}
@@ -555,7 +585,7 @@ export const HouseScreen = memo(function HouseScreen({
 
   return (
     <View
-      style={[styles.screen, screenStyle, { backgroundColor: skyColor }]}
+      style={[styles.screen, screenStyle, { backgroundColor: diorama?.skyColor ?? skyColor }]}
       onLayout={measureScreen}
       testID="house-screen">
       {/* 하단 탭은 AppShell의 형제라 이 absoluteFill 배경에 포함되지 않는다.
@@ -676,6 +706,19 @@ export const HouseScreen = memo(function HouseScreen({
                           style={StyleSheet.absoluteFill}
                           onLayout={onFrameLayout}
                         />
+                        {diorama ? (
+                          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                            <Image
+                              source={diorama.source}
+                              style={StyleSheet.absoluteFill}
+                              contentFit="contain"
+                              accessibilityLabel={tr('house.screen.houseA11y', {
+                                name: currentHouse.name,
+                              })}
+                              testID="house-frame"
+                            />
+                          </View>
+                        ) : null}
                         {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
                         {frame.windowRects.map((rect, w) => {
                           const seatIdx = windowSlots[w];
@@ -685,15 +728,24 @@ export const HouseScreen = memo(function HouseScreen({
                               testID={`house-window-${w}`}
                               style={[
                                 styles.windowSlot,
+                                diorama && styles.dioramaSlot,
                                 rect,
                                 seatIdx != null && dragSeat === seatIdx && styles.dragRow,
                               ]}>
                               {seatIdx != null ? (
-                                renderSeatTile(displayCells[seatIdx], seatIdx, true)
+                                renderSeatTile(
+                                  displayCells[seatIdx],
+                                  seatIdx,
+                                  true,
+                                  diorama ? ((w % 2) as 0 | 1) : undefined,
+                                )
                               ) : (
                                 /* 정원 밖 창문 — 조용한 벽 패널. */
                                 <View
-                                  style={[styles.windowFiller, { backgroundColor: t.surfaceMuted }]}
+                                  style={[
+                                    styles.windowFiller,
+                                    { backgroundColor: diorama ? 'transparent' : t.surfaceMuted },
+                                  ]}
                                   testID="window-filler"
                                 />
                               )}
@@ -702,23 +754,25 @@ export const HouseScreen = memo(function HouseScreen({
                         })}
                         {/* Android는 Image 계열이 pointerEvents prop을 무시하고 터치를
                       삼킨다(#401) — ViewGroup 래퍼가 확실하게 투과시킨다. */}
-                        <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                          <Image
-                            key={coverKey}
-                            source={assetSource(coverKey)}
-                            style={StyleSheet.absoluteFill}
-                            contentFit="fill"
-                            transition={frame.kind === 'stacked' ? 0 : 120}
-                            onError={onFrameError}
-                            recyclingKey={coverKey}
-                            // 디스크 캐시 유지 — 앱 재실행 후에도 재요청 없이 즉시 (#463).
-                            cachePolicy="memory-disk"
-                            accessibilityLabel={tr('house.screen.houseA11y', {
-                              name: currentHouse.name,
-                            })}
-                            testID="house-frame"
-                          />
-                        </View>
+                        {diorama ? null : (
+                          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                            <Image
+                              key={coverKey}
+                              source={assetSource(coverKey)}
+                              style={StyleSheet.absoluteFill}
+                              contentFit="fill"
+                              transition={frame.kind === 'stacked' ? 0 : 120}
+                              onError={onFrameError}
+                              recyclingKey={coverKey}
+                              // 디스크 캐시 유지 — 앱 재실행 후에도 재요청 없이 즉시 (#463).
+                              cachePolicy="memory-disk"
+                              accessibilityLabel={tr('house.screen.houseA11y', {
+                                name: currentHouse.name,
+                              })}
+                              testID="house-frame"
+                            />
+                          </View>
+                        )}
                       </View>
                     </GestureDetector>
                   </Reanimated.View>
@@ -733,7 +787,7 @@ export const HouseScreen = memo(function HouseScreen({
                   onPress={resetCam}
                   accessibilityRole="button"
                   accessibilityLabel={tr('house.screen.zoomExit')}
-                  style={styles.camReset}>
+                  style={({ pressed }) => [styles.camReset, pressed && pressedStyle('dim', t)]}>
                   <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
                     <Icon name="refresh" size={16} color={t.text} />
                   </GlassSurface>
@@ -741,6 +795,40 @@ export const HouseScreen = memo(function HouseScreen({
               ) : null}
             </Animated.View>
           </CoachTarget>
+          {diorama && annexPages.length > 1 ? (
+            <View style={styles.annexTabs} testID="diorama-annexes">
+              {annexPages.map((_, index) => {
+                const name =
+                  index === 0
+                    ? tr('house.diorama.main')
+                    : tr('house.diorama.annex', { number: index });
+                return (
+                  <Pressable
+                    key={index}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: currentAnnex === index }}
+                    accessibilityLabel={tr('house.diorama.pageA11y', { name })}
+                    disabled={dragSeat != null}
+                    onPress={() => {
+                      setAnnex(index);
+                      resetCam();
+                    }}
+                    style={[
+                      styles.annexTab,
+                      { backgroundColor: currentAnnex === index ? t.primary : t.surface },
+                    ]}>
+                    <Text
+                      style={[
+                        Typography.supporting,
+                        { color: currentAnnex === index ? t.onPrimary : t.text },
+                      ]}>
+                      {name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
         </View>
         {/* 프레임 모드에선 방이 창문 안에 그려져 이 격자가 비는데, paddingTop이
             남아 잔디 아래 24px 크림 띠를 만들었다 (#986). 내용이 있을 때만 그린다. */}
@@ -855,6 +943,18 @@ export const HouseScreen = memo(function HouseScreen({
 });
 
 const styles = StyleSheet.create({
+  dioramaSlot: { overflow: 'visible' },
+  annexTabs: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.two,
+    paddingVertical: Spacing.two,
+  },
+  annexTab: {
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+  },
   screen: {
     flex: 1,
   },

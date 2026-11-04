@@ -23,6 +23,7 @@ import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatTime, localDate, monthDayLabel } from '@/utils/datetime';
 import { firstRoutineDate, routineComposeError } from '@/utils/routine-compose';
 import { useT } from '@/i18n';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 export type ComposeKind = 'routine' | 'todo';
 export type ComposeSubmission =
@@ -188,7 +189,7 @@ export function RoutineTodoComposeSheet({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ expanded: panel === target }}
-      style={styles.row}>
+      style={({ pressed }) => [styles.row, pressed && pressedStyle('dim', t)]}>
       <Text style={[Typography.body, { color: t.text }]}>{name}</Text>
       <Text
         numberOfLines={1}
@@ -216,7 +217,7 @@ export function RoutineTodoComposeSheet({
               onPress={() => setPanel(null)}
               accessibilityRole="button"
               accessibilityLabel={tr('routineTodo.compose.backToForm')}
-              style={styles.back}>
+              style={({ pressed }) => [styles.back, pressed && pressedStyle('dim', t)]}>
               <Icon name="back" size={18} color={t.text} />
               <Text style={[Typography.label, { color: t.text }]}>
                 {tr('routineTodo.compose.back')}
@@ -236,7 +237,7 @@ export function RoutineTodoComposeSheet({
               disabled={saving}
               accessibilityRole="button"
               accessibilityLabel={tr('common.cancel')}
-              style={styles.action}>
+              style={({ pressed }) => [styles.action, pressed && pressedStyle('dim', t)]}>
               <Text style={[Typography.label, { color: t.text }]}>{tr('common.cancel')}</Text>
             </Pressable>
             <GlassSurface interactive={false} fallbackColor={t.surfaceMuted} style={styles.segment}>
@@ -253,7 +254,11 @@ export function RoutineTodoComposeSheet({
                       setPanel(null);
                       setError('');
                     }}
-                    style={[styles.kind, kind === next && { backgroundColor: t.surface }]}>
+                    style={({ pressed }) => [
+                      styles.kind,
+                      kind === next && { backgroundColor: t.surface },
+                      pressed && pressedStyle('dim', t),
+                    ]}>
                     <Text
                       style={[
                         Typography.label,
@@ -272,7 +277,7 @@ export function RoutineTodoComposeSheet({
               accessibilityRole="button"
               accessibilityLabel={tr('routineTodo.compose.saveA11y', { kind: label })}
               accessibilityState={{ disabled: !canSubmit, busy: saving }}
-              style={styles.action}>
+              style={({ pressed }) => [styles.action, pressed && pressedStyle('dim', t)]}>
               <Text
                 style={[
                   Typography.label,
@@ -307,7 +312,7 @@ export function RoutineTodoComposeSheet({
                       setCategoryId(item.id);
                       setPanel(null);
                     }}
-                    style={styles.row}>
+                    style={({ pressed }) => [styles.row, pressed && pressedStyle('dim', t)]}>
                     <View style={styles.categoryLabel}>
                       <Text style={[Typography.body, emph('medium'), { color: t.text }]}>
                         {item.name}
@@ -347,7 +352,7 @@ export function RoutineTodoComposeSheet({
                 accessibilityRole="button"
                 accessibilityLabel={tr('routineTodo.compose.keepEditing')}
                 onPress={() => setDiscard(false)}
-                style={styles.row}>
+                style={({ pressed }) => [styles.row, pressed && pressedStyle('dim', t)]}>
                 <Text style={[Typography.label, { color: t.primaryText }]}>
                   {tr('routineTodo.compose.keepEditing')}
                 </Text>
@@ -356,7 +361,7 @@ export function RoutineTodoComposeSheet({
                 accessibilityRole="button"
                 accessibilityLabel={tr('routineTodo.compose.discard')}
                 onPress={onClose}
-                style={styles.row}>
+                style={({ pressed }) => [styles.row, pressed && pressedStyle('dim', t)]}>
                 <Text style={[Typography.label, { color: t.danger }]}>
                   {tr('routineTodo.compose.discard')}
                 </Text>
@@ -437,7 +442,7 @@ export function RoutineTodoComposeSheet({
                   accessibilityRole="button"
                   accessibilityLabel={tr('routineTodo.compose.details')}
                   accessibilityState={{ expanded: details }}
-                  style={styles.row}>
+                  style={({ pressed }) => [styles.row, pressed && pressedStyle('dim', t)]}>
                   <Text style={[Typography.label, { color: t.text }]}>
                     {tr('routineTodo.compose.details')}
                   </Text>
@@ -516,7 +521,10 @@ export function RoutineTodoComposeSheet({
                                 setEndDate(undefined);
                                 setPanel(null);
                               }}
-                              style={styles.row}>
+                              style={({ pressed }) => [
+                                styles.row,
+                                pressed && pressedStyle('dim', t),
+                              ]}>
                               <Text style={[Typography.label, { color: t.primaryText }]}>
                                 {tr('routineTodo.compose.none')}
                               </Text>

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { useToast } from '@/components/ui/toast';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 /**
  * 온보딩·소개 공용 CTA (#1282) — 소개 슬라이드가 로그인 전 화면으로 떨어져
@@ -45,7 +46,10 @@ export function TextButton({ label, onPress }: { label: string; onPress: () => v
   const t = useTokens();
   const Typography = useTypography();
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" style={styles.textBtn}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.textBtn, pressed && pressedStyle('dim', t)]}>
       <Text style={[Typography.supporting, { color: t.textMuted }]}>{label}</Text>
     </Pressable>
   );

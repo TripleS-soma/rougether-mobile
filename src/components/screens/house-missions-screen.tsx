@@ -6,6 +6,7 @@ import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Icon } from '@/components/ui/icon';
 import { ModalCard } from '@/components/ui/modal-card';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Pictogram, type PictogramName, TrashPictogram } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
@@ -90,13 +91,14 @@ function LinkedBadge({
 }) {
   const Typography = useTypography();
   const tr = useT();
+  const t = useTokens();
   return (
     <Pressable
       onPress={() => onPress(mission)}
       accessibilityRole="button"
       accessibilityLabel={tr('house.missions.unlinkA11y', { title: mission.title })}
       hitSlop={8}
-      style={styles.linkedBadge}>
+      style={({ pressed }) => [styles.linkedBadge, pressed && pressedStyle('dim', t)]}>
       <Text style={[Typography.supporting, { color }]}>{label}</Text>
       <Icon name="close" size={12} color={color} />
     </Pressable>
@@ -248,7 +250,11 @@ export function HouseMissionsScreen({
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
               accessibilityLabel={tr('house.missions.tabA11y', { label })}
-              style={[styles.tab, active && { borderBottomColor: t.primary }]}>
+              style={({ pressed }) => [
+                styles.tab,
+                active && { borderBottomColor: t.primary },
+                pressed && pressedStyle('dim', t),
+              ]}>
               <Text style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
                 {label}
               </Text>
@@ -275,7 +281,11 @@ export function HouseMissionsScreen({
               onPress={() => setShowCreateMission(true)}
               accessibilityRole="button"
               accessibilityLabel={tr('house.missions.createA11y')}
-              style={[styles.missionAddBtn, { backgroundColor: t.surfaceMuted }]}>
+              style={({ pressed }) => [
+                styles.missionAddBtn,
+                { backgroundColor: t.surfaceMuted },
+                pressed && pressedStyle('dim', t),
+              ]}>
               <Text style={[Typography.supporting, { color: t.primaryText }]}>
                 {tr('house.missions.create')}
               </Text>
@@ -332,7 +342,10 @@ export function HouseMissionsScreen({
                               title: mission.title,
                             })}
                             hitSlop={8}
-                            style={styles.missionDeleteBtn}>
+                            style={({ pressed }) => [
+                              styles.missionDeleteBtn,
+                              pressed && pressedStyle('dim', t),
+                            ]}>
                             <TrashPictogram size={14} color={t.textMuted} />
                           </Pressable>
                         ) : null}
@@ -393,7 +406,11 @@ export function HouseMissionsScreen({
                             accessibilityLabel={tr('house.missions.claimA11y', {
                               title: mission.title,
                             })}
-                            style={[styles.missionBtn, { backgroundColor: t.warning }]}>
+                            style={({ pressed }) => [
+                              styles.missionBtn,
+                              { backgroundColor: t.warning },
+                              pressed && pressedStyle('dim', t),
+                            ]}>
                             <Text style={[Typography.supporting, { color: t.text }]}>
                               {tr('house.missions.claim')}
                             </Text>
@@ -434,7 +451,11 @@ export function HouseMissionsScreen({
                             accessibilityLabel={tr('house.missions.addRoutineA11y', {
                               title: mission.title,
                             })}
-                            style={[styles.missionBtn, { backgroundColor: t.primary }]}>
+                            style={({ pressed }) => [
+                              styles.missionBtn,
+                              { backgroundColor: t.primary },
+                              pressed && pressedStyle('fill', t),
+                            ]}>
                             <Text style={[Typography.supporting, { color: t.onPrimary }]}>
                               {tr('house.missions.addRoutine')}
                             </Text>
@@ -519,7 +540,11 @@ export function HouseMissionsScreen({
                   }}
                   accessibilityRole="button"
                   accessibilityLabel={tr('house.missions.linkChoice.unlinkA11y')}
-                  style={[styles.choiceBtn, { backgroundColor: t.primary }]}>
+                  style={({ pressed }) => [
+                    styles.choiceBtn,
+                    { backgroundColor: t.primary },
+                    pressed && pressedStyle('fill', t),
+                  ]}>
                   <Text style={[Typography.label, { color: t.onPrimary }]}>
                     {tr('house.missions.linkChoice.unlink')}
                   </Text>
@@ -532,7 +557,11 @@ export function HouseMissionsScreen({
                     }}
                     accessibilityRole="button"
                     accessibilityLabel={tr('house.missions.unlinkConfirm.a11y')}
-                    style={[styles.choiceBtn, { backgroundColor: t.danger }]}>
+                    style={({ pressed }) => [
+                      styles.choiceBtn,
+                      { backgroundColor: t.danger },
+                      pressed && pressedStyle('dim', t),
+                    ]}>
                     <Text style={[Typography.label, { color: t.onPrimary }]}>
                       {tr('house.missions.linkChoice.delete')}
                     </Text>
@@ -542,7 +571,7 @@ export function HouseMissionsScreen({
                   onPress={() => setMissionToUnlink(null)}
                   accessibilityRole="button"
                   accessibilityLabel={tr('house.missions.unlinkConfirm.cancelA11y')}
-                  style={styles.choiceCancel}>
+                  style={({ pressed }) => [styles.choiceCancel, pressed && pressedStyle('dim', t)]}>
                   <Text style={[Typography.label, { color: t.textMuted }]}>
                     {tr('common.cancel')}
                   </Text>
@@ -614,9 +643,10 @@ export function HouseMissionsScreen({
                     onPress={() => setMissionType(opt.type)}
                     accessibilityRole="radio"
                     accessibilityState={{ selected }}
-                    style={[
+                    style={({ pressed }) => [
                       styles.missionTypeBtn,
                       { backgroundColor: selected ? t.primary : t.surfaceMuted },
+                      pressed && pressedStyle('dim', t),
                     ]}>
                     <Pictogram
                       name={opt.icon}
@@ -674,7 +704,11 @@ export function HouseMissionsScreen({
                 onPress={() => setShowPeriodSheet(true)}
                 accessibilityRole="button"
                 accessibilityLabel={tr('house.missions.form.periodPickA11y')}
-                style={[styles.missionInput, { backgroundColor: t.surfaceMuted }]}>
+                style={({ pressed }) => [
+                  styles.missionInput,
+                  { backgroundColor: t.surfaceMuted },
+                  pressed && pressedStyle('dim', t),
+                ]}>
                 <Text style={[Typography.supporting, { color: t.text }]}>
                   {formatDate(missionStart)} ~{' '}
                   {missionEnd ? formatDate(missionEnd) : tr('house.missions.form.openEnded')}

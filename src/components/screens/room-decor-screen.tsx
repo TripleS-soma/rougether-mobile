@@ -53,6 +53,7 @@ import { APP_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 /**
  * What the picker panel is currently choosing for: the full catalog ('all',
@@ -723,7 +724,8 @@ export function RoomDecorScreen({
                 accessibilityRole="button"
                 accessibilityLabel={tr('roomShop.decor.surfacePreviewBuyA11y', {
                   surface: SURFACE_LABEL[sp.kind],
-                })}>
+                })}
+                style={({ pressed }) => [pressed && pressedStyle('dim', t)]}>
                 <GlassSurface style={styles.previewChip} fallbackColor={t.surface}>
                   <Icon name="diamond" size={10} color={t.primary} />
                   <Text style={[Typography.supporting, { color: t.text }]}>
@@ -776,7 +778,11 @@ export function RoomDecorScreen({
                   accessibilityRole="button"
                   accessibilityLabel={tr(labelKey)}
                   hitSlop={4}
-                  style={[styles.toolBtn, { backgroundColor: t.surfaceMuted }]}>
+                  style={({ pressed }) => [
+                    styles.toolBtn,
+                    { backgroundColor: t.surfaceMuted },
+                    pressed && pressedStyle('dim', t),
+                  ]}>
                   <Icon name={icon} size={18} color={icon === 'trash' ? t.danger : t.text} />
                 </Pressable>
               ))}
@@ -819,9 +825,10 @@ export function RoomDecorScreen({
                       accessibilityRole="button"
                       accessibilityLabel={tr('roomShop.decor.tabA11y', { label })}
                       accessibilityState={{ selected: active }}
-                      style={[
+                      style={({ pressed }) => [
                         styles.segBtn,
                         { backgroundColor: active ? t.primary : t.surfaceMuted },
+                        pressed && pressedStyle('dim', t),
                       ]}>
                       <Text
                         style={[
@@ -852,9 +859,10 @@ export function RoomDecorScreen({
                       onPress={() => setPicker(key)}
                       accessibilityRole="button"
                       accessibilityState={{ selected: active }}
-                      style={[
+                      style={({ pressed }) => [
                         styles.segBtn,
                         { backgroundColor: active ? t.primary : t.surfaceMuted },
+                        pressed && pressedStyle('dim', t),
                       ]}>
                       <Text
                         style={[
@@ -879,7 +887,11 @@ export function RoomDecorScreen({
                 accessibilityRole="button"
                 accessibilityLabel={tr('roomShop.decor.closePickerA11y')}
                 hitSlop={8}
-                style={[styles.closeBtn, { backgroundColor: t.surfaceMuted }]}>
+                style={({ pressed }) => [
+                  styles.closeBtn,
+                  { backgroundColor: t.surfaceMuted },
+                  pressed && pressedStyle('dim', t),
+                ]}>
                 <Icon name="close" size={14} color={t.text} />
               </Pressable>
             ) : null}
@@ -1020,7 +1032,11 @@ export function RoomDecorScreen({
           onPress={handleBack}
           accessibilityRole="button"
           accessibilityLabel={tr('roomShop.decor.back')}
-          style={[styles.iconBtn, styles.floatBtn]}>
+          style={({ pressed }) => [
+            styles.iconBtn,
+            styles.floatBtn,
+            pressed && pressedStyle('dim', t),
+          ]}>
           <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
             <Icon name="back" size={26} color={t.text} />
           </GlassSurface>
@@ -1093,7 +1109,11 @@ export function RoomDecorScreen({
           onPress={() => apply(true)}
           accessibilityRole="button"
           accessibilityLabel={tr('common.apply')}
-          style={[styles.applyBtn, split ? styles.splitApply : null]}>
+          style={({ pressed }) => [
+            styles.applyBtn,
+            split ? styles.splitApply : null,
+            pressed && pressedStyle('dim', t),
+          ]}>
           {/* 튜토리얼 코치마크 대상 (#1324) — 격자와 함께 구멍을 이룬다. */}
           <CoachTarget id="decor-apply">
             <GlassSurface style={styles.applyFace} tintColor={t.primary} fallbackColor={t.primary}>

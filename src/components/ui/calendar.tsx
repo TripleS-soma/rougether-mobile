@@ -10,6 +10,7 @@ import Reanimated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import type { DayProgress } from '@/utils/calendar-progress';
 import { progressLabel } from '@/utils/calendar-progress';
 import { GestureDetector } from 'react-native-gesture-handler';
@@ -338,7 +339,11 @@ function CalendarBase({
           accessibilityLabel={
             collapsed ? tr('routineTodo.calendar.prevWeek') : tr('routineTodo.calendar.prevMonth')
           }
-          style={[styles.navBtn, !glass && { backgroundColor: t.surfaceMuted }]}>
+          style={({ pressed }) => [
+            styles.navBtn,
+            !glass && { backgroundColor: t.surfaceMuted },
+            pressed && pressedStyle('dim', t),
+          ]}>
           {glass ? (
             <GlassSurface
               pointerEvents="none"
@@ -346,7 +351,7 @@ function CalendarBase({
               style={[StyleSheet.absoluteFill, styles.glassControl]}
             />
           ) : null}
-          <Text style={[styles.navGlyph, { color: t.text }]}>‹</Text>
+          <Icon name="back" size={20} color={t.text} />
         </Pressable>
         <View style={styles.headCenter}>
           <Text
@@ -364,7 +369,11 @@ function CalendarBase({
               onPress={goToday}
               accessibilityRole="button"
               accessibilityLabel={tr('routineTodo.calendar.goToday')}
-              style={[styles.todayChip, !glass && { backgroundColor: t.primarySoft }]}>
+              style={({ pressed }) => [
+                styles.todayChip,
+                !glass && { backgroundColor: t.primarySoft },
+                pressed && pressedStyle('dim', t),
+              ]}>
               {glass ? (
                 <GlassSurface
                   pointerEvents="none"
@@ -385,7 +394,11 @@ function CalendarBase({
           accessibilityLabel={
             collapsed ? tr('routineTodo.calendar.nextWeek') : tr('routineTodo.calendar.nextMonth')
           }
-          style={[styles.navBtn, !glass && { backgroundColor: t.surfaceMuted }]}>
+          style={({ pressed }) => [
+            styles.navBtn,
+            !glass && { backgroundColor: t.surfaceMuted },
+            pressed && pressedStyle('dim', t),
+          ]}>
           {glass ? (
             <GlassSurface
               pointerEvents="none"
@@ -393,7 +406,7 @@ function CalendarBase({
               style={[StyleSheet.absoluteFill, styles.glassControl]}
             />
           ) : null}
-          <Text style={[styles.navGlyph, { color: t.text }]}>›</Text>
+          <Icon name="forward" size={20} color={t.text} />
         </Pressable>
       </View>
 
@@ -503,10 +516,11 @@ function CalendarBase({
                             // 월 이동으로 이 셀이 새로 측정될 때, 선택 날짜면 즉시 원을 얹는다.
                             if (date === value && selectedInView && foldSettled) placeCircle(false);
                           }}
-                          style={[
+                          style={({ pressed }) => [
                             styles.cell,
                             glass && styles.monthCell,
                             progressByDate && styles.progressCell,
+                            pressed && pressedStyle('dim', t),
                           ]}>
                           <View
                             style={[
@@ -710,10 +724,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  navGlyph: {
-    fontSize: 22,
-    lineHeight: 24,
   },
   grid: {
     // 주 줄을 세로로 쌓는다 — 가로 wrap을 쓰지 않는 게 #845 수정의 핵심.

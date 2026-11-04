@@ -5,6 +5,7 @@ import { type SvgProps } from 'react-native-svg';
 import { GestureDetector } from 'react-native-gesture-handler';
 import Reanimated from 'react-native-reanimated';
 
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { APP_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
 import CalendarActive from '@/assets/images/common/calendar-icon-active.svg';
 import CalendarInactive from '@/assets/images/common/calendar-icon.svg';
@@ -194,9 +195,11 @@ function BottomNavBase({ active, onChange, badges }: BottomNavProps) {
         accessibilityState={{ selected: isActive }}
         accessibilityLabel={accessibilityLabelKey ? tr(accessibilityLabelKey) : label}
         accessibilityHint={badges?.[key] ? tr('nav.badgeAbsent') : undefined}
-        style={[
+        // 탭 전환은 하루 수백 번 — 배경 번쩍임 없이 투명도만.
+        style={({ pressed }) => [
           styles.tab,
           { minWidth: tabMinWidth, maxWidth: tabCap, paddingHorizontal: tabPaddingH },
+          pressed && pressedStyle('dim', t),
         ]}>
         <TabIcon
           isActive={isActive}

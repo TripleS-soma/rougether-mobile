@@ -4,6 +4,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { FeedAvatar } from '@/components/feed/feed-parts';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Loading } from '@/components/ui/loading';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Radius, Spacing } from '@/constants/theme';
@@ -97,7 +98,11 @@ export function BlockedUsersScreen({
               <Pressable
                 onPress={onLoadMore}
                 accessibilityRole="button"
-                style={[styles.more, { backgroundColor: t.surfaceMuted }]}>
+                style={({ pressed }) => [
+                  styles.more,
+                  { backgroundColor: t.surfaceMuted },
+                  pressed && pressedStyle('dim', t),
+                ]}>
                 <Text style={[Typography.label, { color: t.primaryText }]}>
                   {tr('member.moderation.blockedUsers.more')}
                 </Text>
@@ -118,7 +123,11 @@ export function BlockedUsersScreen({
                 accessibilityLabel={tr('member.moderation.blockedUsers.unblockA11y', {
                   name: nameOf(u),
                 })}
-                style={[styles.unblock, { backgroundColor: t.surfaceMuted }]}>
+                style={({ pressed }) => [
+                  styles.unblock,
+                  { backgroundColor: t.surfaceMuted },
+                  pressed && pressedStyle('dim', t),
+                ]}>
                 <Text style={[Typography.label, { color: t.text }]}>
                   {tr('member.moderation.blockedUsers.unblock')}
                 </Text>

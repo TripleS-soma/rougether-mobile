@@ -2,6 +2,7 @@ import { memo, useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { type SharedValue, useAnimatedStyle } from 'react-native-reanimated';
 
+import { HouseDioramaMember } from '@/components/room/house-diorama-member';
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { ROOM_ASPECT_RATIO } from '@/components/room/room-render-contract';
 import {
@@ -37,6 +38,7 @@ export type SeatTileProps = {
   fill: boolean;
   /** Exact rectangular cutouts have no rounded bleed or visible tile border. */
   squareFrame?: boolean;
+  dioramaSide?: 0 | 1;
   /** 지금 들려 있는 좌석인가. */
   dragging: boolean;
   /** 확대 중 — 롱프레스 드래그를 막는다(카메라 팬과 충돌). */
@@ -86,6 +88,7 @@ function SeatTileBase({
   color,
   fill,
   squareFrame = false,
+  dioramaSide,
   dragging,
   zoomed,
   preview,
@@ -180,10 +183,20 @@ function SeatTileBase({
           fill ? styles.roomCellFill : styles.roomCell,
           { backgroundColor: empty ? t.surfaceMuted : color, borderColor: t.border },
           fill && squareFrame && styles.squareFrame,
+          dioramaSide != null && styles.diorama,
         ]}>
         {/* 그 멤버의 실제 방이 타일을 채운다(방문 미리보기); 로드 전엔
             단색 틴트 + 아바타가 자리를 지킨다. */}
-        {scene ? (
+        {dioramaSide != null && !empty ? (
+          <HouseDioramaMember
+            side={dioramaSide}
+            preview={preview}
+            furniture={catalogs.furniture}
+            characterId={avatarCharacterId}
+            sharp={zoomed}
+          />
+        ) : null}
+        {dioramaSide == null && scene ? (
           <View style={styles.roomPreview} pointerEvents="none" testID="room-preview">
             <Room
               {...scene}
@@ -198,7 +211,7 @@ function SeatTileBase({
         ) : null}
         {/* 빈 좌석은 캐릭터 없는 기본 빈 방을 낮춘 톤으로 —
             "방은 준비돼 있고 주인만 없다" (#281, 시안 A). */}
-        {empty ? (
+        {dioramaSide == null && empty ? (
           <View style={styles.roomPreview} pointerEvents="none" testID="vacant-room">
             <Room
               characterId={null}
@@ -210,7 +223,9 @@ function SeatTileBase({
             />
           </View>
         ) : null}
-        {empty || preview ? null : <CharacterAvatar characterId={avatarCharacterId} size={64} />}
+        {dioramaSide != null || empty || preview ? null : (
+          <CharacterAvatar characterId={avatarCharacterId} size={64} />
+        )}
         {/* 타일은 다크에서도 고정 파스텔 배경이라 이름은 (밝은) theme text가
             아니라 onTint 잉크를 쓴다. 프리뷰 위에서는 하단 스크림으로 대비를
             확보한다. 빈 좌석은 라벨 없이 빈 방 비주얼만 — 접근성 라벨은
@@ -218,7 +233,12 @@ function SeatTileBase({
         {empty ? null : (
           <Animated.View
             testID={`seat-meta-${seatIdx}`}
-            style={[styles.roomMeta, preview && styles.roomNameOverlay, metaStyle]}>
+            style={[
+              styles.roomMeta,
+              (preview || dioramaSide != null) && styles.roomNameOverlay,
+              metaStyle,
+              ...(dioramaSide != null ? [styles.dioramaMeta] : []),
+            ]}>
             <View style={styles.roomNameRow}>
               {isOwner ? <CrownPictogram size={12} /> : null}
               {/* 최근 접속(#383) — 초록 점. 은은한 펄스로 "지금 있음" (#450). */}
@@ -230,7 +250,7 @@ function SeatTileBase({
                 style={[
                   Typography.supporting,
                   styles.roomName,
-                  { color: preview ? StaticWhite : t.onTint },
+                  { color: preview || dioramaSide != null ? StaticWhite : t.onTint },
                 ]}>
                 {isMine ? tr('house.seat.mine', { name: displayName }) : displayName}
               </Text>
@@ -242,7 +262,7 @@ function SeatTileBase({
                   style={[
                     Typography.supporting,
                     styles.lastSeen,
-                    { color: preview ? StaticWhite : t.onTint },
+                    { color: preview || dioramaSide != null ? StaticWhite : t.onTint },
                   ]}>
                   {`· ${trailing}`}
                 </Text>
@@ -291,6 +311,8 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   squareFrame: { borderRadius: 0, borderWidth: 0 },
+  diorama: { backgroundColor: 'transparent', borderWidth: 0, overflow: 'visible' },
+  dioramaMeta: { bottom: -Spacing.three },
   roomPreviewFill: {
     width: '100%',
     height: '100%',

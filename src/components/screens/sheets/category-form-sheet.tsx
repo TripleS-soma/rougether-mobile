@@ -15,6 +15,7 @@ import {
 import { Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 const ICON_CHOICES: PictogramName[] = [
   'calendar',
@@ -110,7 +111,11 @@ export function CategoryFormSheet({
           onPress={onClose}
           accessibilityRole="button"
           accessibilityLabel={tr('routineTodo.categoryForm.close')}
-          style={[styles.close, { backgroundColor: t.surfaceMuted }]}>
+          style={({ pressed }) => [
+            styles.close,
+            { backgroundColor: t.surfaceMuted },
+            pressed && pressedStyle('dim', t),
+          ]}>
           <Icon name="close" size={16} color={t.text} />
         </Pressable>
       </View>
@@ -142,10 +147,11 @@ export function CategoryFormSheet({
                   accessibilityRole="button"
                   accessibilityLabel={tr('routineTodo.categoryForm.iconA11y', { icon: e })}
                   accessibilityState={{ selected: active }}
-                  style={[
+                  style={({ pressed }) => [
                     styles.emojiCell,
                     { backgroundColor: active ? t.primarySoft : t.surfaceMuted },
                     active && { borderColor: t.primary, borderWidth: 2 },
+                    pressed && pressedStyle('dim', t),
                   ]}>
                   <CategoryIcon name={e} color={color} size={18} />
                 </Pressable>
@@ -166,10 +172,11 @@ export function CategoryFormSheet({
                   accessibilityRole="button"
                   accessibilityLabel={tr('routineTodo.categoryForm.colorA11y', { color: c })}
                   accessibilityState={{ selected: active }}
-                  style={[
+                  style={({ pressed }) => [
                     styles.colorCell,
                     { backgroundColor: c },
                     active && [styles.colorCellActive, { borderColor: t.text }],
+                    pressed && pressedStyle('dim', t),
                   ]}>
                   {active ? <Icon name="check" size={14} color={StaticWhite} /> : null}
                 </Pressable>
@@ -190,9 +197,10 @@ export function CategoryFormSheet({
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
                   accessibilityLabel={tr(visibilityLabelKey(v))}
-                  style={[
+                  style={({ pressed }) => [
                     styles.segItem,
                     { backgroundColor: active ? t.primary : t.surfaceMuted },
+                    pressed && pressedStyle('dim', t),
                   ]}>
                   <Pictogram
                     name={VISIBILITY_ICONS[v]}
@@ -227,7 +235,11 @@ export function CategoryFormSheet({
               ? tr('routineTodo.categoryForm.saveA11y')
               : tr('routineTodo.categoryForm.create')
           }
-          style={[styles.submit, { backgroundColor: canSubmit ? t.primary : t.textDisabled }]}>
+          style={({ pressed }) => [
+            styles.submit,
+            { backgroundColor: canSubmit ? t.primary : t.textDisabled },
+            pressed && canSubmit && pressedStyle('fill', t),
+          ]}>
           <Icon name={editing ? 'check' : 'add'} size={18} color={t.onPrimary} />
           <Text style={[Typography.label, { color: t.onPrimary }]}>
             {editing ? tr('routineTodo.categoryForm.save') : tr('routineTodo.categoryForm.create')}

@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { SheetHandle } from '@/components/ui/sheet-handle';
 import { MARKET_MAX_SUPPLY } from '@/constants/market';
 import { Radius, Spacing } from '@/constants/theme';
@@ -55,7 +56,11 @@ export function MarketIssueSheet({
           accessibilityRole="button"
           accessibilityLabel={tr('market.issue.closeA11y')}
           hitSlop={8}
-          style={[styles.closeBtn, { backgroundColor: t.surfaceMuted }]}>
+          style={({ pressed }) => [
+            styles.closeBtn,
+            { backgroundColor: t.surfaceMuted },
+            pressed && pressedStyle('dim', t),
+          ]}>
           <Icon name="close" size={14} color={t.text} />
         </Pressable>
       </View>
@@ -72,7 +77,11 @@ export function MarketIssueSheet({
                 accessibilityRole="button"
                 accessibilityLabel={tr('market.order.quantityValue', { n })}
                 accessibilityState={{ selected: active }}
-                style={[styles.choice, { backgroundColor: active ? t.primary : t.surfaceMuted }]}>
+                style={({ pressed }) => [
+                  styles.choice,
+                  { backgroundColor: active ? t.primary : t.surfaceMuted },
+                  pressed && pressedStyle('dim', t),
+                ]}>
                 <Text style={[Typography.label, { color: active ? t.onPrimary : t.text }]}>
                   {n}
                 </Text>

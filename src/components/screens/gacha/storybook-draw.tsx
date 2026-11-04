@@ -6,8 +6,10 @@ import Svg, { Defs, Ellipse, LinearGradient, Path, RadialGradient, Stop } from '
 import type { GachaMachine } from '@/api/adapters';
 import { GiftBoxArt } from '@/components/screens/gacha/gift-box-art';
 import { Pictogram } from '@/components/ui/pictograms';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { GachaSceneColors as Scene, GachaStage, Spacing } from '@/constants/theme';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
+import { useTokens } from '@/hooks/use-tokens';
 import { GACHA_ART, GIFT_ATLAS, GIFT_OPEN_MS } from '@/resources/gacha-art';
 import { hapticSelection } from '@/utils/haptics';
 import { NATIVE_DRIVER } from '@/utils/animation';
@@ -93,6 +95,7 @@ export function GiftOpeningStage({
   reducedMotion?: boolean;
 }) {
   const tr = useT();
+  const t = useTokens();
   const { width, height } = useWindowDimensions();
   const size = Math.min(GachaStage.storybook, width - Spacing.four * 2, height * 0.42);
   const pulse = useAnimatedValue(0);
@@ -160,7 +163,7 @@ export function GiftOpeningStage({
       accessibilityHint={tr('roomShop.gacha.giftOpenHint')}
       accessibilityState={{ disabled: !ready }}
       testID="gacha-gift-stage"
-      style={{ width: size, height: size }}>
+      style={({ pressed }) => [{ width: size, height: size }, pressed && pressedStyle('dim', t)]}>
       <Animated.View
         pointerEvents="none"
         aria-hidden

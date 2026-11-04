@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import type { FeedMinigameRecord } from '@/components/screens/feed/types';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Icon } from '@/components/ui/icon';
 import { getMinigameDefinition } from '@/constants/minigames';
 import { Radius, Spacing } from '@/constants/theme';
@@ -132,7 +133,11 @@ export function FeedMinigameRecordCard({
           accessibilityLabel={tr('feed.record.removeA11y')}
           accessibilityState={{ disabled: removeDisabled }}
           hitSlop={Spacing.two}
-          style={[styles.remove, { backgroundColor: t.surface, borderColor: t.border }]}>
+          style={({ pressed }) => [
+            styles.remove,
+            { backgroundColor: t.surface, borderColor: t.border },
+            pressed && pressedStyle('dim', t),
+          ]}>
           <Icon name="close" size={14} color={t.icon} />
         </Pressable>
       ) : null}

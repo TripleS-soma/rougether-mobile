@@ -1,10 +1,12 @@
+import { HOUSE_DIORAMA_ASPECT } from '@/resources/house-diorama';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { HouseCoverArt } from '@/components/room/house-cover-art';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
-import { FRAME_ASPECT, type HouseFrameOptions, houseCoverName } from '@/resources/house-frame';
+import { type HouseFrameOptions, houseCoverName } from '@/resources/house-frame';
 
 /** One selectable house cover (server GET /houses/cover-images). */
 export type HouseCover = {
@@ -52,12 +54,13 @@ export function HouseCoverPicker({
             accessibilityRole="radio"
             accessibilityState={{ selected }}
             accessibilityLabel={tr('house.coverPicker.coverA11y', { name })}
-            style={[
+            style={({ pressed }) => [
               styles.cell,
               {
                 backgroundColor: t.surfaceMuted,
                 borderColor: selected ? t.primary : 'transparent',
               },
+              pressed && pressedStyle('dim', t),
             ]}>
             {/* 프레임 전체가 보이게 contain — cover는 위(지붕)·아래(받침)를
                 잘라 프레임이 잘린 것처럼 보였다 (#723). 셀 비율도 프레임
@@ -104,7 +107,7 @@ const styles = StyleSheet.create({
   },
   art: {
     width: '100%',
-    aspectRatio: FRAME_ASPECT,
+    aspectRatio: HOUSE_DIORAMA_ASPECT,
     borderRadius: Radius.sm,
     borderCurve: 'continuous',
   },

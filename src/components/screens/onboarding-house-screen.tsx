@@ -1,10 +1,12 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 /** 서버 `PUT /onboarding/house`의 `choice` (#1407) — 좋아요 / 괜찮아요. */
 export type OnboardingHouseChoice = 'AUTO_JOIN' | 'PERSONAL';
@@ -61,7 +63,7 @@ export function OnboardingHouseScreen({
           <View
             testID="onboarding-house-result"
             style={[styles.resultCard, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[styles.resultEmoji, emph('normal')]}>{joined ? '🎉' : '🏠'}</Text>
+            <Icon name={joined ? 'sparkles' : 'home'} size={Spacing.six} color={t.primary} />
             <Text style={[Typography.h2, styles.center, { color: t.text }]}>{title}</Text>
             <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>{body}</Text>
           </View>
@@ -70,7 +72,11 @@ export function OnboardingHouseScreen({
           <Pressable
             accessibilityRole="button"
             onPress={onContinue}
-            style={[styles.primary, { backgroundColor: t.primary }]}>
+            style={({ pressed }) => [
+              styles.primary,
+              { backgroundColor: t.primary },
+              pressed && pressedStyle('fill', t),
+            ]}>
             <Text style={[Typography.label, { color: t.onPrimary }]}>
               {tr('member.onboardingHouse.continue')}
             </Text>
@@ -107,7 +113,11 @@ export function OnboardingHouseScreen({
           accessibilityState={{ disabled: saving, busy: saving }}
           disabled={saving}
           onPress={() => onChoose?.('AUTO_JOIN')}
-          style={[styles.choice, { backgroundColor: t.primary, opacity: saving ? 0.5 : 1 }]}>
+          style={({ pressed }) => [
+            styles.choice,
+            { backgroundColor: t.primary, opacity: saving ? 0.5 : 1 },
+            pressed && pressedStyle('fill', t),
+          ]}>
           <Text style={[Typography.label, { color: t.onPrimary }]}>
             {tr('member.onboardingHouse.autoJoin')}
           </Text>
@@ -120,7 +130,11 @@ export function OnboardingHouseScreen({
           accessibilityState={{ disabled: saving }}
           disabled={saving}
           onPress={() => onChoose?.('PERSONAL')}
-          style={[styles.choice, { backgroundColor: t.surfaceMuted, opacity: saving ? 0.5 : 1 }]}>
+          style={({ pressed }) => [
+            styles.choice,
+            { backgroundColor: t.surfaceMuted, opacity: saving ? 0.5 : 1 },
+            pressed && pressedStyle('dim', t),
+          ]}>
           <Text style={[Typography.label, { color: t.text }]}>
             {tr('member.onboardingHouse.personal')}
           </Text>
@@ -146,7 +160,6 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
     borderWidth: Spacing.half,
   },
-  resultEmoji: { fontSize: Spacing.six },
   center: { textAlign: 'center' },
   actions: { padding: Spacing.four, gap: Spacing.three },
   choice: {

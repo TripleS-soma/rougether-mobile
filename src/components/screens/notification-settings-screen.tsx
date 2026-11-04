@@ -10,6 +10,7 @@ import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style'
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { i18n, useT } from '@/i18n';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 /**
  * App model of GET/PATCH /users/me/notification-settings (#495) — 서버와 같은
@@ -135,7 +136,11 @@ export function NotificationSettingsScreen({
               onPress={onRetry}
               accessibilityRole="button"
               accessibilityLabel={tr('member.notificationSettings.retry')}
-              style={[styles.retryBtn, { backgroundColor: t.primary }]}>
+              style={({ pressed }) => [
+                styles.retryBtn,
+                { backgroundColor: t.primary },
+                pressed && pressedStyle('fill', t),
+              ]}>
               <Text style={[Typography.label, { color: t.onPrimary }]}>
                 {tr('member.notificationSettings.retry')}
               </Text>
