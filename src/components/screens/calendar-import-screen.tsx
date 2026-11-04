@@ -247,6 +247,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     padding: Spacing.three,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
   },
   titleRow: {
     flexDirection: 'row',
@@ -257,6 +258,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.half,
     borderRadius: Radius.sm,
+    borderCurve: 'continuous',
   },
   flex: { flex: 1 },
 });

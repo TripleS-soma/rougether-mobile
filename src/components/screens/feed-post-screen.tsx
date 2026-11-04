@@ -786,6 +786,7 @@ const styles = StyleSheet.create({
   pager: {
     width: '100%',
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
   },
   pageBadge: {
     position: 'absolute',
@@ -809,6 +810,7 @@ const styles = StyleSheet.create({
   menuSheet: {
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.two,
     paddingBottom: Spacing.six,
@@ -850,6 +852,7 @@ const styles = StyleSheet.create({
     flex: 1,
     maxHeight: 120,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },
@@ -868,6 +871,7 @@ const styles = StyleSheet.create({
   dialog: {
     maxHeight: '90%',
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
     padding: Spacing.four,
     gap: Spacing.three,
   },
@@ -890,6 +894,7 @@ const styles = StyleSheet.create({
     minHeight: 120,
     maxHeight: 280,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     padding: Spacing.three,
     textAlignVertical: 'top',
   },

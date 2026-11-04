@@ -730,6 +730,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     borderWidth: 1,
@@ -739,6 +740,7 @@ const styles = StyleSheet.create({
   sideBtn: {
     paddingHorizontal: Spacing.four,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -747,6 +749,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },
@@ -754,6 +757,7 @@ const styles = StyleSheet.create({
   previewCard: {
     marginTop: Spacing.two,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     padding: Spacing.three,
     gap: Spacing.one,
   },
@@ -782,6 +786,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.three,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     padding: Spacing.three,
   },
   // 탭 가능한 카드 본문(커버+정보) — 입주 버튼과 분리 (#328).
@@ -806,6 +811,7 @@ const styles = StyleSheet.create({
     maxWidth: ContentMaxWidth,
     alignSelf: 'center',
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
   },
   hpContent: {
     padding: Spacing.four,
@@ -840,6 +846,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
@@ -880,6 +887,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderStyle: 'dashed',
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     paddingVertical: Spacing.four,
     alignItems: 'center',
   },
@@ -896,6 +904,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     padding: Spacing.three,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
   },
   previewMissionHead: {
     flexDirection: 'row',

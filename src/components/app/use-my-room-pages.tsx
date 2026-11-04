@@ -231,14 +231,25 @@ export function useMyRoomPages({
     setSelectedDate: setCalendarSelectedDate,
     refresh: refreshCalendar,
     refreshDays: refreshCalendarDays,
+    prefetchWeek: prefetchCalendarWeek,
   } = calendar;
   // 달력 탭 날짜 탭 → 주간 보기 (#1327). 선택은 MyRoomScreen이 이미 바꿨다.
   const openCalendarWeek = useCallback(
     (date: string) => {
       track('calendar_week_open', { today: date === calendar.today });
+      // 그 주 7일을 미리 받아 주간 보기에서 날짜를 옮길 때 로딩으로 깜빡이지 않게 (2026-11-04).
+      prefetchCalendarWeek(date);
       setScreen('calendarWeek');
     },
-    [calendar.today, setScreen],
+    [calendar.today, prefetchCalendarWeek, setScreen],
+  );
+  // 주간 보기의 날짜 변경 — 주를 넘기면 새 주도 미리 받는다(같은 주면 캐시라 요청 없음).
+  const selectCalendarWeekDate = useCallback(
+    (date: string) => {
+      setCalendarSelectedDate(date);
+      prefetchCalendarWeek(date);
+    },
+    [setCalendarSelectedDate, prefetchCalendarWeek],
   );
   const closeCalendarWeek = useCallback(() => setScreen('calendar'), [setScreen]);
   const markedCalendarDates = useMemo(
@@ -681,7 +692,7 @@ export function useMyRoomPages({
     calendarWeekProps: {
       ...tabProps,
       selectedDate: calendarSelectedDate,
-      onSelectedDateChange: setCalendarSelectedDate,
+      onSelectedDateChange: selectCalendarWeekDate,
       onEditRoutine: editRoutineFromCalendarWeek,
       calendarMode: 'week' as const,
       onBack: closeCalendarWeek,

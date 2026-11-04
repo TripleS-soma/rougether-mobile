@@ -395,8 +395,8 @@
       "cannotUncomplete": "미션에 기여된 루틴은 완료를 취소할 수 없어요"
     },
     "missionSheet": {
-      "allDone": "🎉 모든 미션 완료!",
-      "stepDone": "✅ 미션 {{n}} 완료!",
+      "allDone": "모든 미션 완료!",
+      "stepDone": "미션 {{n}} 완료!",
       "allDoneBody": "{{n}}개 미션을 모두 마쳤어요. 이제 루틴을 쌓고 방을 꾸미며 루게더를 마음껏 즐겨보세요!",
       "next": "다음 미션: {{label}}",
       "laterA11y": "나중에 하기",
@@ -428,7 +428,7 @@
       "codeNotFound": "초대코드를 찾지 못했어요. 초대 페이지에서 코드를 다시 복사해 주세요."
     },
     "inviteArrival": {
-      "title": "🎁 {{inviter}}의 초대로 오셨어요",
+      "title": "{{inviter}}의 초대로 오셨어요",
       "body": "초대코드를 쓰면 코인 {{n}}개를 받아요. 초대코드는 한 번만 쓸 수 있어요.",
       "laterA11y": "초대 나중에 받기",
       "later": "나중에",
@@ -462,7 +462,9 @@
       "coastal-lighthouse": "바닷바람 등대집",
       "snowy-cabin": "눈꽃 통나무집",
       "herb-greenhouse": "허브 온실집",
-      "clockwork-cottage": "태엽 시계집"
+      "clockwork-cottage": "태엽 시계집",
+      "forest-canopy": "초록 나무집",
+      "evening-brick": "저녁빛 벽돌집"
     },
     "chat": {
       "title": "집 채팅",
@@ -492,6 +494,12 @@
       "range": "{{sm}}월 {{sd}}일 – {{em}}월 {{ed}}일",
       "done": "{{n}}개 완료",
       "none": "완료 없음"
+    },
+    "diorama": {
+      "main": "본채",
+      "annex": "별채 {{number}}",
+      "more": "다른 별채에 {{count}}명",
+      "pageA11y": "{{name}} 보기"
     }
   }
 }

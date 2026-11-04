@@ -2,6 +2,8 @@ import { Platform } from 'react-native';
 
 import { apiGet, apiGetList, apiUpload } from '@/api/client';
 
+export const FURNITURE_GENERATION_COIN_COST = 100;
+
 export type FurniturePhoto = { uri: string; name: string; type: string };
 export type FurnitureCreditBalance = { available: number; reserved: number };
 export type FurnitureJob = {

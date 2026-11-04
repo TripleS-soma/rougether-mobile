@@ -390,10 +390,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderWidth: 3,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
   },
   bubble: {
     position: 'absolute',
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     padding: Spacing.four,
     gap: Spacing.two,
   },

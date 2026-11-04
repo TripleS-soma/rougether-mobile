@@ -67,6 +67,7 @@ function SpeakerSheetBase({
         maxHeight: '92%',
         borderTopLeftRadius: Radius.xl,
         borderTopRightRadius: Radius.xl,
+        borderCurve: 'continuous',
         overflow: 'hidden',
         backgroundColor: t.surface,
       }}>
@@ -157,7 +158,7 @@ function SpeakerSheetBase({
             accessibilityLabel={tr('roomShop.speaker.volumeUpA11y')}
             onPress={() => onVolumeChange(clampVolume(volume + 0.1))}
             style={styles.smallButton}>
-            <Text style={[Typography.h3, { color: t.text }]}>+</Text>
+            <Ionicons name="add" size={Spacing.four} color={t.text} />
           </Pressable>
         </View>
         {error ? (
@@ -204,6 +205,7 @@ const styles = StyleSheet.create({
   track: {
     borderWidth: 1,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     padding: Spacing.three,
     flexDirection: 'row',
     alignItems: 'center',

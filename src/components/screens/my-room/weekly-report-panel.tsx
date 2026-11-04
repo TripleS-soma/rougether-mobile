@@ -299,6 +299,7 @@ const styles = StyleSheet.create({
   center: { textAlign: 'center' },
   hero: {
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     padding: Spacing.three,
     gap: Spacing.one,
     alignItems: 'center',

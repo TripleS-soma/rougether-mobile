@@ -392,6 +392,7 @@ const styles = StyleSheet.create({
     flexBasis: '22%',
     flexGrow: 0,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     borderWidth: 2,
     padding: Spacing.two,
     gap: Spacing.half,
@@ -407,11 +408,13 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 1,
     borderRadius: Radius.sm,
+    borderCurve: 'continuous',
   },
   thumbWrap: {
     width: '100%',
     aspectRatio: 1,
     borderRadius: Radius.sm,
+    borderCurve: 'continuous',
     overflow: 'hidden',
   },
   tileName: {

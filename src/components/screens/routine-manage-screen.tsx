@@ -156,7 +156,7 @@ export function RoutineManageScreen({
                             </View>
                           ) : null}
                         </View>
-                        <Text style={[styles.chevron, { color: t.textDisabled }]}>›</Text>
+                        <Icon name="forward" size={16} color={t.textDisabled} />
                       </Pressable>
                     ))}
                   </View>
@@ -254,8 +254,5 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 13,
-  },
-  chevron: {
-    fontSize: 22,
   },
 });

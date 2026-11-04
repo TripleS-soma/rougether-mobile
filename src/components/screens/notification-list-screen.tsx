@@ -411,6 +411,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.three,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     borderWidth: 1,
     padding: Spacing.three,
   },
@@ -441,6 +442,7 @@ const styles = StyleSheet.create({
   deleteAction: {
     flex: 1,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
   },

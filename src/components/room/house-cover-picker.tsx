@@ -1,10 +1,11 @@
+import { HOUSE_DIORAMA_ASPECT } from '@/resources/house-diorama';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { HouseCoverArt } from '@/components/room/house-cover-art';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
-import { FRAME_ASPECT, type HouseFrameOptions, houseCoverName } from '@/resources/house-frame';
+import { type HouseFrameOptions, houseCoverName } from '@/resources/house-frame';
 
 /** One selectable house cover (server GET /houses/cover-images). */
 export type HouseCover = {
@@ -96,6 +97,7 @@ const styles = StyleSheet.create({
     width: '47%',
     flexGrow: 1,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     borderWidth: 2,
     padding: Spacing.one,
     alignItems: 'center',
@@ -103,8 +105,9 @@ const styles = StyleSheet.create({
   },
   art: {
     width: '100%',
-    aspectRatio: FRAME_ASPECT,
+    aspectRatio: HOUSE_DIORAMA_ASPECT,
     borderRadius: Radius.sm,
+    borderCurve: 'continuous',
   },
   label: { textAlign: 'center' },
 });

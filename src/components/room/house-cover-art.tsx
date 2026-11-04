@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { houseDioramaTheme, HOUSE_DIORAMA_ASPECT } from '@/resources/house-diorama';
 import type { StyleProp, ImageStyle } from 'react-native';
 
 import { useHouseFrame } from '@/hooks/use-house-frame';
@@ -23,16 +24,17 @@ export function HouseCoverArt({
   ...options
 }: Props) {
   const { frame, onFrameError } = useHouseFrame(coverImageKey, options);
+  const diorama = houseDioramaTheme(coverImageKey, options.enabled);
   return (
     <Image
-      key={frame.assetKey}
-      source={assetSource(frame.assetKey)}
-      style={[{ aspectRatio: frame.sourceAspectRatio }, style]}
+      key={diorama?.id ?? frame.assetKey}
+      source={diorama?.source ?? assetSource(frame.assetKey)}
+      style={[{ aspectRatio: diorama ? HOUSE_DIORAMA_ASPECT : frame.sourceAspectRatio }, style]}
       contentFit={legacyContentFit}
       transition={0}
       cachePolicy="memory-disk"
-      recyclingKey={frame.assetKey}
-      onError={onFrameError}
+      recyclingKey={diorama?.id ?? frame.assetKey}
+      onError={diorama ? undefined : onFrameError}
       accessibilityLabel={name}
       testID={testID}
     />

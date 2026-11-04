@@ -199,6 +199,7 @@ const styles = StyleSheet.create({
   btn: {
     flex: 1,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     paddingVertical: Spacing.two,
     alignItems: 'center',
   },

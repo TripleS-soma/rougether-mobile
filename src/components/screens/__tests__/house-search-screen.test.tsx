@@ -485,3 +485,11 @@ describe('HouseSearchScreen — 무한 스크롤·검색 범위 (#975)', () => {
     expect(queryByText(/지금까지 불러온 집에서 찾은 결과예요/)).toBeNull();
   });
 });
+
+// Explicit rollback-renderer coverage. The default shared renderer has its own integration suite.
+beforeEach(() => {
+  process.env.EXPO_PUBLIC_HOUSE_DIORAMA = '0';
+});
+afterEach(() => {
+  delete process.env.EXPO_PUBLIC_HOUSE_DIORAMA;
+});

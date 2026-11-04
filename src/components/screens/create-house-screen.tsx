@@ -335,6 +335,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
@@ -356,6 +357,7 @@ const styles = StyleSheet.create({
   themeCell: {
     width: '31%',
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     borderWidth: 2,
     paddingVertical: Spacing.three,
     alignItems: 'center',
@@ -374,6 +376,7 @@ const styles = StyleSheet.create({
   codeBox: {
     flex: 1,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,
     justifyContent: 'center',
@@ -381,6 +384,7 @@ const styles = StyleSheet.create({
   codeBtn: {
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
   },

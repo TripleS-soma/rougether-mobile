@@ -81,6 +81,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.one,
     marginTop: Spacing.half,

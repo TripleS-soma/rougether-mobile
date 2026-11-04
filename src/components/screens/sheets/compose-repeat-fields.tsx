@@ -96,5 +96,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: Spacing.two,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
   },
 });

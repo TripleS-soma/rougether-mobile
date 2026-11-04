@@ -18,6 +18,7 @@ export function Card({ children, style }: CardProps) {
 const styles = StyleSheet.create({
   card: {
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     padding: Spacing.four,
     gap: Spacing.three,
   },

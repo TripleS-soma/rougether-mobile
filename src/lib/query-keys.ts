@@ -16,6 +16,7 @@ export const queryKeys = {
     leaderboard: (userId: number | null | undefined, gameCode: string) =>
       ['minigames', userId, 'leaderboard', gameCode] as const,
   },
+  furnitureStudio: (userId: number | null | undefined) => ['furniture-studio', userId] as const,
   recommendations: ['recommendations'] as const,
   gachas: ['gachas', 'categories'] as const,
   starterGacha: (userId: number | null | undefined) => ['starter-gacha', userId] as const,

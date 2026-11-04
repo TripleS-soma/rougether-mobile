@@ -43,6 +43,7 @@ const styles = StyleSheet.create({
   privacyCard: {
     flex: 1,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     borderWidth: 2,
     padding: Spacing.three,
     gap: Spacing.half,

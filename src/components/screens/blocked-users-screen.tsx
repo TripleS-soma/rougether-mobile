@@ -169,6 +169,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
   },
   name: {
     flex: 1,

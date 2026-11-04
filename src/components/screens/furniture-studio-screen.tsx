@@ -7,7 +7,7 @@ import type {
   FurnitureJob,
   FurniturePhoto,
 } from '@/api/furniture-generation';
-import { isFurnitureJobActive } from '@/api/furniture-generation';
+import { FURNITURE_GENERATION_COIN_COST, isFurnitureJobActive } from '@/api/furniture-generation';
 import { MarketIssueSheet } from '@/components/screens/market/market-issue-sheet';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -21,6 +21,7 @@ import { useT } from '@/i18n';
 
 export type FurnitureStudioScreenProps = {
   balance: FurnitureCreditBalance | null;
+  coinBalance?: number | null;
   jobs: FurnitureJob[];
   photo: FurniturePhoto | null;
   loading?: boolean;
@@ -41,6 +42,7 @@ export type FurnitureStudioScreenProps = {
 
 export function FurnitureStudioScreen({
   balance,
+  coinBalance = null,
   jobs,
   photo,
   loading,
@@ -61,7 +63,9 @@ export function FurnitureStudioScreen({
   const inset = useHeaderContentInset();
   const screenStyle = useScreenStyle([]);
   const active = jobs.find(isFurnitureJobActive);
-  const ready = !loading && !submitting && !active && (balance?.available ?? 0) > 0;
+  const usesCredit = (balance?.available ?? 0) > 0;
+  const canAfford = usesCredit || (coinBalance ?? 0) >= FURNITURE_GENERATION_COIN_COST;
+  const ready = !loading && !submitting && !active && balance != null && canAfford;
   // 거래소 발행 시트 — 고른 가구의 userItemId.
   const [issuing, setIssuing] = useState<number | null>(null);
   const [issueBusy, setIssueBusy] = useState(false);
@@ -97,6 +101,14 @@ export function FurnitureStudioScreen({
                 : ''}
             </Text>
           </View>
+          {coinBalance != null ? (
+            <Text style={[Typography.label, { color: t.text }]}>
+              {tr('roomShop.studio.coins', { n: coinBalance })}
+            </Text>
+          ) : null}
+          <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
+            {tr('roomShop.studio.paymentHint', { n: FURNITURE_GENERATION_COIN_COST })}
+          </Text>
         </View>
         {loading ? (
           <ActivityIndicator
@@ -144,7 +156,14 @@ export function FurnitureStudioScreen({
             />
             {photo ? (
               <Button
-                label={tr(submitting ? 'roomShop.studio.sending' : 'roomShop.studio.submit')}
+                label={tr(
+                  submitting
+                    ? 'roomShop.studio.sending'
+                    : usesCredit
+                      ? 'roomShop.studio.submit'
+                      : 'roomShop.studio.submitCoins',
+                  { n: FURNITURE_GENERATION_COIN_COST },
+                )}
                 leftIcon="sparkles"
                 onPress={onSubmit}
                 disabled={!ready}
@@ -298,6 +317,7 @@ const styles = StyleSheet.create({
   hero: {
     padding: Spacing.four,
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
     gap: Spacing.three,
     alignItems: 'center',
   },

@@ -14,7 +14,9 @@
         "INVITE_REWARD": "Friend invite reward",
         "GACHA_DRAW": "Gift draw",
         "SHOP_PURCHASE": "Shop purchase",
-        "other": "Other"
+        "other": "Other",
+        "FURNITURE_GENERATION": "AI furniture creation",
+        "FURNITURE_GENERATION_REFUND": "AI furniture generation refund"
       },
       "historyTitle": "Currency history",
       "closeA11y": "Close currency history",
@@ -280,7 +282,7 @@
       "choosePhoto": "Choose a furniture photo",
       "sending": "Sending photo",
       "submit": "Make it with 1 credit",
-      "photoHint": "A JPG or PNG showing one clear subject · up to 10MB\nIf several subjects are visible, crop the photo to keep only the one you want.\nThe photo is used to create AI furniture. Credits are returned if generation fails.",
+      "photoHint": "A JPG or PNG showing one clear subject · up to 10MB\nIf several subjects are visible, crop the photo to keep only the one you want.\nThe photo is used to create AI furniture. The credit or coins used are returned if generation fails.",
       "attendanceTitle": "Check in for 7 days, make your own furniture",
       "attendanceBody": "Check in 7 days in a row to earn 1 credit.",
       "attendanceCta": "View attendance event",
@@ -290,7 +292,7 @@
       "failed": "Couldn't finish this one",
       "placeInRoom": "Place in my room",
       "error": {
-        "FURNITURE_CREDITS_REQUIRED": "Not enough credits. Earn credits from the attendance event.",
+        "FURNITURE_CREDITS_REQUIRED": "You need 1 credit or 100 coins.",
         "FURNITURE_GENERATION_UNAVAILABLE": "Furniture making is taking a break. Please try again later.",
         "FURNITURE_DAILY_LIMIT": "You've used all of today's attempts. See you tomorrow.",
         "FURNITURE_JOB_IN_PROGRESS": "A piece is still being made. You can start a new one once it's done.",
@@ -325,9 +327,12 @@
           "reason": "A processing problem prevented us from finishing your furniture.",
           "hint": "Try again in a little while. If it keeps failing, contact support."
         },
-        "creditReturned": "The credit for this failed attempt has been returned.",
+        "creditReturned": "The credit or coins used for this failed job have been returned.",
         "existingFurniture": "Your previously finished furniture is still in your inventory."
-      }
+      },
+      "coins": "Coins: {{n}}",
+      "paymentHint": "Credits are used first. Without a credit, you can create furniture for {{n}} coins.",
+      "submitCoins": "Create for {{n}} coins"
     },
     "minigame": {
       "runner": {

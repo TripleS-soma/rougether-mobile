@@ -121,6 +121,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.three,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.two,
     // 화면 위에 뜨는 카드 — 토스트와 같은 그림자 결.

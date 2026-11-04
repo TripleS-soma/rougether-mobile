@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { useToast } from '@/components/ui/toast';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, TabularNums } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
 
@@ -43,7 +43,9 @@ export const RoomGrowthPill = memo(function RoomGrowthPill({
       }
       accessibilityLabel={`${tr('roomShop.growth.a11y', { level: growthLevel })}${remaining == null ? '' : tr('roomShop.growth.a11yRemaining', { n: remaining })}${points == null ? '' : tr('roomShop.growth.a11yPoints', { n: points })}`}>
       <GlassSurface fallbackColor={t.surface} interactive={remaining != null} style={styles.glass}>
-        <Text style={[Typography.label, emph('bold'), { color: t.text }]}>Lv. {growthLevel}</Text>
+        <Text style={[Typography.label, emph('bold'), TabularNums, { color: t.text }]}>
+          Lv. {growthLevel}
+        </Text>
       </GlassSurface>
     </Pressable>
   );

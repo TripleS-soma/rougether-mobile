@@ -520,10 +520,12 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
   },
   // Clip row feedback inside, leaving the outer fallback shadow visible.
   cardContent: {
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
     overflow: 'hidden',
   },
   // 회원탈퇴 링크 (#547) — 목록 아래 중앙, 낮은 존재감.

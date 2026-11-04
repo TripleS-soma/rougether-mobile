@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
@@ -45,11 +46,14 @@ function MissionSheetBase({
       onClose={onClose}
       cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
       <View style={[styles.handle, { backgroundColor: t.border }]} />
-      <Text style={[Typography.h2, { color: t.text }]}>
-        {last
-          ? tr('house.missionSheet.allDone')
-          : tr('house.missionSheet.stepDone', { n: completedStep })}
-      </Text>
+      <View style={styles.titleRow}>
+        <Icon name={last ? 'sparkles' : 'success'} size={24} color={t.primary} />
+        <Text style={[Typography.h2, styles.title, { color: t.text }]}>
+          {last
+            ? tr('house.missionSheet.allDone')
+            : tr('house.missionSheet.stepDone', { n: completedStep })}
+        </Text>
+      </View>
       {last ? (
         <Text style={[Typography.body, styles.body, { color: t.textMuted }]}>
           {tr('house.missionSheet.allDoneBody', { n: totalSteps })}
@@ -90,9 +94,12 @@ function MissionSheetBase({
 }
 
 const styles = StyleSheet.create({
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  title: { flexShrink: 1 },
   sheet: {
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.two,
     paddingBottom: Spacing.six,

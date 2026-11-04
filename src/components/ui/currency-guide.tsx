@@ -94,6 +94,7 @@ export function CurrencyGuide({ initialOpen = false }: CurrencyGuideProps) {
 const styles = StyleSheet.create({
   card: {
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
   },
   head: {
     flexDirection: 'row',

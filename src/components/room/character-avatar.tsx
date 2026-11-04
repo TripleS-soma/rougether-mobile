@@ -73,6 +73,8 @@ export type CharacterAvatarProps = {
   style?: StyleProp<ImageStyle>;
   /** 원본 해상도 디코딩 — 카메라 줌 대상(집 창문)용. */
   sharp?: boolean;
+  /** Floor-aligned contain mode for the shared-house scene. */
+  contentPosition?: 'center' | 'bottom';
   /**
    * 나머지 포즈 프레임을 미리 받아둘지 (#970). **기본은 끔.**
    *
@@ -98,6 +100,7 @@ export const CharacterAvatar = memo(function CharacterAvatar({
   size = 96,
   style,
   sharp = false,
+  contentPosition = 'center',
 }: CharacterAvatarProps) {
   const character = useMemo(
     () => CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0],
@@ -133,6 +136,7 @@ export const CharacterAvatar = memo(function CharacterAvatar({
         source={assetSource(key)}
         style={[sizeStyle, style]}
         contentFit="contain"
+        contentPosition={contentPosition}
         cachePolicy="memory-disk"
         // 줌 대상에서는 원본 해상도로 — 다운스케일 디코딩은 확대 시 흐려진다.
         allowDownscaling={!sharp}
@@ -161,6 +165,7 @@ export const CharacterAvatar = memo(function CharacterAvatar({
       source={source}
       style={[sizeStyle, style]}
       contentFit="contain"
+      contentPosition={contentPosition}
       allowDownscaling={!sharp}
       accessibilityLabel={character.name}
     />

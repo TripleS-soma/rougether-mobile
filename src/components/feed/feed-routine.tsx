@@ -256,6 +256,7 @@ const styles = StyleSheet.create({
     gap: Spacing.half,
     paddingVertical: Spacing.one,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
   },
   dot: {
     width: Spacing.one,
@@ -272,6 +273,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     borderWidth: StyleSheet.hairlineWidth * 2,
   },
   state: {
@@ -281,6 +283,7 @@ const styles = StyleSheet.create({
   empty: {
     padding: Spacing.three,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
   },
   retry: {
     paddingHorizontal: Spacing.three,

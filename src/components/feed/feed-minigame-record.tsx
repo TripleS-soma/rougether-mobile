@@ -143,6 +143,7 @@ export function FeedMinigameRecordCard({
 const styles = StyleSheet.create({
   thumb: {
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.half,
@@ -150,6 +151,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     borderWidth: StyleSheet.hairlineWidth,
     padding: Spacing.three,
     gap: Spacing.three,

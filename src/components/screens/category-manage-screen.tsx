@@ -11,7 +11,7 @@ import { type RoutineCategoryMeta, visibilityLabelKey } from '@/constants/routin
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
-import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
 
 export type CategoryManageScreenProps = {
@@ -58,7 +58,6 @@ export function CategoryManageScreen({
   const tr = useT();
   const column = useResponsiveColumn();
   const Typography = useTypography();
-  const emph = useFontEmphasis();
   // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
   const headerInset = useHeaderContentInset();
   // null = 시트 닫힘, 'new' = 생성, 카테고리 = 그 항목 수정.
@@ -196,14 +195,11 @@ export function CategoryManageScreen({
                             styles.rowBtn,
                             { backgroundColor: idx === 0 ? t.surfaceMuted : t.primarySoft },
                           ]}>
-                          <Text
-                            style={[
-                              styles.moveGlyph,
-                              emph('bold'),
-                              { color: idx === 0 ? t.textDisabled : t.primary },
-                            ]}>
-                            ▲
-                          </Text>
+                          <Icon
+                            name="move-up"
+                            size={16}
+                            color={idx === 0 ? t.textDisabled : t.primary}
+                          />
                         </Pressable>
                         <Pressable
                           onPress={() => moveCategory(c.id, 1)}
@@ -219,15 +215,11 @@ export function CategoryManageScreen({
                                 idx === categories.length - 1 ? t.surfaceMuted : t.primarySoft,
                             },
                           ]}>
-                          <Text
-                            style={[
-                              styles.moveGlyph,
-                              {
-                                color: idx === categories.length - 1 ? t.textDisabled : t.primary,
-                              },
-                            ]}>
-                            ▼
-                          </Text>
+                          <Icon
+                            name="move-down"
+                            size={16}
+                            color={idx === categories.length - 1 ? t.textDisabled : t.primary}
+                          />
                         </Pressable>
                         <Pressable
                           onPress={() => setMovingId(null)}
@@ -409,6 +401,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.three,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     borderLeftWidth: 4,
     padding: Spacing.three,
   },
@@ -419,7 +412,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  moveGlyph: { fontSize: 16 },
   houseBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -449,6 +441,7 @@ const styles = StyleSheet.create({
     width: '80%',
     maxWidth: 340,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     padding: Spacing.four,
     gap: Spacing.three,
   },

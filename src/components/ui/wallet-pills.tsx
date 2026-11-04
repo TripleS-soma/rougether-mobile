@@ -3,7 +3,7 @@ import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-nativ
 
 import { Icon, type IconName } from '@/components/ui/icon';
 import { formatAmount } from '@/constants/currency';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, TabularNums } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 import { useT } from '@/i18n';
@@ -107,7 +107,12 @@ function Pill({
       accessibilityLabel={`${label} ${safeValue}`}
       style={[styles.pill, compact && styles.pillCompact, { backgroundColor: t.surfaceMuted }]}>
       <Icon name={icon} size={compact ? 12 : 14} color={color} />
-      <Text style={[compact ? Typography.supporting : Typography.label, { color: t.text }]}>
+      <Text
+        style={[
+          compact ? Typography.supporting : Typography.label,
+          TabularNums,
+          { color: t.text },
+        ]}>
         {shown}
       </Text>
     </Pressable>

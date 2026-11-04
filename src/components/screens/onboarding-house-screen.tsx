@@ -1,5 +1,6 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useScreenStyle } from '@/hooks/use-screen-style';
@@ -61,7 +62,7 @@ export function OnboardingHouseScreen({
           <View
             testID="onboarding-house-result"
             style={[styles.resultCard, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[styles.resultEmoji, emph('normal')]}>{joined ? '🎉' : '🏠'}</Text>
+            <Icon name={joined ? 'sparkles' : 'home'} size={Spacing.six} color={t.primary} />
             <Text style={[Typography.h2, styles.center, { color: t.text }]}>{title}</Text>
             <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>{body}</Text>
           </View>
@@ -143,9 +144,9 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     padding: Spacing.five,
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
     borderWidth: Spacing.half,
   },
-  resultEmoji: { fontSize: Spacing.six },
   center: { textAlign: 'center' },
   actions: { padding: Spacing.four, gap: Spacing.three },
   choice: {
@@ -154,10 +155,12 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.four,
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
   },
   primary: {
     alignItems: 'center',
     paddingVertical: Spacing.three,
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
   },
 });

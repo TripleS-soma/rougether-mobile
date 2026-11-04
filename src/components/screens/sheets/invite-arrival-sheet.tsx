@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { type InvitePreview, inviterLabel } from '@/components/screens/invite-friends-screen';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
@@ -41,9 +42,12 @@ export function InviteArrivalSheet({
       dragEnabled={!busy}
       cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
       <View style={[styles.handle, { backgroundColor: t.border }]} />
-      <Text style={[Typography.h2, { color: t.text }]}>
-        {tr('house.inviteArrival.title', { inviter: inviterLabel(preview?.inviterNickname) })}
-      </Text>
+      <View style={styles.titleRow}>
+        <Icon name="gift" size={24} color={t.primary} />
+        <Text style={[Typography.h2, styles.title, { color: t.text }]}>
+          {tr('house.inviteArrival.title', { inviter: inviterLabel(preview?.inviterNickname) })}
+        </Text>
+      </View>
       <Text style={[Typography.body, styles.body, { color: t.textMuted }]}>
         {tr('house.inviteArrival.body', { n: coin })}
       </Text>
@@ -77,9 +81,12 @@ export function InviteArrivalSheet({
 }
 
 const styles = StyleSheet.create({
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  title: { flexShrink: 1 },
   sheet: {
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.two,
     paddingBottom: Spacing.six,

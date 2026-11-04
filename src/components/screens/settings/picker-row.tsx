@@ -72,6 +72,7 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     padding: Spacing.three,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     borderWidth: 1,
   },
   rowSelected: {

@@ -415,6 +415,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     padding: Spacing.three,
     gap: Spacing.three,
   },
@@ -426,6 +427,7 @@ const styles = StyleSheet.create({
   },
   contentInput: {
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     minHeight: 120,
@@ -443,6 +445,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
   },
   shotRemove: {
     position: 'absolute',
@@ -458,6 +461,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderStyle: 'dashed',
     alignItems: 'center',
@@ -500,6 +504,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: Radius.sm,
+    borderCurve: 'continuous',
   },
   viewerBackdrop: {
     flex: 1,

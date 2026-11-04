@@ -157,6 +157,7 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     gap: Spacing.three,
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
     borderWidth: Spacing.half,
   },
   cardCopy: { flex: 1, gap: Spacing.two },

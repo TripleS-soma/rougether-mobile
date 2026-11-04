@@ -132,6 +132,7 @@ const styles = StyleSheet.create({
     width: '80%',
     maxWidth: 340,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     padding: Spacing.four,
     gap: Spacing.three,
   },

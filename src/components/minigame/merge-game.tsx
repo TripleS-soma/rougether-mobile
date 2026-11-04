@@ -133,6 +133,7 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 400 / 600,
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
     overflow: 'hidden',
   },
   game: { flex: 1 },

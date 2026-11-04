@@ -274,6 +274,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: Spacing.one,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     gap: Spacing.one,
   },
   category: {
@@ -283,6 +284,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     minHeight: 48,
     paddingVertical: Spacing.two,
   },
@@ -310,6 +312,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -324,6 +327,7 @@ const styles = StyleSheet.create({
   draw: {
     minHeight: 72,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',

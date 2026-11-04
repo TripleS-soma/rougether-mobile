@@ -100,6 +100,7 @@ const styles = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: Radius.xl,
     borderTopRightRadius: Radius.xl,
+    borderCurve: 'continuous',
     paddingTop: Spacing.two,
     paddingBottom: Spacing.five,
   },

@@ -156,6 +156,7 @@ const DOT = Spacing.two;
 const styles = StyleSheet.create({
   wrap: {
     borderRadius: Radius.xl,
+    borderCurve: 'continuous',
     borderWidth: StyleSheet.hairlineWidth,
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.two,

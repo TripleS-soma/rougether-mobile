@@ -5,6 +5,10 @@ import svgr from 'vite-plugin-svgr';
 
 const config: StorybookConfig = {
   stories: ['../stories/**/*.stories.tsx'],
+  staticDirs: [
+    { from: '../design-assets/houses', to: '/house-assets/source' },
+    { from: '../assets/houses/shared-v1', to: '/house-assets/app' },
+  ],
   addons: ['@storybook/addon-docs', '@storybook/addon-a11y', '@storybook/addon-vitest'],
   framework: '@storybook/react-native-web-vite',
   core: { disableTelemetry: true },

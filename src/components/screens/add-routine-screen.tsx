@@ -535,7 +535,7 @@ export function AddRoutineScreen({
                   {tr('routineTodo.addRoutine.pickPeriod')}
                 </Text>
               </View>
-              <Text style={[styles.chevron, { color: t.textDisabled }]}>›</Text>
+              <Icon name="forward" size={16} color={t.textDisabled} />
             </Pressable>
           ) : null}
         </View>
@@ -578,7 +578,7 @@ export function AddRoutineScreen({
                   {tr('routineTodo.addRoutine.pickTime')}
                 </Text>
               </View>
-              <Text style={[styles.chevron, { color: t.textDisabled }]}>›</Text>
+              <Icon name="forward" size={16} color={t.textDisabled} />
             </Pressable>
           ) : null}
         </View>
@@ -720,6 +720,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     padding: Spacing.two,
   },
   titleInput: { flex: 1, fontSize: 18, paddingVertical: Spacing.one },
@@ -746,6 +747,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     borderWidth: 2,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
@@ -764,6 +766,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -771,6 +774,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 40,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -778,6 +782,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 40,
     borderRadius: Radius.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -786,6 +791,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.three,
     borderRadius: Radius.lg,
+    borderCurve: 'continuous',
     padding: Spacing.three,
   },
   infoIcon: {
@@ -795,7 +801,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chevron: { fontSize: 22 },
   footer: {
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
