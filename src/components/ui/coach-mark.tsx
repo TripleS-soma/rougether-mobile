@@ -18,6 +18,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
@@ -341,7 +342,8 @@ export function CoachMarkOverlay({
               onPress={onSkip}
               accessibilityRole="button"
               accessibilityLabel={tr('member.tutorial.skipA11y')}
-              hitSlop={8}>
+              hitSlop={8}
+              style={({ pressed }) => pressed && pressedStyle('dim', t)}>
               <Text style={[Typography.supporting, { color: t.textMuted }]}>
                 {tr('member.common.skip')}
               </Text>
@@ -355,7 +357,11 @@ export function CoachMarkOverlay({
               accessibilityLabel={
                 last ? tr('member.tutorial.finishA11y') : tr('member.tutorial.nextA11y')
               }
-              style={[styles.nextBtn, { backgroundColor: t.primary }]}>
+              style={({ pressed }) => [
+                styles.nextBtn,
+                { backgroundColor: t.primary },
+                pressed && pressedStyle('fill', t),
+              ]}>
               <Text style={[Typography.label, { color: t.onPrimary }]}>
                 {last ? tr('member.common.start') : tr('member.common.next')}
               </Text>

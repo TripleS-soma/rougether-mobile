@@ -5,6 +5,7 @@ import { onboardingStyles as styles } from '@/components/screens/onboarding/onbo
 import { Icon } from '@/components/ui/icon';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 /**
  * 온보딩 목표 설문 — 첫 실행의 첫 단계(#1282). 선택 상태는 부모가 갖는다(리팩토링 장부 25번).
@@ -46,9 +47,10 @@ export function GoalStep({
               onPress={() => onToggle(g.id)}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: selected }}
-              style={[
+              style={({ pressed }) => [
                 styles.goalCard,
                 { backgroundColor: t.surface, borderColor: selected ? t.primary : 'transparent' },
+                pressed && pressedStyle('card', t),
               ]}>
               <Text style={[Typography.label, { color: t.text }]}>{g.label}</Text>
               {selected ? (

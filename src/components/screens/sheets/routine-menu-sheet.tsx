@@ -7,6 +7,7 @@ import type { Routine } from '@/constants/routines';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 export type RoutineMenuSheetProps = {
   /** 메뉴를 연 행의 루틴/투두 — null이면 시트가 닫힌다. */
@@ -76,7 +77,11 @@ export function RoutineMenuSheet({
           }}
           accessibilityRole="button"
           accessibilityLabel={`${item?.title ?? ''} ${tr('routineTodo.menu.rename')}`}
-          style={[styles.sheetAction, { backgroundColor: t.surface }]}>
+          style={({ pressed }) => [
+            styles.sheetAction,
+            { backgroundColor: t.surface },
+            pressed && pressedStyle('card', t),
+          ]}>
           <Icon name="edit" size={22} color={t.text} />
           <Text style={[Typography.label, { color: t.text }]}>{tr('routineTodo.menu.rename')}</Text>
         </Pressable>
@@ -88,7 +93,11 @@ export function RoutineMenuSheet({
           }}
           accessibilityRole="button"
           accessibilityLabel={`${item?.title ?? ''} ${tr('routineTodo.menu.deleteA11y')}`}
-          style={[styles.sheetAction, { backgroundColor: t.surface }]}>
+          style={({ pressed }) => [
+            styles.sheetAction,
+            { backgroundColor: t.surface },
+            pressed && pressedStyle('card', t),
+          ]}>
           <Icon name="trash" size={22} color={t.danger} />
           <Text style={[Typography.label, { color: t.danger }]}>
             {tr('routineTodo.menu.delete')}
@@ -107,7 +116,7 @@ export function RoutineMenuSheet({
           }}
           accessibilityRole="button"
           accessibilityLabel={`${item?.title ?? ''} ${tr('routineTodo.menu.editRoutine')}`}
-          style={styles.sheetItem}>
+          style={({ pressed }) => [styles.sheetItem, pressed && pressedStyle('row', t)]}>
           <View style={[styles.sheetItemIcon, { backgroundColor: t.surfaceMuted }]}>
             <Icon name="settings" size={18} color={t.text} />
           </View>
@@ -125,7 +134,7 @@ export function RoutineMenuSheet({
         }}
         accessibilityRole="button"
         accessibilityLabel={`${item?.title ?? ''} ${done ? tr('routineTodo.menu.uncomplete') : tr('routineTodo.menu.completeA11y')}`}
-        style={styles.sheetItem}>
+        style={({ pressed }) => [styles.sheetItem, pressed && pressedStyle('row', t)]}>
         <View style={[styles.sheetItemIcon, { backgroundColor: t.primary }]}>
           <Icon name={done ? 'checkbox-off' : 'check'} size={18} color={t.onPrimary} />
         </View>
@@ -143,7 +152,7 @@ export function RoutineMenuSheet({
         }}
         accessibilityRole="button"
         accessibilityLabel={`${item?.title ?? ''} ${timeLabel}`}
-        style={styles.sheetItem}>
+        style={({ pressed }) => [styles.sheetItem, pressed && pressedStyle('row', t)]}>
         <View style={[styles.sheetItemIcon, { backgroundColor: t.warning }]}>
           <Icon name="bell" size={18} color={t.onPrimary} />
         </View>
@@ -160,7 +169,7 @@ export function RoutineMenuSheet({
         }}
         accessibilityRole="button"
         accessibilityLabel={`${item?.title ?? ''} ${tr('routineTodo.menu.changeDate')}`}
-        style={styles.sheetItem}>
+        style={({ pressed }) => [styles.sheetItem, pressed && pressedStyle('row', t)]}>
         <View style={[styles.sheetItemIcon, { backgroundColor: t.success }]}>
           <Icon name="calendar" size={18} color={t.onPrimary} />
         </View>

@@ -5,6 +5,7 @@ import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { notificationIcon } from '@/constants/notifications';
 import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
@@ -120,7 +121,8 @@ export function NotificationBanner({
         <Pressable
           onPress={handlePress}
           accessibilityRole="button"
-          accessibilityLabel={`${title}. ${body}`}>
+          accessibilityLabel={`${title}. ${body}`}
+          style={({ pressed }) => pressed && pressedStyle('dim', t)}>
           <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.card}>
             <View style={[styles.iconWrap, { backgroundColor: t.surfaceMuted }]}>
               <Icon name={notificationIcon(type)} size={18} color={t.text} />

@@ -9,6 +9,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { todayIso } from '@/utils/datetime';
 import { useT } from '@/i18n';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 export type DateEditSheetProps = {
   /** 날짜를 바꿀 루틴/투두 — null이면 시트가 닫힌다. */
@@ -74,7 +75,11 @@ export function DateEditSheet({
           onPress={onClose}
           accessibilityRole="button"
           accessibilityLabel={tr('common.cancel')}
-          style={[styles.dialogBtn, { backgroundColor: t.surfaceMuted }]}>
+          style={({ pressed }) => [
+            styles.dialogBtn,
+            { backgroundColor: t.surfaceMuted },
+            pressed && pressedStyle('dim', t),
+          ]}>
           <Text style={[Typography.label, { color: t.text }]}>{tr('common.cancel')}</Text>
         </Pressable>
         <Pressable
@@ -87,7 +92,11 @@ export function DateEditSheet({
           }}
           accessibilityRole="button"
           accessibilityLabel={tr('common.confirm')}
-          style={[styles.dialogBtn, { backgroundColor: t.primary }]}>
+          style={({ pressed }) => [
+            styles.dialogBtn,
+            { backgroundColor: t.primary },
+            pressed && pressedStyle('fill', t),
+          ]}>
           <Text style={[Typography.label, { color: t.onPrimary }]}>{tr('common.confirm')}</Text>
         </Pressable>
       </View>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Field } from '@/components/ui/field';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { type PolicyDoc } from '@/constants/policy';
 import { Icon } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -189,9 +190,10 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
               disabled={emailVerified}
               accessibilityRole="button"
               accessibilityState={{ disabled: sendDisabled }}
-              style={[
+              style={({ pressed }) => [
                 styles.sideBtn,
                 { backgroundColor: sendDisabled ? t.disabledBg : t.primary },
+                pressed && !sendDisabled && pressedStyle('fill', t),
               ]}>
               <Text style={[Typography.label, { color: sendDisabled ? t.textMuted : t.onPrimary }]}>
                 {emailVerified
@@ -258,9 +260,10 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
                 onPress={handleVerifyCode}
                 accessibilityRole="button"
                 accessibilityState={{ disabled: verificationCode.length !== 6 }}
-                style={[
+                style={({ pressed }) => [
                   styles.sideBtn,
                   { backgroundColor: verificationCode.length !== 6 ? t.disabledBg : t.text },
+                  pressed && verificationCode.length === 6 && pressedStyle('dim', t),
                 ]}>
                 <Text
                   style={[
@@ -292,7 +295,10 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
             password.length > 0 && !passwordValid ? tr('member.signup.passwordTooShort') : undefined
           }
           trailing={
-            <Pressable onPress={() => setShowPw((v) => !v)} accessibilityRole="button">
+            <Pressable
+              onPress={() => setShowPw((v) => !v)}
+              accessibilityRole="button"
+              style={({ pressed }) => pressed && pressedStyle('dim', t)}>
               <Text style={[Typography.supporting, emph('semibold'), { color: t.textMuted }]}>
                 {showPw ? tr('member.common.hide') : tr('member.common.show')}
               </Text>
@@ -320,7 +326,11 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
           onPress={() => toggleAll(!agreeAll)}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: agreeAll }}
-          style={[styles.agreeAll, { borderBottomColor: t.border }]}>
+          style={({ pressed }) => [
+            styles.agreeAll,
+            { borderBottomColor: t.border },
+            pressed && pressedStyle('row', t),
+          ]}>
           <CheckBox checked={agreeAll} />
           <Text style={[styles.agreeAllText, emph('semibold'), { color: t.text }]}>
             {tr('member.signup.agreeAll')}
@@ -374,7 +384,10 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
         <Text style={[Typography.supporting, styles.msg, { color: t.textMuted }]}>
           {tr('member.signup.haveAccount')}{' '}
         </Text>
-        <Pressable onPress={onBack} accessibilityRole="button">
+        <Pressable
+          onPress={onBack}
+          accessibilityRole="button"
+          style={({ pressed }) => pressed && pressedStyle('dim', t)}>
           <Text style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}>
             {tr('member.signup.login')}
           </Text>
@@ -419,7 +432,7 @@ function AgreementItem({ checked, label, required, onChange, onView }: Agreement
         onPress={() => onChange(!checked)}
         accessibilityRole="checkbox"
         accessibilityState={{ checked }}
-        style={styles.agreeItemMain}>
+        style={({ pressed }) => [styles.agreeItemMain, pressed && pressedStyle('row', t)]}>
         <CheckBox checked={checked} />
         <Text style={[styles.agreeLabel, emph('normal'), { color: t.text }]}>
           {label}{' '}
@@ -432,7 +445,8 @@ function AgreementItem({ checked, label, required, onChange, onView }: Agreement
         <Pressable
           onPress={onView}
           accessibilityRole="button"
-          accessibilityLabel={tr('member.signup.viewDocA11y', { label })}>
+          accessibilityLabel={tr('member.signup.viewDocA11y', { label })}
+          style={({ pressed }) => pressed && pressedStyle('dim', t)}>
           <Text style={[Typography.supporting, styles.viewLink, { color: t.textMuted }]}>
             {tr('member.common.show')}
           </Text>

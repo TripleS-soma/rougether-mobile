@@ -13,6 +13,7 @@ import {
 } from '@/components/screens/gacha/draw-animation';
 import { buildRevealPlan, rarityLabelKey } from '@/components/screens/gacha/reveal-motion';
 import { MultiReveal } from '@/components/screens/gacha/multi-reveal';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { SheetHandle } from '@/components/ui/sheet-handle';
 import { Loading } from '@/components/ui/loading';
 import { BottomSheet, SheetDragExclude } from '@/components/ui/bottom-sheet';
@@ -435,9 +436,10 @@ export function GachaScreen({
                 onPress={skipAnimation}
                 accessibilityRole="button"
                 accessibilityLabel={tr('roomShop.gacha.skipA11y')}
-                style={[
+                style={({ pressed }) => [
                   styles.skipButton,
                   { top: Math.max(insets.top, Spacing.three), backgroundColor: Overlay.dim },
+                  pressed && pressedStyle('dim', t),
                 ]}>
                 <Text style={[Typography.supporting, emph('semibold'), styles.skipText]}>
                   {tr('roomShop.gacha.skip')}

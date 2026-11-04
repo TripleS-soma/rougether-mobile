@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { GlassSurface } from '@/components/ui/glass-surface';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { useToast } from '@/components/ui/toast';
 import { Radius, Spacing, TabularNums } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -38,6 +39,7 @@ export const RoomGrowthPill = memo(function RoomGrowthPill({
       accessibilityHint={remaining == null ? undefined : tr('roomShop.growth.hint')}
       disabled={remaining == null}
       hitSlop={Spacing.two}
+      style={({ pressed }) => pressed && pressedStyle('dim', t)}
       onPress={
         remaining == null ? undefined : () => toast(tr('roomShop.growth.toast', { n: remaining }))
       }

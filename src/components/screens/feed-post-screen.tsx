@@ -40,6 +40,7 @@ import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Icon } from '@/components/ui/icon';
 import { Loading } from '@/components/ui/loading';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { ReportSheet } from '@/components/ui/report-sheet';
 import { SheetHandle } from '@/components/ui/sheet-handle';
 import { RetryState } from '@/components/ui/retry-state';
@@ -260,7 +261,10 @@ function EditPostDialog({
                     accessibilityRole="button"
                     accessibilityLabel={tr('feed.post.editRestoreRoutine')}
                     hitSlop={Spacing.two}
-                    style={styles.restoreRoutine}>
+                    style={({ pressed }) => [
+                      styles.restoreRoutine,
+                      pressed && pressedStyle('dim', t),
+                    ]}>
                     <Text style={[Typography.label, { color: t.primaryText }]}>
                       {tr('feed.post.editRestoreRoutine')}
                     </Text>
@@ -302,7 +306,11 @@ function EditPostDialog({
             <Pressable
               onPress={onCancel}
               accessibilityRole="button"
-              style={[styles.dialogBtn, { backgroundColor: t.surfaceMuted }]}>
+              style={({ pressed }) => [
+                styles.dialogBtn,
+                { backgroundColor: t.surfaceMuted },
+                pressed && pressedStyle('dim', t),
+              ]}>
               <Text style={[Typography.label, { color: t.text }]}>{tr('common.cancel')}</Text>
             </Pressable>
             <Pressable
@@ -310,7 +318,11 @@ function EditPostDialog({
               disabled={!canSave}
               accessibilityRole="button"
               accessibilityState={{ disabled: !canSave }}
-              style={[styles.dialogBtn, { backgroundColor: canSave ? t.primary : t.disabledBg }]}>
+              style={({ pressed }) => [
+                styles.dialogBtn,
+                { backgroundColor: canSave ? t.primary : t.disabledBg },
+                pressed && canSave && pressedStyle('fill', t),
+              ]}>
               <Text style={[Typography.label, { color: canSave ? t.onPrimary : t.textDisabled }]}>
                 {tr('feed.post.save')}
               </Text>
@@ -429,7 +441,11 @@ export function FeedPostScreen({
                 onPress={() => setEditOpen(true)}
                 accessibilityRole="button"
                 accessibilityLabel={tr('feed.post.editA11y')}
-                style={[styles.headerBtn, { backgroundColor: t.surfaceMuted }]}>
+                style={({ pressed }) => [
+                  styles.headerBtn,
+                  { backgroundColor: t.surfaceMuted },
+                  pressed && pressedStyle('dim', t),
+                ]}>
                 <Text style={[Typography.label, { color: t.primaryText }]}>
                   {tr('feed.post.edit')}
                 </Text>
@@ -440,7 +456,11 @@ export function FeedPostScreen({
                 onPress={() => setConfirmPost(true)}
                 accessibilityRole="button"
                 accessibilityLabel={tr('feed.post.deletePostA11y')}
-                style={[styles.headerBtn, { backgroundColor: t.surfaceMuted }]}>
+                style={({ pressed }) => [
+                  styles.headerBtn,
+                  { backgroundColor: t.surfaceMuted },
+                  pressed && pressedStyle('dim', t),
+                ]}>
                 <Text style={[Typography.label, { color: t.danger }]}>
                   {tr('feed.post.deletePost')}
                 </Text>
@@ -453,7 +473,11 @@ export function FeedPostScreen({
             accessibilityRole="button"
             accessibilityLabel={tr('member.moderation.postMenuA11y')}
             hitSlop={Spacing.one}
-            style={[styles.menuBtn, { backgroundColor: t.surfaceMuted }]}>
+            style={({ pressed }) => [
+              styles.menuBtn,
+              { backgroundColor: t.surfaceMuted },
+              pressed && pressedStyle('dim', t),
+            ]}>
             <Icon name="kebab" size={20} color={t.text} />
           </Pressable>
         ) : undefined
@@ -550,7 +574,11 @@ export function FeedPostScreen({
               <Pressable
                 onPress={onLoadMoreComments}
                 accessibilityRole="button"
-                style={[styles.more, { backgroundColor: t.surfaceMuted }]}>
+                style={({ pressed }) => [
+                  styles.more,
+                  { backgroundColor: t.surfaceMuted },
+                  pressed && pressedStyle('dim', t),
+                ]}>
                 <Text style={[Typography.label, { color: t.primaryText }]}>
                   {tr('feed.post.moreComments')}
                 </Text>
@@ -608,7 +636,8 @@ export function FeedPostScreen({
                   accessibilityRole="button"
                   accessibilityLabel={tr('feed.post.cancelReply')}
                   accessibilityState={{ disabled: sending }}
-                  hitSlop={Spacing.two}>
+                  hitSlop={Spacing.two}
+                  style={({ pressed }) => pressed && pressedStyle('dim', t)}>
                   <Text style={[Typography.supporting, { color: t.textMuted }]}>
                     {tr('feed.post.cancelReply')}
                   </Text>
@@ -640,7 +669,11 @@ export function FeedPostScreen({
                 accessibilityRole="button"
                 accessibilityLabel={tr('feed.post.send')}
                 accessibilityState={{ disabled: !canSend }}
-                style={[styles.send, { backgroundColor: canSend ? t.primary : t.disabledBg }]}>
+                style={({ pressed }) => [
+                  styles.send,
+                  { backgroundColor: canSend ? t.primary : t.disabledBg },
+                  pressed && canSend && pressedStyle('fill', t),
+                ]}>
                 <Icon name="send" size={18} color={canSend ? t.onPrimary : t.textDisabled} />
               </Pressable>
             </View>
@@ -690,7 +723,7 @@ export function FeedPostScreen({
             }}
             accessibilityRole="button"
             accessibilityLabel={tr('member.moderation.menu.report')}
-            style={styles.menuItem}>
+            style={({ pressed }) => [styles.menuItem, pressed && pressedStyle('row', t)]}>
             <View style={[styles.menuIcon, { backgroundColor: t.surfaceMuted }]}>
               <Icon name="flag" size={18} color={t.text} />
             </View>
@@ -708,7 +741,7 @@ export function FeedPostScreen({
             }}
             accessibilityRole="button"
             accessibilityLabel={tr('member.moderation.menu.block')}
-            style={styles.menuItem}>
+            style={({ pressed }) => [styles.menuItem, pressed && pressedStyle('row', t)]}>
             <View style={[styles.menuIcon, { backgroundColor: t.surfaceMuted }]}>
               <Icon name="block" size={18} color={t.danger} />
             </View>

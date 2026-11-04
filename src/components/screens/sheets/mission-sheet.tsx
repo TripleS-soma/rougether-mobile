@@ -6,6 +6,7 @@ import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 export type MissionSheetProps = {
   visible: boolean;
@@ -71,7 +72,11 @@ function MissionSheetBase({
             onPress={onClose}
             accessibilityRole="button"
             accessibilityLabel={tr('house.missionSheet.laterA11y')}
-            style={[styles.btn, { backgroundColor: t.surfaceMuted }]}>
+            style={({ pressed }) => [
+              styles.btn,
+              { backgroundColor: t.surfaceMuted },
+              pressed && pressedStyle('dim', t),
+            ]}>
             <Text style={[Typography.label, { color: t.text }]}>
               {tr('house.missionSheet.later')}
             </Text>
@@ -83,7 +88,11 @@ function MissionSheetBase({
           accessibilityLabel={
             last ? tr('house.missionSheet.finishA11y') : tr('house.missionSheet.goA11y')
           }
-          style={[styles.btn, { backgroundColor: t.primary }]}>
+          style={({ pressed }) => [
+            styles.btn,
+            { backgroundColor: t.primary },
+            pressed && pressedStyle('fill', t),
+          ]}>
           <Text style={[Typography.label, { color: t.onPrimary }]}>
             {last ? tr('house.missionSheet.finish') : tr('house.missionSheet.go')}
           </Text>

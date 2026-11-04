@@ -23,6 +23,7 @@ import type {
 } from '@/components/screens/feed/types';
 import { Icon } from '@/components/ui/icon';
 import { Loading } from '@/components/ui/loading';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { FEED_DEFAULT_BOARD, FEED_MAX_CONTENT, FEED_MAX_IMAGES } from '@/constants/feed';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
@@ -117,7 +118,11 @@ export function FeedComposeScreen({
             accessibilityLabel={tr('feed.compose.submit')}
             accessibilityState={{ disabled: !canSubmit, busy: submitting }}
             testID="feed-compose-submit"
-            style={[styles.submit, { backgroundColor: canSubmit ? t.primary : t.disabledBg }]}>
+            style={({ pressed }) => [
+              styles.submit,
+              { backgroundColor: canSubmit ? t.primary : t.disabledBg },
+              pressed && canSubmit && pressedStyle('fill', t),
+            ]}>
             <Text style={[Typography.label, { color: canSubmit ? t.onPrimary : t.textDisabled }]}>
               {submitting ? tr('feed.compose.submitting') : tr('feed.compose.submit')}
             </Text>
@@ -182,7 +187,12 @@ export function FeedComposeScreen({
                     count: images.length,
                     max: FEED_MAX_IMAGES,
                   })}
-                  style={[styles.thumb, styles.addTile, { backgroundColor: t.surfaceMuted }]}>
+                  style={({ pressed }) => [
+                    styles.thumb,
+                    styles.addTile,
+                    { backgroundColor: t.surfaceMuted },
+                    pressed && pressedStyle('dim', t),
+                  ]}>
                   <Icon name="camera" size={26} color={t.icon} />
                   <Text style={[Typography.supporting, { color: t.textMuted }]}>
                     {tr('feed.compose.counter', { count: images.length, max: FEED_MAX_IMAGES })}
@@ -218,7 +228,11 @@ export function FeedComposeScreen({
                       accessibilityRole="button"
                       accessibilityLabel={tr('feed.compose.retryUploadA11y', { index: i + 1 })}
                       accessibilityHint={img.error}
-                      style={[styles.thumbState, { backgroundColor: Overlay.strong }]}>
+                      style={({ pressed }) => [
+                        styles.thumbState,
+                        { backgroundColor: Overlay.strong },
+                        pressed && pressedStyle('dim', t),
+                      ]}>
                       <Icon name="refresh" size={22} color={t.onPrimary} />
                       <Text style={[Typography.supporting, { color: t.onPrimary }]}>
                         {tr('feed.compose.uploadFailed')}
@@ -231,7 +245,11 @@ export function FeedComposeScreen({
                       accessibilityRole="button"
                       accessibilityLabel={tr('feed.compose.removePhotoA11y', { index: i + 1 })}
                       hitSlop={Spacing.two}
-                      style={[styles.remove, { backgroundColor: Overlay.strong }]}>
+                      style={({ pressed }) => [
+                        styles.remove,
+                        { backgroundColor: Overlay.strong },
+                        pressed && pressedStyle('dim', t),
+                      ]}>
                       <Icon name="close" size={14} color={t.onPrimary} />
                     </Pressable>
                   ) : null}

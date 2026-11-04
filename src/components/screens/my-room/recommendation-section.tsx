@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Recommendation } from '@/api';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { DAY_CODES, getWeekdayLabels } from '@/constants/routines';
 import { i18n, useT } from '@/i18n';
 import { Radius, Spacing } from '@/constants/theme';
@@ -137,7 +138,11 @@ export function RecommendationSection({
                   name: r.routineTitle ?? tr('routineTodo.recommendation.routineFallback'),
                 })}
                 accessibilityState={{ disabled: busy }}
-                style={[styles.btn, { backgroundColor: t.surface, opacity: busy ? 0.5 : 1 }]}>
+                style={({ pressed }) => [
+                  styles.btn,
+                  { backgroundColor: t.surface, opacity: busy ? 0.5 : 1 },
+                  pressed && pressedStyle('card', t),
+                ]}>
                 <Text style={[Typography.label, { color: t.textMuted }]}>
                   {tr('routineTodo.recommendation.dismiss')}
                 </Text>
@@ -150,7 +155,11 @@ export function RecommendationSection({
                   name: r.routineTitle ?? tr('routineTodo.recommendation.routineFallback'),
                 })}
                 accessibilityState={{ disabled: busy }}
-                style={[styles.btn, { backgroundColor: t.primary, opacity: busy ? 0.5 : 1 }]}>
+                style={({ pressed }) => [
+                  styles.btn,
+                  { backgroundColor: t.primary, opacity: busy ? 0.5 : 1 },
+                  pressed && pressedStyle('fill', t),
+                ]}>
                 <Text style={[Typography.label, { color: t.onPrimary }]}>
                   {tr('routineTodo.recommendation.accept')}
                 </Text>

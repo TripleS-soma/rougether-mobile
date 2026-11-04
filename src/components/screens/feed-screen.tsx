@@ -19,6 +19,7 @@ import type { FeedBoardFilter, FeedImageLoader, FeedPost } from '@/components/sc
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon } from '@/components/ui/icon';
 import { Loading } from '@/components/ui/loading';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { PagerScrollView } from '@/components/ui/pager-scroll-view';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -341,7 +342,11 @@ export function FeedScreen({
           accessibilityRole="button"
           accessibilityLabel={tr('feed.composeA11y')}
           testID="feed-compose"
-          style={[styles.compose, { bottom: navInset + Spacing.three }]}>
+          style={({ pressed }) => [
+            styles.compose,
+            { bottom: navInset + Spacing.three },
+            pressed && pressedStyle('dim', t),
+          ]}>
           <GlassSurface style={styles.composeFace} fallbackColor={t.primary} tintColor={t.primary}>
             <Icon name="add" size={28} color={t.onPrimary} />
           </GlassSurface>

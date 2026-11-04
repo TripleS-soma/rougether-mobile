@@ -8,6 +8,7 @@ import { WHEEL_ITEM_HEIGHT, WHEEL_VISIBLE_ROWS, WheelPicker } from '@/components
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
 const MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
@@ -112,7 +113,11 @@ export function TimePickerSheet({
           onPress={onClose}
           accessibilityRole="button"
           accessibilityLabel={tr('routineTodo.timePicker.close')}
-          style={[styles.close, { backgroundColor: t.surfaceMuted }]}>
+          style={({ pressed }) => [
+            styles.close,
+            { backgroundColor: t.surfaceMuted },
+            pressed && pressedStyle('dim', t),
+          ]}>
           <Icon name="close" size={16} color={t.text} />
         </Pressable>
       </View>
@@ -180,7 +185,11 @@ export function TimePickerSheet({
           onPress={save}
           accessibilityRole="button"
           accessibilityLabel={tr('routineTodo.timePicker.saveA11y')}
-          style={[styles.save, { backgroundColor: t.primary }]}>
+          style={({ pressed }) => [
+            styles.save,
+            { backgroundColor: t.primary },
+            pressed && pressedStyle('fill', t),
+          ]}>
           <Text style={[Typography.label, { color: t.onPrimary }]}>
             {tr('routineTodo.timePicker.save')}
           </Text>

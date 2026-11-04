@@ -28,6 +28,7 @@ import type { NavTab } from '@/components/ui/bottom-nav';
 import { DEFAULT_START_TAB, START_TAB_OPTIONS } from '@/lib/start-tab';
 import { type AppLanguage, DEFAULT_LANGUAGE, LANGUAGE_OPTIONS, useT } from '@/i18n';
 import { supportsPushNotifications } from '@/config/features';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 const MODE_OPTIONS: ThemeMode[] = ['system', 'light', 'dark'];
 
@@ -235,7 +236,7 @@ export const SettingsScreen = memo(function SettingsScreen({
                     accessibilityState={{ selected, checked: selected }}
                     aria-checked={selected}
                     accessibilityLabel={name}
-                    style={styles.modeOption}>
+                    style={({ pressed }) => [styles.modeOption, pressed && pressedStyle('dim', t)]}>
                     {selected ? (
                       <GlassSurface
                         fallbackColor={t.primary}
@@ -283,7 +284,7 @@ export const SettingsScreen = memo(function SettingsScreen({
                     accessibilityState={{ selected, checked: selected }}
                     aria-checked={selected}
                     accessibilityLabel={tr('settings.startTabOption', { name })}
-                    style={styles.modeOption}>
+                    style={({ pressed }) => [styles.modeOption, pressed && pressedStyle('dim', t)]}>
                     {selected ? (
                       <GlassSurface
                         fallbackColor={t.primary}
@@ -445,7 +446,7 @@ export const SettingsScreen = memo(function SettingsScreen({
           onPress={() => setConfirmWithdraw(true)}
           accessibilityRole="button"
           accessibilityLabel={tr('settings.withdraw')}
-          style={styles.withdrawLink}>
+          style={({ pressed }) => [styles.withdrawLink, pressed && pressedStyle('dim', t)]}>
           <Text style={[Typography.supporting, { color: t.dangerText }]}>
             {tr('settings.withdraw')}
           </Text>

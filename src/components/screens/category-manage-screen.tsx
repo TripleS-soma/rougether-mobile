@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CategoryFormSheet } from '@/components/screens/sheets/category-form-sheet';
 import type { CategoryDeleteMode } from '@/api/categories';
 import { Icon } from '@/components/ui/icon';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { CategoryIcon } from '@/components/ui/category-icon';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -94,7 +95,11 @@ export function CategoryManageScreen({
             accessibilityRole="button"
             // 시트 제출 버튼('카테고리 추가')과 라벨이 겹치지 않게 구분.
             accessibilityLabel={tr('routineTodo.categoryManage.addA11y')}
-            style={[styles.iconBtn, { backgroundColor: t.primary }]}>
+            style={({ pressed }) => [
+              styles.iconBtn,
+              { backgroundColor: t.primary },
+              pressed && pressedStyle('fill', t),
+            ]}>
             <Icon name="add" size={20} color={t.onPrimary} />
           </Pressable>
         }
@@ -136,10 +141,12 @@ export function CategoryManageScreen({
                     accessibilityHint={
                       onReorder ? tr('routineTodo.categoryManage.rowHint') : undefined
                     }
-                    style={[
+                    style={({ pressed }) => [
                       styles.catRow,
                       { backgroundColor: t.surface, borderLeftColor: c.color },
                       moving && { borderWidth: 2, borderColor: t.primary, borderLeftWidth: 4 },
+                      // 길게 눌러 순서 바꾸기가 있을 때만 반응
+                      pressed && !!onReorder && pressedStyle('card', t),
                     ]}>
                     <View style={[styles.catDot, { backgroundColor: `${c.color}33` }]}>
                       <CategoryIcon name={c.icon} color={c.color} size={16} />
@@ -161,7 +168,10 @@ export function CategoryManageScreen({
                               name: c.name,
                             })}
                             hitSlop={8}
-                            style={styles.houseBadge}>
+                            style={({ pressed }) => [
+                              styles.houseBadge,
+                              pressed && pressedStyle('dim', t),
+                            ]}>
                             <Icon name="house" size={12} color={t.primaryText} />
                             <Text
                               style={[Typography.supporting, { color: t.primaryText }]}
@@ -191,9 +201,10 @@ export function CategoryManageScreen({
                           accessibilityLabel={tr('routineTodo.categoryManage.moveUpA11y', {
                             name: c.name,
                           })}
-                          style={[
+                          style={({ pressed }) => [
                             styles.rowBtn,
                             { backgroundColor: idx === 0 ? t.surfaceMuted : t.primarySoft },
+                            pressed && pressedStyle('dim', t),
                           ]}>
                           <Icon
                             name="move-up"
@@ -208,12 +219,13 @@ export function CategoryManageScreen({
                           accessibilityLabel={tr('routineTodo.categoryManage.moveDownA11y', {
                             name: c.name,
                           })}
-                          style={[
+                          style={({ pressed }) => [
                             styles.rowBtn,
                             {
                               backgroundColor:
                                 idx === categories.length - 1 ? t.surfaceMuted : t.primarySoft,
                             },
+                            pressed && pressedStyle('dim', t),
                           ]}>
                           <Icon
                             name="move-down"
@@ -225,7 +237,11 @@ export function CategoryManageScreen({
                           onPress={() => setMovingId(null)}
                           accessibilityRole="button"
                           accessibilityLabel={tr('routineTodo.categoryManage.moveDoneA11y')}
-                          style={[styles.rowBtn, { backgroundColor: t.primary }]}>
+                          style={({ pressed }) => [
+                            styles.rowBtn,
+                            { backgroundColor: t.primary },
+                            pressed && pressedStyle('fill', t),
+                          ]}>
                           <Icon name="check" size={16} color={t.onPrimary} />
                         </Pressable>
                       </>
@@ -237,7 +253,11 @@ export function CategoryManageScreen({
                           accessibilityLabel={tr('routineTodo.categoryManage.editA11y', {
                             name: c.name,
                           })}
-                          style={[styles.rowBtn, { backgroundColor: t.surfaceMuted }]}>
+                          style={({ pressed }) => [
+                            styles.rowBtn,
+                            { backgroundColor: t.surfaceMuted },
+                            pressed && pressedStyle('dim', t),
+                          ]}>
                           <Icon name="edit" size={16} color={t.text} />
                         </Pressable>
                         <Pressable
@@ -251,7 +271,11 @@ export function CategoryManageScreen({
                           accessibilityLabel={tr('routineTodo.categoryManage.deleteA11y', {
                             name: c.name,
                           })}
-                          style={[styles.rowBtn, { backgroundColor: t.dangerSoft }]}>
+                          style={({ pressed }) => [
+                            styles.rowBtn,
+                            { backgroundColor: t.dangerSoft },
+                            pressed && pressedStyle('dim', t),
+                          ]}>
                           <Icon name="trash" size={16} color={t.danger} />
                         </Pressable>
                       </>
@@ -326,7 +350,11 @@ export function CategoryManageScreen({
                 }}
                 accessibilityRole="button"
                 accessibilityLabel={tr('routineTodo.categoryManage.deleteUnassign')}
-                style={[styles.leaveBtn, { backgroundColor: t.primary }]}>
+                style={({ pressed }) => [
+                  styles.leaveBtn,
+                  { backgroundColor: t.primary },
+                  pressed && pressedStyle('fill', t),
+                ]}>
                 <Text style={[Typography.label, { color: t.onPrimary }]}>
                   {tr('routineTodo.categoryManage.deleteUnassign')}
                 </Text>
@@ -338,7 +366,11 @@ export function CategoryManageScreen({
                 }}
                 accessibilityRole="button"
                 accessibilityLabel={tr('routineTodo.categoryManage.deletePurge')}
-                style={[styles.leaveBtn, { backgroundColor: t.danger }]}>
+                style={({ pressed }) => [
+                  styles.leaveBtn,
+                  { backgroundColor: t.danger },
+                  pressed && pressedStyle('dim', t),
+                ]}>
                 <Text style={[Typography.label, { color: t.onPrimary }]}>
                   {tr('routineTodo.categoryManage.deletePurge')}
                 </Text>
@@ -347,7 +379,7 @@ export function CategoryManageScreen({
                 onPress={() => setPendingDelete(null)}
                 accessibilityRole="button"
                 accessibilityLabel={tr('common.cancel')}
-                style={styles.leaveStay}>
+                style={({ pressed }) => [styles.leaveStay, pressed && pressedStyle('dim', t)]}>
                 <Text style={[Typography.label, { color: t.textMuted }]}>
                   {tr('common.cancel')}
                 </Text>

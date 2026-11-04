@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { Icon } from '@/components/ui/icon';
 import { Loading } from '@/components/ui/loading';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { RetryState } from '@/components/ui/retry-state';
 import { Radius, Spacing, TabularNums } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -60,7 +61,11 @@ export function MarketList({
             onPress={onOpenOrders}
             accessibilityRole="button"
             accessibilityLabel={tr('market.list.myOrders')}
-            style={[styles.chip, { backgroundColor: t.surfaceMuted }]}>
+            style={({ pressed }) => [
+              styles.chip,
+              { backgroundColor: t.surfaceMuted },
+              pressed && pressedStyle('dim', t),
+            ]}>
             <Icon name="list" size={14} color={t.text} />
             <Text style={[Typography.supporting, { color: t.text }]}>
               {tr('market.list.myOrders')}
@@ -73,7 +78,11 @@ export function MarketList({
             accessibilityRole="button"
             accessibilityLabel={tr('market.list.refreshA11y')}
             hitSlop={8}
-            style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
+            style={({ pressed }) => [
+              styles.iconBtn,
+              { backgroundColor: t.surfaceMuted },
+              pressed && pressedStyle('dim', t),
+            ]}>
             <Icon name="refresh" size={14} color={t.text} />
           </Pressable>
         ) : null}
@@ -103,10 +112,11 @@ export function MarketList({
                 onPress={() => onOpenAsset?.(a.assetId)}
                 accessibilityRole="button"
                 accessibilityLabel={tr('market.list.cardA11y', { name: a.name })}
-                style={[
+                style={({ pressed }) => [
                   styles.card,
                   i === 0 && styles.cardFill,
                   { backgroundColor: t.surfaceMuted },
+                  pressed && pressedStyle('dim', t),
                 ]}>
                 <MarketAssetImage assetKey={a.assetKey} name={a.name} size={CARD_IMAGE} />
                 <Text numberOfLines={1} style={[Typography.label, { color: t.text }]}>

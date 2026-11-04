@@ -6,6 +6,7 @@ import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
+import { pressedStyle } from '@/components/ui/press-feedback';
 
 /** 서버 `PUT /onboarding/house`의 `choice` (#1407) — 좋아요 / 괜찮아요. */
 export type OnboardingHouseChoice = 'AUTO_JOIN' | 'PERSONAL';
@@ -71,7 +72,11 @@ export function OnboardingHouseScreen({
           <Pressable
             accessibilityRole="button"
             onPress={onContinue}
-            style={[styles.primary, { backgroundColor: t.primary }]}>
+            style={({ pressed }) => [
+              styles.primary,
+              { backgroundColor: t.primary },
+              pressed && pressedStyle('fill', t),
+            ]}>
             <Text style={[Typography.label, { color: t.onPrimary }]}>
               {tr('member.onboardingHouse.continue')}
             </Text>
@@ -108,7 +113,11 @@ export function OnboardingHouseScreen({
           accessibilityState={{ disabled: saving, busy: saving }}
           disabled={saving}
           onPress={() => onChoose?.('AUTO_JOIN')}
-          style={[styles.choice, { backgroundColor: t.primary, opacity: saving ? 0.5 : 1 }]}>
+          style={({ pressed }) => [
+            styles.choice,
+            { backgroundColor: t.primary, opacity: saving ? 0.5 : 1 },
+            pressed && pressedStyle('fill', t),
+          ]}>
           <Text style={[Typography.label, { color: t.onPrimary }]}>
             {tr('member.onboardingHouse.autoJoin')}
           </Text>
@@ -121,7 +130,11 @@ export function OnboardingHouseScreen({
           accessibilityState={{ disabled: saving }}
           disabled={saving}
           onPress={() => onChoose?.('PERSONAL')}
-          style={[styles.choice, { backgroundColor: t.surfaceMuted, opacity: saving ? 0.5 : 1 }]}>
+          style={({ pressed }) => [
+            styles.choice,
+            { backgroundColor: t.surfaceMuted, opacity: saving ? 0.5 : 1 },
+            pressed && pressedStyle('dim', t),
+          ]}>
           <Text style={[Typography.label, { color: t.text }]}>
             {tr('member.onboardingHouse.personal')}
           </Text>

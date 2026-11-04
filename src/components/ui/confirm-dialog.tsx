@@ -1,5 +1,6 @@
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
@@ -62,7 +63,11 @@ export function ConfirmDialog({
                 onPress={onCancel}
                 accessibilityRole="button"
                 accessibilityLabel={cancelAccessibilityLabel ?? resolvedCancelLabel}
-                style={[styles.btn, { backgroundColor: t.surfaceMuted }]}>
+                style={({ pressed }) => [
+                  styles.btn,
+                  { backgroundColor: t.surfaceMuted },
+                  pressed && pressedStyle('dim', t),
+                ]}>
                 <Text style={[Typography.label, { color: t.text }]}>{resolvedCancelLabel}</Text>
               </Pressable>
             ) : null}
@@ -70,7 +75,11 @@ export function ConfirmDialog({
               onPress={onConfirm}
               accessibilityRole="button"
               accessibilityLabel={confirmAccessibilityLabel ?? confirmLabel}
-              style={[styles.btn, { backgroundColor: destructive ? t.danger : t.primary }]}>
+              style={({ pressed }) => [
+                styles.btn,
+                { backgroundColor: destructive ? t.danger : t.primary },
+                pressed && pressedStyle(destructive ? 'dim' : 'fill', t),
+              ]}>
               <Text style={[Typography.label, { color: t.onPrimary }]}>{confirmLabel}</Text>
             </Pressable>
           </View>

@@ -2,6 +2,7 @@ import { type ReactNode, useContext } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { useT } from '@/i18n';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon } from '@/components/ui/icon';
@@ -45,7 +46,7 @@ export function ScreenHeader({ title, onBack, backLabel, right }: ScreenHeaderPr
             onPress={onBack}
             accessibilityRole="button"
             accessibilityLabel={resolvedBackLabel}
-            style={styles.floatBtn}>
+            style={({ pressed }) => [styles.floatBtn, pressed && pressedStyle('dim', t)]}>
             <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
               <Icon name="back" size={20} color={t.text} />
             </GlassSurface>

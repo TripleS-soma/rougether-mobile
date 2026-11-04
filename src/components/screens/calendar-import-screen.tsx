@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BearCheck } from '@/components/ui/bear-check';
 import { Button } from '@/components/ui/button';
 import { Loading } from '@/components/ui/loading';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Radius, Spacing } from '@/constants/theme';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
@@ -134,7 +135,11 @@ export function CalendarImportScreen({
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: on }}
                   accessibilityLabel={tr('member.calendarImport.calendarA11y', { title: c.title })}
-                  style={[styles.row, { backgroundColor: t.surfaceMuted }]}>
+                  style={({ pressed }) => [
+                    styles.row,
+                    { backgroundColor: t.surfaceMuted },
+                    pressed && pressedStyle('row', t),
+                  ]}>
                   <BearCheck checked={on} size={20} />
                   <View style={styles.flex}>
                     <Text style={[Typography.label, { color: t.text }]}>{c.title}</Text>
@@ -189,7 +194,11 @@ export function CalendarImportScreen({
                   ]
                     .filter(Boolean)
                     .join(', ')}
-                  style={[styles.row, { backgroundColor: t.surfaceMuted }]}>
+                  style={({ pressed }) => [
+                    styles.row,
+                    { backgroundColor: t.surfaceMuted },
+                    pressed && pressedStyle('row', t),
+                  ]}>
                   <BearCheck checked={isOn(c)} size={20} />
                   <View style={styles.flex}>
                     <View style={styles.titleRow}>

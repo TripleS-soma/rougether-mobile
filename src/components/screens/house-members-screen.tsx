@@ -9,6 +9,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Icon } from '@/components/ui/icon';
 import { ModalCard } from '@/components/ui/modal-card';
 import { CrownPictogram, DoorPictogram, PencilPictogram } from '@/components/ui/pictograms';
+import { pressedStyle } from '@/components/ui/press-feedback';
 import { useToast } from '@/components/ui/toast';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
@@ -222,7 +223,11 @@ export function HouseMembersScreen({
           onPress={onBack}
           accessibilityRole="button"
           accessibilityLabel={tr('common.back')}
-          style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
+          style={({ pressed }) => [
+            styles.iconBtn,
+            { backgroundColor: t.surfaceMuted },
+            pressed && pressedStyle('dim', t),
+          ]}>
           <Icon name="back" size={26} color={t.text} />
         </Pressable>
         <View style={styles.flex}>
@@ -243,7 +248,11 @@ export function HouseMembersScreen({
                   onPress={() => setShowReissueConfirm(true)}
                   accessibilityRole="button"
                   accessibilityLabel={tr('house.members.reissueA11y')}
-                  style={[styles.reissueBtn, { backgroundColor: t.surfaceMuted }]}>
+                  style={({ pressed }) => [
+                    styles.reissueBtn,
+                    { backgroundColor: t.surfaceMuted },
+                    pressed && pressedStyle('dim', t),
+                  ]}>
                   <Text style={[Typography.supporting, { color: t.primaryText }]}>
                     {tr('house.members.reissue')}
                   </Text>
@@ -266,9 +275,10 @@ export function HouseMembersScreen({
                 onPress={() => void requestIssue()}
                 accessibilityRole="button"
                 accessibilityLabel={tr('house.members.issueCode')}
-                style={[
+                style={({ pressed }) => [
                   styles.codeBox,
                   { borderColor: t.border, backgroundColor: t.surfaceMuted },
+                  pressed && pressedStyle('dim', t),
                 ]}>
                 <Text style={[Typography.label, { color: t.primaryText }]}>
                   {tr('house.members.issueCode')}
@@ -281,7 +291,11 @@ export function HouseMembersScreen({
                   onPress={() => void copyInviteCode()}
                   accessibilityRole="button"
                   accessibilityLabel={tr('house.members.copyA11y')}
-                  style={[styles.inviteActionBtn, { backgroundColor: t.surfaceMuted }]}>
+                  style={({ pressed }) => [
+                    styles.inviteActionBtn,
+                    { backgroundColor: t.surfaceMuted },
+                    pressed && pressedStyle('dim', t),
+                  ]}>
                   <Icon name="copy" size={14} color={t.text} />
                   <Text style={[Typography.supporting, { color: t.text }]}>
                     {tr('house.members.copy')}
@@ -293,7 +307,11 @@ export function HouseMembersScreen({
                     onPress={() => void shareInviteLink()}
                     accessibilityRole="button"
                     accessibilityLabel={tr('house.members.shareA11y')}
-                    style={[styles.inviteActionBtn, { backgroundColor: t.primary }]}>
+                    style={({ pressed }) => [
+                      styles.inviteActionBtn,
+                      { backgroundColor: t.primary },
+                      pressed && pressedStyle('fill', t),
+                    ]}>
                     <Icon name="gift" size={14} color={t.onPrimary} />
                     <Text style={[Typography.supporting, { color: t.onPrimary }]}>
                       {tr('house.members.share')}
@@ -317,7 +335,11 @@ export function HouseMembersScreen({
               onPress={openEditHouse}
               accessibilityRole="button"
               accessibilityLabel={tr('house.members.editHouse')}
-              style={[styles.editHouseBtn, { backgroundColor: t.surfaceMuted }]}>
+              style={({ pressed }) => [
+                styles.editHouseBtn,
+                { backgroundColor: t.surfaceMuted },
+                pressed && pressedStyle('dim', t),
+              ]}>
               <PencilPictogram size={14} />
               <Text style={[Typography.label, { color: t.primaryText }]}>
                 {tr('house.members.editHouse')}
@@ -349,7 +371,11 @@ export function HouseMembersScreen({
                     onPress={() => onRejectJoinRequest(currentHouse.houseId!, request.requestId)}
                     accessibilityRole="button"
                     accessibilityLabel={tr('house.members.rejectA11y', { name: request.nickname })}
-                    style={[styles.kickBtn, { backgroundColor: t.dangerSoft }]}>
+                    style={({ pressed }) => [
+                      styles.kickBtn,
+                      { backgroundColor: t.dangerSoft },
+                      pressed && pressedStyle('dim', t),
+                    ]}>
                     <Text style={[Typography.supporting, { color: t.danger }]}>
                       {tr('house.members.reject')}
                     </Text>
@@ -360,7 +386,11 @@ export function HouseMembersScreen({
                     onPress={() => onAcceptJoinRequest(currentHouse.houseId!, request.requestId)}
                     accessibilityRole="button"
                     accessibilityLabel={tr('house.members.acceptA11y', { name: request.nickname })}
-                    style={[styles.kickBtn, { backgroundColor: t.primarySoft }]}>
+                    style={({ pressed }) => [
+                      styles.kickBtn,
+                      { backgroundColor: t.primarySoft },
+                      pressed && pressedStyle('dim', t),
+                    ]}>
                     <Text style={[Typography.supporting, { color: t.primaryText }]}>
                       {tr('house.members.accept')}
                     </Text>
@@ -441,7 +471,11 @@ export function HouseMembersScreen({
                     onPress={() => setTransferTarget(member)}
                     accessibilityRole="button"
                     accessibilityLabel={tr('house.members.transferA11y', { name: member.name })}
-                    style={[styles.kickBtn, { backgroundColor: t.primarySoft }]}>
+                    style={({ pressed }) => [
+                      styles.kickBtn,
+                      { backgroundColor: t.primarySoft },
+                      pressed && pressedStyle('dim', t),
+                    ]}>
                     <Text style={[Typography.supporting, { color: t.primaryText }]}>
                       {tr('house.members.transfer')}
                     </Text>
@@ -454,9 +488,10 @@ export function HouseMembersScreen({
                     disabled={kickedOut}
                     accessibilityRole="button"
                     accessibilityLabel={tr('house.members.kickA11y', { name: member.name })}
-                    style={[
+                    style={({ pressed }) => [
                       styles.kickBtn,
                       { backgroundColor: kickedOut ? t.surfaceMuted : t.dangerSoft },
+                      pressed && pressedStyle('dim', t),
                     ]}>
                     <Text
                       style={[
@@ -485,7 +520,11 @@ export function HouseMembersScreen({
                 accessibilityLabel={
                   isLoneOwner ? tr('house.members.deleteHouse') : tr('house.members.leaveHouse')
                 }
-                style={[styles.leaveBtn, { backgroundColor: t.dangerSoft }]}>
+                style={({ pressed }) => [
+                  styles.leaveBtn,
+                  { backgroundColor: t.dangerSoft },
+                  pressed && pressedStyle('dim', t),
+                ]}>
                 <DoorPictogram size={14} />
                 <Text style={[Typography.label, { color: t.danger }]}>
                   {isLoneOwner ? tr('house.members.deleteHouse') : tr('house.members.leaveHouse')}
@@ -634,7 +673,7 @@ export function HouseMembersScreen({
                     accessibilityRole="radio"
                     accessibilityState={{ selected, disabled: tooSmall }}
                     accessibilityLabel={tr('house.members.edit.capacityOptionA11y', { n })}
-                    style={[
+                    style={({ pressed }) => [
                       styles.capacityBtn,
                       {
                         backgroundColor: selected
@@ -643,6 +682,7 @@ export function HouseMembersScreen({
                             ? t.disabledBg
                             : t.surfaceMuted,
                       },
+                      pressed && pressedStyle('dim', t),
                     ]}>
                     <Text
                       style={[
