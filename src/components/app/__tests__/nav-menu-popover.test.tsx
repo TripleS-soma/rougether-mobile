@@ -59,7 +59,8 @@ describe('NavMenuPopover', () => {
 
   it('방 작업만 남는다 — 재화 내역·출석 이벤트 항목은 내 정보로 갔다 (#1055 → #1089)', async () => {
     const { getByLabelText, queryByLabelText } = await render(<NavMenuPopover {...baseProps} />);
-    expect(getByLabelText('방 꾸미기')).toBeTruthy();
+    // 꾸미기는 방 오른쪽 버튼 열과 중복이라 뺐다 (2026-11-04).
+    expect(queryByLabelText('방 꾸미기')).toBeNull();
     expect(getByLabelText('루틴 관리')).toBeTruthy();
     expect(queryByLabelText('재화 내역')).toBeNull();
     expect(queryByLabelText(/출석 이벤트/)).toBeNull();
@@ -90,6 +91,6 @@ describe('NavMenuPopover', () => {
     const { onSaveRoomImage: _omit, ...rest } = baseProps;
     const ui = await render(<NavMenuPopover {...rest} />);
     expect(ui.queryByLabelText('방 이미지 저장')).toBeNull();
-    expect(ui.getByLabelText('방 꾸미기')).toBeTruthy();
+    expect(ui.getByLabelText('루틴 관리')).toBeTruthy();
   });
 });
