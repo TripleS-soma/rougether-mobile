@@ -5,7 +5,8 @@
     "NSCalendarsFullAccessUsageDescription": "Rougether reads your calendar to import events as to-dos. It never writes to your calendar.",
     "NSRemindersUsageDescription": "Rougether does not use Reminders. Only calendar events are read and imported as to-dos.",
     "NSPhotoLibraryUsageDescription": "Used to pick a screenshot from your library to attach to a bug report.",
-    "NSPhotoLibraryAddUsageDescription": "Used to save a picture of your room to your library."
+    "NSPhotoLibraryAddUsageDescription": "Used to save a picture of your room to your library.",
+    "NSUserTrackingUsageDescription": "If you allow it, this is used only to measure which ad brought you to Rougether. Nothing you do in the app, like routines or chats, is sent."
   },
   "android": {
     "app_name": "Rougether"

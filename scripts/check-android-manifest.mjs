@@ -172,6 +172,24 @@ for (const [name, why] of merged ? REQUIRED_MERGED : REQUIRED_SOURCE) {
   }
 }
 
+/**
+ * 광고 ID (#1616) — `android.permission.*` 가 아니라 위 파서에 안 잡혀 따로 본다.
+ * Meta SDK(설치 광고 측정)가 Android 13+에서 광고 ID를 읽으려면 필요하고, 없으면
+ * 0으로만 읽혀 설치 귀속이 통째로 사라진다(빌드는 성공한다). 방침·Play 데이터 보안
+ * 설문이 "광고 ID 수집"을 적고 있으니 최종 매니페스트에 반드시 실려야 한다.
+ */
+if (merged) {
+  const adId = readFileSync(path, 'utf8').match(
+    /<uses-permission[\s>][^>]*com\.google\.android\.gms\.permission\.AD_ID[^>]*>/,
+  );
+  if (!adId || /tools:node="remove"/.test(adId[0])) {
+    problems.push([
+      'com.google.android.gms.permission.AD_ID 가 없습니다',
+      'Meta 설치 광고 측정(#1616). 방침·Play 데이터 보안 설문과 어긋납니다.',
+    ]);
+  }
+}
+
 const listed = [...perms.entries()]
   .map(([n, tag]) => `  ${/tools:node="remove"/.test(tag) ? '-' : '+'} ${n}`)
   .sort();
