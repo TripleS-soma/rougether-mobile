@@ -3,7 +3,7 @@ import {
   getTrackingPermissionsAsync,
   requestTrackingPermissionsAsync,
 } from 'expo-tracking-transparency';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { Settings } from 'react-native-fbsdk-next';
 
 import { reportError } from '@/lib/error-reporting';
@@ -16,13 +16,15 @@ import { reportError } from '@/lib/error-reporting';
  * - **푸시 권한과 겹치지 않게**: 푸시는 로그인 때 요청한다. 그 결정이 아직이면
  *   (팝업이 떠 있을 수 있음) 이번엔 건너뛴다 — 시스템 팝업이 떠 있는 동안 ATT를
  *   요청하면 iOS가 팝업 없이 `undetermined`를 돌려줘 기회를 날린다. 다음 진입에 다시 본다.
- * - **허용했을 때만** Meta SDK에 광고 추적을 켠다. 거부해도 앱 동작은 같고 Meta는
+ * - **앱이 활성일 때만** 요청한다 — 푸시를 눌러 콜드 스타트하는 등 비활성 상태에서 부르면
+ *   마찬가지로 팝업 없이 끝난다.
+ * - **허용했을 때만** Meta SDK에 광고 추적을 켠다(나중에 설정에서 끄면 다음 진입에 끈다). 거부해도 앱 동작은 같고 Meta는
  *   집계 측정(AEM)만 한다. 방침 약속: 사용자 식별 정보·앱 안 내용은 보내지 않는다.
  *
  * Android는 팝업이 없다 — SDK가 광고 ID를 읽고, 사용자는 기기 설정에서 끈다.
  */
 export async function requestAdTrackingOnce(): Promise<void> {
-  if (Platform.OS !== 'ios') return;
+  if (Platform.OS !== 'ios' || AppState.currentState !== 'active') return;
   try {
     const push = await Notifications.getPermissionsAsync();
     if (push.status === 'undetermined') return;
@@ -31,7 +33,7 @@ export async function requestAdTrackingOnce(): Promise<void> {
     if (status === 'undetermined' && canAskAgain) {
       ({ status } = await requestTrackingPermissionsAsync());
     }
-    if (status === 'granted') await Settings.setAdvertiserTrackingEnabled(true);
+    await Settings.setAdvertiserTrackingEnabled(status === 'granted');
   } catch (e) {
     reportError(e, { area: 'ad-tracking' });
   }
