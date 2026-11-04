@@ -14,18 +14,10 @@ const EXEMPT = [
 
 /**
  * **앱 폰트를 일부러 안 씌우는** 글리프 자리 — `font-hygiene.test.ts`의 `GLYPH_ONLY`와 짝이다.
- *
- * 그쪽 주석대로 `‹ › ＋` 같은 문자는 한글 폰트에 없는 경우가 많아, 패밀리를 강제하면
- * 오히려 폴백이 더 튄다. 그래서 이 자리들은 처음부터 시스템 폰트로 **일관되게** 그린다
- * — 폴백이 아니라 의도다. 파일+문자로 적어 줄 이동에 흔들리지 않게 한다.
+ * 파일+문자로 적어 줄 이동에 흔들리지 않게 한다. 지금은 비어 있다 — `‹ › ＋ ▲ ▼`
+ * 같은 텍스트 기호는 전부 `Icon`으로 옮겼고(#1613) `icon-hygiene.test.ts`가 막는다.
  */
-const GLYPH_ONLY: Record<string, string[]> = {
-  'src/components/ui/calendar.tsx': ['‹', '›'],
-  'src/components/screens/add-routine-screen.tsx': ['›'],
-  'src/components/screens/routine-manage-screen.tsx': ['›'],
-  'src/components/screens/settings/appearance-preview.tsx': ['＋'],
-  'src/components/screens/category-manage-screen.tsx': ['▲', '▼'],
-};
+const GLYPH_ONLY: Record<string, string[]> = {};
 
 /**
  * 한글 음절·ASCII 말고 UI 문구에 써도 되는 문자. **사유를 반드시 적는다.**

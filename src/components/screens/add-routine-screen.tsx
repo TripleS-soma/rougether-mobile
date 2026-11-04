@@ -535,7 +535,7 @@ export function AddRoutineScreen({
                   {tr('routineTodo.addRoutine.pickPeriod')}
                 </Text>
               </View>
-              <Text style={[styles.chevron, { color: t.textDisabled }]}>›</Text>
+              <Icon name="forward" size={16} color={t.textDisabled} />
             </Pressable>
           ) : null}
         </View>
@@ -578,7 +578,7 @@ export function AddRoutineScreen({
                   {tr('routineTodo.addRoutine.pickTime')}
                 </Text>
               </View>
-              <Text style={[styles.chevron, { color: t.textDisabled }]}>›</Text>
+              <Icon name="forward" size={16} color={t.textDisabled} />
             </Pressable>
           ) : null}
         </View>
@@ -801,7 +801,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chevron: { fontSize: 22 },
   footer: {
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,

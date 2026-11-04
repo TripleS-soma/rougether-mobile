@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
+import { Icon } from '@/components/ui/icon';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -70,7 +71,7 @@ export function AppearancePreview({
           </Text>
         </View>
         <View style={[styles.addBtn, { backgroundColor: t.primary }]}>
-          <Text style={[styles.addGlyph, { color: t.onPrimary }]}>＋</Text>
+          <Icon name="add" size={24} color={t.onPrimary} />
         </View>
       </View>
 
@@ -136,10 +137,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  addGlyph: {
-    fontSize: 24,
-    lineHeight: 26,
   },
   cta: {
     borderRadius: Radius.md,
