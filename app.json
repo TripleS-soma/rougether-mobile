@@ -257,10 +257,10 @@
       [
         "react-native-fbsdk-next",
         {
-          "appID": "META_APP_ID_TODO",
-          "clientToken": "META_CLIENT_TOKEN_TODO",
+          "appID": "1600130231361323",
+          "clientToken": "137f089783ced9624fe750792647d77b",
           "displayName": "Rougether",
-          "scheme": "fbMETA_APP_ID_TODO",
+          "scheme": "fb1600130231361323",
           "isAutoInitEnabled": true,
           "autoLogAppEventsEnabled": true,
           "advertiserIDCollectionEnabled": true,
