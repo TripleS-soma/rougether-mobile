@@ -580,6 +580,11 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const weekMode = tab !== 'room' && calendarMode === 'week';
   const hideDayList = tab !== 'room' && calendarMode === 'month' && !!onOpenDay;
   const [weekLeaving, setWeekLeaving] = useState(false);
+  // 달력 탭 페이지가 제자리에서 주간 ↔ 월을 오간다(2026-11-04) — 화면이 살아 있으니 월로
+  // 돌아오면 '떠나는 중'을 풀어 다음 진입이 처음부터 접히게.
+  useEffect(() => {
+    if (!weekMode) setWeekLeaving(false);
+  }, [weekMode]);
   // UI 스레드(Reanimated) — 달력 줄 접힘과 같은 시간·같은 곡선, 같은 스레드에서 자란다(2026-11-04).
   const weekIn = useRef(useSharedValue(0)).current;
   useEffect(() => {

@@ -20,8 +20,12 @@ export function usePagerLock(screen: Screen) {
   const houseLockedRef = useRef(false);
   // 튜토리얼 코치마크 잠금 (#1324) — 탭과 무관하게 스와이프를 막는다.
   const tutorialLockedRef = useRef(false);
+  // 주간 보기(#1327)는 달력 페이지가 제자리에서 접힌 모드 — 좌우 스와이프는 주 이동이라
+  // 탭 페이저가 가로채면 안 된다(2026-11-04, 새 화면 마운트 대신 제자리 전환).
+  const weekLocked = screen === 'calendarWeek';
   const apply = (tab: typeof activeTab) => {
-    lock.value = tutorialLockedRef.current || (houseLockedRef.current && tab === 'house');
+    lock.value =
+      tutorialLockedRef.current || weekLocked || (houseLockedRef.current && tab === 'house');
   };
   const setHouseLocked = useStableCallback((locked: boolean) => {
     houseLockedRef.current = locked;
@@ -33,7 +37,8 @@ export function usePagerLock(screen: Screen) {
   });
   // 탭이 바뀌면 집 잠금 의사는 유지한 채 활성 여부만 다시 판정한다.
   useEffect(() => {
-    lock.value = tutorialLockedRef.current || (houseLockedRef.current && activeTab === 'house');
-  }, [activeTab, lock]);
+    lock.value =
+      tutorialLockedRef.current || weekLocked || (houseLockedRef.current && activeTab === 'house');
+  }, [activeTab, weekLocked, lock]);
   return { lock, setHouseLocked, setTutorialLocked };
 }
