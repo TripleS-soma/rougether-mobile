@@ -116,3 +116,27 @@ it('KST 자정에도 사용자가 고른 과거 날짜는 유지한다', async (
   expect(result.current.selectedDate).toBe('2026-08-15');
   expect(result.current.today).toBe('2026-09-10');
 });
+
+it('prefetchWeek는 그 주 7일 중 오늘을 뺀 날을 받고, 같은 주를 다시 부르면 요청하지 않는다 (2026-11-04)', async () => {
+  const requested: string[] = [];
+  global.fetch = jest.fn(async (url: string) => {
+    const m = /\/calendar\?date=(\d{4}-\d{2}-\d{2})/.exec(url);
+    if (m) requested.push(m[1]);
+    return jsonRes({ date: m?.[1] ?? '', categories: [] });
+  }) as unknown as typeof fetch;
+  const qc = createTestQueryClient();
+  const { result, unmount } = await renderHook(() => useCalendarView(async () => {}), {
+    wrapper: queryWrapper(qc),
+  });
+  const today = result.current.today;
+  // 오늘이 든 주를 미리 받는다 — 오늘은 방 데이터로 그리므로 빠진다.
+  await act(async () => result.current.prefetchWeek(today));
+  await waitFor(() => expect(requested).toHaveLength(6));
+  expect(requested).not.toContain(today);
+  // 같은 주의 다른 날로 다시 불러도 이미 받은 날은 건너뛴다.
+  await act(async () => result.current.prefetchWeek(requested[0]));
+  await act(async () => {});
+  expect(requested).toHaveLength(6);
+  await unmount();
+  qc.clear();
+});
