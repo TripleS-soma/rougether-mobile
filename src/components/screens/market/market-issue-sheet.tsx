@@ -1,28 +1,23 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { SheetHandle } from '@/components/ui/sheet-handle';
-import { MARKET_MAX_SUPPLY } from '@/constants/market';
+import { parseOrderPrice } from '@/components/screens/market/economics';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
 
-const SUPPLY_CHOICES = Array.from({ length: MARKET_MAX_SUPPLY }, (_, i) => i + 1);
-
 export type MarketIssueSheetProps = {
   visible: boolean;
   submitting?: boolean;
-  onSubmit?: (totalSupply: number) => void;
+  onSubmit?: (price: number) => void;
   onClose: () => void;
 };
 
-/**
- * 거래소에 올리기 (#1427) — 발행 수량 1~10(내 보유분 1개 포함). 한 번 올리면 추가 발행도,
- * 가구 재검수도 안 된다는 걸 누르기 전에 알린다.
- */
+/** 제작자는 원본을 보관하고 판매 가격만 정함. */
 export function MarketIssueSheet({
   visible,
   submitting = false,
@@ -32,9 +27,10 @@ export function MarketIssueSheet({
   const t = useTokens();
   const Typography = useTypography();
   const tr = useT();
-  const [supply, setSupply] = useState(1);
+  const [priceText, setPriceText] = useState('');
+  const price = parseOrderPrice(priceText);
   useEffect(() => {
-    if (visible) setSupply(1);
+    if (visible) setPriceText('');
   }, [visible]);
 
   return (
@@ -60,35 +56,31 @@ export function MarketIssueSheet({
         </Pressable>
       </View>
       <View style={styles.body}>
-        <Text style={[Typography.label, { color: t.text }]}>{tr('market.issue.supply')}</Text>
-        <View style={styles.choices}>
-          {SUPPLY_CHOICES.map((n) => {
-            const active = n === supply;
-            return (
-              <Pressable
-                key={n}
-                onPress={() => setSupply(n)}
-                disabled={submitting}
-                accessibilityRole="button"
-                accessibilityLabel={tr('market.order.quantityValue', { n })}
-                accessibilityState={{ selected: active }}
-                style={[styles.choice, { backgroundColor: active ? t.primary : t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: active ? t.onPrimary : t.text }]}>
-                  {n}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <Text style={[Typography.label, { color: t.text }]}>{tr('market.order.price')}</Text>
+        <TextInput
+          value={priceText}
+          onChangeText={(value) => setPriceText(value.replace(/[^0-9]/g, ''))}
+          keyboardType="number-pad"
+          maxLength={4}
+          editable={!submitting}
+          accessibilityLabel={tr('market.order.price')}
+          placeholder={tr('market.order.pricePlaceholder')}
+          placeholderTextColor={t.textMuted}
+          style={[Typography.h3, { color: t.text, padding: Spacing.three }]}
+        />
         <Text style={[Typography.supporting, { color: t.textMuted }]}>
           {tr('market.issue.body')}
         </Text>
         <Button
           label={
-            submitting ? tr('market.issue.submitting') : tr('market.issue.submit', { n: supply })
+            submitting
+              ? tr('market.issue.submitting')
+              : tr('market.issue.submit', { n: price ?? 0 })
           }
-          onPress={() => onSubmit?.(supply)}
-          disabled={submitting}
+          onPress={() => {
+            if (price != null) onSubmit?.(price);
+          }}
+          disabled={submitting || price == null}
         />
       </View>
     </BottomSheet>

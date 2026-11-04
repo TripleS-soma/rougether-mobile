@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { Room } from '@/components/room/room';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
-import { MarketAssetScreen } from '@/components/screens/market-asset-screen';
-import { MarketOrdersScreen } from '@/components/screens/market-orders-screen';
-import { MarketScreen } from '@/components/screens/market-screen';
-import { MarketList } from '@/components/screens/market/market-list';
+import {
+  FixedPriceMarketScreen,
+  FixedPriceListingScreen,
+} from '@/components/screens/fixed-price-market-screen';
 import { MarketIssueSheet } from '@/components/screens/market/market-issue-sheet';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { RoomGrowthPill } from '@/components/ui/room-growth-pill';
@@ -16,12 +16,7 @@ import { Button } from '@/components/ui/button';
 import { FurnitureStudioScreen } from '@/components/screens/furniture-studio-screen';
 import { FriendWeekStrip } from '@/components/screens/house/friend-week-strip';
 import { shiftIso, todayIso } from '@/utils/datetime';
-import {
-  DEMO_MARKET_ASSET,
-  DEMO_MARKET_ASSETS,
-  DEMO_MARKET_ORDERS,
-  DEMO_MARKET_TRADES,
-} from '@/mocks/fixtures';
+import { DEMO_MARKET_ASSET, DEMO_MARKET_ASSETS } from '@/mocks/fixtures';
 import { RoomRenderReference } from '@/dev/room-render-reference';
 import { MinigamePreview, MINIGAME_PREVIEW_CATALOG } from '@/dev/minigame-preview';
 import { MinigamesScreen } from '@/components/screens/minigames-screen';
@@ -320,51 +315,48 @@ export const roomEntries: GalleryEntry[] = [
     ),
   },
   {
-    name: 'MarketList',
+    name: 'FixedPriceMarketScreen',
     description:
-      '가구 거래소 목록 (#1427, MARKET_ENABLED로 숨김) — 거래소 화면 안 카드 격자: 그림·이름·제작자(탈퇴 시 탈퇴한 회원)·최저 판매가/판매 대기 없음·최근 거래가, 내 주문·새로고침. 로컬 픽스처.',
-    render: () => <MarketList assets={DEMO_MARKET_ASSETS} hasNext />,
-  },
-  {
-    name: 'MarketScreen',
-    description:
-      '가구 거래소 화면 (#1502) — 방 화면 전체 메뉴(≡)에서 여는 독립 화면: 헤더(뒤로·코인), 판매 중 N개 · 내 주문 보기, 목록. 로컬 픽스처.',
+      '고정가 가구 거래소. 제작자 가격으로 즉시 구매하며 수량 선택과 되팔기가 없음. 로컬 픽스처.',
     render: () => (
       <View style={{ height: 640 }}>
-        <MarketScreen assets={DEMO_MARKET_ASSETS} hasNext coinBalance={1200} sellingCount={2} />
-      </View>
-    ),
-  },
-  {
-    name: 'MarketAssetScreen',
-    description:
-      '거래소 가구 상세 (#1427): 그림·제작자·발행 수·최저 판매가·최근 거래가, 구매하기/판매하기/발행 재고 판매(보유·제작자 여부로), 호가 위 3단계, 최근 거래, 신고하기(onReport 있을 때만). 버튼을 누르면 주문 시트(가격 1~1,000·예상 수령액). 로컬 픽스처.',
-    render: () => (
-      <View style={{ height: 720, alignSelf: 'stretch' }}>
-        <MarketAssetScreen
-          asset={{ ...DEMO_MARKET_ASSET, owned: true, isCreator: true }}
-          trades={DEMO_MARKET_TRADES}
+        <FixedPriceMarketScreen
+          listings={DEMO_MARKET_ASSETS.map((a) => ({
+            ...a,
+            itemId: a.itemId ?? 1,
+            isCreator: false,
+            price: a.bestAskPrice ?? 30,
+            selling: true,
+            owned: false,
+          }))}
           coinBalance={120}
-          onPlaceOrder={() => true}
-          onReport={() => true}
         />
       </View>
     ),
   },
   {
-    name: 'MarketOrdersScreen',
+    name: 'FixedPriceListingScreen',
     description:
-      '거래소 내 주문 (#1427): 대기 중/완료 탭, 행(그림·이름·구매/판매·가격·체결 수량·상태·만료까지), 대기 중은 확인 후 취소. 로컬 픽스처.',
+      '제작자 판매 관리. 원본을 보관하면서 판매 가격을 바꾸거나 판매를 중지함. 로컬 픽스처.',
     render: () => (
-      <View style={{ height: 640, alignSelf: 'stretch' }}>
-        <MarketOrdersScreen orders={DEMO_MARKET_ORDERS} onCancel={() => {}} />
+      <View style={{ height: 720 }}>
+        <FixedPriceListingScreen
+          listing={{
+            ...DEMO_MARKET_ASSET,
+            itemId: 1,
+            price: 30,
+            selling: true,
+            owned: true,
+            isCreator: true,
+          }}
+          coinBalance={120}
+        />
       </View>
     ),
   },
   {
     name: 'MarketIssueSheet',
-    description:
-      '거래소에 올리기 (#1427) — AI 가구 스튜디오의 발행 시트: 발행 수량 1~10, 추가 발행·재검수 불가 안내.',
+    description: 'AI 가구 판매 등록: 판매 가격 설정, 원본 보관, 무제한 판매와 수수료 안내.',
     render: () => <MarketIssueSheetDemo />,
   },
   {

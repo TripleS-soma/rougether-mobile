@@ -13,7 +13,7 @@ export function FurnitureStudio({
   onGoToRoom: () => Promise<boolean>;
   onAttendance?: () => void;
   /** 거래소에 올리기 (#1427) — 셸이 MARKET_ENABLED일 때만 넘긴다. */
-  onIssue?: (userItemId: number, totalSupply: number) => Promise<boolean>;
+  onIssue?: (userItemId: number, price: number) => Promise<boolean>;
 }) {
   const studio = useFurnitureStudio();
   const tr = useT();

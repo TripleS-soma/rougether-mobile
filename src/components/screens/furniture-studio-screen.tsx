@@ -37,7 +37,7 @@ export type FurnitureStudioScreenProps = {
    * 거래소에 올리기 (#1427) — 넘겼을 때만 완성된 가구에 버튼이 생긴다(셸은 MARKET_ENABLED일 때만
    * 넘긴다). 성공하면 true — 시트를 닫는다(상세로의 이동은 호출부 몫).
    */
-  onIssue?: (userItemId: number, totalSupply: number) => Promise<boolean> | boolean | void;
+  onIssue?: (userItemId: number, price: number) => Promise<boolean> | boolean | void;
 };
 
 export function FurnitureStudioScreen({
@@ -69,11 +69,11 @@ export function FurnitureStudioScreen({
   // 거래소 발행 시트 — 고른 가구의 userItemId.
   const [issuing, setIssuing] = useState<number | null>(null);
   const [issueBusy, setIssueBusy] = useState(false);
-  const submitIssue = async (totalSupply: number) => {
+  const submitIssue = async (price: number) => {
     if (issuing == null || issueBusy) return;
     setIssueBusy(true);
     try {
-      const ok = await Promise.resolve(onIssue?.(issuing, totalSupply));
+      const ok = await Promise.resolve(onIssue?.(issuing, price));
       if (ok !== false) setIssuing(null);
     } finally {
       setIssueBusy(false);
