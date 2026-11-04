@@ -1,5 +1,14 @@
 import { type ReactNode, memo, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View, type ViewProps } from 'react-native';
+import Reanimated, {
+  Easing,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  type SharedValue,
+} from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 import type { DayProgress } from '@/utils/calendar-progress';
 import { progressLabel } from '@/utils/calendar-progress';
@@ -194,27 +203,32 @@ function CalendarBase({
 
   // 주 접힘 (#1327) — 선택 주를 뺀 줄의 높이·투명도를 0으로. 줄 높이는 실측(첫 onLayout)
   // 뒤에야 알 수 있어, 마운트와 동시에 접히는 경우 측정 전엔 애니메이션을 시작하지 않는다.
+  // UI 스레드(Reanimated)에서 돈다 (2026-11-04) — 예전 Animated(height라 JS 드라이버)는
+  // 주간 보기 화면 마운트와 같은 JS 스레드를 다퉈 프레임이 떨어졌다.
   const collapsed = weekOf != null;
-  const collapse = useAnimatedValue(0);
+  // jest의 useSharedValue는 렌더마다 새 객체 — useRef로 앵커 (paw-refresh-scroll과 같은 계약).
+  const fold = useRef(useSharedValue(0)).current;
   const [rowH, setRowH] = useState(0);
+  // 접힘이 멈춰 있는가 — 움직이는 동안엔 떠 있는 원 대신 선택 칸을 칠한다(아래 selCircle).
+  const [foldSettled, setFoldSettled] = useState(!collapsed);
   useEffect(() => {
     if (collapsed && rowH === 0) return;
-    const anim = Animated.timing(collapse, {
-      toValue: collapsed ? 1 : 0,
-      duration: WEEK_COLLAPSE_MS,
-      easing: Easing.out(Easing.cubic),
-      // height는 네이티브 드라이버가 못 다룬다.
-      useNativeDriver: false,
-    });
-    anim.start();
-    return () => anim.stop();
-  }, [collapsed, rowH, collapse]);
+    const to = collapsed ? 1 : 0;
+    if (fold.value === to) {
+      setFoldSettled(true);
+      return;
+    }
+    setFoldSettled(false);
+    fold.value = withTiming(
+      to,
+      { duration: WEEK_COLLAPSE_MS, easing: Easing.out(Easing.cubic) },
+      (finished) => {
+        if (finished) runOnJS(setFoldSettled)(true);
+      },
+    );
+  }, [collapsed, rowH, fold]);
   // 남기는 주 — 이웃 달 칸까지 날짜로 찾는다. 9/30을 고른 채 10월 뷰여도 그 주(첫 줄)가 남는다.
   const keptWeek = weekOf ? weeks.findIndex((week) => week.some((c) => c.date === weekOf)) : -1;
-  const rowCollapse = {
-    height: rowH ? collapse.interpolate({ inputRange: [0, 1], outputRange: [rowH, 0] }) : undefined,
-    opacity: collapse.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
-  };
 
   // 달력 월 스와이프 (#562) — 그리드의 가로 우세 플링으로 ‹ ›와 같은 이전/
   // 다음 달 이동. RNGH pan(#561과 공용 유틸) — RN 웹의 ScrollView 안에서
@@ -268,10 +282,12 @@ function CalendarBase({
     if (appearing || !animate) {
       selPos.setValue(target);
     } else {
+      // 출렁임 없이 (2026-11-04) — friction 7·tension 90은 목표 칸을 25px 지나쳤다가
+      // 350ms 동안 되돌아와 "원이 튄다"로 보였다(웹 rAF 실측). bounciness 0 = 임계 감쇠.
       Animated.spring(selPos, {
         toValue: target,
-        friction: 7,
-        tension: 90,
+        bounciness: 0,
+        speed: 18,
         useNativeDriver: NATIVE_DRIVER,
       }).start();
     }
@@ -298,6 +314,14 @@ function CalendarBase({
     // placeCircle은 렌더마다 새로 만들어지는 클로저 — value/selectedInView만 의존.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, selectedInView]);
+  // 접힘이 멈추면 원을 최종 칸에 다시 얹는다 — 움직이는 동안의 줄 onLayout은 늦고 띄엄띄엄
+  // 와서, 그걸 따라 원을 옮기면 칸을 계단식으로 뒤쫓으며 흔들렸다(2026-11-04 제보).
+  useEffect(() => {
+    if (foldSettled && selectedInView) placeCircle(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [foldSettled]);
+  /** 떠 있는 원 대신 선택 칸 자체를 칠하는가 — 접힘·펼침이 움직이는 동안. 칸은 줄과 같이 움직인다. */
+  const fillSelectedCell = !foldSettled && selectedInView && !progressByDate;
 
   return (
     <View style={styles.wrap}>
@@ -377,7 +401,7 @@ function CalendarBase({
                 styles.selCircle,
                 {
                   backgroundColor: t.primary,
-                  opacity: progressByDate ? 0 : selOpacity,
+                  opacity: progressByDate || !foldSettled ? 0 : selOpacity,
                   transform: selPos.getTranslateTransform(),
                 },
               ]}
@@ -408,10 +432,16 @@ function CalendarBase({
               // 접히는 줄 (#1327) — 남기는 주가 이 달에 있을 때만 나머지를 접는다.
               const folding = keptWeek >= 0 && wi !== keptWeek;
               return (
-                <Animated.View
-                  key={`week-${wi}`}
+                <FoldRow
+                  // 접히는 줄 ↔ 남는 줄이 바뀌면(주 이동·펼침) 새로 마운트 — Reanimated는 반환에서
+                  // 빠진 style 키(height)를 되돌리지 않아, 접혀 있던 줄이 남는 줄이 되면 높이 0이
+                  // 그대로 남아 선택 주가 사라졌다(#1603 리뷰). 새 뷰엔 낡은 값이 없다.
+                  key={`week-${wi}-${folding ? 'fold' : 'keep'}`}
                   testID={`calendar-week-row-${wi}`}
-                  style={[styles.weekRow, folding && rowCollapse]}
+                  fold={fold}
+                  rowH={rowH}
+                  folding={folding}
+                  style={styles.weekRow}
                   accessibilityElementsHidden={folding && collapsed}
                   importantForAccessibility={folding && collapsed ? 'no-hide-descendants' : 'auto'}
                   // 셀 onLayout은 이 줄 기준 좌표라, 선택 원을 grid 좌표에 얹으려면
@@ -421,7 +451,8 @@ function CalendarBase({
                     // 줄 높이 실측 (#1327) — 접히지 않는 줄에서 한 번만.
                     if (!folding && rowH === 0 && e.nativeEvent.layout.height > 0)
                       setRowH(e.nativeEvent.layout.height);
-                    if (selectedInView) placeCircle(false);
+                    // 접히는 동안엔 원을 쫓아 옮기지 않는다 — 칸 채움이 대신하고 멈추면 한 번 놓는다.
+                    if (selectedInView && foldSettled) placeCircle(false);
                   }}>
                   <View style={styles.week}>
                     {week.map((cell, di) => {
@@ -464,7 +495,7 @@ function CalendarBase({
                           onLayout={(e) => {
                             dayLayouts.current[date] = { ...e.nativeEvent.layout, row: wi };
                             // 월 이동으로 이 셀이 새로 측정될 때, 선택 날짜면 즉시 원을 얹는다.
-                            if (date === value && selectedInView) placeCircle(false);
+                            if (date === value && selectedInView && foldSettled) placeCircle(false);
                           }}
                           style={[
                             styles.cell,
@@ -476,6 +507,7 @@ function CalendarBase({
                               styles.dayCircle,
                               progressByDate && styles.progressDate,
                               progressByDate && isSelected && { backgroundColor: t.primary },
+                              fillSelectedCell && isSelected && { backgroundColor: t.primary },
                             ]}>
                             {progress && progress.total > 0 && !future ? (
                               <Svg
@@ -566,7 +598,7 @@ function CalendarBase({
                       );
                     })}
                   </View>
-                </Animated.View>
+                </FoldRow>
               );
             })}
           </View>
@@ -575,6 +607,25 @@ function CalendarBase({
     </View>
   );
 }
+/**
+ * 접히는 주 줄 (#1327) — 선택 주가 아닌 줄의 높이·투명도를 `fold`(0 펼침 → 1 접힘)로.
+ * 남기는 줄과 아직 줄 높이를 모를 때는 높이를 건드리지 않는다.
+ */
+function FoldRow({
+  fold,
+  rowH,
+  folding,
+  style,
+  ...rest
+}: ViewProps & { fold: SharedValue<number>; rowH: number; folding: boolean }) {
+  const foldStyle = useAnimatedStyle(() => {
+    if (!folding) return { opacity: 1 };
+    if (!rowH) return { opacity: 1 - fold.value };
+    return { height: interpolate(fold.value, [0, 1], [rowH, 0]), opacity: 1 - fold.value };
+  }, [folding, rowH]);
+  return <Reanimated.View {...rest} style={[style, foldStyle]} />;
+}
+
 /**
  * memo (#771) — 42칸 + onLayout 클로저를 매번 다시 만들지 않게. 부모가
  * `onSelect`를 참조 고정으로 줘야 실제로 건너뛴다.
