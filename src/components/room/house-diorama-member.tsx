@@ -67,6 +67,7 @@ export const HouseDioramaMember = memo(function HouseDioramaMember({
                 cachePolicy="memory-disk"
                 allowDownscaling={!sharp}
                 accessible={false}
+                accessibilityLabel=""
               />
             )}
           </View>

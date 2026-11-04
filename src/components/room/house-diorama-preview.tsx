@@ -43,7 +43,7 @@ export function HouseDioramaPreview({
         style={StyleSheet.absoluteFill}
         contentFit="contain"
         accessible={!!name}
-        accessibilityLabel={name ? tr('house.previewFrame.a11y', { name }) : undefined}
+        accessibilityLabel={name ? tr('house.previewFrame.a11y', { name }) : ''}
       />
       {dioramaWindowRects(theme).map((rect, i) => {
         const seat = page[i];

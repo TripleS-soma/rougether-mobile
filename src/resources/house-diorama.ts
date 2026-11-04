@@ -1,3 +1,10 @@
+import cloud_balloon from '@/assets/houses/shared-v1/cloud-balloon.webp';
+import coral_aquarium from '@/assets/houses/shared-v1/coral-aquarium.webp';
+import mushroom_forest from '@/assets/houses/shared-v1/mushroom-forest.webp';
+import night_observatory from '@/assets/houses/shared-v1/night-observatory.webp';
+import forest_canopy from '@/assets/houses/shared-v1/forest-canopy.webp';
+import evening_brick from '@/assets/houses/shared-v1/evening-brick.webp';
+
 import type { HouseWindowRect } from '@/resources/house-frame';
 import type { FurnitureItem, PlacedFurniture } from '@/resources/furniture';
 import { DEFAULT_HOUSE_COVER_KEY } from '@/resources/house-frame';
@@ -20,42 +27,42 @@ export const HOUSE_DIORAMA_THEMES: readonly HouseDioramaTheme[] = [
     id: 'cloud-balloon',
     skyColor: '#a6cef5',
     coverImageKey: DEFAULT_HOUSE_COVER_KEY,
-    source: require('@/assets/houses/shared-v1/cloud-balloon.webp'),
+    source: cloud_balloon,
     feet: [791, 1187],
   },
   {
     id: 'coral-aquarium',
     skyColor: '#58a0e9',
     coverImageKey: 'house/coral-aquarium/house-unified-coral-aquarium-frame.png',
-    source: require('@/assets/houses/shared-v1/coral-aquarium.webp'),
+    source: coral_aquarium,
     feet: [781, 1198],
   },
   {
     id: 'mushroom-forest',
     skyColor: '#c4e3f1',
     coverImageKey: 'house/mushroom-forest/house-unified-mushroom-forest-frame.png',
-    source: require('@/assets/houses/shared-v1/mushroom-forest.webp'),
+    source: mushroom_forest,
     feet: [800, 1137],
   },
   {
     id: 'night-observatory',
     skyColor: '#705caa',
     coverImageKey: 'house/night-observatory/house-unified-night-observatory-frame-v3.png',
-    source: require('@/assets/houses/shared-v1/night-observatory.webp'),
+    source: night_observatory,
     feet: [795, 1200],
   },
   {
     id: 'forest-canopy',
     skyColor: '#e7e8c3',
     coverImageKey: FOREST_CANOPY_COVER_KEY,
-    source: require('@/assets/houses/shared-v1/forest-canopy.webp'),
+    source: forest_canopy,
     feet: [782, 1155],
   },
   {
     id: 'evening-brick',
     skyColor: '#826ba9',
     coverImageKey: EVENING_BRICK_COVER_KEY,
-    source: require('@/assets/houses/shared-v1/evening-brick.webp'),
+    source: evening_brick,
     feet: [797, 1200],
   },
 ];
