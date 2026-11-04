@@ -113,4 +113,39 @@ describe('MyRoomScreen — 달력 월/주 모드 (#1327)', () => {
       jest.useRealTimers();
     }
   });
+
+  it('같은 화면이 월로 돌아왔다 다시 주로 오면 처음부터 접히고, 뒤로도 다시 동작한다 (2026-11-04 제자리 전환)', async () => {
+    jest.useFakeTimers();
+    try {
+      const onBack = jest.fn();
+      const week = (
+        <MyRoomScreen
+          routines={SAMPLE_ROUTINES}
+          view="calendar"
+          calendarMode="week"
+          onBack={onBack}
+        />
+      );
+      const ui = await render(week);
+      await fireEvent.press(ui.getByLabelText('뒤로 가기'));
+      await act(async () => {
+        jest.advanceTimersByTime(400);
+      });
+      await waitFor(() => expect(onBack).toHaveBeenCalledTimes(1));
+      // 셸이 같은 인스턴스를 월로 되돌린다(새 화면 마운트 없음).
+      await ui.rerender(<MyRoomScreen routines={SAMPLE_ROUTINES} view="calendar" />);
+      expect(ui.queryByText('주간 보기')).toBeNull();
+      // 다시 주로 — '떠나는 중'이 남아 있으면 펼친 채(다음 달)로 남고 뒤로가 삼켜진다.
+      await ui.rerender(week);
+      expect(ui.getByText('주간 보기')).toBeTruthy();
+      expect(ui.getByLabelText('다음 주')).toBeTruthy();
+      await fireEvent.press(ui.getByLabelText('뒤로 가기'));
+      await act(async () => {
+        jest.advanceTimersByTime(400);
+      });
+      await waitFor(() => expect(onBack).toHaveBeenCalledTimes(2));
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });
