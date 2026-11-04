@@ -9,6 +9,12 @@ import {
   useRef,
   useState,
 } from 'react';
+import Reanimated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import {
   Animated,
   type GestureResponderEvent,
@@ -35,12 +41,7 @@ import { isScheduledOn } from '@/components/screens/my-room/schedule';
 import type { GroupSlot } from '@/components/screens/my-room/routine-drag';
 import { useRoutineRowDrag } from '@/components/screens/my-room/use-routine-row-drag';
 import { useCategoryHeaderDrag } from '@/components/screens/my-room/use-category-header-drag';
-import {
-  useAnimatedValue,
-  useConstant,
-  useLatestRef,
-  useStableCallback,
-} from '@/hooks/use-stable-value';
+import { useConstant, useLatestRef, useStableCallback } from '@/hooks/use-stable-value';
 import { CategoryDragHandle } from '@/components/screens/my-room/category-drag-handle';
 import { RoutineRow } from '@/components/screens/my-room/routine-row';
 import {
@@ -579,17 +580,19 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const weekMode = tab !== 'room' && calendarMode === 'week';
   const hideDayList = tab !== 'room' && calendarMode === 'month' && !!onOpenDay;
   const [weekLeaving, setWeekLeaving] = useState(false);
-  const weekIn = useAnimatedValue(0);
+  // UI 스레드(Reanimated) — 달력 줄 접힘과 같은 시간·같은 곡선, 같은 스레드에서 자란다(2026-11-04).
+  const weekIn = useRef(useSharedValue(0)).current;
   useEffect(() => {
     if (!weekMode) return;
-    const anim = Animated.timing(weekIn, {
-      toValue: weekLeaving ? 0 : 1,
+    weekIn.value = withTiming(weekLeaving ? 0 : 1, {
       duration: WEEK_COLLAPSE_MS,
-      useNativeDriver: false,
+      easing: Easing.out(Easing.cubic),
     });
-    anim.start();
-    return () => anim.stop();
   }, [weekMode, weekLeaving, weekIn]);
+  const weekHeadStyle = useAnimatedStyle(() => ({
+    height: weekIn.value * WEEK_HEADER_H,
+    opacity: weekIn.value,
+  }));
   // 뒤로: 펼침(WEEK_COLLAPSE_MS)이 끝난 뒤 닫는다 — 애니메이션 완료 콜백 대신 타이머로,
   // 테스트(가짜 타이머)와 기기에서 같은 시점에 닫히게.
   const onBackRef = useLatestRef(onBack);
@@ -1202,15 +1205,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       // 뜻을 갖게 되면 "가로 스와이프 = 하단 탭 이동" 규칙이 다시 깨진다. 월 이동은 ‹ › 버튼.
       <View style={styles.calendarOverview}>
         {weekMode ? (
-          <Animated.View
-            testID="calendar-week-header"
-            style={[
-              styles.weekHead,
-              {
-                height: weekIn.interpolate({ inputRange: [0, 1], outputRange: [0, WEEK_HEADER_H] }),
-                opacity: weekIn,
-              },
-            ]}>
+          <Reanimated.View testID="calendar-week-header" style={[styles.weekHead, weekHeadStyle]}>
             <Pressable
               onPress={leaveWeek}
               accessibilityRole="button"
@@ -1223,7 +1218,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             <Text style={[Typography.h3, { color: t.text }]}>
               {tr('routineTodo.myRoom.weekView')}
             </Text>
-          </Animated.View>
+          </Reanimated.View>
         ) : null}
         <Calendar
           value={selectedDate}
