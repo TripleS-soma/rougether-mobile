@@ -181,3 +181,41 @@ it('allows credit-funded submission with no coins', async () => {
   });
   expect(createFurniture).toHaveBeenCalledTimes(1);
 });
+
+it('keeps credit-funded creation available when only the wallet request fails', async () => {
+  (fetchWallets as jest.Mock).mockRejectedValue(new Error('wallet unavailable'));
+  (createFurniture as jest.Mock).mockResolvedValue({ id: 'credit-job', status: 'QUEUED' });
+  const { result } = await renderHook(() => useFurnitureStudio(), {
+    wrapper: queryWrapper(queryClient),
+  });
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  expect(result.current.balance?.available).toBe(1);
+  expect(result.current.coinBalance).toBeNull();
+  expect(result.current.error).toBeNull();
+  await act(async () => {
+    await result.current.choosePhoto();
+  });
+  await act(async () => {
+    await result.current.submit();
+  });
+  expect(createFurniture).toHaveBeenCalledTimes(1);
+});
+
+it('does not invent a coin balance when the wallet fails and no credit is available', async () => {
+  (fetchFurnitureCredits as jest.Mock).mockResolvedValue({ available: 0, reserved: 0 });
+  (fetchWallets as jest.Mock).mockRejectedValue(new Error('wallet unavailable'));
+  const { result } = await renderHook(() => useFurnitureStudio(), {
+    wrapper: queryWrapper(queryClient),
+  });
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  expect(result.current.balance?.available).toBe(0);
+  expect(result.current.coinBalance).toBeNull();
+  expect(result.current.error).toBeTruthy();
+  await act(async () => {
+    await result.current.choosePhoto();
+  });
+  await act(async () => {
+    await result.current.submit();
+  });
+  expect(createFurniture).not.toHaveBeenCalled();
+});

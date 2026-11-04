@@ -49,18 +49,15 @@ type StudioData = Awaited<ReturnType<typeof fetchStudio>>;
 const NO_JOBS: StudioData['jobs'] = [];
 
 async function fetchStudio() {
-  const [balance, jobs, wallets] = await Promise.all([
-    fetchFurnitureCredits(),
-    fetchFurnitureJobs(),
-    fetchWallets(),
-  ]);
-  return { balance, jobs, wallet: toWallet(wallets) };
+  const [balance, jobs] = await Promise.all([fetchFurnitureCredits(), fetchFurnitureJobs()]);
+  return { balance, jobs };
 }
 
 export function useFurnitureStudio() {
   const queryClient = useQueryClient();
   const userId = getSessionUserId();
   const queryKey = useMemo(() => queryKeys.furnitureStudio(userId), [userId]);
+  const walletKey = useMemo(() => queryKeys.wallet(userId), [userId]);
   const [photo, setPhoto] = useState<FurniturePhoto | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [localError, setError] = useState<string | null>(null);
@@ -79,6 +76,18 @@ export function useFurnitureStudio() {
     retry: false,
     refetchOnWindowFocus: false,
   });
+  const {
+    data: wallet,
+    isPending: walletPending,
+    error: walletError,
+    refetch: refetchWallet,
+  } = useQuery({
+    queryKey: walletKey,
+    queryFn: async () => toWallet(await fetchWallets()),
+    staleTime: 0,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
   const { mutateAsync } = useMutation({
     mutationKey: queryKey,
     mutationFn: ({ selectedPhoto, id }: { selectedPhoto: FurniturePhoto; id: string }) =>
@@ -87,18 +96,15 @@ export function useFurnitureStudio() {
   });
   const balance = data?.balance ?? null;
   const jobs = data?.jobs ?? NO_JOBS;
-  const coinBalance = data?.wallet.coin ?? null;
-  const loading = isPending;
-  const error = localError ?? (loadError ? errorMessage(loadError) : null);
-
-  useEffect(() => {
-    if (data) queryClient.setQueryData(queryKeys.wallet(userId), data.wallet);
-  }, [data, queryClient, userId]);
+  const coinBalance = walletError ? null : (wallet?.coin ?? null);
+  const loading = isPending || ((balance?.available ?? 0) < 1 && walletPending);
+  const queryError = loadError ?? ((balance?.available ?? 0) < 1 ? walletError : null);
+  const error = localError ?? (queryError ? errorMessage(queryError) : null);
 
   const refresh = useCallback(async () => {
     setError(null);
-    await refetch();
-  }, [refetch]);
+    await Promise.all([refetch(), refetchWallet()]);
+  }, [refetch, refetchWallet]);
 
   useEffect(() => {
     mounted.current = true;
@@ -160,7 +166,10 @@ export function useFurnitureStudio() {
     setError(null);
     // Cancel older reads before reserving a credit or coins.
     try {
-      await queryClient.cancelQueries({ queryKey });
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey }),
+        queryClient.cancelQueries({ queryKey: walletKey }),
+      ]);
       const job = await mutateAsync({ selectedPhoto: photo, id: pendingId.current });
       if (!mounted.current) return;
       queryClient.setQueryData<StudioData>(
@@ -182,7 +191,18 @@ export function useFurnitureStudio() {
       busy.current = false;
       if (mounted.current) setSubmitting(false);
     }
-  }, [active, balance, coinBalance, photo, queryClient, queryKey, mutateAsync, refresh, userId]);
+  }, [
+    active,
+    balance,
+    coinBalance,
+    photo,
+    queryClient,
+    queryKey,
+    walletKey,
+    mutateAsync,
+    refresh,
+    userId,
+  ]);
 
   return useMemo(
     () => ({
