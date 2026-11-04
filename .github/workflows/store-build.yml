@@ -239,7 +239,7 @@ jobs:
       contents: read
       checks: read
     concurrency:
-      group: eas-deploy-dev
+      group: ${{ inputs.action == 'inspect' && 'eas-testflight-current-inspect' || 'eas-deploy-dev' }}
       cancel-in-progress: false
     env:
       SUBMIT_MODE: ${{ inputs.mode }}

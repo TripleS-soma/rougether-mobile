@@ -207,7 +207,9 @@ it('keeps production and the frozen 115 lane separate from the opt-in current ca
   expect(Object.keys(w.on.workflow_dispatch.inputs).length).toBeLessThanOrEqual(10);
   const lane = w.jobs['testflight-current-submit'];
   expect(lane.if).toBe("inputs.mode == 'testflight-current-submit'");
-  expect(lane.concurrency.group).toBe('eas-deploy-dev');
+  expect(lane.concurrency.group).toBe(
+    "${{ inputs.action == 'inspect' && 'eas-testflight-current-inspect' || 'eas-deploy-dev' }}",
+  );
   expect(lane.steps.at(-1)).toMatchObject({
     if: 'always()',
     run: 'node scripts/submit-current-testflight.js cleanup',
