@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { PagerGestureContext } from '@/components/ui/pager-scroll-view';
+import { useAppFrame } from '@/hooks/use-app-frame';
 import { PageActiveContext } from '@/hooks/use-page-active';
 import { SWIPE_CLAIM_DX, SWIPE_FAIL_DY } from '@/utils/gesture';
 
@@ -73,11 +74,15 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
   // 조건부 페이지(피드 #1409 — FEED_ENABLED)는 null로 들어온다 — 빈 자리를 페이지로 세지 않는다.
   const pages = children.filter((child) => child != null && child !== false);
   const count = pages.length;
-  const [width, setWidth] = useState(0);
+  // 첫 프레임부터 앱 프레임 폭으로 (2026-11-04) — 0으로 시작하면 다시 마운트될 때(주간 보기 →
+  // 달력 복귀 #1327) 페이지 폭이 정해지지 않아 글자가 세로로 꺾인 채 한 프레임, onLayout 전까지
+  // 빈 화면이 깜빡였다. 실제 폭은 아래 onLayout이 바로잡는다.
+  const initialWidth = useAppFrame().width;
+  const [width, setWidth] = useState(initialWidth);
   // 공유값은 첫 렌더 인스턴스에 앵커링(useRef) — 프로덕션 useSharedValue는
   // 원래 참조가 안정적이지만, jest 환경은 렌더마다 새 객체를 돌려줘(실측)
   // 1회 생성한 제스처의 클로저와 최신 쓰기가 서로 다른 객체를 보게 된다.
-  const tx = useRef(useSharedValue(0)).current;
+  const tx = useRef(useSharedValue(-index * initialWidth)).current;
   const start = useRef(useSharedValue(0)).current;
   const touchStart = useRef(useSharedValue({ x: 0, y: 0 })).current;
   const swiping = useRef(useSharedValue(false)).current;
@@ -96,7 +101,7 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
   // 팬 객체를 새로 붙이는 비용도 없앤다. 워클릿이 읽어야 하는 최신 값
   // (index·width)은 공유값 미러로, JS 콜백은 ref로 넘긴다.
   const indexSV = useRef(useSharedValue(index)).current;
-  const widthSV = useRef(useSharedValue(0)).current;
+  const widthSV = useRef(useSharedValue(initialWidth)).current;
   indexSV.value = index;
   const commitRef = useRef<(target: number) => void>(() => {});
 

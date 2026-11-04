@@ -588,9 +588,12 @@ export function AppShell({
       {/* 하단 탭 3서피스는 수평 페이저에 상주한다 (#563) — 스와이프 중
         이웃 화면이 손가락을 따라 끝까지 보인다. 비활성 페이지는 페이저가
         드래그/정착 중에만 그린다. 서브화면들은 기존처럼 단독 렌더. */}
-      {activeTab ? (
+      {/* 주간 보기(#1327)도 페이저의 달력 페이지가 제자리에서 접힌다 (2026-11-04 실기기 영상) —
+          예전엔 별도 MyRoomScreen을 마운트하고 페이저(다섯 탭)를 언마운트해, 날짜 탭 뒤 약 300ms
+          화면이 얼었다가 접힘이 몰아쳤고, 돌아올 땐 페이저 재마운트로 깜빡였다. */}
+      {activeTab || screen === 'calendarWeek' ? (
         <TabPager
-          index={NAV_ORDER.indexOf(activeTab)}
+          index={NAV_ORDER.indexOf(activeTab ?? 'calendar')}
           onIndexChange={handlePageChange}
           lock={pagerLock}>
           {/* 달력은 나의 방과 같은 데이터·콜백을 쓰는 두 번째 인스턴스 (#1138) — 방
@@ -606,7 +609,20 @@ export function AppShell({
             onOpenFurnitureStudio={openFurnitureStudio}
             onOpenMinigames={minigames.openMinigames}
           />
-          <MyRoomScreen {...myRoomPages.calendarTabProps} view="calendar" {...tabScroll.calendar} />
+          {screen === 'calendarWeek' ? (
+            <MyRoomScreen
+              {...myRoomPages.calendarWeekProps}
+              view="calendar"
+              backInterceptorRef={weekBackRef}
+              {...tabScroll.calendar}
+            />
+          ) : (
+            <MyRoomScreen
+              {...myRoomPages.calendarTabProps}
+              view="calendar"
+              {...tabScroll.calendar}
+            />
+          )}
           {/* 집은 2단(#1230) 프레임 안에서도 폰 컬럼 — 캔버스가 1200px로 늘지 않게.
               내 정보는 스스로 콘텐츠 폭을 제한하므로(useResponsiveColumn) 감싸지 않는다 —
               감싸면 배경(블롭)까지 480px에 갇혀 설정 화면과 달리 양옆이 회색으로 남았다. */}
@@ -620,15 +636,6 @@ export function AppShell({
       ) : null}
 
       {minigames.subScreen}
-      {/* 주간 보기 (#1327) — 달력 탭의 두 번째 인스턴스. 슬라이드 없이 즉시 바뀌고
-          (INSTANT_TRANSITION_SCREENS) 달력이 스스로 선택 주로 접힌다. */}
-      {screen === 'calendarWeek' ? (
-        <MyRoomScreen
-          {...myRoomPages.calendarWeekProps}
-          view="calendar"
-          backInterceptorRef={weekBackRef}
-        />
-      ) : null}
       {screen === 'furnitureStudio' ? (
         <FurnitureStudio
           key={`${attendance.status?.eventId ?? 0}:${attendance.status?.completed ?? false}`}
