@@ -6,6 +6,7 @@ import { calendarDayOptions, calendarMonthOptions } from '@/hooks/use-calendar-d
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { queryKeys } from '@/lib/query-keys';
 import { calendarToday, untilCalendarMidnight } from '@/utils/calendar-progress';
+import { shiftIso, weekdayOf } from '@/utils/datetime';
 
 /** 월/선택일은 기존 달력 뮤테이션과 같은 캐시를 관찰한다. */
 export function useCalendarView(reloadToday: () => Promise<void>) {
@@ -55,6 +56,22 @@ export function useCalendarView(reloadToday: () => Promise<void>) {
       sub.remove();
     };
   }, [refresh, reloadRef]);
+  /**
+   * 그 날짜가 든 주(일~토) 7일을 미리 받는다 (2026-11-04) — 주간 보기에서 날짜를 옮길 때마다
+   * 처음 보는 날은 목록 자리에 로딩이 떴다가 바뀌어 깜빡였다. 오늘은 방 데이터로 그리므로
+   * 빼고, 이미 받은 날은 react-query가 건너뛴다(staleTime Infinity).
+   */
+  const prefetchWeek = useCallback(
+    (date: string) => {
+      const sunday = shiftIso(date, -weekdayOf(date));
+      for (let i = 0; i < 7; i += 1) {
+        const day = shiftIso(sunday, i);
+        if (day === todayRef.current) continue;
+        void qc.prefetchQuery(calendarDayOptions(userId, day));
+      }
+    },
+    [qc, userId],
+  );
   const { refetch: refetchMonth } = monthQuery;
   const { refetch: refetchDay } = dayQuery;
   const retryMonth = useCallback(() => {
@@ -78,5 +95,6 @@ export function useCalendarView(reloadToday: () => Promise<void>) {
     retryDay,
     refresh,
     refreshDays,
+    prefetchWeek,
   };
 }
