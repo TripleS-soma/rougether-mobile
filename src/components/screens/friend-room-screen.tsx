@@ -641,7 +641,6 @@ export function FriendRoomScreen({
   );
 }
 
-/** 전송된 응원이 버튼 줄 위로 떠올라 사라지는 버스트 (#450). */
 /**
  * 목록 자리표시 (#1635) — 친구를 넘기거나 날짜를 바꾸는 동안 스피너 대신 루틴 행과 같은 높이
  * (minHeight 48)의 회색 행을 세운다. 스피너는 높이가 달라 목록이 줄었다 늘며 깜빡였다.
@@ -665,6 +664,7 @@ function RoutineListSkeleton({ label }: { label: string }) {
   );
 }
 
+/** 전송된 응원이 버튼 줄 위로 떠올라 사라지는 버스트 (#450). */
 function CheerBurst({ type, onDone }: { type: CheerType; onDone: () => void }) {
   const p = useAnimatedValue(0);
   const icon = CHEERS.find((c) => c.type === type)?.icon ?? 'heart';
