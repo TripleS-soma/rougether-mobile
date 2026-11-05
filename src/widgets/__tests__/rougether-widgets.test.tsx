@@ -1,4 +1,4 @@
-import { MyRoomWidget, TodayListWidget } from '@/widgets/rougether-widgets';
+import { MyRoomWidget, roomNextLine, TodayListWidget } from '@/widgets/rougether-widgets';
 import { DarkThemes, Themes } from '@/constants/theme';
 
 type Node = {
@@ -30,16 +30,58 @@ const walk = (node: unknown, hit: (n: Node) => boolean): Node | null => {
 };
 
 describe('MyRoomWidget 색 (#778)', () => {
-  it('방 이미지 칸 배경이 하단 바와 같은 surface — 레터박스가 검게 보이지 않게', () => {
+  // 시안 C(#1633)부터 방 캡처가 껍데기를 채우고 판이 위에 겹친다 — 캡처가 칸 비율과 안 맞아
+  // 생기는 레터박스는 겹침 껍데기의 배경이 보이므로, 그 배경이 surface여야 검게 안 보인다.
+  const shell = (tree: unknown) => (tree as Node).props?.style;
+
+  it('방 이미지 레터박스가 surface — 검게 보이지 않게', () => {
     const tree = MyRoomWidget({ summary, roomImage: 'data:image/jpeg;base64,AAAA', dark: false });
-    const imageBox = walk(tree, (n) => !!n.props?.style?.flex && !!n.props?.style?.borderRadius);
-    expect(imageBox?.props?.style?.backgroundColor).toBe(Themes.cozy.surface);
+    expect(shell(tree)?.backgroundColor).toBe(Themes.cozy.surface);
   });
 
   it('다크에서도 같은 규칙 — 껍데기 surface를 따른다', () => {
     const tree = MyRoomWidget({ summary, roomImage: 'data:image/jpeg;base64,AAAA', dark: true });
-    const imageBox = walk(tree, (n) => !!n.props?.style?.flex && !!n.props?.style?.borderRadius);
-    expect(imageBox?.props?.style?.backgroundColor).toBe(DarkThemes.cozy.surface);
+    expect(shell(tree)?.backgroundColor).toBe(DarkThemes.cozy.surface);
+  });
+});
+
+describe('MyRoomWidget 방 창문 판 (#1633)', () => {
+  const textsOf = (tree: unknown) => {
+    const out: string[] = [];
+    walk(tree, (n) => {
+      const text = (n.props as { text?: string } | undefined)?.text;
+      if (typeof text === 'string') out.push(text);
+      return false;
+    });
+    return out;
+  };
+
+  it('판에 진행·연속·다음 할 일이 방 그림 위에 겹친다', () => {
+    const tree = MyRoomWidget({
+      summary: { done: 2, total: 5, streak: 12, remaining: ['물 한 잔 마시기', '스트레칭'] },
+      roomImage: 'data:image/jpeg;base64,AAAA',
+      dark: false,
+    });
+    expect(textsOf(tree)).toEqual(
+      expect.arrayContaining([' 2/5', '🔥 12일', '다음 · 물 한 잔 마시기']),
+    );
+    const panel = walk(tree, (n) =>
+      String(n.props?.style?.backgroundColor ?? '').startsWith('rgba('),
+    );
+    expect(panel?.props?.style?.borderRadius).toBe(14);
+  });
+
+  it('다음 할 일 한 줄: 미접속·다 함 문구가 우선, 저녁 걱정엔 목록 첫 항목', () => {
+    const base = { done: 2, total: 5, streak: 0, remaining: ['A', 'B'] };
+    expect(roomNextLine(base, { face: 'worried', message: '아직 3개 남았어요' })).toBe('다음 · A');
+    expect(roomNextLine(base, { face: 'sad', message: '3일째 못 봤어요' })).toBe('3일째 못 봤어요');
+    expect(roomNextLine({ ...base, remaining: [] }, { face: 'happy', message: '다 했어요' })).toBe(
+      '다 했어요',
+    );
+    expect(roomNextLine({ ...base, total: 0, remaining: [] }, { face: 'neutral' })).toBe(
+      '오늘 예정된 루틴이 없어요',
+    );
+    expect(roomNextLine({ ...base, lang: 'en' }, { face: 'neutral' })).toBe('Next · A');
   });
 });
 

@@ -15,6 +15,7 @@ import { Appearance } from 'react-native';
 import {
   FlexWidget,
   ImageWidget,
+  OverlapWidget,
   requestWidgetUpdate,
   TextWidget,
   type WidgetTaskHandlerProps,
@@ -194,7 +195,28 @@ export function TodayListWidget({
   );
 }
 
-/** 시안 D — 내 방 (정방형): 방 캡처 + 아래 진행 바 행. */
+/**
+ * 내 방 판의 다음 할 일 한 줄 (#1633) — 표정 문구(미접속·다 함)가 있으면 그게 우선이고,
+ * 저녁 걱정은 "다음 할 일"이 더 쓸모 있어 목록 첫 항목을 보여 준다(iOS nextLine과 같은 규칙).
+ */
+export function roomNextLine(summary: WidgetSummary, mood: WidgetMood): string {
+  if (summary.total === 0) return widgetCopy(summary.lang, 'emptyToday');
+  if (summary.remaining.length === 0) return mood.message ?? widgetCopy(summary.lang, 'allDone');
+  if (mood.message && mood.face !== 'worried') return mood.message;
+  return widgetCopy(summary.lang, 'nextUp', { title: summary.remaining[0] });
+}
+
+/** 판 배경 — 방 그림이 비치게 표면색 90% (RemoteViews는 블러가 없어 반투명 단색으로 근사). */
+const glass = (dark: boolean) =>
+  (dark
+    ? 'rgba(43, 37, 30, 0.9)'
+    : 'rgba(255, 255, 255, 0.9)') as `rgba(${number}, ${number}, ${number}, ${number})`;
+
+/**
+ * 시안 C — 내 방 "방 창문" (#1633): 방 캡처를 껍데기 끝까지 깔고, 아래에 반투명 판을 얹어
+ * 진행(N/M)·연속 일수·다음 할 일·진행 바를 보여 준다. 종전(#604 시안 D)의 하단 단색 띠는
+ * 캡처와 껍데기 사이에 회색 여백을 만들어 방이 작아 보였다.
+ */
 export function MyRoomWidget({
   summary,
   roomImage,
@@ -207,8 +229,16 @@ export function MyRoomWidget({
   mood?: WidgetMood;
 }) {
   const t = palette(dark);
+  const progress = summary.total > 0 ? summary.done / summary.total : 0;
+  const concerned = mood.face === 'worried' || mood.face === 'sad' || mood.face === 'crying';
+  const lineColor =
+    concerned || (summary.total > 0 && summary.remaining.length === 0)
+      ? concerned
+        ? t.warningText
+        : t.primaryText
+      : t.text;
   return (
-    <FlexWidget
+    <OverlapWidget
       clickAction="OPEN_URI"
       clickActionData={{ uri: WIDGET_OPEN_URL }}
       style={{
@@ -216,67 +246,96 @@ export function MyRoomWidget({
         width: 'match_parent',
         backgroundColor: t.surface as `#${string}`,
         borderRadius: WIDGET_RADIUS,
-        flexDirection: 'column',
       }}>
       {roomImage ? (
-        <FlexWidget
-          style={{
-            flex: 1,
-            width: 'match_parent',
-            alignItems: 'center',
-            justifyContent: 'center',
-            // 캡처가 칸 비율과 안 맞아 레터박스가 생겨도 하단 바와 같은 색이
-            // 되게 (#778) — 배경을 비워 두면 그 자리가 검게 보인다.
-            backgroundColor: t.surface as `#${string}`,
-            borderRadius: WIDGET_RADIUS,
-          }}>
-          <ImageWidget
-            image={roomImage as `data:image${string}`}
-            imageWidth={512}
-            imageHeight={512}
-            style={{ width: 'match_parent', height: 'match_parent' }}
-            radius={WIDGET_RADIUS}
-          />
-        </FlexWidget>
+        <ImageWidget
+          image={roomImage as `data:image${string}`}
+          imageWidth={512}
+          imageHeight={512}
+          style={{ width: 'match_parent', height: 'match_parent' }}
+          radius={WIDGET_RADIUS}
+        />
       ) : (
         <FlexWidget
           style={{
-            flex: 1,
             width: 'match_parent',
+            height: 'match_parent',
             alignItems: 'center',
-            justifyContent: 'center',
+            paddingTop: 22,
             backgroundColor: t.surfaceMuted as `#${string}`,
             borderRadius: WIDGET_RADIUS,
           }}>
-          <TextWidget text="🐾" style={{ fontSize: 28 }} />
+          <FaceWidget mood={mood} size={36} />
           <TextWidget
             text={widgetCopy(summary.lang, 'roomEmpty')}
-            style={{ fontSize: 11, color: t.textMuted as `#${string}`, paddingTop: 4 }}
+            style={{ fontSize: 11, color: t.textMuted as `#${string}`, paddingTop: 6 }}
           />
         </FlexWidget>
       )}
       <FlexWidget
         style={{
-          flexDirection: 'row',
-          alignItems: 'center',
           width: 'match_parent',
-          paddingHorizontal: 12,
-          paddingVertical: 7,
+          height: 'match_parent',
+          justifyContent: 'flex-end',
+          padding: 8,
         }}>
-        <FaceWidget mood={mood} size={16} />
-        <TextWidget
-          text={` ${summary.done}/${summary.total}`}
-          style={{ fontSize: 12, fontWeight: '700', color: t.primaryText as `#${string}` }}
-        />
-        <FlexWidget style={{ flex: 1 }} />
-        {summary.streak > 0 ? (
+        <FlexWidget
+          style={{
+            width: 'match_parent',
+            flexDirection: 'column',
+            backgroundColor: glass(dark),
+            borderRadius: 14,
+            paddingHorizontal: 10,
+            paddingVertical: 7,
+          }}>
+          <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', width: 'match_parent' }}>
+            <FaceWidget mood={mood} size={16} />
+            <TextWidget
+              text={` ${summary.done}/${summary.total}`}
+              style={{ fontSize: 13, fontWeight: '700', color: t.primaryText as `#${string}` }}
+            />
+            <FlexWidget style={{ flex: 1 }} />
+            {summary.streak > 0 ? (
+              <TextWidget
+                text={widgetCopy(summary.lang, 'streakDays', { streak: summary.streak })}
+                style={{ fontSize: 11, fontWeight: '700', color: t.warningText as `#${string}` }}
+              />
+            ) : null}
+          </FlexWidget>
           <TextWidget
-            text={widgetCopy(summary.lang, 'streakDays', { streak: summary.streak })}
-            style={{ fontSize: 12, fontWeight: '700', color: t.warningText as `#${string}` }}
+            text={roomNextLine(summary, mood)}
+            truncate="END"
+            maxLines={1}
+            style={{
+              fontSize: 11,
+              fontWeight: '500',
+              color: lineColor as `#${string}`,
+              paddingTop: 2,
+              width: 'match_parent',
+            }}
           />
-        ) : null}
+          <FlexWidget style={{ height: 5 }} />
+          <FlexWidget
+            style={{
+              flexDirection: 'row',
+              width: 'match_parent',
+              height: 4,
+              backgroundColor: t.surfaceMuted as `#${string}`,
+              borderRadius: 99,
+            }}>
+            <FlexWidget
+              style={{
+                flex: Math.round(progress * 100),
+                height: 4,
+                backgroundColor: t.primary as `#${string}`,
+                borderRadius: 99,
+              }}
+            />
+            <FlexWidget style={{ flex: Math.round((1 - progress) * 100), height: 4 }} />
+          </FlexWidget>
+        </FlexWidget>
       </FlexWidget>
-    </FlexWidget>
+    </OverlapWidget>
   );
 }
 

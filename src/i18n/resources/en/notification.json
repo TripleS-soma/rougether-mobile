@@ -81,7 +81,8 @@
       "allDone": "All done! 🎉",
       "more": "+{{count}} more",
       "roomEmpty": "Open the app to hang your room here",
-      "streakDays": "🔥 {{streak}}d"
+      "streakDays": "🔥 {{streak}}d",
+      "nextUp": "Next · {{title}}"
     }
   }
 }
