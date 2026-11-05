@@ -60,7 +60,9 @@
         "flip": "좌우 반전",
         "toFront": "맨 앞으로",
         "toBack": "맨 뒤로",
-        "remove": "빼기"
+        "remove": "빼기",
+        "undo": "실행 취소",
+        "redo": "다시 실행"
       },
       "catalogLoading": "카탈로그 불러오는 중...",
       "catalogError": "카탈로그를 불러오지 못했어요.",
