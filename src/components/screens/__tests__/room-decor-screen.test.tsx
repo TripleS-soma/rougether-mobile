@@ -1,5 +1,5 @@
 import { act, fireEvent, render, waitFor, within } from '@testing-library/react-native';
-import { BackHandler, StyleSheet } from 'react-native';
+import { BackHandler, Platform, StyleSheet } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
@@ -784,6 +784,45 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     await fireEvent.press(getByLabelText('뒤로가기'));
     expect(onBack).toHaveBeenCalled();
     expect(queryByText('변경사항을 저장할까요?')).toBeNull();
+  });
+
+  it('웹 단축키 — Delete로 빼고 ⌘Z로 되돌리고, 방향키 연타는 한 단계 (#1642)', async () => {
+    const listeners: Record<string, (e: unknown) => void> = {};
+    const g = global as unknown as { document?: unknown };
+    const prevDoc = g.document;
+    const prevOS = Platform.OS;
+    g.document = {
+      addEventListener: (type: string, fn: (e: unknown) => void) => (listeners[type] = fn),
+      removeEventListener: () => {},
+    };
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
+    try {
+      const onApply = jest.fn();
+      const { getByTestId, getByText } = await render(
+        <RoomDecorScreen initialItems={items(['plant', 'rug'])} onApply={onApply} />,
+      );
+      await layoutCanvas(getByTestId);
+      const key = (k: Record<string, unknown>) =>
+        act(() =>
+          listeners.keydown({ target: { tagName: 'DIV' }, preventDefault: jest.fn(), ...k }),
+        );
+
+      await tapItem('plant');
+      await key({ key: 'ArrowRight' });
+      await key({ key: 'ArrowRight' });
+      await key({ key: 'ArrowRight' });
+      await key({ key: 'Delete' });
+      await key({ key: 'z', metaKey: true }); // 빼기 되돌림
+      await key({ key: 'z', metaKey: true }); // 방향키 3번이 한 단계로 되돌아감
+      await fireEvent.press(getByText('적용하기'));
+      await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
+      const saved = onApply.mock.calls[0][0] as PlacedFurniture[];
+      expect(saved.map((p) => p.furnitureId).sort()).toEqual(['plant', 'rug']);
+      expect(saved.find((p) => p.furnitureId === 'plant')?.x).toBe(items(['plant'])[0].x);
+    } finally {
+      Object.defineProperty(Platform, 'OS', { value: prevOS, configurable: true });
+      g.document = prevDoc;
+    }
   });
 
   it('pinch scale commits clamped to 0.5–3.5', async () => {

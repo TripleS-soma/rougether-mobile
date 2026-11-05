@@ -1,5 +1,5 @@
 import { type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
@@ -25,6 +25,7 @@ import {
 } from '@/components/screens/decor/preview-economics';
 import { UnsavedLeaveModal } from '@/components/screens/decor/unsaved-leave-modal';
 import { useDecorHistory } from '@/components/screens/decor/decor-history';
+import { decorShortcutFor, isTypingTarget } from '@/components/screens/decor/decor-shortcuts';
 import { ROOM_RENDER_CONTRACT, roomPercent } from '@/components/room/room-render-contract';
 import { Loading } from '@/components/ui/loading';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -594,6 +595,54 @@ export function RoomDecorScreen({
     setItems((prev) =>
       prev.map((p) => (p.furnitureId === selectedId ? { ...p, z: 1 } : { ...p, z: p.z + 1 })),
     );
+  /** 방향키 미세 이동 (#1642) — 방 안으로 클램프, 연타는 히스토리 한 단계로 묶는다. */
+  const nudgeSelected = (dx: number, dy: number) => {
+    if (!selectedId) return;
+    const id = selectedId;
+    commitDoc(
+      (d) => ({
+        ...d,
+        items: d.items.map((p) => {
+          if (p.furnitureId !== id) return p;
+          const bounds = dragClampBounds(p.scale ?? 1);
+          const clamp = (v: number, axis: 'x' | 'y') =>
+            Math.min(bounds[axis].max, Math.max(bounds[axis].min, v));
+          return { ...p, x: clamp(p.x + dx, 'x'), y: clamp(p.y + dy, 'y') };
+        }),
+      }),
+      { key: `nudge:${id}`, at: Date.now() },
+    );
+  };
+
+  // 웹 키보드 단축키 (#1642) — 데스크톱 2단 꾸미기. 리스너는 한 번만 달고, 매 렌더 최신
+  // 선택·히스토리를 읽는 핸들러를 ref로 갈아 끼운다(선택이 바뀔 때마다 떼고 붙이지 않게).
+  const shortcutRef = useRef<(e: KeyboardEvent) => void>(() => {});
+  shortcutRef.current = (e: KeyboardEvent) => {
+    if (isTypingTarget(e.target)) return;
+    const action = decorShortcutFor(e);
+    if (!action) return;
+    if (action.kind === 'undo' || action.kind === 'redo') {
+      e.preventDefault();
+      if (action.kind === 'undo') undo();
+      else redo();
+      return;
+    }
+    // 나머지는 선택된 가구가 있을 때만 — 없으면 브라우저 기본 동작을 막지 않는다.
+    if (!selectedId) return;
+    e.preventDefault();
+    if (action.kind === 'remove') removeItem(selectedId);
+    else if (action.kind === 'deselect') setSelectedId(null);
+    else if (action.kind === 'front') bringToFront();
+    else if (action.kind === 'back') sendToBack();
+    else nudgeSelected(action.dx, action.dy);
+  };
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const doc = document;
+    const onKeyDown = (e: KeyboardEvent) => shortcutRef.current(e);
+    doc.addEventListener('keydown', onKeyDown);
+    return () => doc.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // What the open picker offers, owned first so placing needs no digging.
   // 보유중 filter hides the shop side of every picker (slot/surface/전체보기).

@@ -26,14 +26,28 @@ export type DecorDoc = {
 /** 되돌릴 수 있는 최대 단계 — 그보다 오래된 단계는 버린다. */
 export const DECOR_HISTORY_LIMIT = 50;
 
+/**
+ * 연속 입력 묶음 (#1642) — 방향키를 누르고 있으면 이동이 수십 번 커밋된다. 같은 키로
+ * `DECOR_COALESCE_MS` 안에 이어 들어온 커밋은 새 단계를 만들지 않고 현재 단계를 덮어쓴다
+ * (실행 취소 한 번에 그 연타 전체가 되돌아간다).
+ */
+export const DECOR_COALESCE_MS = 800;
+
 export type DecorHistory = {
   past: DecorDoc[];
   present: DecorDoc;
   future: DecorDoc[];
+  /** 마지막 묶음 커밋 — 다른 동작이 끼면 끊긴다. */
+  group?: { key: string; at: number };
 };
 
 export type DecorHistoryAction =
-  | { type: 'commit'; update: (doc: DecorDoc) => DecorDoc }
+  | {
+      type: 'commit';
+      update: (doc: DecorDoc) => DecorDoc;
+      /** 연속 입력 묶음 키와 시각(ms) — 없으면 항상 새 단계. */
+      group?: { key: string; at: number };
+    }
   | { type: 'undo' }
   | { type: 'redo' }
   | { type: 'reset'; doc: DecorDoc };
@@ -63,12 +77,24 @@ export function decorHistoryReducer(state: DecorHistory, action: DecorHistoryAct
     case 'commit': {
       const next = action.update(state.present);
       if (sameDoc(next, state.present)) return state;
+      const { group } = action;
+      if (
+        group &&
+        state.group &&
+        state.group.key === group.key &&
+        group.at - state.group.at <= DECOR_COALESCE_MS &&
+        state.past.length > 0
+      ) {
+        // 같은 연타의 이어짐 — 단계는 그대로, 현재 문서만 갱신.
+        return { past: state.past, present: next, future: [], group };
+      }
       const past = [...state.past, state.present];
       return {
         past:
           past.length > DECOR_HISTORY_LIMIT ? past.slice(past.length - DECOR_HISTORY_LIMIT) : past,
         present: next,
         future: [],
+        group,
       };
     }
     case 'undo': {
@@ -98,7 +124,8 @@ export function useDecorHistory(initial: () => DecorDoc) {
     future: [],
   }));
   const commit = useCallback(
-    (update: (doc: DecorDoc) => DecorDoc) => dispatch({ type: 'commit', update }),
+    (update: (doc: DecorDoc) => DecorDoc, group?: { key: string; at: number }) =>
+      dispatch({ type: 'commit', update, group }),
     [],
   );
   const undo = useCallback(() => dispatch({ type: 'undo' }), []);
