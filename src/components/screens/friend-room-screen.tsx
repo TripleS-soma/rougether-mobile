@@ -433,9 +433,7 @@ export function FriendRoomScreen({
             <SpringProgressBar progress={progress} color={t.primary} trackColor={t.surfaceMuted} />
 
             {listBusy ? (
-              <View style={styles.listState}>
-                <Loading />
-              </View>
+              <RoutineListSkeleton label={tr('app.ui.loading')} />
             ) : dayError ? (
               <Text style={[Typography.supporting, styles.listState, { color: t.textMuted }]}>
                 {tr('roomShop.friendRoom.dayLoadError')}
@@ -644,6 +642,29 @@ export function FriendRoomScreen({
 }
 
 /** 전송된 응원이 버튼 줄 위로 떠올라 사라지는 버스트 (#450). */
+/**
+ * 목록 자리표시 (#1635) — 친구를 넘기거나 날짜를 바꾸는 동안 스피너 대신 루틴 행과 같은 높이
+ * (minHeight 48)의 회색 행을 세운다. 스피너는 높이가 달라 목록이 줄었다 늘며 깜빡였다.
+ */
+function RoutineListSkeleton({ label }: { label: string }) {
+  const t = useTokens();
+  return (
+    <View accessible accessibilityRole="progressbar" accessibilityLabel={label}>
+      {[0.62, 0.44, 0.54].map((width, i) => (
+        <View key={i} style={styles.row} testID="routine-skeleton-row">
+          <View style={[styles.skeletonDot, { backgroundColor: t.surfaceMuted }]} />
+          <View
+            style={[
+              styles.skeletonBar,
+              { width: `${width * 100}%`, backgroundColor: t.surfaceMuted },
+            ]}
+          />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function CheerBurst({ type, onDone }: { type: CheerType; onDone: () => void }) {
   const p = useAnimatedValue(0);
   const icon = CHEERS.find((c) => c.type === type)?.icon ?? 'heart';
@@ -821,6 +842,8 @@ const styles = StyleSheet.create({
   rows: {
     gap: 0,
   },
+  skeletonDot: { width: 22, height: 22, borderRadius: Radius.pill },
+  skeletonBar: { height: 14, borderRadius: Radius.sm },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

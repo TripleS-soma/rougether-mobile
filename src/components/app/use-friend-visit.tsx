@@ -1,4 +1,11 @@
-import { useCallback, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
 
 import { type Screen } from '@/components/app/navigation';
 import { FriendRoomScreen, type CheerType } from '@/components/screens/friend-room-screen';
@@ -46,7 +53,13 @@ export function useFriendVisit({
     name: i18n.t('app.friendVisit.friend'),
   }));
   // The visited friend's live room + today's routines (loads on visit, #149).
-  const { friendRoom, load: loadFriendRoom, cleanCobweb, selectDate } = useFriendRoom();
+  const {
+    friendRoom,
+    load: loadFriendRoom,
+    prefetch: prefetchFriendRoom,
+    cleanCobweb,
+    selectDate,
+  } = useFriendRoom();
   // Guestbook for the friend room being visited (loads on visit).
   const {
     entries: guestbookEntries,
@@ -96,6 +109,19 @@ export function useFriendVisit({
     },
     [visitableFriends, visitingFriend.membershipId, visitFriend],
   );
+
+  // 스와이프 이웃 미리 받기 (#1635) — 지금 보는 친구의 앞·뒤 친구 방·오늘 목록을 캐시에 올려
+  // 두면, 넘길 때 스피너 없이 바로 그려진다. 친구 방 화면에 있을 때만.
+  useEffect(() => {
+    if (screen !== 'friendRoom' || visitableFriends.length < 2) return;
+    const i = visitableFriends.findIndex((f) => f.membershipId === visitingFriend.membershipId);
+    if (i < 0) return;
+    const n = visitableFriends.length;
+    for (const f of [visitableFriends[(i + 1) % n], visitableFriends[(i + n - 1) % n]]) {
+      if (f.houseId != null && f.membershipId != null)
+        prefetchFriendRoom(f.houseId, f.membershipId);
+    }
+  }, [screen, visitableFriends, visitingFriend.membershipId, prefetchFriendRoom]);
 
   // 방문 실패 시 다시 시도 (#549) — 같은 친구의 방·방명록을 다시 불러온다.
   const retryFriendRoomVisit = useCallback(() => {
