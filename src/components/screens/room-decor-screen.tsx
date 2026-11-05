@@ -26,6 +26,7 @@ import {
 import { UnsavedLeaveModal } from '@/components/screens/decor/unsaved-leave-modal';
 import { useDecorHistory } from '@/components/screens/decor/decor-history';
 import { decorShortcutFor, isTypingTarget } from '@/components/screens/decor/decor-shortcuts';
+import { NO_GUIDE, snapTargetsFor } from '@/components/room/snap-guides';
 import { ROOM_RENDER_CONTRACT, roomPercent } from '@/components/room/room-render-contract';
 import { Loading } from '@/components/ui/loading';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -511,6 +512,10 @@ export function RoomDecorScreen({
   const [roomSize, setRoomSize] = useState({ w: 0, h: 0 });
   // 선택된 가구 — 링 + 툴바(회전/반전/앞뒤/빼기) + 크기 핸들 대상 (#333).
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedSnapTargets = useMemo(
+    () => (selectedId ? snapTargetsFor(items, selectedId) : undefined),
+    [items, selectedId],
+  );
   // 실행 취소·다시 실행으로 선택된 가구가 방에서 사라지면 선택(링·툴바)도 푼다 (#1640).
   useEffect(() => {
     if (selectedId && !items.some((p) => p.furnitureId === selectedId)) setSelectedId(null);
@@ -522,6 +527,17 @@ export function RoomDecorScreen({
   const dragActive = useRef(useSharedValue(false)).current;
   // opacity 0은 글래스 면(#1050)을 아예 안 그리고 복귀도 불안정해서, 드래그 중엔
   // 접는(scale) 방식으로 숨긴다 — 리렌더 없이 UI 스레드에서만 반응하는 건 그대로.
+  // 스마트 가이드 (#1644) — 드래그 중 팬 워클릿이 쓰는 가이드 선 위치(px). dragActive와 같은
+  // 이유로 useRef 앵커. 후보는 선택된 가구에만 계산해 넘긴다(선택된 것만 끌 수 있다).
+  const guide = useRef(useSharedValue({ x: NO_GUIDE, y: NO_GUIDE })).current;
+  const guideXStyle = useAnimatedStyle(() => ({
+    opacity: guide.value.x === NO_GUIDE ? 0 : 1,
+    transform: [{ translateX: Math.max(0, guide.value.x) }],
+  }));
+  const guideYStyle = useAnimatedStyle(() => ({
+    opacity: guide.value.y === NO_GUIDE ? 0 : 1,
+    transform: [{ translateY: Math.max(0, guide.value.y) }],
+  }));
   const toolbarDragStyle = useAnimatedStyle(() => ({
     transform: [{ scale: withTiming(dragActive.value ? 0.01 : 1, { duration: 120 }) }],
     // 숨은 툴바의 유령 터치 차단 — 두 번째 손가락이 빼기를 누르는 사고 방지.
@@ -787,6 +803,8 @@ export function RoomDecorScreen({
                     onDragEnd={commitDrag}
                     onScaleEnd={commitScale}
                     dragActiveSV={dragActive}
+                    snapTargets={p.furnitureId === selectedId ? selectedSnapTargets : undefined}
+                    guideSV={guide}
                     preview={!owned.has(p.furnitureId)}
                     previewPrice={item.price}
                   />
@@ -815,6 +833,17 @@ export function RoomDecorScreen({
             ))}
           </View>
         ) : null}
+        {/* 스마트 가이드 선 (#1644) — 드래그 중 붙은 축에만 보인다. 리렌더 없이 SV로만 움직인다. */}
+        <Animated.View
+          pointerEvents="none"
+          testID="snap-guide-x"
+          style={[styles.guideX, { backgroundColor: t.primary }, guideXStyle]}
+        />
+        <Animated.View
+          pointerEvents="none"
+          testID="snap-guide-y"
+          style={[styles.guideY, { backgroundColor: t.primary }, guideYStyle]}
+        />
         {/* 캐릭터는 항상 가구 앞 — 오버레이(드래그 중 z 9999)보다 위 전용 레이어. */}
         <View pointerEvents="none" style={styles.characterLayer}>
           {/* Room과 같은 두 겹(자리 박스 + 꽉 채운 아바타) — 아바타에 자리 스타일을
@@ -1230,6 +1259,9 @@ export function RoomDecorScreen({
   );
 }
 
+/** 가이드 선 두께(px) (#1644). */
+const GUIDE_THICKNESS = 1.5;
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -1354,6 +1386,25 @@ const styles = StyleSheet.create({
   // 상반부(벽 쪽) 가구 선택 — 가리지 않게 하단으로 회피 (#608).
   toolbarBottom: {
     bottom: Spacing.two,
+  },
+  // 스마트 가이드 선 (#1644) — 위치는 transform으로만 바꾼다(레이아웃 재계산 없음).
+  guideX: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: GUIDE_THICKNESS,
+    marginLeft: -GUIDE_THICKNESS / 2,
+    zIndex: 10000,
+  },
+  guideY: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    height: GUIDE_THICKNESS,
+    marginTop: -GUIDE_THICKNESS / 2,
+    zIndex: 10000,
   },
   // 플로팅 줄 오른쪽 묶음 — 실행 취소 알약 + 재화 (#1640).
   floatRight: {

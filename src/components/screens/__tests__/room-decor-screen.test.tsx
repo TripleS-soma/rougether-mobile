@@ -825,6 +825,44 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     }
   });
 
+  // 스마트 가이드·스냅 (#1644) — 320×384 방, plant(0.25→80px) / rug(0.65→208px).
+  const dragPlant = (translationX: number) =>
+    act(() =>
+      fireGestureHandler(getByGestureTestId('item-pan-plant'), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE },
+        { state: State.ACTIVE, translationX, translationY: 0 },
+        { state: State.END, translationX, translationY: 0 },
+      ]),
+    );
+
+  it('다른 가구 중심선 6px 안으로 끌면 그 선에 붙는다', async () => {
+    const onApply = jest.fn();
+    const { getByTestId, getByText } = await render(
+      <RoomDecorScreen initialItems={items(['plant', 'rug'])} onApply={onApply} />,
+    );
+    await layoutCanvas(getByTestId);
+    await tapItem('plant');
+    await dragPlant(124); // 80 + 124 = 204px → rug 중심 208px에서 4px
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    expect(lastApply(onApply).find((p) => p.furnitureId === 'plant')?.x).toBeCloseTo(0.65);
+  });
+
+  it('임계 밖이면 놓은 자리 그대로, 손을 떼면 가이드 선은 숨는다', async () => {
+    const onApply = jest.fn();
+    const { getByTestId, getByText } = await render(
+      <RoomDecorScreen initialItems={items(['plant', 'rug'])} onApply={onApply} />,
+    );
+    await layoutCanvas(getByTestId);
+    await tapItem('plant');
+    await dragPlant(100); // 180px — 방 가운데 160px에서 20px, rug 208px에서 28px
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    expect(lastApply(onApply).find((p) => p.furnitureId === 'plant')?.x).toBeCloseTo(180 / 320);
+    expect(StyleSheet.flatten(getByTestId('snap-guide-x').props.style).opacity).toBe(0);
+  });
+
   it('pinch scale commits clamped to 0.5–3.5', async () => {
     const onApply = jest.fn();
     const { getByTestId, getByText } = await render(
