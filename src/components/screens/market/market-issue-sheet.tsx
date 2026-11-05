@@ -36,6 +36,7 @@ export function MarketIssueSheet({
   return (
     <BottomSheet
       visible={visible}
+      avoidKeyboard
       onClose={submitting ? undefined : onClose}
       dragEnabled={!submitting}
       accessibilityLabel={tr('market.issue.title')}
