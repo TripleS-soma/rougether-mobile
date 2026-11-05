@@ -12,6 +12,13 @@ import Animated, {
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { Icon } from '@/components/ui/icon';
 import { furnitureClampBounds, ROOM_RENDER_CONTRACT } from '@/components/room/room-render-contract';
+import {
+  NO_GUIDE,
+  SNAP_THRESHOLD_PX,
+  snapAxis,
+  type SnapTargets,
+} from '@/components/room/snap-guides';
+import { hapticSelection } from '@/utils/haptics';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens } from '@/hooks/use-tokens';
 import type { FurnitureItem, PlacedFurniture } from '@/resources/furniture';
@@ -68,6 +75,13 @@ export type DraggableFurnitureProps = {
    * 구독한다. React 상태로 올리면 리렌더가 활성 팬을 취소하므로 SV 전용.
    */
   dragActiveSV?: SharedValue<boolean>;
+  /** 스마트 가이드 후보 (#1644) — 선택된 가구에만 준다. 없으면 스냅 없음. */
+  snapTargets?: SnapTargets;
+  /**
+   * 부모 소유의 가이드 선 위치(px, `NO_GUIDE`=숨김) (#1644) — 팬 워클릿이 매 프레임 쓰고
+   * 캔버스의 가이드 선이 Animated 스타일로 읽는다. dragActiveSV와 같은 이유로 SV 전용.
+   */
+  guideSV?: SharedValue<{ x: number; y: number }>;
 };
 
 /**
@@ -84,6 +98,8 @@ export function DraggableFurniture({
   onDragEnd,
   onScaleEnd,
   dragActiveSV,
+  snapTargets,
+  guideSV,
   preview = false,
   previewPrice,
 }: DraggableFurnitureProps) {
@@ -131,14 +147,29 @@ export function DraggableFurniture({
     .onUpdate((e) => {
       // 실제 렌더 크기(기본 박스 × scale)까지 방 안에 남게 한다 (#333).
       const clamp = dragClampBounds(scaleSV.value, roomSize.w / roomSize.h);
-      cx.value = Math.min(
-        clamp.x.max * roomSize.w,
-        Math.max(clamp.x.min * roomSize.w, start.value.x + e.translationX),
-      );
-      cy.value = Math.min(
-        clamp.y.max * roomSize.h,
-        Math.max(clamp.y.min * roomSize.h, start.value.y + e.translationY),
-      );
+      const minX = clamp.x.min * roomSize.w;
+      const maxX = clamp.x.max * roomSize.w;
+      const minY = clamp.y.min * roomSize.h;
+      const maxY = clamp.y.max * roomSize.h;
+      let x = Math.min(maxX, Math.max(minX, start.value.x + e.translationX));
+      let y = Math.min(maxY, Math.max(minY, start.value.y + e.translationY));
+      // 스마트 가이드 (#1644) — 다른 가구 중심선·방 가운데에 가까우면 붙인다.
+      if (snapTargets) {
+        const sx = snapAxis(x, snapTargets.xs, roomSize.w, SNAP_THRESHOLD_PX, minX, maxX);
+        const sy = snapAxis(y, snapTargets.ys, roomSize.h, SNAP_THRESHOLD_PX, minY, maxY);
+        if (sx !== NO_GUIDE) x = sx;
+        if (sy !== NO_GUIDE) y = sy;
+        if (guideSV) {
+          const prev = guideSV.value;
+          // 새로 붙는 순간에만 톡 — 붙어 있는 동안 매 프레임 울리지 않게.
+          if ((sx !== NO_GUIDE && sx !== prev.x) || (sy !== NO_GUIDE && sy !== prev.y)) {
+            runOnJS(hapticSelection)();
+          }
+          if (sx !== prev.x || sy !== prev.y) guideSV.value = { x: sx, y: sy };
+        }
+      }
+      cx.value = x;
+      cy.value = y;
     })
     .onEnd(() => {
       dragging.value = false;
@@ -148,6 +179,7 @@ export function DraggableFurniture({
       // 취소·중단 경로 포함 항상 해제 — 툴바가 숨은 채 남지 않게.
       dragging.value = false;
       if (dragActiveSV) dragActiveSV.value = false;
+      if (guideSV) guideSV.value = { x: NO_GUIDE, y: NO_GUIDE };
     });
 
   // 짧은 탭 = 선택 (#333). 팬이 활성화되면(=진짜 드래그) 탭은 무산된다.
