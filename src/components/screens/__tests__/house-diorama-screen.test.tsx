@@ -53,6 +53,7 @@ describe('default shared-house renderer', () => {
     );
     // 기존 프레임 집은 배경 이미지가 화면을 덮어 경계가 없다.
     expect(classic.queryByTestId('diorama-top-fade')).toBeNull();
+  });
   it('별채 탭은 스크롤 밖, 화면에 고정된다 — 탭바 뒤에 깔리지 않게 (#1651)', async () => {
     const ui = await render(<HouseScreen houses={[house(10)]} />);
     const tabs = ui.getByTestId('diorama-annexes');
