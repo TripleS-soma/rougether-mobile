@@ -748,6 +748,44 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     expect(firstArgIds(onApply)).toEqual([]);
   });
 
+  // 실행 취소·다시 실행 (#1640).
+  it('실행 취소로 뺀 가구가 돌아오고, 다시 실행으로 다시 빠진다', async () => {
+    const onApply = jest.fn();
+    const { getByTestId, getByText, getByLabelText } = await render(
+      <RoomDecorScreen initialItems={items(['plant', 'rug'])} onApply={onApply} />,
+    );
+    await layoutCanvas(getByTestId);
+    // 처음엔 되돌릴 게 없다.
+    expect(getByLabelText('실행 취소').props.accessibilityState).toMatchObject({ disabled: true });
+    expect(getByLabelText('다시 실행').props.accessibilityState).toMatchObject({ disabled: true });
+
+    await tapItem('plant');
+    await fireEvent.press(getByLabelText('빼기'));
+    await fireEvent.press(getByLabelText('실행 취소'));
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
+    expect(firstArgIds(onApply).sort()).toEqual(['plant', 'rug']);
+
+    await fireEvent.press(getByLabelText('다시 실행'));
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalledTimes(2));
+    expect(onApply.mock.calls[1][0].map((p: PlacedFurniture) => p.furnitureId)).toEqual(['rug']);
+  });
+
+  it('되돌려서 처음 상태가 되면 미적용 변경이 없다 — 뒤로가기 확인이 안 뜬다', async () => {
+    const onBack = jest.fn();
+    const { getByTestId, getByLabelText, queryByText } = await render(
+      <RoomDecorScreen initialItems={items(['plant'])} onBack={onBack} />,
+    );
+    await layoutCanvas(getByTestId);
+    await tapItem('plant');
+    await fireEvent.press(getByLabelText('좌우 반전'));
+    await fireEvent.press(getByLabelText('실행 취소'));
+    await fireEvent.press(getByLabelText('뒤로가기'));
+    expect(onBack).toHaveBeenCalled();
+    expect(queryByText('변경사항을 저장할까요?')).toBeNull();
+  });
+
   it('pinch scale commits clamped to 0.5–3.5', async () => {
     const onApply = jest.fn();
     const { getByTestId, getByText } = await render(

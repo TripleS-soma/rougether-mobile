@@ -48,6 +48,9 @@ const ICONS = {
   'rotate-cw': 'arrow-redo-outline',
   'layer-up': 'arrow-up',
   'layer-down': 'arrow-down',
+  // 꾸미기 실행 취소·다시 실행 (#1640) — 회전(arrow-undo-outline)과 구분되게 채운 화살표.
+  undo: 'arrow-undo',
+  redo: 'arrow-redo',
   // 카테고리 순서 옮기기 (#1613)
   'move-up': 'caret-up',
   'move-down': 'caret-down',

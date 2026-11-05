@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -24,6 +24,7 @@ import {
   surfacePreviewsOf,
 } from '@/components/screens/decor/preview-economics';
 import { UnsavedLeaveModal } from '@/components/screens/decor/unsaved-leave-modal';
+import { useDecorHistory } from '@/components/screens/decor/decor-history';
 import { ROOM_RENDER_CONTRACT, roomPercent } from '@/components/room/room-render-contract';
 import { Loading } from '@/components/ui/loading';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -253,13 +254,35 @@ export function RoomDecorScreen({
     )
       .filter(([id]) => furniture.some((f) => f.id === id))
       .map(([id, x, y], i) => ({ furnitureId: id, x, y, z: i + 1 }));
-  const [items, setItems] = useState<PlacedFurniture[]>(() => initialItems ?? demoItems());
+  // 편집 문서 = 가구 배치 + 표면 3종. 실행 취소·다시 실행이 이 단위로 되돌린다 (#1640).
+  // 바꾸는 쪽은 아래 setter 4개를 그대로 쓴다 — 각 호출이 히스토리 한 단계(변화 없으면 무시).
+  const {
+    doc,
+    commit: commitDoc,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useDecorHistory(() => ({
+    items: initialItems ?? demoItems(),
+    wallpaperId: initialWallpaperId,
+    floorId: initialFloorId,
+    backgroundId: initialBackgroundId,
+  }));
+  const { items, wallpaperId, floorId, backgroundId } = doc;
+  const resolve = <T,>(u: SetStateAction<T>, prev: T): T =>
+    typeof u === 'function' ? (u as (p: T) => T)(prev) : u;
+  const setItems = (u: SetStateAction<PlacedFurniture[]>) =>
+    commitDoc((d) => ({ ...d, items: resolve(u, d.items) }));
+  const setWallpaperId = (u: SetStateAction<string>) =>
+    commitDoc((d) => ({ ...d, wallpaperId: resolve(u, d.wallpaperId) }));
+  const setFloorId = (u: SetStateAction<string | null>) =>
+    commitDoc((d) => ({ ...d, floorId: resolve(u, d.floorId) }));
+  const setBackgroundId = (u: SetStateAction<string | null>) =>
+    commitDoc((d) => ({ ...d, backgroundId: resolve(u, d.backgroundId) }));
   // 타일마다 placed.includes를 돌면 카탈로그 크기의 제곱이 된다 (실서버 가구
   // 122종) — 조회는 Set으로 O(1) (#794).
   const placedSet = useMemo(() => new Set(items.map((p) => p.furnitureId)), [items]);
-  const [wallpaperId, setWallpaperId] = useState(initialWallpaperId);
-  const [floorId, setFloorId] = useState<string | null>(initialFloorId);
-  const [backgroundId, setBackgroundId] = useState<string | null>(initialBackgroundId);
   // Snapshot of the layout at mount — leaving with a different layout
   // (미적용 변경) asks whether to save first. 좌표까지 비교한다.
   const snap = (its: PlacedFurniture[], wp: string, fl: string | null, bg: string | null): string =>
@@ -370,10 +393,13 @@ export function RoomDecorScreen({
   const saveWithoutPreviews = () => {
     const v = strippedValues();
     // 화면 상태도 저장값과 맞춘다 — 프리뷰가 방에 남아 보이면 안 된다.
-    setItems(v.items);
-    setWallpaperId(v.wallpaperId);
-    setFloorId(v.floorId);
-    setBackgroundId(v.backgroundId);
+    // 한 단계로 — 프리뷰 빼기가 실행 취소 4번으로 쪼개지지 않게 (#1640).
+    commitDoc(() => ({
+      items: v.items,
+      wallpaperId: v.wallpaperId,
+      floorId: v.floorId,
+      backgroundId: v.backgroundId,
+    }));
     setConfirmPreviews(false);
     proceedApply(pendingBackRef.current, v);
   };
@@ -484,6 +510,10 @@ export function RoomDecorScreen({
   const [roomSize, setRoomSize] = useState({ w: 0, h: 0 });
   // 선택된 가구 — 링 + 툴바(회전/반전/앞뒤/빼기) + 크기 핸들 대상 (#333).
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // 실행 취소·다시 실행으로 선택된 가구가 방에서 사라지면 선택(링·툴바)도 푼다 (#1640).
+  useEffect(() => {
+    if (selectedId && !items.some((p) => p.furnitureId === selectedId)) setSelectedId(null);
+  }, [items, selectedId]);
   // 드래그 중 여부 (#608) — 팬 워클릿이 UI 스레드에서 쓰는 미러. React 상태로
   // 받으면 리렌더가 활성 팬을 취소하므로(draggable-furniture 참고) 툴바 숨김은
   // Animated 스타일로만 반응한다. jest의 useSharedValue는 렌더마다 새 객체라
@@ -1041,12 +1071,36 @@ export function RoomDecorScreen({
             <Icon name="back" size={26} color={t.text} />
           </GlassSurface>
         </Pressable>
-        <GlassSurface
-          interactive={false}
-          fallbackColor={t.surface}
-          style={[styles.floatBtn, styles.floatWallet]}>
-          <WalletPills coin={coinBalance} diamond={diamondBalance} />
-        </GlassSurface>
+        <View style={styles.floatRight} pointerEvents="box-none">
+          {/* 실행 취소·다시 실행 (#1640) — 오른쪽 위, 재화 알약 왼쪽. 캔버스 위 선택 툴바·가격
+            칩과 겹치지 않고, 스크롤해도 화면에 고정된다. 되돌릴 게 없으면 비활성. */}
+          <GlassSurface style={[styles.floatBtn, styles.historyFace]} fallbackColor={t.surface}>
+            {(
+              [
+                ['undo', 'roomShop.decor.tool.undo', canUndo, undo],
+                ['redo', 'roomShop.decor.tool.redo', canRedo, redo],
+              ] as const
+            ).map(([icon, labelKey, enabled, onPress]) => (
+              <Pressable
+                key={icon}
+                onPress={onPress}
+                disabled={!enabled}
+                accessibilityRole="button"
+                accessibilityLabel={tr(labelKey)}
+                accessibilityState={{ disabled: !enabled }}
+                hitSlop={4}
+                style={({ pressed }) => [styles.toolBtn, pressed && pressedStyle('dim', t)]}>
+                <Icon name={icon} size={18} color={enabled ? t.text : t.textDisabled} />
+              </Pressable>
+            ))}
+          </GlassSurface>
+          <GlassSurface
+            interactive={false}
+            fallbackColor={t.surface}
+            style={[styles.floatBtn, styles.floatWallet]}>
+            <WalletPills coin={coinBalance} diamond={diamondBalance} />
+          </GlassSurface>
+        </View>
       </View>
 
       {/* Buying spends diamond irreversibly — confirm before calling onBuy. */}
@@ -1251,6 +1305,19 @@ const styles = StyleSheet.create({
   // 상반부(벽 쪽) 가구 선택 — 가리지 않게 하단으로 회피 (#608).
   toolbarBottom: {
     bottom: Spacing.two,
+  },
+  // 플로팅 줄 오른쪽 묶음 — 실행 취소 알약 + 재화 (#1640).
+  floatRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  // 실행 취소 알약 (#1640).
+  historyFace: {
+    flexDirection: 'row',
+    gap: Spacing.half,
+    padding: Spacing.half,
+    borderRadius: Radius.pill,
   },
   toolBtn: {
     width: 36,
