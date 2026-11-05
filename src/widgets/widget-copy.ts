@@ -29,7 +29,8 @@ export type WidgetCopyKey =
   | 'allDone'
   | 'more'
   | 'roomEmpty'
-  | 'streakDays';
+  | 'streakDays'
+  | 'nextUp';
 
 export function widgetCopy(
   lang: unknown,
