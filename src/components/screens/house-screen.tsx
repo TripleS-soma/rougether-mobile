@@ -34,6 +34,7 @@ import type {
   RoomCell,
   VisitedFriend,
 } from '@/components/screens/house/types';
+import { DioramaTopFade } from '@/components/screens/house/diorama-top-fade';
 import { HouseEmptyState } from '@/components/screens/house/house-empty-state';
 import { HouseMetaPills } from '@/components/screens/house/house-meta-pills';
 import { HouseSideArrows, sideArrowTop } from '@/components/screens/house/house-side-arrows';
@@ -715,6 +716,7 @@ export const HouseScreen = memo(function HouseScreen({
                               })}
                               testID="house-frame"
                             />
+                            <DioramaTopFade color={diorama.skyColor} />
                           </View>
                         ) : null}
                         {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}

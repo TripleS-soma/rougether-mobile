@@ -44,6 +44,15 @@ describe('default shared-house renderer', () => {
       );
     },
   );
+  it('그림 위쪽 경계를 하늘색으로 녹인다 — 단색 띠와 그림 사이 직선 (#1649)', async () => {
+    const ui = await render(<HouseScreen houses={[house(4)]} />);
+    expect(ui.getByTestId('diorama-top-fade')).toBeTruthy();
+    const classic = await render(
+      <HouseScreen houses={[{ ...house(4), displayMode: 'CLASSIC' }]} />,
+    );
+    // 기존 프레임 집은 배경 이미지가 화면을 덮어 경계가 없다.
+    expect(classic.queryByTestId('diorama-top-fade')).toBeNull();
+  });
   it('returns to the main house when the displayed house changes', async () => {
     const houses = [house(10), { ...house(4, 12), coverImageKey: EVENING_BRICK_COVER_KEY }];
     const ui = await render(<HouseScreen houses={houses} houseIndex={0} />);
