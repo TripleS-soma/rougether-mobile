@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { BackHandler, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
@@ -24,6 +24,9 @@ import {
   surfacePreviewsOf,
 } from '@/components/screens/decor/preview-economics';
 import { UnsavedLeaveModal } from '@/components/screens/decor/unsaved-leave-modal';
+import { useDecorHistory } from '@/components/screens/decor/decor-history';
+import { decorShortcutFor, isTypingTarget } from '@/components/screens/decor/decor-shortcuts';
+import { NO_GUIDE, snapTargetsFor } from '@/components/room/snap-guides';
 import { ROOM_RENDER_CONTRACT, roomPercent } from '@/components/room/room-render-contract';
 import { Loading } from '@/components/ui/loading';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -253,13 +256,35 @@ export function RoomDecorScreen({
     )
       .filter(([id]) => furniture.some((f) => f.id === id))
       .map(([id, x, y], i) => ({ furnitureId: id, x, y, z: i + 1 }));
-  const [items, setItems] = useState<PlacedFurniture[]>(() => initialItems ?? demoItems());
+  // 편집 문서 = 가구 배치 + 표면 3종. 실행 취소·다시 실행이 이 단위로 되돌린다 (#1640).
+  // 바꾸는 쪽은 아래 setter 4개를 그대로 쓴다 — 각 호출이 히스토리 한 단계(변화 없으면 무시).
+  const {
+    doc,
+    commit: commitDoc,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useDecorHistory(() => ({
+    items: initialItems ?? demoItems(),
+    wallpaperId: initialWallpaperId,
+    floorId: initialFloorId,
+    backgroundId: initialBackgroundId,
+  }));
+  const { items, wallpaperId, floorId, backgroundId } = doc;
+  const resolve = <T,>(u: SetStateAction<T>, prev: T): T =>
+    typeof u === 'function' ? (u as (p: T) => T)(prev) : u;
+  const setItems = (u: SetStateAction<PlacedFurniture[]>) =>
+    commitDoc((d) => ({ ...d, items: resolve(u, d.items) }));
+  const setWallpaperId = (u: SetStateAction<string>) =>
+    commitDoc((d) => ({ ...d, wallpaperId: resolve(u, d.wallpaperId) }));
+  const setFloorId = (u: SetStateAction<string | null>) =>
+    commitDoc((d) => ({ ...d, floorId: resolve(u, d.floorId) }));
+  const setBackgroundId = (u: SetStateAction<string | null>) =>
+    commitDoc((d) => ({ ...d, backgroundId: resolve(u, d.backgroundId) }));
   // 타일마다 placed.includes를 돌면 카탈로그 크기의 제곱이 된다 (실서버 가구
   // 122종) — 조회는 Set으로 O(1) (#794).
   const placedSet = useMemo(() => new Set(items.map((p) => p.furnitureId)), [items]);
-  const [wallpaperId, setWallpaperId] = useState(initialWallpaperId);
-  const [floorId, setFloorId] = useState<string | null>(initialFloorId);
-  const [backgroundId, setBackgroundId] = useState<string | null>(initialBackgroundId);
   // Snapshot of the layout at mount — leaving with a different layout
   // (미적용 변경) asks whether to save first. 좌표까지 비교한다.
   const snap = (its: PlacedFurniture[], wp: string, fl: string | null, bg: string | null): string =>
@@ -370,10 +395,13 @@ export function RoomDecorScreen({
   const saveWithoutPreviews = () => {
     const v = strippedValues();
     // 화면 상태도 저장값과 맞춘다 — 프리뷰가 방에 남아 보이면 안 된다.
-    setItems(v.items);
-    setWallpaperId(v.wallpaperId);
-    setFloorId(v.floorId);
-    setBackgroundId(v.backgroundId);
+    // 한 단계로 — 프리뷰 빼기가 실행 취소 4번으로 쪼개지지 않게 (#1640).
+    commitDoc(() => ({
+      items: v.items,
+      wallpaperId: v.wallpaperId,
+      floorId: v.floorId,
+      backgroundId: v.backgroundId,
+    }));
     setConfirmPreviews(false);
     proceedApply(pendingBackRef.current, v);
   };
@@ -484,6 +512,14 @@ export function RoomDecorScreen({
   const [roomSize, setRoomSize] = useState({ w: 0, h: 0 });
   // 선택된 가구 — 링 + 툴바(회전/반전/앞뒤/빼기) + 크기 핸들 대상 (#333).
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedSnapTargets = useMemo(
+    () => (selectedId ? snapTargetsFor(items, selectedId) : undefined),
+    [items, selectedId],
+  );
+  // 실행 취소·다시 실행으로 선택된 가구가 방에서 사라지면 선택(링·툴바)도 푼다 (#1640).
+  useEffect(() => {
+    if (selectedId && !items.some((p) => p.furnitureId === selectedId)) setSelectedId(null);
+  }, [items, selectedId]);
   // 드래그 중 여부 (#608) — 팬 워클릿이 UI 스레드에서 쓰는 미러. React 상태로
   // 받으면 리렌더가 활성 팬을 취소하므로(draggable-furniture 참고) 툴바 숨김은
   // Animated 스타일로만 반응한다. jest의 useSharedValue는 렌더마다 새 객체라
@@ -491,6 +527,17 @@ export function RoomDecorScreen({
   const dragActive = useRef(useSharedValue(false)).current;
   // opacity 0은 글래스 면(#1050)을 아예 안 그리고 복귀도 불안정해서, 드래그 중엔
   // 접는(scale) 방식으로 숨긴다 — 리렌더 없이 UI 스레드에서만 반응하는 건 그대로.
+  // 스마트 가이드 (#1644) — 드래그 중 팬 워클릿이 쓰는 가이드 선 위치(px). dragActive와 같은
+  // 이유로 useRef 앵커. 후보는 선택된 가구에만 계산해 넘긴다(선택된 것만 끌 수 있다).
+  const guide = useRef(useSharedValue({ x: NO_GUIDE, y: NO_GUIDE })).current;
+  const guideXStyle = useAnimatedStyle(() => ({
+    opacity: guide.value.x === NO_GUIDE ? 0 : 1,
+    transform: [{ translateX: Math.max(0, guide.value.x) }],
+  }));
+  const guideYStyle = useAnimatedStyle(() => ({
+    opacity: guide.value.y === NO_GUIDE ? 0 : 1,
+    transform: [{ translateY: Math.max(0, guide.value.y) }],
+  }));
   const toolbarDragStyle = useAnimatedStyle(() => ({
     transform: [{ scale: withTiming(dragActive.value ? 0.01 : 1, { duration: 120 }) }],
     // 숨은 툴바의 유령 터치 차단 — 두 번째 손가락이 빼기를 누르는 사고 방지.
@@ -564,6 +611,54 @@ export function RoomDecorScreen({
     setItems((prev) =>
       prev.map((p) => (p.furnitureId === selectedId ? { ...p, z: 1 } : { ...p, z: p.z + 1 })),
     );
+  /** 방향키 미세 이동 (#1642) — 방 안으로 클램프, 연타는 히스토리 한 단계로 묶는다. */
+  const nudgeSelected = (dx: number, dy: number) => {
+    if (!selectedId) return;
+    const id = selectedId;
+    commitDoc(
+      (d) => ({
+        ...d,
+        items: d.items.map((p) => {
+          if (p.furnitureId !== id) return p;
+          const bounds = dragClampBounds(p.scale ?? 1);
+          const clamp = (v: number, axis: 'x' | 'y') =>
+            Math.min(bounds[axis].max, Math.max(bounds[axis].min, v));
+          return { ...p, x: clamp(p.x + dx, 'x'), y: clamp(p.y + dy, 'y') };
+        }),
+      }),
+      { key: `nudge:${id}`, at: Date.now() },
+    );
+  };
+
+  // 웹 키보드 단축키 (#1642) — 데스크톱 2단 꾸미기. 리스너는 한 번만 달고, 매 렌더 최신
+  // 선택·히스토리를 읽는 핸들러를 ref로 갈아 끼운다(선택이 바뀔 때마다 떼고 붙이지 않게).
+  const shortcutRef = useRef<(e: KeyboardEvent) => void>(() => {});
+  shortcutRef.current = (e: KeyboardEvent) => {
+    if (isTypingTarget(e.target)) return;
+    const action = decorShortcutFor(e);
+    if (!action) return;
+    if (action.kind === 'undo' || action.kind === 'redo') {
+      e.preventDefault();
+      if (action.kind === 'undo') undo();
+      else redo();
+      return;
+    }
+    // 나머지는 선택된 가구가 있을 때만 — 없으면 브라우저 기본 동작을 막지 않는다.
+    if (!selectedId) return;
+    e.preventDefault();
+    if (action.kind === 'remove') removeItem(selectedId);
+    else if (action.kind === 'deselect') setSelectedId(null);
+    else if (action.kind === 'front') bringToFront();
+    else if (action.kind === 'back') sendToBack();
+    else nudgeSelected(action.dx, action.dy);
+  };
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const doc = document;
+    const onKeyDown = (e: KeyboardEvent) => shortcutRef.current(e);
+    doc.addEventListener('keydown', onKeyDown);
+    return () => doc.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // What the open picker offers, owned first so placing needs no digging.
   // 보유중 filter hides the shop side of every picker (slot/surface/전체보기).
@@ -708,6 +803,8 @@ export function RoomDecorScreen({
                     onDragEnd={commitDrag}
                     onScaleEnd={commitScale}
                     dragActiveSV={dragActive}
+                    snapTargets={p.furnitureId === selectedId ? selectedSnapTargets : undefined}
+                    guideSV={guide}
                     preview={!owned.has(p.furnitureId)}
                     previewPrice={item.price}
                   />
@@ -736,6 +833,17 @@ export function RoomDecorScreen({
             ))}
           </View>
         ) : null}
+        {/* 스마트 가이드 선 (#1644) — 드래그 중 붙은 축에만 보인다. 리렌더 없이 SV로만 움직인다. */}
+        <Animated.View
+          pointerEvents="none"
+          testID="snap-guide-x"
+          style={[styles.guideX, { backgroundColor: t.primary }, guideXStyle]}
+        />
+        <Animated.View
+          pointerEvents="none"
+          testID="snap-guide-y"
+          style={[styles.guideY, { backgroundColor: t.primary }, guideYStyle]}
+        />
         {/* 캐릭터는 항상 가구 앞 — 오버레이(드래그 중 z 9999)보다 위 전용 레이어. */}
         <View pointerEvents="none" style={styles.characterLayer}>
           {/* Room과 같은 두 겹(자리 박스 + 꽉 채운 아바타) — 아바타에 자리 스타일을
@@ -1041,12 +1149,36 @@ export function RoomDecorScreen({
             <Icon name="back" size={26} color={t.text} />
           </GlassSurface>
         </Pressable>
-        <GlassSurface
-          interactive={false}
-          fallbackColor={t.surface}
-          style={[styles.floatBtn, styles.floatWallet]}>
-          <WalletPills coin={coinBalance} diamond={diamondBalance} />
-        </GlassSurface>
+        <View style={styles.floatRight} pointerEvents="box-none">
+          {/* 실행 취소·다시 실행 (#1640) — 오른쪽 위, 재화 알약 왼쪽. 캔버스 위 선택 툴바·가격
+            칩과 겹치지 않고, 스크롤해도 화면에 고정된다. 되돌릴 게 없으면 비활성. */}
+          <GlassSurface style={[styles.floatBtn, styles.historyFace]} fallbackColor={t.surface}>
+            {(
+              [
+                ['undo', 'roomShop.decor.tool.undo', canUndo, undo],
+                ['redo', 'roomShop.decor.tool.redo', canRedo, redo],
+              ] as const
+            ).map(([icon, labelKey, enabled, onPress]) => (
+              <Pressable
+                key={icon}
+                onPress={onPress}
+                disabled={!enabled}
+                accessibilityRole="button"
+                accessibilityLabel={tr(labelKey)}
+                accessibilityState={{ disabled: !enabled }}
+                hitSlop={4}
+                style={({ pressed }) => [styles.toolBtn, pressed && pressedStyle('dim', t)]}>
+                <Icon name={icon} size={18} color={enabled ? t.text : t.textDisabled} />
+              </Pressable>
+            ))}
+          </GlassSurface>
+          <GlassSurface
+            interactive={false}
+            fallbackColor={t.surface}
+            style={[styles.floatBtn, styles.floatWallet]}>
+            <WalletPills coin={coinBalance} diamond={diamondBalance} />
+          </GlassSurface>
+        </View>
       </View>
 
       {/* Buying spends diamond irreversibly — confirm before calling onBuy. */}
@@ -1126,6 +1258,9 @@ export function RoomDecorScreen({
     </View>
   );
 }
+
+/** 가이드 선 두께(px) (#1644). */
+const GUIDE_THICKNESS = 1.5;
 
 const styles = StyleSheet.create({
   screen: {
@@ -1251,6 +1386,38 @@ const styles = StyleSheet.create({
   // 상반부(벽 쪽) 가구 선택 — 가리지 않게 하단으로 회피 (#608).
   toolbarBottom: {
     bottom: Spacing.two,
+  },
+  // 스마트 가이드 선 (#1644) — 위치는 transform으로만 바꾼다(레이아웃 재계산 없음).
+  guideX: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: GUIDE_THICKNESS,
+    marginLeft: -GUIDE_THICKNESS / 2,
+    zIndex: 10000,
+  },
+  guideY: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    height: GUIDE_THICKNESS,
+    marginTop: -GUIDE_THICKNESS / 2,
+    zIndex: 10000,
+  },
+  // 플로팅 줄 오른쪽 묶음 — 실행 취소 알약 + 재화 (#1640).
+  floatRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  // 실행 취소 알약 (#1640).
+  historyFace: {
+    flexDirection: 'row',
+    gap: Spacing.half,
+    padding: Spacing.half,
+    borderRadius: Radius.pill,
   },
   toolBtn: {
     width: 36,

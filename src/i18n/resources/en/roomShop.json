@@ -60,7 +60,9 @@
         "flip": "Flip horizontally",
         "toFront": "Bring to front",
         "toBack": "Send to back",
-        "remove": "Remove"
+        "remove": "Remove",
+        "undo": "Undo",
+        "redo": "Redo"
       },
       "catalogLoading": "Loading catalog...",
       "catalogError": "Couldn't load the catalog.",

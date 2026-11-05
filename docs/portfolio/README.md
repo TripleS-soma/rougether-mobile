@@ -43,6 +43,7 @@ Claude(또는 작업자)가 대화·작업 중 아래에 해당한다고 **스�
 
 ## 목록
 
+- [2026-11-05 · 방 꾸미기 편집기에 실행 취소·다시 실행 넣기 — 명령 패턴 대신 스냅샷 스택을 고른 이유](2026-11-05-room-editor-undo-redo.md)
 - [2026-11-05, 제작 가구의 원본 보관과 고정가 판매 전환](2026-11-05-fixed-price-market-transition.md)
 - [2026-11-04 · Meta SDK를 넣자 iOS Release 링크가 깨진 문제 — 미리 컴파일된 RN 코어와 옛 podspec](2026-11-04-fbsdk-prebuilt-rn-link-failure.md)
 - [2026-11-04, 서로 다른 개인 방을 한 집에 자연스럽게 보여주기](2026-11-04-shared-house-diorama.md)
@@ -64,3 +65,8 @@ Claude(또는 작업자)가 대화·작업 중 아래에 해당한다고 **스�
 - [2026-09-16 · 심사 제출된 테스트 빌드가 개발 OTA를 받는 문제 — EAS 채널 재배선](2026-09-16-ota-channel-remap.md)
 - [2026-09-16 · prebuild 생성물이 런타임 지문을 갈라 iOS 빌드 실패](2026-09-16-fingerprint-prebuild-artifact.md)
 - [2026-09-16 · 웹 바텀시트 양옆 검은 선 — RN Modal이 앱 프레임 밖에 붙는 문제](2026-09-16-web-modal-frame-border.md)
+- [2026-09-08 · 같은 방이 화면마다 다르게 보이던 문제 — 하나의 렌더 계약과 "자리 박스" 두 겹 구조](2026-09-08-room-render-contract.md)
+- [2026-08-13 · 방 꾸미기에서 방을 건드릴 때마다 카탈로그 전체가 다시 그려지던 문제 — memo 경계와 참조 안정성](2026-08-13-room-editor-catalogue-rerender.md)
+- [2026-08-12 · 방 꾸미기에서 엉뚱한 가구가 잡히던 문제 — 정사각 터치 박스의 투명 모서리](2026-08-12-room-editor-hitbox.md)
+- [2026-07-30 · 선택 툴바가 편집 대상을 가리던 문제 — 리렌더 없이 드래그에 반응하는 툴바](2026-07-30-room-editor-toolbar-gesture.md)
+- [2026-07-21 · 방 꾸미기 에디터의 문서 모델 — 해상도와 무관한 좌표, 리비전으로 막는 저장 충돌](2026-07-21-room-editor-document-model.md)

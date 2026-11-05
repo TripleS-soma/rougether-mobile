@@ -61,6 +61,8 @@ const ICON_LABELS = {
   tap: '탭 조작',
   finish: '결승',
   home: '집 없음·홈',
+  undo: '실행 취소',
+  redo: '다시 실행',
   'move-up': '위로 옮기기',
   'move-down': '아래로 옮기기',
   myRoom: '나의 방',

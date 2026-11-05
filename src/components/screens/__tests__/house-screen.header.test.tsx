@@ -27,7 +27,7 @@ describe('HouseScreen — 헤더·레일·집 전환·미션 요약', () => {
     expect(getByText(long).props.numberOfLines).toBe(1);
   });
 
-  it('액션은 플로팅 레일에 있다 — 목표·집 탐색·구성원 (#986)', async () => {
+  it('집 탐색은 레일, 집 관리는 멤버 알약에서 연다 (#986 → #1646)', async () => {
     const onOpenMissions = jest.fn();
     const onOpenSearch = jest.fn();
     const onOpenMembers = jest.fn();
@@ -41,7 +41,7 @@ describe('HouseScreen — 헤더·레일·집 전환·미션 요약', () => {
     );
     await fireEvent.press(getByLabelText('집 탐색'));
     expect(onOpenSearch).toHaveBeenCalled();
-    await fireEvent.press(getByLabelText('집 관리'));
+    await fireEvent.press(getByLabelText(/^집 관리/));
     expect(onOpenMembers).toHaveBeenCalled();
   });
 
@@ -56,7 +56,7 @@ describe('HouseScreen — 헤더·레일·집 전환·미션 요약', () => {
     expect(queryByText('5,600')).toBeNull();
     // The demo owner's tile carries the 방장 crown.
     expect(getByText('최준서')).toBeTruthy();
-    // 공동 미션 진입점은 플로팅 레일의 '목표' 버튼이다 (#875 → #986).
+    // 공동 미션 진입점은 레벨 알약이다 (#875 → #986 → #1646).
     expect(getByLabelText(/^우리 집의 목표/)).toBeTruthy();
   });
 
@@ -66,19 +66,18 @@ describe('HouseScreen — 헤더·레일·집 전환·미션 요약', () => {
    * 요약 줄이 진입점이라 진입점을 둘로 두지 않는다(#856과 같은 결).
    */
 
-  it('목표 버튼 라벨이 진행 상황을 담고 탭하면 미션 화면을 연다 (#875 → #986)', async () => {
+  it('레벨 알약이 진행 상황을 보이고 탭하면 미션 화면을 연다 (#875 → #1646)', async () => {
     const onOpenMissions = jest.fn();
-    const { getByLabelText, queryByLabelText } = await render(
+    const { getByLabelText, getByText, queryByLabelText } = await render(
       <HouseScreen
         houses={[MISSION_HOUSE]}
         linkedRoutines={[{ missionId: 11, completedToday: true }]}
         onOpenMissions={onOpenMissions}
       />,
     );
-    // 줄이 레일 버튼이 되며 '오늘 1/2'가 눈에서는 사라졌다 (#986) — #875가
-    // 드러내려던 진행 상황이 **라벨에는 그대로** 남아야 한다. 이 단언이 그
-    // 약속을 지키는 그물이다.
-    await fireEvent.press(getByLabelText('우리 집의 목표, 오늘 1/2 기여, 받을 보상 1개'));
+    // 알약엔 숫자(1/2)만 보이고, #875가 드러내려던 문장은 **라벨에 그대로** 남는다.
+    expect(getByText('1/2')).toBeTruthy();
+    await fireEvent.press(getByLabelText(/^우리 집의 목표, 오늘 1\/2 기여, 받을 보상 1개, Lv\./));
     expect(onOpenMissions).toHaveBeenCalled();
     // FAB은 사라졌다 — 진입점은 하나다.
     expect(queryByLabelText('공동 미션')).toBeNull();
@@ -95,16 +94,16 @@ describe('HouseScreen — 헤더·레일·집 전환·미션 요약', () => {
     expect(getByLabelText(/우리 집의 목표, 오늘 1\/2 기여/)).toBeTruthy();
   });
 
-  it('미션이 없으면 목표 버튼 라벨이 진행 중 없음으로 말한다 (#875 → #986)', async () => {
+  it('미션이 없으면 레벨 알약 라벨이 진행 중 없음으로 말한다 (#875 → #1646)', async () => {
     const { getByLabelText } = await render(
       <HouseScreen houses={[{ ...MISSION_HOUSE, missions: [] }]} onOpenMissions={jest.fn()} />,
     );
-    expect(getByLabelText('우리 집의 목표, 진행 중 없음')).toBeTruthy();
+    expect(getByLabelText(/^우리 집의 목표, 진행 중 없음, Lv\./)).toBeTruthy();
   });
 
-  it('onOpenMissions가 없으면 목표 버튼을 그리지 않는다', async () => {
-    // 레일 버튼이 되며 화면에 보이는 글자는 '목표'뿐이다 — `queryByText('우리 집의
-    // 목표')`로 두면 배선 유무와 무관하게 늘 null이라 단언이 조용히 무의미해진다.
+  it('onOpenMissions가 없으면 레벨 알약은 누를 수 없는 표시다', async () => {
+    // 라벨로 단언한다 — 알약엔 '목표'라는 글자가 없어 `queryByText`는 배선 유무와
+    // 무관하게 늘 null이라 단언이 조용히 무의미해진다.
     const { queryByLabelText, queryByText } = await render(
       <HouseScreen houses={[MISSION_HOUSE]} />,
     );
@@ -162,12 +161,12 @@ describe('HouseScreen — 헤더·레일·집 전환·미션 요약', () => {
   // 방장 전용 UI가 더 이상 없다. 집 정보 수정은 #753에서 구성원 화면으로,
   // 미션 만들기는 #875에서 미션 화면으로 갔고 권한 단언도 각 화면 테스트에 있다.
 
-  it('집 관리 버튼은 셸 화면을 연다 — onOpenMembers 콜백 (#753)', async () => {
+  it('멤버 알약은 집 관리 셸 화면을 연다 — onOpenMembers 콜백 (#753 → #1646)', async () => {
     const onOpenMembers = jest.fn();
     const { getByLabelText } = await render(
       <HouseScreen houses={[MISSION_HOUSE]} onOpenMembers={onOpenMembers} />,
     );
-    await fireEvent.press(getByLabelText('집 관리'));
+    await fireEvent.press(getByLabelText(/^집 관리/));
     expect(onOpenMembers).toHaveBeenCalledTimes(1);
   });
 });

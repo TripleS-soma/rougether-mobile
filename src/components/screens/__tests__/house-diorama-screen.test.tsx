@@ -53,3 +53,25 @@ describe('default shared-house renderer', () => {
     expect(ui.getByLabelText('멤버1')).toBeTruthy();
   });
 });
+
+it.each([1, 3, 4, 6, 10])(
+  'preserves all %i members and their visit targets in classic mode',
+  async (count) => {
+    const onVisitFriend = jest.fn();
+    const current = { ...house(count), displayMode: 'CLASSIC' as const };
+    const previews = Object.fromEntries(
+      Array.from({ length: count }, (_, i) => [i + 101, { placements: [] }]),
+    );
+    const ui = await render(
+      <HouseScreen houses={[current]} roomPreviews={previews} onVisitFriend={onVisitFriend} />,
+    );
+    expect(ui.queryByTestId('diorama-annexes')).toBeNull();
+    expect(ui.getAllByTestId('room-preview')).toHaveLength(count);
+    for (let i = 0; i < count; i++) {
+      await fireEvent.press(ui.getByLabelText(`멤버${i + 1}`));
+      expect(onVisitFriend).toHaveBeenLastCalledWith(
+        expect.objectContaining({ houseId: 11, membershipId: i + 101 }),
+      );
+    }
+  },
+);

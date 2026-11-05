@@ -79,6 +79,21 @@ export const queryKeys = {
     one: (houseId: number, membershipId: number) =>
       ['house-member-room', houseId, membershipId] as const,
   },
+  /**
+   * 집 구성원의 하루 루틴 (GET …/members/{mid}/day) — 친구 방 목록. 스와이프 이웃을 미리
+   * 받아 두려고 캐시에 올린다(#1635). 오늘 것만 캐시하고 다른 날짜는 그때그때 받는다.
+   */
+  memberDay: {
+    all: ['house-member-day'] as const,
+    one: (houseId: number, membershipId: number, date: string) =>
+      ['house-member-day', houseId, membershipId, date] as const,
+  },
+  /** 집 구성원의 완료 기록 (GET …/routine-completions) — 친구 방 주간 띠의 점 (#1635). */
+  memberCompletions: {
+    all: ['house-member-completions'] as const,
+    one: (houseId: number, membershipId: number, from: string, to: string) =>
+      ['house-member-completions', houseId, membershipId, from, to] as const,
+  },
   /** 집 커버 카탈로그 (GET /houses/cover-images) — 사용자 무관. */
   houseCovers: ['house-covers'] as const,
   /** 내 인벤토리 (GET /me/items, itemId↔userItemId) — 뽑기·구매·AI 가구가 갱신한다. */

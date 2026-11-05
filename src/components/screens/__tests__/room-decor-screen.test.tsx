@@ -1,5 +1,5 @@
 import { act, fireEvent, render, waitFor, within } from '@testing-library/react-native';
-import { BackHandler, StyleSheet } from 'react-native';
+import { BackHandler, Platform, StyleSheet } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
@@ -746,6 +746,121 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     await fireEvent.press(getByText('적용하기'));
     await waitFor(() => expect(onApply).toHaveBeenCalled());
     expect(firstArgIds(onApply)).toEqual([]);
+  });
+
+  // 실행 취소·다시 실행 (#1640).
+  it('실행 취소로 뺀 가구가 돌아오고, 다시 실행으로 다시 빠진다', async () => {
+    const onApply = jest.fn();
+    const { getByTestId, getByText, getByLabelText } = await render(
+      <RoomDecorScreen initialItems={items(['plant', 'rug'])} onApply={onApply} />,
+    );
+    await layoutCanvas(getByTestId);
+    // 처음엔 되돌릴 게 없다.
+    expect(getByLabelText('실행 취소').props.accessibilityState).toMatchObject({ disabled: true });
+    expect(getByLabelText('다시 실행').props.accessibilityState).toMatchObject({ disabled: true });
+
+    await tapItem('plant');
+    await fireEvent.press(getByLabelText('빼기'));
+    await fireEvent.press(getByLabelText('실행 취소'));
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
+    expect(firstArgIds(onApply).sort()).toEqual(['plant', 'rug']);
+
+    await fireEvent.press(getByLabelText('다시 실행'));
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalledTimes(2));
+    expect(onApply.mock.calls[1][0].map((p: PlacedFurniture) => p.furnitureId)).toEqual(['rug']);
+  });
+
+  it('되돌려서 처음 상태가 되면 미적용 변경이 없다 — 뒤로가기 확인이 안 뜬다', async () => {
+    const onBack = jest.fn();
+    const { getByTestId, getByLabelText, queryByText } = await render(
+      <RoomDecorScreen initialItems={items(['plant'])} onBack={onBack} />,
+    );
+    await layoutCanvas(getByTestId);
+    await tapItem('plant');
+    await fireEvent.press(getByLabelText('좌우 반전'));
+    await fireEvent.press(getByLabelText('실행 취소'));
+    await fireEvent.press(getByLabelText('뒤로가기'));
+    expect(onBack).toHaveBeenCalled();
+    expect(queryByText('변경사항을 저장할까요?')).toBeNull();
+  });
+
+  it('웹 단축키 — Delete로 빼고 ⌘Z로 되돌리고, 방향키 연타는 한 단계 (#1642)', async () => {
+    const listeners: Record<string, (e: unknown) => void> = {};
+    const g = global as unknown as { document?: unknown };
+    const prevDoc = g.document;
+    const prevOS = Platform.OS;
+    g.document = {
+      addEventListener: (type: string, fn: (e: unknown) => void) => (listeners[type] = fn),
+      removeEventListener: () => {},
+    };
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
+    try {
+      const onApply = jest.fn();
+      const { getByTestId, getByText } = await render(
+        <RoomDecorScreen initialItems={items(['plant', 'rug'])} onApply={onApply} />,
+      );
+      await layoutCanvas(getByTestId);
+      const key = (k: Record<string, unknown>) =>
+        act(() =>
+          listeners.keydown({ target: { tagName: 'DIV' }, preventDefault: jest.fn(), ...k }),
+        );
+
+      await tapItem('plant');
+      await key({ key: 'ArrowRight' });
+      await key({ key: 'ArrowRight' });
+      await key({ key: 'ArrowRight' });
+      await key({ key: 'Delete' });
+      await key({ key: 'z', metaKey: true }); // 빼기 되돌림
+      await key({ key: 'z', metaKey: true }); // 방향키 3번이 한 단계로 되돌아감
+      await fireEvent.press(getByText('적용하기'));
+      await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
+      const saved = onApply.mock.calls[0][0] as PlacedFurniture[];
+      expect(saved.map((p) => p.furnitureId).sort()).toEqual(['plant', 'rug']);
+      expect(saved.find((p) => p.furnitureId === 'plant')?.x).toBe(items(['plant'])[0].x);
+    } finally {
+      Object.defineProperty(Platform, 'OS', { value: prevOS, configurable: true });
+      g.document = prevDoc;
+    }
+  });
+
+  // 스마트 가이드·스냅 (#1644) — 320×384 방, plant(0.25→80px) / rug(0.65→208px).
+  const dragPlant = (translationX: number) =>
+    act(() =>
+      fireGestureHandler(getByGestureTestId('item-pan-plant'), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE },
+        { state: State.ACTIVE, translationX, translationY: 0 },
+        { state: State.END, translationX, translationY: 0 },
+      ]),
+    );
+
+  it('다른 가구 중심선 6px 안으로 끌면 그 선에 붙는다', async () => {
+    const onApply = jest.fn();
+    const { getByTestId, getByText } = await render(
+      <RoomDecorScreen initialItems={items(['plant', 'rug'])} onApply={onApply} />,
+    );
+    await layoutCanvas(getByTestId);
+    await tapItem('plant');
+    await dragPlant(124); // 80 + 124 = 204px → rug 중심 208px에서 4px
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    expect(lastApply(onApply).find((p) => p.furnitureId === 'plant')?.x).toBeCloseTo(0.65);
+  });
+
+  it('임계 밖이면 놓은 자리 그대로, 손을 떼면 가이드 선은 숨는다', async () => {
+    const onApply = jest.fn();
+    const { getByTestId, getByText } = await render(
+      <RoomDecorScreen initialItems={items(['plant', 'rug'])} onApply={onApply} />,
+    );
+    await layoutCanvas(getByTestId);
+    await tapItem('plant');
+    await dragPlant(100); // 180px — 방 가운데 160px에서 20px, rug 208px에서 28px
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    expect(lastApply(onApply).find((p) => p.furnitureId === 'plant')?.x).toBeCloseTo(180 / 320);
+    expect(StyleSheet.flatten(getByTestId('snap-guide-x').props.style).opacity).toBe(0);
   });
 
   it('pinch scale commits clamped to 0.5–3.5', async () => {

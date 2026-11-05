@@ -10,7 +10,7 @@ function validateChannelMapping(response, expected) {
     const branches = channel?.updateBranches;
     return (
       CHANNELS.includes(expected) &&
-      channel.name === expected &&
+      channel.name === (expected === 'dev' ? 'internal' : 'production') &&
       channel.isPaused === false &&
       mapping.version === 0 &&
       Array.isArray(mapping.data) &&
@@ -32,7 +32,9 @@ function execute(expected, run = spawnSync) {
   try {
     if (!CHANNELS.includes(expected)) throw new Error(FAILURE);
     // Capture CLI output: channel metadata can contain private update URLs and errors.
-    const result = run('eas', ['channel:view', expected, '--json', '--non-interactive'], {
+    // The internal channel receives dev updates. The legacy dev channel serves production.
+    const channel = expected === 'dev' ? 'internal' : 'production';
+    const result = run('eas', ['channel:view', channel, '--json', '--non-interactive'], {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: 60000,

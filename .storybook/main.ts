@@ -10,7 +10,10 @@ const config: StorybookConfig = {
     { from: '../assets/houses/shared-v1', to: '/house-assets/app' },
   ],
   addons: ['@storybook/addon-docs', '@storybook/addon-a11y', '@storybook/addon-vitest'],
-  framework: '@storybook/react-native-web-vite',
+  framework: {
+    name: '@storybook/react-native-web-vite',
+    options: { pluginReactOptions: { babel: { plugins: ['react-native-worklets/plugin'] } } },
+  },
   core: { disableTelemetry: true },
   async viteFinal(config) {
     return mergeConfig(config, {

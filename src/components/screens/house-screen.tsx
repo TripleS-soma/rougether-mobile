@@ -35,6 +35,7 @@ import type {
   VisitedFriend,
 } from '@/components/screens/house/types';
 import { HouseEmptyState } from '@/components/screens/house/house-empty-state';
+import { HouseMetaPills } from '@/components/screens/house/house-meta-pills';
 import { HouseSideArrows, sideArrowTop } from '@/components/screens/house/house-side-arrows';
 import { HouseSwitcher } from '@/components/screens/house/house-switcher';
 import { manageableMembers } from '@/components/screens/house/members';
@@ -46,10 +47,10 @@ import { useSeatDrag } from '@/components/screens/house/use-seat-drag';
 import { gridRoomPairs, seatRowsFor } from '@/components/screens/house/seat-geometry';
 import { Icon } from '@/components/ui/icon';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
-import { CrownPictogram, HousePictogram, TargetPictogram } from '@/components/ui/pictograms';
+import { CrownPictogram, HousePictogram } from '@/components/ui/pictograms';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
-import { characterIdForMember } from '@/hooks/use-member-room-previews';
-import { FixedOverlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
+import { characterIdForMember } from '@/resources/member-character';
+import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useBottomNavInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -353,12 +354,17 @@ export const HouseScreen = memo(function HouseScreen({
     failureScope: currentHouse?.houseId ?? houseIndex,
     maxMembers: currentHouse?.maxMembers,
     minimumSeats: displayCells.length,
+    displayMode: currentHouse?.displayMode,
     enabled,
     previewTheme,
   });
-  const diorama = houseDioramaTheme(currentHouse?.coverImageKey, enabled);
+  const diorama = houseDioramaTheme(
+    currentHouse?.coverImageKey,
+    enabled,
+    currentHouse?.displayMode,
+  );
   const [annex, setAnnex] = useState(0);
-  useEffect(() => setAnnex(0), [currentHouse?.houseId, houseIndex]);
+  useEffect(() => setAnnex(0), [currentHouse?.houseId, houseIndex, currentHouse?.displayMode]);
   const annexPages = useMemo(() => dioramaSeatPages(seatRows), [seatRows]);
   const currentAnnex = Math.min(annex, annexPages.length - 1);
   const frame = useMemo(
@@ -582,6 +588,11 @@ export const HouseScreen = memo(function HouseScreen({
       contributedMissionIds.includes(m.id) ||
       linkedRoutines.some((r) => r.missionId === m.id && r.completedToday),
   ).length;
+  const missionSummary = {
+    active: activeMissionCount,
+    contributedToday: contributedTodayCount,
+    claimable: claimableCount,
+  };
 
   return (
     <View
@@ -595,6 +606,8 @@ export const HouseScreen = memo(function HouseScreen({
         {backgroundKey ? (
           <Image
             source={assetSource(backgroundKey)}
+            alt=""
+            accessibilityLabel=""
             style={StyleSheet.absoluteFill}
             contentFit="cover"
             contentPosition="center"
@@ -646,40 +659,24 @@ export const HouseScreen = memo(function HouseScreen({
             onReorder={onReorderHouses}
           />
           <View onLayout={measureHeaderBottom} testID="house-header-end" />
-          {/* 레벨·멤버 pill — 프레임 여백과 정렬된 행 (모서리 절대배치는
-                화면 끝에 걸려 보였다). 고정 밝기 흰 스크림 위라 onTint 잉크. */}
-          <View
+          {/* 레벨·멤버 알약 — 프레임 여백과 정렬된 행 (모서리 절대배치는
+                화면 끝에 걸려 보였다). 레벨은 목표, 인원수는 집 관리 진입점이다 (#1646). */}
+          <HouseMetaPills
             style={[
               styles.framePillsRow,
               // Tall roofs leave quiet corners beside the balloon/roof peak.
               // Float metadata there instead of pushing all three floors down.
               isThreeStorey ? [styles.floatingFramePills, { top: headerBottom }] : null,
-            ]}>
-            <GlassSurface
-              interactive={false}
-              fallbackColor={FixedOverlay.skyPill}
-              style={styles.skyPill}>
-              <HousePictogram size={12} />
-              <Text style={[Typography.supporting, { color: t.onTint }]}>
-                Lv.{currentHouse.level ?? 0}
-                {currentHouse.growthPoints != null
-                  ? ` · ${currentHouse.growthPoints % 100}/100`
-                  : ''}
-              </Text>
-            </GlassSurface>
-            <GlassSurface
-              interactive={false}
-              fallbackColor={FixedOverlay.skyPill}
-              style={styles.skyPill}>
-              <Text style={[Typography.supporting, { color: t.onTint }]}>
-                {/* Vacant seats are not members — count the real ones. */}
-                {tr('house.screen.members', {
-                  n: currentHouse.memberCount ?? manageableMembers(currentHouse).length,
-                })}
-                {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
-              </Text>
-            </GlassSurface>
-          </View>
+            ]}
+            level={currentHouse.level ?? 0}
+            growthPoints={currentHouse.growthPoints}
+            /* Vacant seats are not members — count the real ones. */
+            memberCount={currentHouse.memberCount ?? manageableMembers(currentHouse).length}
+            maxMembers={currentHouse.maxMembers}
+            missions={missionSummary}
+            onOpenMissions={onOpenMissions}
+            onOpenMembers={onOpenMembers}
+          />
           {/* 남는 세로를 여기서 먹어 집을 잔디에 붙인다 (#986). CoachTarget이
               flex 자식이라 안쪽 View에 auto 마진을 줘도 안 먹는다 — 명시 스페이서. */}
           <View style={styles.skySpacer} />
@@ -710,6 +707,7 @@ export const HouseScreen = memo(function HouseScreen({
                           <View style={StyleSheet.absoluteFill} pointerEvents="none">
                             <Image
                               source={diorama.source}
+                              alt=""
                               style={StyleSheet.absoluteFill}
                               contentFit="contain"
                               accessibilityLabel={tr('house.screen.houseA11y', {
@@ -759,6 +757,7 @@ export const HouseScreen = memo(function HouseScreen({
                             <Image
                               key={coverKey}
                               source={assetSource(coverKey)}
+                              alt=""
                               style={StyleSheet.absoluteFill}
                               contentFit="fill"
                               transition={frame.kind === 'stacked' ? 0 : 120}
@@ -796,7 +795,11 @@ export const HouseScreen = memo(function HouseScreen({
             </Animated.View>
           </CoachTarget>
           {diorama && annexPages.length > 1 ? (
-            <View style={styles.annexTabs} testID="diorama-annexes">
+            <View
+              style={styles.annexTabs}
+              accessibilityRole="tablist"
+              accessibilityLabel={tr('house.diorama.navigation')}
+              testID="diorama-annexes">
               {annexPages.map((_, index) => {
                 const name =
                   index === 0
@@ -807,6 +810,7 @@ export const HouseScreen = memo(function HouseScreen({
                     key={index}
                     accessibilityRole="tab"
                     accessibilityState={{ selected: currentAnnex === index }}
+                    aria-selected={currentAnnex === index}
                     accessibilityLabel={tr('house.diorama.pageA11y', { name })}
                     disabled={dragSeat != null}
                     onPress={() => {
@@ -873,34 +877,6 @@ export const HouseScreen = memo(function HouseScreen({
           시작하게 하려면 액션이 아트 **위에** 떠야 한다. 흰 원 + 라벨은
           배경이 하늘색이든 다크모드든 대비가 보장되는 형태다(#232). */}
       <View style={[styles.rail, railInset]} pointerEvents="box-none" onLayout={measureRail}>
-        {onOpenMissions ? (
-          <CoachTarget id="house-missions">
-            <RailButton
-              icon={<TargetPictogram size={20} />}
-              label={tr('house.screen.railMissions')}
-              onPress={onOpenMissions}
-              /* 줄에서 버튼이 되며 '오늘 1/1'이 눈에서 사라진다 (#875가 드러내려던
-                 것이다) — 라벨에는 그대로 담고, 받을 보상은 점으로 남긴다. */
-              accessibilityLabel={[
-                tr('house.screen.missionsA11yTitle'),
-                activeMissionCount > 0
-                  ? tr('house.screen.missionsA11yToday', {
-                      done: contributedTodayCount,
-                      total: activeMissionCount,
-                    })
-                  : tr('house.screen.missionsA11yNone'),
-                claimableCount > 0
-                  ? tr('house.screen.missionsA11yClaimable', { n: claimableCount })
-                  : null,
-              ]
-                .filter(Boolean)
-                .join(', ')}
-              badge={claimableCount > 0 ? t.warning : undefined}
-              t={t}
-              Typography={Typography}
-            />
-          </CoachTarget>
-        ) : null}
         {onOpenChat ? (
           <RailButton
             icon={<Icon name="chat" size={20} color={t.text} />}
@@ -922,17 +898,6 @@ export const HouseScreen = memo(function HouseScreen({
             label={tr('house.screen.railSearch')}
             onPress={onOpenSearch}
             accessibilityLabel={tr('house.screen.railSearch')}
-            t={t}
-            Typography={Typography}
-          />
-        </CoachTarget>
-        {/* 튜토리얼 '친구 초대' 첫 대상 (#1324). */}
-        <CoachTarget id="house-manage">
-          <RailButton
-            icon={<Icon name="members" size={20} color={t.text} />}
-            label={tr('house.screen.railManage')}
-            onPress={onOpenMembers}
-            accessibilityLabel={tr('house.screen.railManage')}
             t={t}
             Typography={Typography}
           />
@@ -1078,8 +1043,7 @@ const styles = StyleSheet.create({
   framePillsRow: {
     // 레벨 위에 멤버를 세로로 쌓는다 — 좌우로 벌리면 멤버 필이 우측 플로팅
     // 레일과 같은 줄에 놓여 서로 밀어낸다.
-    alignItems: 'flex-start',
-    gap: Spacing.one,
+    // 알약 간격은 HouseMetaPills가 정한다 (hitSlop이 겹치지 않을 만큼, #1646).
     paddingHorizontal: Spacing.four,
     marginTop: Spacing.three,
   },
@@ -1087,14 +1051,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     zIndex: 2,
-  },
-  skyPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.one,
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
   },
   // Name row + optional last-seen line (#383), centered as one block.
 });

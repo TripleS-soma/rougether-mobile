@@ -280,6 +280,9 @@ describe('FriendRoomScreen', () => {
     const loading = await render(<FriendRoomScreen routines={[]} loading />);
     expect(loading.queryByText('오늘 예정된 루틴이 없어요.')).toBeNull();
     expect(loading.queryByText('0 / 0')).toBeNull();
+    // 스피너 대신 루틴 행과 같은 높이의 자리표시 행 (#1635) — 넘길 때 목록이 출렁이지 않게.
+    expect(loading.getByLabelText('불러오는 중')).toBeTruthy();
+    expect(loading.getAllByTestId('routine-skeleton-row')).toHaveLength(3);
 
     const empty = await render(<FriendRoomScreen routines={[]} />);
     expect(empty.getByText('오늘 예정된 루틴이 없어요.')).toBeTruthy();
