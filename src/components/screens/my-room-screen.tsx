@@ -1313,10 +1313,13 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                   onPress={() => openCompose(today)}
                   accessibilityRole="button"
                   accessibilityLabel={tr('routineTodo.myRoom.addTodayA11y')}
-                  style={({ pressed }) => pressed && pressedStyle('dim', t)}>
-                  <GlassSurface fallbackColor={t.surface} style={styles.quickAddTrigger}>
-                    <Icon name="add" size={22} color={t.text} />
-                  </GlassSurface>
+                  hitSlop={8}
+                  style={({ pressed }) => [
+                    styles.quickAddTrigger,
+                    { backgroundColor: t.primary },
+                    pressed && pressedStyle('fill', t),
+                  ]}>
+                  <Icon name="add" size={18} color={t.onPrimary} />
                 </Pressable>
               </CoachTarget>
             </View>
@@ -1378,10 +1381,13 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               onPress={() => openCompose(selectedDate)}
               accessibilityRole="button"
               accessibilityLabel={tr('routineTodo.myRoom.addSelectedA11y')}
-              style={({ pressed }) => pressed && pressedStyle('dim', t)}>
-              <GlassSurface fallbackColor={t.surface} style={styles.quickAddTrigger}>
-                <Icon name="add" size={22} color={t.text} />
-              </GlassSurface>
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.quickAddTrigger,
+                { backgroundColor: t.primary },
+                pressed && pressedStyle('fill', t),
+              ]}>
+              <Icon name="add" size={18} color={t.onPrimary} />
             </Pressable>
           </View>
         </View>
@@ -1697,11 +1703,17 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 });
 
 const CAT_DOT_SIZE = 32;
+const QUICK_ADD_SIZE = 32;
 
 const styles = StyleSheet.create({
+  /**
+   * 오늘·날짜 머리의 추가 버튼 (#1637) — 32pt 브랜드색 원. 종전 54pt 흰 글래스 원은 제목보다
+   * 크고, 라이트 모드에서 크림색 화면과 구분되지 않았다. 터치 영역은 hitSlop 8로 48pt.
+   */
   quickAddTrigger: {
+    width: QUICK_ADD_SIZE,
+    height: QUICK_ADD_SIZE,
     borderRadius: Radius.pill,
-    padding: Spacing.three,
     alignItems: 'center',
     justifyContent: 'center',
   },
