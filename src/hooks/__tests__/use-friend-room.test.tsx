@@ -384,3 +384,72 @@ describe('구성원 방 응답 공유 (성능 장부 N5)', () => {
     expect(roomCalls()).toBe(2);
   });
 });
+
+describe('스와이프 이웃 미리 받기 (#1635)', () => {
+  const dayCalls = () =>
+    (global.fetch as jest.Mock).mock.calls.filter(([u]) => /\/members\/43\/day$/.test(String(u)))
+      .length;
+  const world = () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/room')) return res({ slots: [], placements: [] });
+      if (url.includes('/routine-completions')) return res({ items: [] });
+      return res({
+        date: '2026-07-08',
+        routines: [{ id: 50, originRoutineId: 5, title: '물 한 잔', completed: false }],
+        todos: [],
+      });
+    }) as unknown as typeof fetch;
+  };
+
+  /** 렌더마다 loading 값을 남긴다 — 중간에 스피너 단계를 거쳤는지 보려면 모든 렌더를 봐야 한다. */
+  const track = async () => {
+    const seen: boolean[] = [];
+    const hook = await renderHook(
+      () => {
+        const r = useFriendRoom();
+        seen.push(r.friendRoom.loading);
+        return r;
+      },
+      { wrapper: queryWrapper() },
+    );
+    return { ...hook, seen };
+  };
+
+  it('미리 받은 친구로 넘기면 로딩 없이 바로 목록이 채워지고, 다시 받지 않는다', async () => {
+    world();
+    const { result, seen } = await track();
+    await act(async () => {
+      result.current.prefetch(11, 43);
+    });
+    await waitFor(() => expect(dayCalls()).toBe(1));
+    seen.length = 0;
+    await act(async () => {
+      await result.current.load(11, 43);
+    });
+    // 빈 방 + 스피너 단계를 한 번도 거치지 않는다.
+    expect(seen).not.toContain(true);
+    expect(result.current.friendRoom.routines.map((r) => r.title)).toEqual(['물 한 잔']);
+    // 신선한 캐시면 fetchQuery가 그대로 돌려준다 — 오늘 목록을 다시 받지 않는다.
+    expect(dayCalls()).toBe(1);
+  });
+
+  it('캐시가 없으면 평소처럼 로딩을 거친다', async () => {
+    world();
+    // 응답을 한 틱 늦춰야 로딩 렌더가 따로 커밋된다(같은 틱이면 React가 합친다).
+    const inner = global.fetch as jest.Mock;
+    global.fetch = jest.fn(
+      (url: string) => new Promise((r) => setTimeout(() => r(inner(url)), 5)),
+    ) as unknown as typeof fetch;
+    const { result } = await track();
+    let pending: Promise<void> = Promise.resolve();
+    await act(async () => {
+      pending = result.current.load(11, 43);
+    });
+    // 응답 전: 빈 목록 + 로딩(화면은 스켈레톤 행을 그린다).
+    expect(result.current.friendRoom.loading).toBe(true);
+    await act(async () => {
+      await pending;
+    });
+    expect(result.current.friendRoom.loading).toBe(false);
+  });
+});
