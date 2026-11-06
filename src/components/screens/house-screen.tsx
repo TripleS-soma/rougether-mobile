@@ -384,7 +384,9 @@ export const HouseScreen = memo(function HouseScreen({
   );
   const coverKey = frame.assetKey;
   const isThreeStorey = frame.kind === 'stacked' && frame.windowRects.length === 6;
-  const frameBottomGap = isThreeStorey ? Spacing.three : Spacing.six;
+  // 리디자인 집은 그림이 잔디까지 그려진 한 장이라 그림 아래 여백이 없다 (#1670) — 예전 64pt 여백은
+  // 하늘색으로 칠해져, 아래로 스크롤하면 잔디 밑에 하늘이 이어졌다.
+  const frameBottomGap = diorama ? 0 : isThreeStorey ? Spacing.three : Spacing.six;
   // Three portrait floors can exceed the first viewport at full screen width.
   // Reserve the measured header, floating navigation and existing frame gaps.
   // Landscape/short embedded previews retain scrolling instead of collapsing.
@@ -614,6 +616,11 @@ export const HouseScreen = memo(function HouseScreen({
           9:16 마스터를 cover/center로 그려 다양한 화면 높이에서도 가장자리만
           자연스럽게 잘리고 집 뒤 핵심 여백은 유지한다. */}
       <View style={StyleSheet.absoluteFill} pointerEvents="none" testID="house-background-layer">
+        {/* 리디자인 집은 화면 아래쪽을 땅색으로 (#1670) — 아래로 끝까지 당겨도(iOS 바운스) 잔디 밑에
+            하늘이 드러나지 않는다. 위로 당길 땐 그대로 하늘. */}
+        {diorama ? (
+          <View style={[styles.groundHalf, { backgroundColor: diorama.groundColor }]} />
+        ) : null}
         {backgroundKey ? (
           <Image
             source={assetSource(backgroundKey)}
@@ -642,7 +649,11 @@ export const HouseScreen = memo(function HouseScreen({
         // 이 화면은 폭 제한에서 뺀다 (#986) — 하늘이 화면을 꽉 채워야 하고,
         // 태블릿에서 560으로 잘리면 좌우가 크림으로 남아 목적과 반대가 된다.
         // 프레임은 aspectRatio라 폭을 따라 커지지만, 좌석 좌표는 정규화라 안전.
-        contentContainerStyle={[styles.body, navInset ? { paddingBottom: navInset } : null]}
+        // 리디자인 집은 탭바 밑 여백을 아래 땅 띠가 대신한다 (#1670).
+        contentContainerStyle={[
+          styles.body,
+          navInset && !diorama ? { paddingBottom: navInset } : null,
+        ]}
         scrollEnabled={dragSeat == null}
         testID="house-scroll">
         {/* 프레임 모드(#287) — 하늘 위에 스위처·집 프레임, 방은 창문 안에.
@@ -807,6 +818,13 @@ export const HouseScreen = memo(function HouseScreen({
             </Animated.View>
           </CoachTarget>
         </View>
+        {/* 탭바 밑 띠 (#1670) — 그림 맨 아래와 같은 색으로 이어 붙인다. 스크롤은 여기서 끝난다. */}
+        {diorama && navInset ? (
+          <View
+            testID="diorama-ground"
+            style={{ height: navInset, backgroundColor: diorama.groundColor }}
+          />
+        ) : null}
         {/* 프레임 모드에선 방이 창문 안에 그려져 이 격자가 비는데, paddingTop이
             남아 잔디 아래 24px 크림 띠를 만들었다 (#986). 내용이 있을 때만 그린다. */}
         {roomPairs.length === 0 ? null : (
@@ -924,6 +942,9 @@ export const HouseScreen = memo(function HouseScreen({
 
 const styles = StyleSheet.create({
   dioramaSlot: { overflow: 'visible' },
+  // 바운스가 드러내는 건 아래 100~150pt 남짓 — 절반까지 칠하면 짧은 화면(가로·태블릿)에서 그림
+  // 위쪽 하늘 자리까지 땅색이 올라온다. 그림이 덮는 아래 4분의 1만.
+  groundHalf: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '25%' },
   annexTabs: {
     position: 'absolute',
     alignSelf: 'center',

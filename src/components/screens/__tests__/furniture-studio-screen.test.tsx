@@ -350,6 +350,18 @@ describe('내 가구 탭 — 2열 타일 + 상세 시트 (#1666)', () => {
     );
   });
 
+  it('실패 칸을 보다가 실패가 0건이 되면 전체로 돌아온다 — 칩이 사라진 빈 그리드에 갇히지 않게 (#1668 리뷰)', async () => {
+    const props = { balance: { available: 1, reserved: 0 }, photo: null };
+    const ui = await render(<FurnitureStudioScreen {...props} jobs={[done('d1'), failedJob]} />);
+    await fireEvent.press(ui.getByRole('tab', { name: '내 가구 2' }));
+    await fireEvent.press(ui.getByRole('tab', { name: '실패 1' }));
+    expect(ui.getAllByLabelText(/^내가 만든 가구 \d+/)).toHaveLength(1);
+    // 목록 갱신으로 실패 건이 빠졌다.
+    await ui.rerender(<FurnitureStudioScreen {...props} jobs={[done('d1')]} />);
+    expect(ui.queryByText(/^실패 /)).toBeNull();
+    expect(ui.getAllByLabelText(/^내가 만든 가구 \d+/)).toHaveLength(1);
+  });
+
   it('만들던 가구가 끝나면 내 가구 탭으로 넘어간다', async () => {
     const props = { balance: { available: 0, reserved: 0 }, photo: null };
     const ui = await render(
