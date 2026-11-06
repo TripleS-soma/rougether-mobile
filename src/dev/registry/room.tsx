@@ -208,6 +208,57 @@ export const roomEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'FurnitureStudioHistory',
+    description: '내 가구 탭 — 2열 타일·완성/실패 거르기·상세 시트 (#1666).',
+    render: () => (
+      <FurnitureStudioScreen
+        balance={{ available: 1, reserved: 0 }}
+        coinBalance={3200}
+        photo={null}
+        onGoToRoom={() => {}}
+        onIssue={() => true}
+        jobs={[
+          {
+            id: 'h1',
+            status: 'SUCCEEDED',
+            assetKey: 'items/furniture/chair.png',
+            userItemId: 1,
+            failureCode: null,
+          },
+          {
+            id: 'h2',
+            status: 'FAILED',
+            assetKey: null,
+            userItemId: null,
+            failureCode: 'PHOTO_REJECTED',
+          },
+          {
+            id: 'h3',
+            status: 'SUCCEEDED',
+            assetKey: 'items/furniture/sofa.png',
+            userItemId: 3,
+            failureCode: null,
+          },
+          {
+            id: 'h4',
+            status: 'FAILED',
+            assetKey: 'items/furniture/lamp.png',
+            userItemId: 4,
+            failureCode: 'GENERATION_BUDGET_EXHAUSTED',
+            reason: '배경에 흰 잔상이 남았어요.',
+          },
+          {
+            id: 'h5',
+            status: 'SUCCEEDED',
+            assetKey: 'items/furniture/plant.png',
+            userItemId: 5,
+            failureCode: null,
+          },
+        ]}
+      />
+    ),
+  },
+  {
     name: 'FurnitureStudioFailures',
     description: '사진 거절·품질 검수·일시 오류의 사유와 재시도 안내 (#1503).',
     render: () => (

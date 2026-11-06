@@ -337,7 +337,21 @@
       },
       "coins": "Coins: {{n}}",
       "paymentHint": "Credits are used first. Without a credit, you can create furniture for {{n}} coins.",
-      "submitCoins": "Create for {{n}} coins"
+      "submitCoins": "Create for {{n}} coins",
+      "tabMake": "Create",
+      "tabMine": "My furniture {{n}}",
+      "tabsA11y": "Switch AI furniture view",
+      "filterAll": "All {{n}}",
+      "filterDone": "Done {{n}}",
+      "filterFailed": "Failed {{n}}",
+      "filterA11y": "Filter by status",
+      "tileA11y": "My furniture {{n}}, {{status}}",
+      "badgeFailed": "Failed",
+      "badgeReview": "Review failed",
+      "emptyMine": "You have not made any furniture yet",
+      "goMake": "Make one",
+      "sheetA11y": "My furniture details",
+      "close": "Close"
     },
     "minigame": {
       "runner": {
