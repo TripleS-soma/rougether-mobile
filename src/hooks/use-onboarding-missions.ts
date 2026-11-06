@@ -1,4 +1,4 @@
-import { completeOnboardingTutorial } from '@/api/starter-gacha';
+import { completeOnboardingTutorial, STARTER_GACHA_SERVER_READY } from '@/api/starter-gacha';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -139,7 +139,8 @@ export function useOnboardingMissions(autoStart: boolean) {
     const next = s.stepIndex + 1;
     if (next >= ONBOARDING_MISSION_STEPS.length) {
       // 마지막 미션 — 배너는 소멸하고 축하 시트만 남는다.
-      void completeOnboardingTutorial().catch(() => {});
+      // 서버에 아직 없는 API (#1660) — 있을 때만 알린다.
+      if (STARTER_GACHA_SERVER_READY) void completeOnboardingTutorial().catch(() => {});
       void AsyncStorage.setItem(storeKey(), 'completed').catch(() => {});
       setState({ active: false, stepIndex: s.stepIndex, completedIndex: s.stepIndex });
       return;

@@ -5,6 +5,11 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MISSION_HOUSE } from '@/test-utils/house-screen-fixtures';
 
 jest.mock('@/hooks/use-color-scheme', () => ({ useColorScheme: jest.fn(() => 'light') }));
+const mockTrack = jest.fn();
+jest.mock('@/lib/analytics', () => ({
+  ...jest.requireActual('@/lib/analytics'),
+  track: (...args: unknown[]) => mockTrack(...args),
+}));
 beforeEach(() => jest.mocked(useColorScheme).mockReturnValue('light'));
 
 describe('HouseScreen — 헤더·레일·집 전환·미션 요약', () => {
@@ -168,5 +173,26 @@ describe('HouseScreen — 헤더·레일·집 전환·미션 요약', () => {
     );
     await fireEvent.press(getByLabelText(/^집 관리/));
     expect(onOpenMembers).toHaveBeenCalledTimes(1);
+  });
+
+  it('진입점 탭을 house_action_tap으로 남긴다 — 11/5 배치 변경의 효과를 잰다 (#1660)', async () => {
+    mockTrack.mockClear();
+    const handlers = {
+      onOpenMissions: jest.fn(),
+      onOpenChat: jest.fn(),
+      onOpenSearch: jest.fn(),
+      onOpenMembers: jest.fn(),
+    };
+    const { getByLabelText } = await render(<HouseScreen houses={[MISSION_HOUSE]} {...handlers} />);
+    await fireEvent.press(getByLabelText(/^우리 집의 목표/));
+    await fireEvent.press(getByLabelText(/^집 채팅/));
+    await fireEvent.press(getByLabelText('집 탐색'));
+    await fireEvent.press(getByLabelText(/^집 관리/));
+    const actions = mockTrack.mock.calls
+      .filter(([event]) => event === 'house_action_tap')
+      .map(([, props]) => (props as { action: string }).action);
+    expect(actions).toEqual(['missions', 'chat', 'search', 'manage']);
+    // 탭 기록이 원래 동작을 막지 않는다.
+    for (const fn of Object.values(handlers)) expect(fn).toHaveBeenCalledTimes(1);
   });
 });

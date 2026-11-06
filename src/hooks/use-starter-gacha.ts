@@ -1,7 +1,11 @@
 import { useCallback, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, getSessionUserId } from '@/api';
-import { drawStarterGacha, fetchStarterGacha } from '@/api/starter-gacha';
+import {
+  drawStarterGacha,
+  fetchStarterGacha,
+  STARTER_GACHA_SERVER_READY,
+} from '@/api/starter-gacha';
 import { queryKeys } from '@/lib/query-keys';
 import type { DrawResult } from '@/api/types';
 import { useLatestRef } from '@/hooks/use-stable-value';
@@ -10,7 +14,12 @@ export function useStarterGacha(enabled: boolean) {
   const userId = getSessionUserId();
   const key = queryKeys.starterGacha(userId);
   const qc = useQueryClient();
-  const query = useQuery({ queryKey: key, queryFn: fetchStarterGacha, enabled, retry: false });
+  const query = useQuery({
+    queryKey: key,
+    queryFn: fetchStarterGacha,
+    enabled: enabled && STARTER_GACHA_SERVER_READY,
+    retry: false,
+  });
   const latest = useLatestRef(query.data);
   const busy = useRef(false);
   const { mutateAsync } = useMutation({ mutationFn: drawStarterGacha, retry: false });
@@ -43,7 +52,9 @@ export function useStarterGacha(enabled: boolean) {
   }, [refetch]);
   // 서버에 온보딩 뽑기 API가 아직 없으면(404) 첫 뽑기 미션을 막지 않고 일반 뽑기로 돌아간다.
   // 일시 장애(5xx·오프라인)는 여기 포함하지 않는다 — 유료 뽑기로 흘려보내면 무료 스피커를 잃는다.
-  const unavailable = query.error instanceof ApiError && query.error.status === 404;
+  // 서버가 아직 없다고 알고 있으면(#1660) 묻지도 않고 같은 길로 보낸다.
+  const unavailable =
+    !STARTER_GACHA_SERVER_READY || (query.error instanceof ApiError && query.error.status === 404);
   return {
     state: query.data,
     loading: query.isPending,

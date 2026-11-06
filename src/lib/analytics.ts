@@ -13,6 +13,9 @@ import { Platform } from 'react-native';
  * 어떤 경우에도 앱을 죽이면 안 된다는 게 이 파일의 계약이다.
  */
 
+/** 집 화면 진입점 (#1660) — 레일(채팅·집 탐색)과 하늘 위 알약(레벨 → 목표, 인원수 → 집 관리). */
+export type HouseAction = 'missions' | 'chat' | 'search' | 'manage';
+
 /** 방 화면 버튼 — 오른쪽 열 6개 + 메뉴(☰) 항목은 `menu_` 접두. */
 export type RoomAction =
   | 'menu'
@@ -136,6 +139,8 @@ export type AnalyticsEvent =
   | 'feature_tour'
   /** 방 화면 버튼 탭 (2026-11-04) — 오른쪽 열·메뉴 항목. 배치를 실측으로 다시 정한다. */
   | 'room_action_tap'
+  /** 집 화면 진입점 탭 (#1660) — 11/5 레일 정리(#1647)로 목표·집 관리를 알약으로 옮긴 배치를 잰다. */
+  | 'house_action_tap'
   /**
    * 주문·취소 결과 — side(BUY|SELL|CANCEL), source(INVENTORY|ISSUANCE|none),
    * result(filled|open|cancelled|rejected|pending|error). rejected면 code에 거절 사유.
@@ -336,6 +341,7 @@ export type AnalyticsParams = {
   user_block: { via: string } | undefined;
   market_view: { screen: 'list' | 'asset' | 'orders' };
   room_action_tap: { action: RoomAction };
+  house_action_tap: { action: HouseAction };
   /** 기능 첫 진입 튜토리얼 — step은 끝낸(건너뛴) 단계 번호(1부터). */
   feature_tour: { tour: string; action: 'complete' | 'skip' | 'replay'; step: number };
   market_order: { side: string; source: string; result: string; code?: string };
