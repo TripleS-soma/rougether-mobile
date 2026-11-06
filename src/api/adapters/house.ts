@@ -225,6 +225,7 @@ export function toHouseMission(m: MissionSummary): HouseMission {
     endsOn: m.endsAt ? kstDateOf(m.endsAt) : undefined,
     myContribution: m.myContribution ?? undefined,
     contributedToday: m.contributedToday ?? undefined,
+    claimedToday: m.todayClaimed ?? undefined,
   };
 }
 
