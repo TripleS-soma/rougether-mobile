@@ -11,6 +11,13 @@ import {
 import { ToastProvider } from '@/components/ui/toast';
 import { FURNITURE_ITEMS, type PlacedFurniture, type Wallpaper } from '@/resources/furniture';
 
+const mockTrack = jest.fn();
+jest.mock('@/lib/analytics', () => ({
+  ...jest.requireActual('@/lib/analytics'),
+  track: (...args: unknown[]) => mockTrack(...args),
+}));
+const tracked = (event: string) => mockTrack.mock.calls.filter(([e]) => e === event);
+
 // Local demo catalog anchors: 'bed'(포근한 침대) / 'plant'(초록 식물) /
 // default wallpaper 'simple', alternative 'paw'(발자국 패턴).
 const items = (ids: string[]): PlacedFurniture[] =>
@@ -560,6 +567,40 @@ describe('RoomDecorScreen — 저장 흐름', () => {
     await fireEvent.press(getByLabelText('새로 불러오기'));
     expect(onConflictReload).toHaveBeenCalled();
     expect(onBack).toHaveBeenCalled();
+  });
+
+  /**
+   * 꾸미기 퍼널 계측 (#1664) — decor_place는 새 가구 추가만 세서, 벽지만 바꾸고 저장한 사람이
+   * "배치 없이 나감"으로 읽혔다(GA: decor_open 98명 → decor_place 66명인데 room_save 90명).
+   */
+  it('벽지만 바꿔도 첫 변경을 한 번 센다 — 가구 추가만 세던 decor_place와 다르게 (#1664)', async () => {
+    mockTrack.mockClear();
+    const { getByLabelText } = await render(<RoomDecorScreen initialItems={[]} />);
+    expect(tracked('decor_edit')).toHaveLength(0);
+    await fireEvent.press(getByLabelText('벽 꾸미기'));
+    await fireEvent.press(getByLabelText('발자국 패턴'));
+    expect(tracked('decor_edit')).toHaveLength(1);
+    expect(tracked('decor_place')).toHaveLength(0);
+    // 더 바꿔도 세션당 한 번.
+    await fireEvent.press(getByLabelText('심플 베이지'));
+    expect(tracked('decor_edit')).toHaveLength(1);
+  });
+
+  it('저장 안 한 채 나가려 할 때 고른 것을 남긴다 — 그냥 둘러본 것과 버린 것을 가른다 (#1664)', async () => {
+    mockTrack.mockClear();
+    const { getByLabelText } = await render(
+      <RoomDecorScreen initialItems={[]} onBack={jest.fn()} onApply={jest.fn()} />,
+    );
+    await fireEvent.press(getByLabelText('소품 탭'));
+    await fireEvent.press(getByLabelText('초록 식물'));
+    await fireEvent.press(getByLabelText('뒤로가기'));
+    await fireEvent.press(getByLabelText('계속 꾸미기'));
+    await fireEvent.press(getByLabelText('뒤로가기'));
+    await fireEvent.press(getByLabelText('저장하지 않고 나가기'));
+    expect(tracked('decor_leave_unsaved').map(([, p]) => p)).toEqual([
+      { action: 'stay' },
+      { action: 'discard' },
+    ]);
   });
 
   it('goes straight back when nothing changed', async () => {

@@ -1,4 +1,5 @@
 import { fireEvent, render, renderHook, waitFor } from '@testing-library/react-native';
+import { __resetSheetSerializer } from '@/components/ui/bottom-sheet';
 
 import { fetchMyMarketOrders } from '@/api/market';
 import { NavMenuPopover } from '@/components/app/nav-menu-popover';
@@ -80,6 +81,7 @@ describe('거래소 내비게이션 (#1427 → #1502 독립 화면)', () => {
 });
 
 describe('스튜디오 "판매 준비하기" (#1427)', () => {
+  afterEach(() => __resetSheetSerializer());
   const jobs = [
     {
       id: 'job-1',
@@ -100,8 +102,11 @@ describe('스튜디오 "판매 준비하기" (#1427)', () => {
         onIssue={onIssue}
       />,
     );
+    // 내 가구 탭 → 타일 → 상세 시트의 판매하기 (#1666). 판매 시트는 상세 시트가 닫힌 뒤 뜬다.
+    await fireEvent.press(ui.getByRole('tab', { name: /^내 가구/ }));
+    await fireEvent.press(ui.getAllByLabelText(/^내가 만든 가구 \d+/)[0]);
     await fireEvent.press(ui.getByLabelText('판매하기'));
-    expect(ui.getByText(/원본은 계속 보관하고/)).toBeTruthy();
+    await waitFor(() => expect(ui.getByText(/원본은 계속 보관하고/)).toBeTruthy());
     await fireEvent.changeText(ui.getByLabelText('개당 가격 (코인)'), '30');
     await fireEvent.press(ui.getByLabelText('30코인에 판매하기'));
     await waitFor(() => expect(onIssue).toHaveBeenCalledWith(77, 30));
@@ -111,6 +116,9 @@ describe('스튜디오 "판매 준비하기" (#1427)', () => {
     const ui = await render(
       <FurnitureStudioScreen balance={{ available: 0, reserved: 0 }} jobs={jobs} photo={null} />,
     );
+    await fireEvent.press(ui.getByRole('tab', { name: /^내 가구/ }));
+    await fireEvent.press(ui.getAllByLabelText(/^내가 만든 가구 \d+/)[0]);
+    expect(ui.getByLabelText('방에 배치하기')).toBeTruthy();
     expect(ui.queryByLabelText('판매하기')).toBeNull();
   });
 

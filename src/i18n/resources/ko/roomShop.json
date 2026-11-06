@@ -337,7 +337,22 @@
       },
       "coins": "보유 코인 {{n}}",
       "paymentHint": "생성권을 먼저 사용해요. 생성권이 없으면 {{n}}코인으로 만들 수 있어요.",
-      "submitCoins": "{{n}}코인으로 만들기"
+      "submitCoins": "{{n}}코인으로 만들기",
+      "tabMake": "만들기",
+      "tabMine": "내 가구 {{n}}",
+      "tabsA11y": "AI 가구 화면 전환",
+      "filterAll": "전체 {{n}}",
+      "filterDone": "완성 {{n}}",
+      "filterFailed": "실패 {{n}}",
+      "filterA11y": "상태로 거르기",
+      "tileA11y": "내가 만든 가구 {{n}}, {{status}}",
+      "badgeFailed": "실패",
+      "badgeReview": "검수 실패",
+      "emptyMine": "아직 만든 가구가 없어요",
+      "goMake": "만들러 가기",
+      "sheetA11y": "내가 만든 가구 자세히",
+      "close": "닫기",
+      "retryGoMake": "다시 만들러 가기"
     },
     "minigame": {
       "runner": {
