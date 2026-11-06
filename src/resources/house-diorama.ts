@@ -20,6 +20,11 @@ export type HouseDioramaTheme = {
   coverImageKey: string;
   source: number;
   skyColor: string;
+  /**
+   * 그림 맨 아래 띠의 평균색 (#1670) — 그림 아래(탭바 밑)와 아래로 당겼을 때 드러나는 곳을 칠한다.
+   * 예전엔 화면 배경(skyColor)이 그대로 보여, 잔디 밑에 하늘색이 이어져 어색했다. 그림 하단 12px 평균.
+   */
+  groundColor: string;
   feet: readonly [number, number];
 };
 
@@ -27,6 +32,7 @@ export const HOUSE_DIORAMA_THEMES: readonly HouseDioramaTheme[] = [
   {
     id: 'cloud-balloon',
     skyColor: '#a6cef5',
+    groundColor: '#e6dadf',
     coverImageKey: DEFAULT_HOUSE_COVER_KEY,
     source: cloud_balloon,
     feet: [791, 1187],
@@ -34,6 +40,7 @@ export const HOUSE_DIORAMA_THEMES: readonly HouseDioramaTheme[] = [
   {
     id: 'coral-aquarium',
     skyColor: '#58a0e9',
+    groundColor: '#fbc37e',
     coverImageKey: 'house/coral-aquarium/house-unified-coral-aquarium-frame.png',
     source: coral_aquarium,
     feet: [781, 1198],
@@ -41,6 +48,7 @@ export const HOUSE_DIORAMA_THEMES: readonly HouseDioramaTheme[] = [
   {
     id: 'mushroom-forest',
     skyColor: '#c4e3f1',
+    groundColor: '#9c9c5c',
     coverImageKey: 'house/mushroom-forest/house-unified-mushroom-forest-frame.png',
     source: mushroom_forest,
     feet: [800, 1137],
@@ -48,6 +56,7 @@ export const HOUSE_DIORAMA_THEMES: readonly HouseDioramaTheme[] = [
   {
     id: 'night-observatory',
     skyColor: '#705caa',
+    groundColor: '#846f2b',
     coverImageKey: 'house/night-observatory/house-unified-night-observatory-frame-v3.png',
     source: night_observatory,
     feet: [795, 1200],
@@ -55,6 +64,7 @@ export const HOUSE_DIORAMA_THEMES: readonly HouseDioramaTheme[] = [
   {
     id: 'forest-canopy',
     skyColor: '#e7e8c3',
+    groundColor: '#c1bd69',
     coverImageKey: FOREST_CANOPY_COVER_KEY,
     source: forest_canopy,
     feet: [782, 1155],
@@ -62,6 +72,7 @@ export const HOUSE_DIORAMA_THEMES: readonly HouseDioramaTheme[] = [
   {
     id: 'evening-brick',
     skyColor: '#826ba9',
+    groundColor: '#9e823d',
     coverImageKey: EVENING_BRICK_COVER_KEY,
     source: evening_brick,
     feet: [797, 1200],
