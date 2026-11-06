@@ -117,6 +117,11 @@ export type BugReportResponse = {
   createdAt?: string;
 };
 
+export type BuyRequest = {
+  requestId: string;
+  expectedPrice?: number;
+};
+
 export type CalendarDayCount = {
   date?: string;
   routineCount?: number;
@@ -706,7 +711,7 @@ export type HouseMissionContributeResponse = {
 
 export type HouseMissionCreateRequest = {
   title: string;
-  missionType: 'DAILY_MEMBER_RATE' | 'WEEKLY_MEMBER_COUNT' | 'STREAK_DAYS';
+  missionType: 'DAILY_MEMBER_RATE' | 'DAILY_MEMBER_COUNT' | 'WEEKLY_MEMBER_COUNT' | 'STREAK_DAYS';
   targetValue?: number;
   startsAt?: string;
   endsAt?: string;
@@ -719,7 +724,7 @@ export type HouseMissionListResponse = {
 export type HouseMissionResponse = {
   missionId?: number;
   title?: string;
-  missionType?: 'DAILY_MEMBER_RATE' | 'WEEKLY_MEMBER_COUNT' | 'STREAK_DAYS';
+  missionType?: 'DAILY_MEMBER_RATE' | 'DAILY_MEMBER_COUNT' | 'WEEKLY_MEMBER_COUNT' | 'STREAK_DAYS';
   targetValue?: number;
   currentValue?: number;
   status?: 'ACTIVE' | 'COMPLETED' | 'EXPIRED';
@@ -852,6 +857,13 @@ export type KakaoLoginRequest = {
   allowNewAccount?: boolean;
 };
 
+export type Listings = {
+  items?: MarketListingResponse[];
+  page?: number;
+  size?: number;
+  totalElements?: number;
+};
+
 export type LoginResponse = {
   userId?: number;
   accessToken?: string;
@@ -876,7 +888,6 @@ export type MarketAssetListResponse = {
 };
 
 export type MarketAssetResponse = {
-  mySellOrders?: MarketOrderResponse[];
   assetId?: number;
   itemId?: number;
   name?: string;
@@ -892,6 +903,7 @@ export type MarketAssetResponse = {
   sellPending?: boolean;
   asks?: PriceLevel[];
   bids?: PriceLevel[];
+  mySellOrders?: MarketOrderResponse[];
 };
 
 export type MarketCommandAcceptedResponse = {
@@ -904,6 +916,18 @@ export type MarketCommandResponse = {
   status?: 'PENDING' | 'APPLIED' | 'REJECTED';
   rejectCode?: string | null;
   order?: MarketOrderResponse;
+};
+
+export type MarketListingResponse = {
+  assetId?: number;
+  itemId?: number;
+  name?: string;
+  assetKey?: string;
+  creatorNickname?: string;
+  isCreator?: boolean;
+  price?: number;
+  selling?: boolean;
+  owned?: boolean;
 };
 
 export type MarketOrderResponse = {
@@ -919,6 +943,13 @@ export type MarketOrderResponse = {
   status?: 'OPEN' | 'FILLED' | 'CANCELLED' | 'EXPIRED';
   expiresAt?: string;
   createdAt?: string;
+};
+
+export type MarketPurchaseResponse = {
+  purchaseId?: number;
+  assetId?: number;
+  userItemId?: number;
+  price?: number;
 };
 
 export type MarketTradeListResponse = {
@@ -1037,7 +1068,7 @@ export type MinigameRunStartResponse = {
 export type MissionSummary = {
   missionId?: number;
   title?: string;
-  missionType?: 'DAILY_MEMBER_RATE' | 'WEEKLY_MEMBER_COUNT' | 'STREAK_DAYS';
+  missionType?: 'DAILY_MEMBER_RATE' | 'DAILY_MEMBER_COUNT' | 'WEEKLY_MEMBER_COUNT' | 'STREAK_DAYS';
   targetValue?: number;
   currentValue?: number;
   status?: 'ACTIVE' | 'COMPLETED' | 'EXPIRED';
@@ -1535,6 +1566,11 @@ export type RoutineUpdateRequest = {
   houseMissionId?: number | null;
 };
 
+export type SellRequest = {
+  userItemId: number;
+  price?: number;
+};
+
 export type SimilarityRequest = {
   items: Item[];
 };
@@ -1678,6 +1714,11 @@ export type TransferOwnershipResponse = {
   houseId?: number;
   newOwnerMembershipId?: number;
   newOwnerUserId?: number;
+};
+
+export type UpdateRequest = {
+  price?: number;
+  selling: boolean;
 };
 
 export type WalletHistoryListResponse = {

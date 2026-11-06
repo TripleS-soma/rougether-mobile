@@ -388,6 +388,17 @@ describe('API adapters — house', () => {
       toHouseMission({ missionId: 2, title: '루게더 개발', missionType: 'WEEKLY_MEMBER_COUNT' })
         .unit,
     ).toBe('회');
+    // 하루 N명 이상 (#1657) — 진행값이 오늘 기여한 인원이라 단위가 '명'.
+    const count = toHouseMission({
+      missionId: 4,
+      title: '하루 두 명',
+      missionType: 'DAILY_MEMBER_COUNT',
+      targetValue: 2,
+      currentValue: 2,
+      todayClaimed: false,
+    });
+    expect(count.unit).toBe('명');
+    expect(count.achieved).toBe(true);
     // 서버가 모르는 유형을 보내와도 카드가 깨지지 않게 — 단위만 비운다.
     // 생성 타입에는 없지만 서버가 나중에 새 유형을 붙일 수 있다 — 런타임 폴백.
     expect(

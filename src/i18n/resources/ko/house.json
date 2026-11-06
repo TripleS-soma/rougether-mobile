@@ -237,7 +237,9 @@
         "openEnded": "무기한",
         "cancelA11y": "미션 만들기 취소",
         "submitA11y": "미션 만들기 확인",
-        "submit": "만들기"
+        "submit": "만들기",
+        "targetMembers": "하루 몇 명 이상 달성해야 하나요?",
+        "targetMembersA11y": "{{n}}명"
       }
     },
     "missionTypes": {
@@ -245,6 +247,11 @@
         "label": "일일 구성원 달성률",
         "shortLabel": "일일 달성률",
         "unit": "%"
+      },
+      "dailyMemberCount": {
+        "label": "하루 달성 인원",
+        "shortLabel": "하루 N명",
+        "unit": "명"
       },
       "weeklyMemberCount": {
         "label": "주간 구성원 달성 횟수",

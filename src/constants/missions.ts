@@ -11,6 +11,8 @@ import type { PictogramName } from '@/components/ui/pictograms';
  *
  * - `DAILY_MEMBER_RATE`: 오늘 기여한 멤버 **비율 %** → 1~100. 넘기면 서버가
  *   400 `HOUSE_MISSION_TARGET_INVALID`을 준다.
+ * - `DAILY_MEMBER_COUNT`: 오늘 기여한 멤버 **수** → 1~집 정원 (#1657). 멤버 수가 바뀌어도
+ *   필요한 인원이 그대로라 새 일일 미션은 이것으로 만든다. 상한은 화면이 집 정원으로 좁힌다.
  * - `WEEKLY_MEMBER_COUNT`: 기여 **누적 합** → 1~1000.
  * - `STREAK_DAYS`: 서버에 타입은 있으나 MVP에서 생성 불가 —
  *   `NewHouseMission['missionType']`에 없다. 목록 표시용으로만 남긴다.
@@ -24,6 +26,14 @@ export const MISSION_TYPE_RULES = {
     shortLabelKey: 'house.missionTypes.dailyMemberRate.shortLabel',
     unitKey: 'house.missionTypes.dailyMemberRate.unit',
     max: 100,
+  },
+  DAILY_MEMBER_COUNT: {
+    icon: 'sun',
+    labelKey: 'house.missionTypes.dailyMemberCount.label',
+    shortLabelKey: 'house.missionTypes.dailyMemberCount.shortLabel',
+    unitKey: 'house.missionTypes.dailyMemberCount.unit',
+    /** 서버 집 정원 상한(10). 실제 상한은 그 집의 정원 — 생성 화면이 좁힌다. */
+    max: 10,
   },
   WEEKLY_MEMBER_COUNT: {
     icon: 'calendar',
