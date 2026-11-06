@@ -175,7 +175,13 @@ export function HouseMissionsScreen({
    * 상태라 진행 중에 남는다 — 지난 미션으로 넘기면 보상을 못 받는다.
    */
   const pastMissions = missions.filter((m) => m.status !== 'ACTIVE');
-  const shownMissions = tab === 'active' ? activeMissions : pastMissions;
+  // 오늘 보상을 받은 일일 미션은 진행 중 맨 아래로 (#1655) — 매일 반복이라 지난 미션은
+  // 아니지만, 오늘은 할 일이 끝났다. 나머지 순서는 서버 순서 그대로(안정 정렬).
+  const activeOrdered = [
+    ...activeMissions.filter((m) => !m.claimedToday),
+    ...activeMissions.filter((m) => m.claimedToday),
+  ];
+  const shownMissions = tab === 'active' ? activeOrdered : pastMissions;
 
   // Mission creation is owner-only on the server (403 HOUSE_NOT_OWNER).
   const canCreateMission = !!(onCreateMission && isOwner);
@@ -313,6 +319,7 @@ export function HouseMissionsScreen({
                 const cta = missionCtaState({
                   status: mission.status,
                   achieved: mission.achieved,
+                  claimedToday: mission.claimedToday,
                   contributed: isContributed(mission),
                   linked: hasLinked,
                   canClaim: !!(currentHouse.houseId && onClaimMission),
@@ -398,6 +405,10 @@ export function HouseMissionsScreen({
                         ) : cta.kind === 'expired' ? (
                           <Text style={[Typography.supporting, { color: t.textDisabled }]}>
                             {tr('house.missions.expired')}
+                          </Text>
+                        ) : cta.kind === 'claimedToday' ? (
+                          <Text style={[Typography.supporting, { color: t.primaryText }]}>
+                            {tr('house.missions.claimedToday')}
                           </Text>
                         ) : cta.kind === 'claim' ? (
                           <Pressable

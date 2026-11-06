@@ -582,7 +582,8 @@ export const HouseScreen = memo(function HouseScreen({
   // 요약 줄 파생 (#875) — 시트가 목록 위에 그리던 것과 같은 값.
   const activeMissions = missions.filter((m) => m.status === 'ACTIVE');
   const activeMissionCount = activeMissions.length;
-  const claimableCount = activeMissions.filter((m) => m.achieved).length;
+  // 오늘 이미 받은 일일 미션은 '받을 보상'이 아니다 (#1655).
+  const claimableCount = activeMissions.filter((m) => m.achieved && !m.claimedToday).length;
   const contributedTodayCount = activeMissions.filter(
     (m) =>
       m.contributedToday === true ||

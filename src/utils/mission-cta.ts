@@ -10,6 +10,7 @@ export type MissionCtaState =
   | { kind: 'ended' } // '종료' 라벨 — 목표 미달인데 COMPLETED (#888)
   | { kind: 'expired' } // '기간 만료' 라벨
   | { kind: 'claim' } // '보상 받기' 버튼
+  | { kind: 'claimedToday' } // '오늘 받음' 라벨 — 일일 미션, 내일 다시 (#1655)
   | { kind: 'contributed' } // '기여함' 라벨
   | { kind: 'linked' } // '루틴 연동됨' 라벨
   | { kind: 'addRoutine' } // '＋ 내 루틴에' 버튼
@@ -23,6 +24,8 @@ export type MissionCtaInput = {
   contributed: boolean;
   /** 이 미션이 내 루틴으로 연동돼 있는지. */
   linked: boolean;
+  /** 일일 미션의 오늘 보상 수령 여부(서버 todayClaimed, #1655). */
+  claimedToday?: boolean;
   /** 보상 수령 배선 존재(houseId + onClaimMission). */
   canClaim: boolean;
   /** 루틴 추가 배선 존재(houseId + onAddMissionRoutine). */
@@ -44,6 +47,8 @@ export function missionCtaState(input: MissionCtaInput): MissionCtaState {
     case 'EXPIRED':
       return { kind: 'expired' };
     case 'ACTIVE':
+      // 일일 미션은 받아도 ACTIVE·achieved 그대로라, 받았는지를 먼저 본다 (#1655).
+      if (input.claimedToday) return { kind: 'claimedToday' };
       if (input.achieved && input.canClaim) return { kind: 'claim' };
       if (input.contributed) return { kind: 'contributed' };
       if (input.linked) return { kind: 'linked' };

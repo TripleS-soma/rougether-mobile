@@ -98,12 +98,19 @@ export function useHouseMissions({
       } catch (err) {
         const notAchieved =
           err instanceof ApiError && err.code === ErrorCode.HOUSE_MISSION_NOT_ACHIEVED;
+        // 이미 받은 보상(다른 구성원이 먼저 받았거나 화면이 낡았다) — 실패가 아니라 상태가
+        // 늦은 것이니 사실을 말하고 다시 불러 카드를 '받음'으로 맞춘다 (#1655).
+        const alreadyClaimed =
+          err instanceof ApiError && err.code === ErrorCode.HOUSE_MISSION_ALREADY_CLAIMED;
         toast(
-          notAchieved
-            ? i18n.t('house.missionToast.notAchieved')
-            : i18n.t('house.missionToast.claimFailed'),
-          'error',
+          alreadyClaimed
+            ? i18n.t('house.missionToast.alreadyClaimed')
+            : notAchieved
+              ? i18n.t('house.missionToast.notAchieved')
+              : i18n.t('house.missionToast.claimFailed'),
+          alreadyClaimed ? 'info' : 'error',
         );
+        if (alreadyClaimed) await reloadHouse(houseId);
       }
     },
     [toast, reloadHouse],

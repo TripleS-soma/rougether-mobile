@@ -84,3 +84,30 @@ describe('useHouses — 완료 응답의 서버 자동 기여 반영 (#578)', ()
     expect(calls.some((c) => c.includes('/contribute'))).toBe(false);
   });
 });
+
+describe('useHouses — 이미 받은 보상 (#1655)', () => {
+  it('409 이미 받음은 실패가 아니라 안내로 알리고 그 집을 다시 불러 카드를 맞춘다', async () => {
+    const calls: string[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      calls.push(`${init?.method ?? 'GET'} ${url}`);
+      if (url.includes('/missions/12/claim') && init?.method === 'POST')
+        return {
+          ok: false,
+          status: 409,
+          text: async () =>
+            JSON.stringify({ code: 'HOUSE_MISSION_ALREADY_CLAIMED', message: '오늘은 이미' }),
+        };
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    calls.length = 0;
+
+    await act(async () => {
+      await result.current.claimMission(7, 12);
+    });
+    expect(mockToast).toHaveBeenCalledWith('이미 받은 보상이에요', 'info');
+    expect(calls.some((c) => c.startsWith('GET') && c.includes('/houses/7'))).toBe(true);
+  });
+});

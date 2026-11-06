@@ -250,6 +250,30 @@ describe('HouseMissionsScreen', () => {
       expect(queryByLabelText('기상 인증 모으기 보상 받기')).toBeNull();
     });
 
+    it('오늘 보상을 받은 일일 미션은 받음으로 바뀌고 진행 중 맨 아래로 간다 (#1655)', async () => {
+      // 일일 미션은 받아도 ACTIVE·achieved 그대로다 — todayClaimed가 빠지면 '보상 받기'가 남아
+      // 다시 누르면 409(이미 받음)만 돌아왔다(실기기 제보).
+      // 받은 미션을 일부러 앞에 둔다 — 화면이 아래로 내리는지 본다.
+      const base = MISSION_HOUSE.missions ?? [];
+      const claimed = { ...base.find((m) => m.id === 12)!, claimedToday: true };
+      const missions = [claimed, ...base.filter((m) => m.id !== 12)];
+      const { getByText, getAllByText, queryByLabelText } = await render(
+        <HouseMissionsScreen
+          house={{ ...MISSION_HOUSE, missions }}
+          missions={missions}
+          isOwner={false}
+          onClaimMission={jest.fn()}
+        />,
+      );
+      expect(queryByLabelText('기상 인증 모으기 보상 받기')).toBeNull();
+      expect(getByText('오늘 받음 · 내일 또')).toBeTruthy();
+      // 매일 반복이라 지난 미션은 아니지만 오늘은 끝났다 — 다른 진행 중 미션 아래.
+      const order = getAllByText(/^(주간 루틴 지키기|기상 인증 모으기)$/).map(
+        (n) => n.props.children,
+      );
+      expect(order).toEqual(['주간 루틴 지키기', '기상 인증 모으기']);
+    });
+
     it('요약 줄은 진행 중 탭에서만 — 지난 미션을 보는 중엔 어긋난 말이다', async () => {
       const { getByText, queryByText, getByLabelText } = await render(
         <HouseMissionsScreen
