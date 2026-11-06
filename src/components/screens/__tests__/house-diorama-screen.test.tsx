@@ -62,6 +62,20 @@ describe('default shared-house renderer', () => {
     const scroll = ui.getByTestId('house-scroll');
     expect(within(scroll).queryByTestId('diorama-annexes')).toBeNull();
   });
+  it('그림 아래는 땅색 띠로 끝난다 — 아래로 스크롤해도 잔디 밑에 하늘이 이어지지 않게 (#1670)', async () => {
+    const ui = await render(<HouseScreen houses={[house(4)]} />);
+    // 탭바 밑 높이만큼, 그림 맨 아래(숲 집)와 같은 색.
+    const ground = StyleSheet.flatten(ui.getByTestId('diorama-ground').props.style);
+    expect(ground.backgroundColor).toBe('#c1bd69');
+    expect(ground.height).toBeGreaterThan(0);
+    // 그림 아래 64pt 하늘 여백이 없다.
+    expect(StyleSheet.flatten(ui.getByTestId('sky-section').props.style).paddingBottom).toBe(0);
+    const classic = await render(
+      <HouseScreen houses={[{ ...house(4), displayMode: 'CLASSIC' }]} />,
+    );
+    expect(classic.queryByTestId('diorama-ground')).toBeNull();
+  });
+
   it('returns to the main house when the displayed house changes', async () => {
     const houses = [house(10), { ...house(4, 12), coverImageKey: EVENING_BRICK_COVER_KEY }];
     const ui = await render(<HouseScreen houses={houses} houseIndex={0} />);
