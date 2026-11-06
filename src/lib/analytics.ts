@@ -73,6 +73,13 @@ export type AnalyticsEvent =
   | 'decor_open'
   /** 꾸미기 세션의 첫 가구 배치 (#1043) — 마운트당 1회. decor_open→decor_place→room_save 퍼널. */
   | 'decor_place'
+  /**
+   * 꾸미기 세션의 첫 변경 (#1664) — 가구 추가·이동·회전·벽지·바닥·배경 무엇이든. decor_place는
+   * 새 가구 추가만 세서, 벽지만 바꾸고 저장한 사람이 "배치 없이 나감"으로 읽혔다. 마운트당 1회.
+   */
+  | 'decor_edit'
+  /** 저장 안 한 변경이 있는 채로 나가려 할 때 고른 것 (#1664) — action: save·discard·stay. */
+  | 'decor_leave_unsaved'
   // 재방문 계기 (#803) — 앱을 다시 연 이유를 셋으로 가른다: 푸시/위젯/직접.
   // push_open을 이 이벤트로 흡수했다 — 계기가 세 갈래인데 이벤트가 하나만
   // 있으면 "푸시로 온 사람 수"는 알아도 "그냥 연 사람 수"를 못 센다.
@@ -303,6 +310,7 @@ export type AnalyticsParams = {
   gacha_draw: { gachaId: number | string; count: number };
   room_save: { item_count: number };
   decor_open: { from: 'gacha' | 'direct' };
+  decor_leave_unsaved: { action: 'save' | 'discard' | 'stay' };
   app_open: { source: string };
   review_prompt_requested: { completions: number };
   house_join_request: { via: 'browse' | 'code' };

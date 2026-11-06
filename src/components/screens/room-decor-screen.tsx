@@ -302,6 +302,14 @@ export function RoomDecorScreen({
     [items, wallpaperId, floorId, backgroundId],
   );
   const dirty = currentSnap !== initialSnapRef.current;
+  // 첫 변경 (#1664) — 무엇을 바꿨든 한 번. 저장으로 dirty가 풀렸다 다시 켜져도 세지 않는다.
+  const editedOnceRef = useRef(false);
+  useEffect(() => {
+    if (dirty && !editedOnceRef.current) {
+      editedOnceRef.current = true;
+      track('decor_edit');
+    }
+  }, [dirty]);
   const [confirmLeave, setConfirmLeave] = useState(false);
   // 뒤로가기가 아닌 이탈(거래소 상세·내 주문, #1427)의 목적지 — 없으면 onBack.
   const leaveTargetRef = useRef<(() => void) | null>(null);
@@ -1193,14 +1201,17 @@ export function RoomDecorScreen({
       <UnsavedLeaveModal
         visible={confirmLeave}
         onSaveAndLeave={() => {
+          track('decor_leave_unsaved', { action: 'save' });
           setConfirmLeave(false);
           apply(true);
         }}
         onLeaveWithoutSaving={() => {
+          track('decor_leave_unsaved', { action: 'discard' });
           setConfirmLeave(false);
           leave();
         }}
         onStay={() => {
+          track('decor_leave_unsaved', { action: 'stay' });
           leaveTargetRef.current = null;
           setConfirmLeave(false);
         }}
