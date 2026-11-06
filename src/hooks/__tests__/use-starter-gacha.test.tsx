@@ -6,7 +6,13 @@ import type { DrawResult, GachaDrawResponse } from '@/api/types';
 import { ApiError, getSessionUserId } from '@/api';
 import { queryKeys } from '@/lib/query-keys';
 
-jest.mock('@/api/starter-gacha');
+// 서버가 나온 뒤의 흐름을 검증한다 — 기본값(false, #1660)은 use-starter-gacha.unreleased.test.tsx.
+jest.mock('@/api/starter-gacha', () => ({
+  fetchStarterGacha: jest.fn(),
+  drawStarterGacha: jest.fn(),
+  completeOnboardingTutorial: jest.fn(),
+  STARTER_GACHA_SERVER_READY: true,
+}));
 const fetchState = jest.mocked(fetchStarterGacha);
 const drawApi = jest.mocked(drawStarterGacha);
 const reward: DrawResult = {
