@@ -1,4 +1,5 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, within } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import { HouseScreen, type House } from '@/components/screens/house-screen';
 import { FOREST_CANOPY_COVER_KEY, EVENING_BRICK_COVER_KEY } from '@/resources/house-diorama';
 
@@ -52,6 +53,14 @@ describe('default shared-house renderer', () => {
     );
     // 기존 프레임 집은 배경 이미지가 화면을 덮어 경계가 없다.
     expect(classic.queryByTestId('diorama-top-fade')).toBeNull();
+  });
+  it('별채 탭은 스크롤 밖, 화면에 고정된다 — 탭바 뒤에 깔리지 않게 (#1651)', async () => {
+    const ui = await render(<HouseScreen houses={[house(10)]} />);
+    const tabs = ui.getByTestId('diorama-annexes');
+    expect(StyleSheet.flatten(tabs.props.style)).toMatchObject({ position: 'absolute' });
+    // 스크롤 콘텐츠의 자손이 아니다.
+    const scroll = ui.getByTestId('house-scroll');
+    expect(within(scroll).queryByTestId('diorama-annexes')).toBeNull();
   });
   it('returns to the main house when the displayed house changes', async () => {
     const houses = [house(10), { ...house(4, 12), coverImageKey: EVENING_BRICK_COVER_KEY }];
