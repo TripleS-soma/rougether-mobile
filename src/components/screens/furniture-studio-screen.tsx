@@ -105,10 +105,13 @@ export function FurnitureStudioScreen({
   // 가구함엔 이전 완성본이 있어 시트에선 배치·판매가 되지만, 이번 작업은 실패다(#1667 리뷰).
   const failedCount = history.filter((job) => job.status === 'FAILED').length;
   const doneCount = history.length - failedCount;
+  // 칩 줄은 실패가 있을 때만 뜬다 — 목록이 갱신돼 실패가 0건이 되면 칩이 사라지므로, 그때 남은
+  // 거르기 상태로 빈 그리드에 갇히지 않게 '전체'로 본다(#1668 리뷰).
+  const effectiveFilter: JobFilter = failedCount > 0 ? filter : 'all';
   const shown =
-    filter === 'all'
+    effectiveFilter === 'all'
       ? history
-      : history.filter((job) => (job.status === 'FAILED') === (filter === 'failed'));
+      : history.filter((job) => (job.status === 'FAILED') === (effectiveFilter === 'failed'));
   const openJob = history.find((job) => job.id === openJobId) ?? null;
   // 만들던 게 끝나면 결과가 있는 탭으로 — 기다린 사람이 결과를 찾으러 탭을 누르지 않게.
   const activeId = active?.id ?? null;
@@ -304,7 +307,7 @@ export function FurnitureStudioScreen({
                   ['failed', tr('roomShop.studio.filterFailed', { n: failedCount })],
                 ] as const
               ).map(([key, label]) => {
-                const selected = filter === key;
+                const selected = effectiveFilter === key;
                 return (
                   <Pressable
                     key={key}

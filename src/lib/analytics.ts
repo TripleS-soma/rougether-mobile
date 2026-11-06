@@ -78,7 +78,10 @@ export type AnalyticsEvent =
    * 새 가구 추가만 세서, 벽지만 바꾸고 저장한 사람이 "배치 없이 나감"으로 읽혔다. 마운트당 1회.
    */
   | 'decor_edit'
-  /** 저장 안 한 변경이 있는 채로 나가려 할 때 고른 것 (#1664) — action: save·discard·stay. */
+  /**
+   * 저장 안 한 변경이 있는 채로 나가려 할 때 고른 것 (#1664) — action: save·discard·stay.
+   * save는 **저장 시도**다(누른 순간). 저장 완료는 `room_save`가 따로 센다 — 실패하면 둘이 갈린다.
+   */
   | 'decor_leave_unsaved'
   // 재방문 계기 (#803) — 앱을 다시 연 이유를 셋으로 가른다: 푸시/위젯/직접.
   // push_open을 이 이벤트로 흡수했다 — 계기가 세 갈래인데 이벤트가 하나만
