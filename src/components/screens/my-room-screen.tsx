@@ -134,6 +134,8 @@ export type CalendarDayItem = {
 const CHROME_ROW_HEIGHT = 40;
 /** 주간 보기 헤더(뒤로 + 제목) 높이 (#1327) — 접힘과 함께 0→이 값으로 자란다. */
 const WEEK_HEADER_H = 44;
+/** 주간 헤더·달력·목록 사이 간격 — 헤더가 접힐 때 이 간격도 같이 접는다. */
+const CALENDAR_OVERVIEW_GAP = Spacing.three;
 const ZERO_INSETS = { top: 0, bottom: 0, left: 0, right: 0 };
 
 // RoomSceneProps: <Room />에 스프레드로 전달되는 씬 번들 (#691) — 내 방은
@@ -597,8 +599,14 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   }, [weekMode, weekLeaving, weekIn]);
   const weekHeadStyle = useAnimatedStyle(() => ({
     height: weekIn.value * WEEK_HEADER_H,
+    // 부모(calendarOverview)의 gap도 함께 접는다 (#1653) — 높이만 0이 되면 gap 16이 남아,
+    // 월 달력으로 바뀌는 순간 달력 전체가 16pt 위로 튀었다.
+    marginBottom: (weekIn.value - 1) * CALENDAR_OVERVIEW_GAP,
     opacity: weekIn.value,
   }));
+  // 주간 목록은 헤더와 같이 걷힌다 (#1653) — 예전엔 펼침 내내 남아 있다가 닫히는 순간 한
+  // 프레임에 사라졌다. 들어올 때도 같은 곡선으로 나타난다.
+  const weekListStyle = useAnimatedStyle(() => ({ opacity: weekIn.value }));
   // 뒤로: 펼침(WEEK_COLLAPSE_MS)이 끝난 뒤 닫는다 — 애니메이션 완료 콜백 대신 타이머로,
   // 테스트(가짜 타이머)와 기기에서 같은 시점에 닫히게.
   const onBackRef = useLatestRef(onBack);
@@ -1360,7 +1368,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             )}
       </View>
     ) : hideDayList ? null : (
-      <>
+      <Reanimated.View style={[styles.calendarDayList, weekMode ? weekListStyle : null]}>
         <View style={styles.calListHead}>
           <View
             style={styles.calDateHeading}
@@ -1445,7 +1453,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             ),
           )
         )}
-      </>
+      </Reanimated.View>
     );
 
   return (
@@ -1731,7 +1739,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   growthOverlay: { position: 'absolute', left: Spacing.four, zIndex: 3 },
-  calendarOverview: { gap: Spacing.three },
+  calendarOverview: { gap: CALENDAR_OVERVIEW_GAP },
   calendarFilters: { flexDirection: 'row', padding: Spacing.one, borderRadius: Radius.pill },
   calendarFilter: {
     flex: 1,
@@ -1757,6 +1765,8 @@ const styles = StyleSheet.create({
     padding: Spacing.four,
     gap: Spacing.two,
   },
+  // 날짜 목록 묶음 — 페이드(#1653)를 위해 프래그먼트를 뷰로 감쌌으니 패널의 gap을 이어받는다.
+  calendarDayList: { gap: Spacing.two },
   calDateHeading: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.two },
   // The selected date is the single heading for its list.
   calListHead: {

@@ -101,9 +101,15 @@ describe('Calendar — 접히는 동안 선택 표시 (2026-11-04 원 튐)', () 
     expect(ui.queryByTestId('calendar-selected-fill-2026-09-17')).toBeNull();
   });
 
+  const fillOpacity = (ui: Awaited<ReturnType<typeof render>>, date: string) =>
+    StyleSheet.flatten(
+      ui.getByTestId(`calendar-selected-fill-${date}`).props.style as StyleProp<ViewStyle>,
+    ).opacity;
+
   it('월 보기(멈춘 상태)에선 칸을 칠하지 않는다 — 떠 있는 원이 맡는다', async () => {
     const ui = await render(<Calendar value="2026-09-16" onSelect={jest.fn()} />);
-    expect(ui.queryByTestId('calendar-selected-fill-2026-09-16')).toBeNull();
+    // 채움 뷰는 늘 마운트돼 있고 투명하다 (#1653 — 새로 마운트하면 Android가 움직이는 동안 안 그렸다).
+    expect(fillOpacity(ui, '2026-09-16')).toBe(0);
   });
 });
 
