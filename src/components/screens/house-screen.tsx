@@ -56,6 +56,7 @@ import { useBottomNavInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
+import { type HouseAction, track } from '@/lib/analytics';
 import { assetSource } from '@/resources/asset';
 import { houseBackgroundKey } from '@/resources/house-background';
 import { DEFAULT_HOUSES } from '@/mocks/fixtures';
@@ -590,6 +591,14 @@ export const HouseScreen = memo(function HouseScreen({
       contributedMissionIds.includes(m.id) ||
       linkedRoutines.some((r) => r.missionId === m.id && r.completedToday),
   ).length;
+  /** 진입점 탭 기록 (#1660) — 방 화면의 room_action_tap과 같은 결. 콜백이 없으면 버튼도 없다. */
+  const tapHouseAction = (action: HouseAction, run?: () => void) =>
+    run
+      ? () => {
+          track('house_action_tap', { action });
+          run();
+        }
+      : undefined;
   const missionSummary = {
     active: activeMissionCount,
     contributedToday: contributedTodayCount,
@@ -676,8 +685,8 @@ export const HouseScreen = memo(function HouseScreen({
             memberCount={currentHouse.memberCount ?? manageableMembers(currentHouse).length}
             maxMembers={currentHouse.maxMembers}
             missions={missionSummary}
-            onOpenMissions={onOpenMissions}
-            onOpenMembers={onOpenMembers}
+            onOpenMissions={tapHouseAction('missions', onOpenMissions)}
+            onOpenMembers={tapHouseAction('manage', onOpenMembers)}
           />
           {/* 남는 세로를 여기서 먹어 집을 잔디에 붙인다 (#986). CoachTarget이
               flex 자식이라 안쪽 View에 auto 마진을 줘도 안 먹는다 — 명시 스페이서. */}
@@ -887,7 +896,7 @@ export const HouseScreen = memo(function HouseScreen({
           <RailButton
             icon={<Icon name="chat" size={20} color={t.text} />}
             label={tr('house.chat.rail')}
-            onPress={onOpenChat}
+            onPress={tapHouseAction('chat', onOpenChat)}
             accessibilityLabel={
               chatUnread > 0
                 ? tr('house.chat.railA11yUnread', { n: chatUnread })
@@ -902,7 +911,7 @@ export const HouseScreen = memo(function HouseScreen({
           <RailButton
             icon={<Icon name="search" size={20} color={t.text} />}
             label={tr('house.screen.railSearch')}
-            onPress={onOpenSearch}
+            onPress={tapHouseAction('search', onOpenSearch)}
             accessibilityLabel={tr('house.screen.railSearch')}
             t={t}
             Typography={Typography}
