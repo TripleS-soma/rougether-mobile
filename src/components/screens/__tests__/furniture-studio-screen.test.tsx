@@ -91,9 +91,15 @@ it('shows the photo rejection reason, how to fix it, and credit return', async (
     ui.getByText('만들 대상 하나가 또렷하게 보이도록 사진을 잘라 다시 선택해주세요.'),
   ).toBeTruthy();
   expect(ui.getByText('실패한 작업에 사용한 생성권이나 코인은 돌려드렸어요.')).toBeTruthy();
-  await fireEvent.press(ui.getByLabelText('다시 만들 사진 선택'));
-  expect(choose).toHaveBeenCalledTimes(1);
   expect(ui.queryByText('PHOTO_REJECTED')).toBeNull();
+  // 시트에선 선택기를 열지 않고 만들기 탭으로만 — 닫히는 시트 위로 네이티브 선택기를 올리지 않는다.
+  await fireEvent.press(ui.getByLabelText('다시 만들러 가기'));
+  expect(choose).not.toHaveBeenCalled();
+  expect(ui.getByRole('tab', { name: '만들기' }).props.accessibilityState).toMatchObject({
+    selected: true,
+  });
+  await fireEvent.press(ui.getByLabelText('가구 사진 선택'));
+  expect(choose).toHaveBeenCalledTimes(1);
 });
 
 it.each([undefined, null, '   '])(
@@ -321,6 +327,27 @@ describe('내 가구 탭 — 2열 타일 + 상세 시트 (#1666)', () => {
     expect(tiles[0].props.accessibilityLabel).toMatch(/이번에는 완성하지 못했어요$/);
     await fireEvent.press(ui.getByRole('tab', { name: '완성 2' }));
     expect(ui.getAllByLabelText(/^내가 만든 가구 \d+/)).toHaveLength(2);
+  });
+
+  it('검수 실패도 실패로 거른다 — 배지가 달린 타일은 전부 실패 칸에 (#1667 리뷰)', async () => {
+    const reviewFailed = { ...failedJob, id: 'r', userItemId: 9, failureCode: 'HARD_QA_REJECTED' };
+    const ui = await render(
+      <FurnitureStudioScreen
+        balance={{ available: 1, reserved: 0 }}
+        photo={null}
+        jobs={[done('d1'), reviewFailed]}
+      />,
+    );
+    await fireEvent.press(ui.getByRole('tab', { name: '내 가구 2' }));
+    // 순수 실패가 없어도 검수 실패가 있으면 거르기가 뜬다.
+    await fireEvent.press(ui.getByRole('tab', { name: '실패 1' }));
+    const tiles = ui.getAllByLabelText(/^내가 만든 가구 \d+/);
+    expect(tiles).toHaveLength(1);
+    expect(tiles[0].props.accessibilityLabel).toMatch(/이번 검수를 마치지 못했어요$/);
+    await fireEvent.press(ui.getByRole('tab', { name: '완성 1' }));
+    expect(ui.getAllByLabelText(/^내가 만든 가구 \d+/)[0].props.accessibilityLabel).toMatch(
+      /내 가구함에 담았어요$/,
+    );
   });
 
   it('만들던 가구가 끝나면 내 가구 탭으로 넘어간다', async () => {

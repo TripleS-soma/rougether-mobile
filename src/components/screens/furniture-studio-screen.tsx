@@ -101,12 +101,14 @@ export function FurnitureStudioScreen({
   const [filter, setFilter] = useState<JobFilter>('all');
   const [openJobId, setOpenJobId] = useState<string | null>(null);
   const history = jobs.filter((job) => !isFurnitureJobActive(job));
-  const failedCount = history.filter((job) => !hasFurniture(job)).length;
+  // 거르기는 작업 결과 기준 — 배지가 달린 타일(실패·검수 실패)은 전부 '실패'에 있다. 검수 실패도
+  // 가구함엔 이전 완성본이 있어 시트에선 배치·판매가 되지만, 이번 작업은 실패다(#1667 리뷰).
+  const failedCount = history.filter((job) => job.status === 'FAILED').length;
   const doneCount = history.length - failedCount;
   const shown =
     filter === 'all'
       ? history
-      : history.filter((job) => (filter === 'done' ? hasFurniture(job) : !hasFurniture(job)));
+      : history.filter((job) => (job.status === 'FAILED') === (filter === 'failed'));
   const openJob = history.find((job) => job.id === openJobId) ?? null;
   // 만들던 게 끝나면 결과가 있는 탭으로 — 기다린 사람이 결과를 찾으러 탭을 누르지 않게.
   const activeId = active?.id ?? null;
@@ -423,15 +425,11 @@ export function FurnitureStudioScreen({
                 ) : null}
               </>
             ) : (
+              // 사진 선택기는 열지 않고 만들기 탭으로만 — 닫히는 중인 시트(Modal) 위로 네이티브
+              // 선택기를 올리면 iOS가 띄우지 못한다(#1667 리뷰). 만들기 탭 맨 위가 사진 선택이다.
               <Button
-                label={tr('roomShop.studio.retryPhoto')}
-                onPress={() =>
-                  fromSheet(() => {
-                    setTab('make');
-                    onChoosePhoto?.();
-                  })
-                }
-                disabled={!ready}
+                label={tr('roomShop.studio.retryGoMake')}
+                onPress={() => fromSheet(() => setTab('make'))}
               />
             )}
             <Button

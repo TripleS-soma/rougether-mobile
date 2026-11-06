@@ -351,7 +351,8 @@
       "emptyMine": "아직 만든 가구가 없어요",
       "goMake": "만들러 가기",
       "sheetA11y": "내가 만든 가구 자세히",
-      "close": "닫기"
+      "close": "닫기",
+      "retryGoMake": "다시 만들러 가기"
     },
     "minigame": {
       "runner": {
