@@ -22,6 +22,10 @@ const config: StorybookConfig = {
       plugins: [svgr({ include: '**/*.svg', svgrOptions: { exportType: 'default' } })],
       resolve: {
         alias: {
+          // 네이티브 전용 — 웹에선 실행되지 않는 require를 Vite가 묶다 깨지지 않게 빈 모듈로 (#1660).
+          '@react-native-firebase/analytics': fileURLToPath(
+            new URL('./stubs/react-native-firebase-analytics.ts', import.meta.url),
+          ),
           '@/assets': fileURLToPath(new URL('../assets', import.meta.url)),
           '@': fileURLToPath(new URL('../src', import.meta.url)),
         },
