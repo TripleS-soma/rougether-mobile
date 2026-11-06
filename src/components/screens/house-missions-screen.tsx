@@ -28,10 +28,16 @@ function addDaysIso(iso: string, days: number) {
 }
 
 /** 생성 가능한 유형만 — 표시값은 constants/missions의 단일 출처에서 (#887). */
+// 일일 미션은 인원 기준으로만 만든다 (#1657) — 달성률(%)은 입주·탈퇴로 필요한 인원이 바뀌었다.
+// 이미 있는 달성률 미션은 목록에서 그대로 보인다(MISSION_TYPE_RULES).
 const CREATABLE_TYPES: NewHouseMission['missionType'][] = [
-  'DAILY_MEMBER_RATE',
+  'DAILY_MEMBER_COUNT',
   'WEEKLY_MEMBER_COUNT',
 ];
+
+/** 유형을 바꿀 때의 목표 기본값 — 인원은 2명(정원이 그보다 작으면 정원), 누적은 10회. */
+const defaultTarget = (type: NewHouseMission['missionType'], capacity: number) =>
+  type === 'DAILY_MEMBER_COUNT' ? String(Math.min(2, capacity)) : '10';
 
 const MISSION_TYPE_OPTIONS: {
   type: NewHouseMission['missionType'];
@@ -175,7 +181,13 @@ export function HouseMissionsScreen({
    * 상태라 진행 중에 남는다 — 지난 미션으로 넘기면 보상을 못 받는다.
    */
   const pastMissions = missions.filter((m) => m.status !== 'ACTIVE');
-  const shownMissions = tab === 'active' ? activeMissions : pastMissions;
+  // 오늘 보상을 받은 일일 미션은 진행 중 맨 아래로 (#1655) — 매일 반복이라 지난 미션은
+  // 아니지만, 오늘은 할 일이 끝났다. 나머지 순서는 서버 순서 그대로(안정 정렬).
+  const activeOrdered = [
+    ...activeMissions.filter((m) => !m.claimedToday),
+    ...activeMissions.filter((m) => m.claimedToday),
+  ];
+  const shownMissions = tab === 'active' ? activeOrdered : pastMissions;
 
   // Mission creation is owner-only on the server (403 HOUSE_NOT_OWNER).
   const canCreateMission = !!(onCreateMission && isOwner);
@@ -183,17 +195,21 @@ export function HouseMissionsScreen({
   const canDeleteMission = !!(onDeleteMission && isOwner);
   const missionTargetNum = Number(missionTarget);
   const targetRule = MISSION_TYPE_RULES[missionType];
+  // 인원 목표의 상한은 이 집의 정원 (#1657, 서버도 정원 초과를 400으로 막는다).
+  const memberCapacity = Math.max(
+    1,
+    Math.min(currentHouse.maxMembers ?? targetRule.max, MISSION_TYPE_RULES.DAILY_MEMBER_COUNT.max),
+  );
+  const targetMax = missionType === 'DAILY_MEMBER_COUNT' ? memberCapacity : targetRule.max;
   const targetValid =
-    Number.isInteger(missionTargetNum) &&
-    missionTargetNum >= 1 &&
-    missionTargetNum <= targetRule.max;
+    Number.isInteger(missionTargetNum) && missionTargetNum >= 1 && missionTargetNum <= targetMax;
   const canSubmitMission = missionTitle.trim().length > 0 && targetValid;
   const submitMission = () => {
     // Blocked taps explain themselves, first unmet condition first.
     if (missionTitle.trim().length === 0) return toast(tr('house.missions.titleRequired'), 'error');
     if (!targetValid)
       return toast(
-        tr('house.missions.targetInvalid', { max: targetRule.max, unit: tr(targetRule.unitKey) }),
+        tr('house.missions.targetInvalid', { max: targetMax, unit: tr(targetRule.unitKey) }),
         'error',
       );
     if (!currentHouse.houseId) return;
@@ -211,7 +227,7 @@ export function HouseMissionsScreen({
     });
     setShowCreateMission(false);
     setMissionTitle('');
-    setMissionTarget('10');
+    setMissionTarget(defaultTarget(missionType, memberCapacity));
     setMissionHasPeriod(false);
   };
   const toggleMissionPeriod = () => {
@@ -313,6 +329,7 @@ export function HouseMissionsScreen({
                 const cta = missionCtaState({
                   status: mission.status,
                   achieved: mission.achieved,
+                  claimedToday: mission.claimedToday,
                   contributed: isContributed(mission),
                   linked: hasLinked,
                   canClaim: !!(currentHouse.houseId && onClaimMission),
@@ -398,6 +415,10 @@ export function HouseMissionsScreen({
                         ) : cta.kind === 'expired' ? (
                           <Text style={[Typography.supporting, { color: t.textDisabled }]}>
                             {tr('house.missions.expired')}
+                          </Text>
+                        ) : cta.kind === 'claimedToday' ? (
+                          <Text style={[Typography.supporting, { color: t.primaryText }]}>
+                            {tr('house.missions.claimedToday')}
                           </Text>
                         ) : cta.kind === 'claim' ? (
                           <Pressable
@@ -640,7 +661,10 @@ export function HouseMissionsScreen({
                 return (
                   <Pressable
                     key={opt.type}
-                    onPress={() => setMissionType(opt.type)}
+                    onPress={() => {
+                      setMissionType(opt.type);
+                      setMissionTarget(defaultTarget(opt.type, memberCapacity));
+                    }}
                     accessibilityRole="radio"
                     accessibilityState={{ selected }}
                     style={({ pressed }) => [
@@ -664,31 +688,69 @@ export function HouseMissionsScreen({
                 );
               })}
             </View>
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              {tr('house.missions.form.target', {
-                max: targetRule.max,
-                unit: tr(targetRule.unitKey),
-              })}
-            </Text>
-            {/* 단위를 입력칸 안에 붙인다 — 달성률에 500을 적어도 통과하던
-                시절엔 이 값이 %인지 횟수인지 화면 어디에도 없었다. */}
-            <View style={[styles.missionInputRow, { backgroundColor: t.surfaceMuted }]}>
-              <TextInput
-                value={missionTarget}
-                onChangeText={setMissionTarget}
-                keyboardType="number-pad"
-                accessibilityLabel={tr('house.missions.form.targetA11y')}
-                style={[
-                  styles.missionInput,
-                  styles.missionInputField,
-                  emph('normal'),
-                  { color: t.text },
-                ]}
-              />
-              <Text style={[Typography.label, styles.missionUnit, { color: t.textMuted }]}>
-                {tr(targetRule.unitKey)}
-              </Text>
-            </View>
+            {missionType === 'DAILY_MEMBER_COUNT' ? (
+              <>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  {tr('house.missions.form.targetMembers')}
+                </Text>
+                {/* 인원은 1~정원 중 고른다 (#1657) — 정원이 최대 10이라 칩이 한눈에 들어오고,
+                    입력칸이면 정원보다 큰 수를 적었다가 막히는 왕복이 생긴다. */}
+                <View style={styles.memberTargetRow} accessibilityRole="radiogroup">
+                  {Array.from({ length: memberCapacity }, (_, i) => i + 1).map((n) => {
+                    const selected = missionTargetNum === n;
+                    return (
+                      <Pressable
+                        key={n}
+                        onPress={() => setMissionTarget(String(n))}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected }}
+                        accessibilityLabel={tr('house.missions.form.targetMembersA11y', { n })}
+                        style={({ pressed }) => [
+                          styles.memberTargetChip,
+                          { backgroundColor: selected ? t.primary : t.surfaceMuted },
+                          pressed && pressedStyle('dim', t),
+                        ]}>
+                        <Text
+                          style={[
+                            Typography.label,
+                            { color: selected ? t.onPrimary : t.textMuted },
+                          ]}>
+                          {n}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  {tr('house.missions.form.target', {
+                    max: targetRule.max,
+                    unit: tr(targetRule.unitKey),
+                  })}
+                </Text>
+                {/* 단위를 입력칸 안에 붙인다 — 달성률에 500을 적어도 통과하던
+                  시절엔 이 값이 %인지 횟수인지 화면 어디에도 없었다. */}
+                <View style={[styles.missionInputRow, { backgroundColor: t.surfaceMuted }]}>
+                  <TextInput
+                    value={missionTarget}
+                    onChangeText={setMissionTarget}
+                    keyboardType="number-pad"
+                    accessibilityLabel={tr('house.missions.form.targetA11y')}
+                    style={[
+                      styles.missionInput,
+                      styles.missionInputField,
+                      emph('normal'),
+                      { color: t.text },
+                    ]}
+                  />
+                  <Text style={[Typography.label, styles.missionUnit, { color: t.textMuted }]}>
+                    {tr(targetRule.unitKey)}
+                  </Text>
+                </View>
+              </>
+            )}
             <View style={styles.periodRow}>
               <Text style={[Typography.supporting, { color: t.textMuted }]}>
                 {tr('house.missions.form.period')}
@@ -852,6 +914,18 @@ const styles = StyleSheet.create({
   },
   missionInputField: { flex: 1 },
   missionUnit: { paddingRight: Spacing.three },
+  memberTargetRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+  },
+  memberTargetChip: {
+    minWidth: 44,
+    minHeight: 44,
+    borderRadius: Radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   missionTypeRow: {
     flexDirection: 'row',
     gap: Spacing.two,

@@ -189,6 +189,7 @@
       "expired": "기간 만료",
       "claimA11y": "{{title}} 보상 받기",
       "claim": "보상 받기",
+      "claimedToday": "오늘 받음 · 내일 또",
       "contributed": "기여함",
       "linked": "루틴 연동됨",
       "addRoutineA11y": "{{title}} 내 루틴에 추가",
@@ -236,7 +237,9 @@
         "openEnded": "무기한",
         "cancelA11y": "미션 만들기 취소",
         "submitA11y": "미션 만들기 확인",
-        "submit": "만들기"
+        "submit": "만들기",
+        "targetMembers": "하루 몇 명 이상 달성해야 하나요?",
+        "targetMembersA11y": "{{n}}명"
       }
     },
     "missionTypes": {
@@ -244,6 +247,11 @@
         "label": "일일 구성원 달성률",
         "shortLabel": "일일 달성률",
         "unit": "%"
+      },
+      "dailyMemberCount": {
+        "label": "하루 달성 인원",
+        "shortLabel": "하루 N명",
+        "unit": "명"
       },
       "weeklyMemberCount": {
         "label": "주간 구성원 달성 횟수",
@@ -381,6 +389,7 @@
       "claimed": "보상 수령! 집 성장 포인트 +{{points}}",
       "notAchieved": "아직 목표를 달성하지 못했어요",
       "claimFailed": "보상 받기에 실패했어요",
+      "alreadyClaimed": "이미 받은 보상이에요",
       "created": "새 미션을 만들었어요!",
       "ownerOnlyCreate": "방장만 미션을 만들 수 있어요",
       "createFailed": "미션 만들기에 실패했어요",

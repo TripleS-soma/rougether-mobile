@@ -189,6 +189,7 @@
       "expired": "Expired",
       "claimA11y": "Claim reward for {{title}}",
       "claim": "Claim reward",
+      "claimedToday": "Claimed today · again tomorrow",
       "contributed": "Contributed",
       "linked": "Routine linked",
       "addRoutineA11y": "Add {{title}} to my routines",
@@ -236,7 +237,9 @@
         "openEnded": "No end date",
         "cancelA11y": "Cancel create mission",
         "submitA11y": "Confirm create mission",
-        "submit": "Create"
+        "submit": "Create",
+        "targetMembers": "How many members each day?",
+        "targetMembersA11y": "{{n}} members"
       }
     },
     "missionTypes": {
@@ -244,6 +247,11 @@
         "label": "Daily member completion rate",
         "shortLabel": "Daily rate",
         "unit": "%"
+      },
+      "dailyMemberCount": {
+        "label": "Members per day",
+        "shortLabel": "N per day",
+        "unit": " people"
       },
       "weeklyMemberCount": {
         "label": "Weekly member completions",
@@ -381,6 +389,7 @@
       "claimed": "Reward claimed! House growth +{{points}}",
       "notAchieved": "The goal hasn't been reached yet",
       "claimFailed": "Couldn't claim the reward",
+      "alreadyClaimed": "This reward was already claimed",
       "created": "New mission created!",
       "ownerOnlyCreate": "Only the owner can create missions",
       "createFailed": "Couldn't create the mission",

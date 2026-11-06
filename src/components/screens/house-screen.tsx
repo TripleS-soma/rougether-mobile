@@ -34,6 +34,7 @@ import type {
   RoomCell,
   VisitedFriend,
 } from '@/components/screens/house/types';
+import { DioramaTopFade } from '@/components/screens/house/diorama-top-fade';
 import { HouseEmptyState } from '@/components/screens/house/house-empty-state';
 import { HouseMetaPills } from '@/components/screens/house/house-meta-pills';
 import { HouseSideArrows, sideArrowTop } from '@/components/screens/house/house-side-arrows';
@@ -581,7 +582,8 @@ export const HouseScreen = memo(function HouseScreen({
   // 요약 줄 파생 (#875) — 시트가 목록 위에 그리던 것과 같은 값.
   const activeMissions = missions.filter((m) => m.status === 'ACTIVE');
   const activeMissionCount = activeMissions.length;
-  const claimableCount = activeMissions.filter((m) => m.achieved).length;
+  // 오늘 이미 받은 일일 미션은 '받을 보상'이 아니다 (#1655).
+  const claimableCount = activeMissions.filter((m) => m.achieved && !m.claimedToday).length;
   const contributedTodayCount = activeMissions.filter(
     (m) =>
       m.contributedToday === true ||
@@ -715,6 +717,7 @@ export const HouseScreen = memo(function HouseScreen({
                               })}
                               testID="house-frame"
                             />
+                            <DioramaTopFade color={diorama.skyColor} />
                           </View>
                         ) : null}
                         {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
@@ -794,45 +797,6 @@ export const HouseScreen = memo(function HouseScreen({
               ) : null}
             </Animated.View>
           </CoachTarget>
-          {diorama && annexPages.length > 1 ? (
-            <View
-              style={styles.annexTabs}
-              accessibilityRole="tablist"
-              accessibilityLabel={tr('house.diorama.navigation')}
-              testID="diorama-annexes">
-              {annexPages.map((_, index) => {
-                const name =
-                  index === 0
-                    ? tr('house.diorama.main')
-                    : tr('house.diorama.annex', { number: index });
-                return (
-                  <Pressable
-                    key={index}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: currentAnnex === index }}
-                    aria-selected={currentAnnex === index}
-                    accessibilityLabel={tr('house.diorama.pageA11y', { name })}
-                    disabled={dragSeat != null}
-                    onPress={() => {
-                      setAnnex(index);
-                      resetCam();
-                    }}
-                    style={[
-                      styles.annexTab,
-                      { backgroundColor: currentAnnex === index ? t.primary : t.surface },
-                    ]}>
-                    <Text
-                      style={[
-                        Typography.supporting,
-                        { color: currentAnnex === index ? t.onPrimary : t.text },
-                      ]}>
-                      {name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : null}
         </View>
         {/* 프레임 모드에선 방이 창문 안에 그려져 이 격자가 비는데, paddingTop이
             남아 잔디 아래 24px 크림 띠를 만들었다 (#986). 내용이 있을 때만 그린다. */}
@@ -865,6 +829,48 @@ export const HouseScreen = memo(function HouseScreen({
         )}
       </PawRefreshScroll>
 
+      {/* 별채 탭 — 화면 고정, 하단 탭바 바로 위 (#1651). 예전엔 집 그림 아래 스크롤 끝에
+          있어 첫 화면에선 탭바 뒤에 깔렸다. 별채가 있을 때(멤버 5명 이상)만 뜬다. */}
+      {diorama && annexPages.length > 1 ? (
+        <GlassSurface
+          interactive={false}
+          fallbackColor={t.surface}
+          style={[styles.annexTabs, { bottom: navInset + Spacing.two }]}
+          accessibilityRole="tablist"
+          accessibilityLabel={tr('house.diorama.navigation')}
+          testID="diorama-annexes">
+          {annexPages.map((_, index) => {
+            const name =
+              index === 0 ? tr('house.diorama.main') : tr('house.diorama.annex', { number: index });
+            return (
+              <Pressable
+                key={index}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: currentAnnex === index }}
+                aria-selected={currentAnnex === index}
+                accessibilityLabel={tr('house.diorama.pageA11y', { name })}
+                disabled={dragSeat != null}
+                onPress={() => {
+                  setAnnex(index);
+                  resetCam();
+                }}
+                style={[
+                  styles.annexTab,
+                  // 바깥 알약이 면이라 고르지 않은 탭은 투명 — 고른 탭만 채운다.
+                  currentAnnex === index ? { backgroundColor: t.primary } : null,
+                ]}>
+                <Text
+                  style={[
+                    Typography.supporting,
+                    { color: currentAnnex === index ? t.onPrimary : t.text },
+                  ]}>
+                  {name}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </GlassSurface>
+      ) : null}
       {/* 집 전환 화살표 — 화면 가운데 양쪽에 고정 (#1575). 레일보다 아래 층. */}
       <HouseSideArrows
         showArrows={totalPages > 1}
@@ -910,10 +916,13 @@ export const HouseScreen = memo(function HouseScreen({
 const styles = StyleSheet.create({
   dioramaSlot: { overflow: 'visible' },
   annexTabs: {
+    position: 'absolute',
+    alignSelf: 'center',
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: Spacing.two,
-    paddingVertical: Spacing.two,
+    gap: Spacing.one,
+    padding: Spacing.one,
+    borderRadius: Radius.pill,
+    zIndex: 30,
   },
   annexTab: {
     paddingVertical: Spacing.two,

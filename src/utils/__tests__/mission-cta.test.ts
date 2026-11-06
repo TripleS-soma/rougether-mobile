@@ -17,6 +17,12 @@ describe('missionCtaState (#559)', () => {
     ['COMPLETED인데 achieved 미상 → 종료 (#888)', { ...base, status: 'COMPLETED' }, 'ended'],
     ['EXPIRED는 항상 만료 라벨', { ...base, status: 'EXPIRED', achieved: true }, 'expired'],
     ['ACTIVE+달성+배선 → 보상 받기', { ...base, status: 'ACTIVE', achieved: true }, 'claim'],
+    // 일일 미션은 받아도 ACTIVE·achieved 그대로 — 오늘 받았으면 다시 '보상 받기'를 띄우지 않는다 (#1655).
+    [
+      '일일 미션 오늘 받음 → 오늘 받음 라벨 (#1655)',
+      { ...base, status: 'ACTIVE', achieved: true, claimedToday: true },
+      'claimedToday',
+    ],
     [
       'ACTIVE+달성이라도 배선 없으면 다음 가지로',
       { ...base, status: 'ACTIVE', achieved: true, canClaim: false, contributed: true },

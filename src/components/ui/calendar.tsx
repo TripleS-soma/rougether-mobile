@@ -211,20 +211,23 @@ function CalendarBase({
   const fold = useRef(useSharedValue(0)).current;
   const [rowH, setRowH] = useState(0);
   // 접힘이 멈춰 있는가 — 움직이는 동안엔 떠 있는 원 대신 선택 칸을 칠한다(아래 selCircle).
-  const [foldSettled, setFoldSettled] = useState(!collapsed);
+  // "어느 방향으로 멈췄나"를 들고, 지금 방향과 같을 때만 멈춘 것으로 본다 (#1653) — 예전엔
+  // 불리언이라 뒤로를 누른 첫 렌더(weekOf=null)에 아직 '멈춤'으로 남아, 펼쳐지는 줄 위에
+  // 옛 자리의 원이 한 프레임 보였다가 사라졌다(릴리스 APK 로그로 확인).
+  const [settledFor, setSettledFor] = useState<boolean | null>(collapsed ? null : false);
+  const foldSettled = settledFor === collapsed;
   useEffect(() => {
     if (collapsed && rowH === 0) return;
     const to = collapsed ? 1 : 0;
     if (fold.value === to) {
-      setFoldSettled(true);
+      setSettledFor(collapsed);
       return;
     }
-    setFoldSettled(false);
     fold.value = withTiming(
       to,
       { duration: WEEK_COLLAPSE_MS, easing: Easing.out(Easing.cubic) },
       (finished) => {
-        if (finished) runOnJS(setFoldSettled)(true);
+        if (finished) runOnJS(setSettledFor)(collapsed);
       },
     );
   }, [collapsed, rowH, fold]);
@@ -531,11 +534,17 @@ function CalendarBase({
                             {/* 접힘·펼침 중 선택 칸 채움 — 기존 뷰에 배경만 덧칠하면 Android Fabric이
                                 (배경 없던 뷰를 평탄화했다 되살리며) 모서리를 잃어 네모로 그렸다
                                 (2026-11-04 녹화). 둥근 모서리와 배경을 처음부터 가진 뷰를 따로 띄운다. */}
-                            {fillSelectedCell && isSelected ? (
+                            {/* 늘 마운트해 두고 투명도만 바꾼다 (#1653) — 펼침이 시작될 때 새로
+                                마운트하면 Android에서 움직이는 동안 그려지지 않았다(로그엔 켜짐,
+                                녹화엔 빈 칸). */}
+                            {isSelected && selectedInView && !progressByDate ? (
                               <View
                                 pointerEvents="none"
                                 testID={`calendar-selected-fill-${date}`}
-                                style={[styles.selectedFill, { backgroundColor: t.primary }]}
+                                style={[
+                                  styles.selectedFill,
+                                  { backgroundColor: t.primary, opacity: fillSelectedCell ? 1 : 0 },
+                                ]}
                               />
                             ) : null}
                             {progress && progress.total > 0 && !future ? (

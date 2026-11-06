@@ -126,12 +126,17 @@ export type HouseMission = {
   myContribution?: number;
   /** 오늘 이미 기여했는지 (#373-②) — 세션 추적·연동 루틴 판정과 합쳐 '기여됨'을 정한다. */
   contributedToday?: boolean;
+  /**
+   * 일일 미션의 오늘 보상 수령 여부 (#1655, 서버 `todayClaimed`). 일일 미션은 보상을 받아도
+   * ACTIVE로 남아(매일 반복) 이 값으로만 '받음'을 안다 — 빠지면 받은 뒤에도 '보상 받기'가 남는다.
+   */
+  claimedToday?: boolean;
 };
 
 /** Creatable mission types (STREAK_DAYS is not supported by the server yet). */
 export type NewHouseMission = {
   title: string;
-  missionType: 'DAILY_MEMBER_RATE' | 'WEEKLY_MEMBER_COUNT';
+  missionType: 'DAILY_MEMBER_RATE' | 'DAILY_MEMBER_COUNT' | 'WEEKLY_MEMBER_COUNT';
   targetValue: number;
   /** Optional period (ISO date-time, KST); omitted = 즉시 시작·무기한. */
   startsAt?: string;
