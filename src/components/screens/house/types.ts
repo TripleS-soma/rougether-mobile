@@ -136,7 +136,7 @@ export type HouseMission = {
 /** Creatable mission types (STREAK_DAYS is not supported by the server yet). */
 export type NewHouseMission = {
   title: string;
-  missionType: 'DAILY_MEMBER_RATE' | 'WEEKLY_MEMBER_COUNT';
+  missionType: 'DAILY_MEMBER_RATE' | 'DAILY_MEMBER_COUNT' | 'WEEKLY_MEMBER_COUNT';
   targetValue: number;
   /** Optional period (ISO date-time, KST); omitted = 즉시 시작·무기한. */
   startsAt?: string;

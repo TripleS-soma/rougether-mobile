@@ -237,7 +237,9 @@
         "openEnded": "No end date",
         "cancelA11y": "Cancel create mission",
         "submitA11y": "Confirm create mission",
-        "submit": "Create"
+        "submit": "Create",
+        "targetMembers": "How many members each day?",
+        "targetMembersA11y": "{{n}} members"
       }
     },
     "missionTypes": {
@@ -245,6 +247,11 @@
         "label": "Daily member completion rate",
         "shortLabel": "Daily rate",
         "unit": "%"
+      },
+      "dailyMemberCount": {
+        "label": "Members per day",
+        "shortLabel": "N per day",
+        "unit": " people"
       },
       "weeklyMemberCount": {
         "label": "Weekly member completions",

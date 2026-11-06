@@ -446,13 +446,12 @@ describe('HouseMissionsScreen', () => {
   });
 
   /**
-   * 목표 수치는 유형마다 뜻과 상한이 다르다 (#872, 서버 계약). 달성률은 %라
-   * 1~100이고 넘기면 서버가 400 HOUSE_MISSION_TARGET_INVALID를 준다. 예전엔
-   * 클라이언트가 유형 무관 1~1000만 봐서 500%도 통과시켜 400을 맞았다.
+   * 일일 미션은 '하루 N명 이상'으로 만든다 (#1657). 달성률(%)은 입주·탈퇴로 필요한 인원이
+   * 바뀌어 새로 만들 수 없고, 인원은 1~이 집 정원 중 칩으로 고른다(서버도 정원 초과를 400).
    */
-  it('일일 달성률 목표가 100을 넘으면 보내지 않고 알려준다 (#872)', async () => {
+  it('일일 미션은 1~정원 중 인원을 골라 만든다 (#1657)', async () => {
     const onCreateMission = jest.fn();
-    const { getByText, getByLabelText } = await render(
+    const { getByText, getByLabelText, queryByLabelText, queryByText } = await render(
       <ToastProvider>
         <HouseMissionsScreen
           house={MISSION_HOUSE}
@@ -463,12 +462,21 @@ describe('HouseMissionsScreen', () => {
       </ToastProvider>,
     );
     await fireEvent.press(getByLabelText('미션 만들기'));
-    await fireEvent.press(getByText('일일 달성률'));
-    await fireEvent.changeText(getByLabelText('미션 제목'), '달성률 미션');
-    await fireEvent.changeText(getByLabelText('목표 수치'), '500');
+    expect(queryByText('일일 달성률')).toBeNull();
+    await fireEvent.press(getByText('하루 N명'));
+    expect(getByText('하루 몇 명 이상 달성해야 하나요?')).toBeTruthy();
+    // 정원 4 → 1~4명, 5명은 없다. 기본값은 2명.
+    expect(getByLabelText('4명')).toBeTruthy();
+    expect(queryByLabelText('5명')).toBeNull();
+    expect(getByLabelText('2명').props.accessibilityState).toMatchObject({ selected: true });
+    await fireEvent.press(getByLabelText('3명'));
+    await fireEvent.changeText(getByLabelText('미션 제목'), '하루 세 명');
     await fireEvent.press(getByLabelText('미션 만들기 확인'));
-    expect(onCreateMission).not.toHaveBeenCalled();
-    expect(getByText(/1~100% 사이/)).toBeTruthy();
+    expect(onCreateMission).toHaveBeenCalledWith(7, {
+      title: '하루 세 명',
+      missionType: 'DAILY_MEMBER_COUNT',
+      targetValue: 3,
+    });
   });
 
   /** 같은 500이 주간 달성 횟수에서는 유효하다 — 상한이 1000이다. */
@@ -510,8 +518,9 @@ describe('HouseMissionsScreen', () => {
     // 기본값은 주간 달성 횟수 — 1~1000회.
     expect(getByText('목표 수치 (1~1000회)')).toBeTruthy();
 
-    await fireEvent.press(getByText('일일 달성률'));
-    expect(getByText('목표 수치 (1~100%)')).toBeTruthy();
+    // 일일(인원)은 숫자 입력 대신 인원 칩 — 범위 문구도 인원 질문으로 바뀐다.
+    await fireEvent.press(getByText('하루 N명'));
+    expect(getByText('하루 몇 명 이상 달성해야 하나요?')).toBeTruthy();
   });
 
   it('explains a missing mission title with a toast instead of creating', async () => {
