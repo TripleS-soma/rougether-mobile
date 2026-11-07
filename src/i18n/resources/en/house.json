@@ -165,7 +165,8 @@
         "classicHint": "See everyone’s entire decorated room",
         "displayModeShared": "The owner’s choice is shared with every member.",
         "classicCoverFallback": "This theme uses the default exterior in full room view. Your original theme is kept."
-      }
+      },
+      "inviteLater": "I'll go solo for now"
     },
     "missions": {
       "unlinkA11y": "Remove linked routine for {{title}}",

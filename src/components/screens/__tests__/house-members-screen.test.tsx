@@ -5,6 +5,12 @@ import { HouseMembersScreen, manageableMembers } from '@/components/screens/hous
 import type { House } from '@/components/screens/house-screen';
 import { ToastProvider } from '@/components/ui/toast';
 
+const mockTrack = jest.fn();
+jest.mock('@/lib/analytics', () => ({
+  ...jest.requireActual('@/lib/analytics'),
+  track: (...args: unknown[]) => mockTrack(...args),
+}));
+
 const HOUSE: House = {
   name: '아침 루틴 하우스',
   houseId: 1,
@@ -42,6 +48,51 @@ describe('HouseMembersScreen — 초대코드 복사·링크 공유 (#624)', () 
 
     await fireEvent.press(getByLabelText('초대코드 복사'));
     await waitFor(() => expect(onInviteShared).toHaveBeenCalledTimes(1));
+  });
+
+  /**
+   * 초대를 강제하지 않는다 (#1673) — 초대 미션 중에만 "지금은 혼자 할게요"가 공유와 같은 무게로
+   * 뜨고, 복사·공유는 어디서 왔는지(mission/manage) 함께 센다.
+   */
+  it('초대 미션 중엔 "지금은 혼자 할게요"가 뜨고, 평소엔 없다 (#1673)', async () => {
+    const onInviteLater = jest.fn();
+    const mission = await render(
+      <ToastProvider>
+        <HouseMembersScreen {...baseProps} inviteVia="mission" onInviteLater={onInviteLater} />
+      </ToastProvider>,
+    );
+    await fireEvent.press(mission.getByLabelText('지금은 혼자 할게요'));
+    expect(onInviteLater).toHaveBeenCalledTimes(1);
+
+    const manage = await render(
+      <ToastProvider>
+        <HouseMembersScreen {...baseProps} />
+      </ToastProvider>,
+    );
+    expect(manage.queryByLabelText('지금은 혼자 할게요')).toBeNull();
+  });
+
+  it('복사·공유를 출처와 함께 센다 — 공유 취소는 세지 않는다 (#1673)', async () => {
+    mockTrack.mockClear();
+    const share = jest.spyOn(Share, 'share');
+    const { getByLabelText } = await render(
+      <ToastProvider>
+        <HouseMembersScreen {...baseProps} inviteVia="mission" onInviteShared={jest.fn()} />
+      </ToastProvider>,
+    );
+    await fireEvent.press(getByLabelText('초대코드 복사'));
+    share.mockResolvedValueOnce({ action: 'dismissedAction' } as never);
+    await fireEvent.press(getByLabelText('초대 링크 공유'));
+    share.mockResolvedValueOnce({ action: 'sharedAction' } as never);
+    await fireEvent.press(getByLabelText('초대 링크 공유'));
+    await waitFor(() =>
+      expect(
+        mockTrack.mock.calls.filter(([e]) => e === 'invite_code_copy').map(([, p]) => p),
+      ).toEqual([
+        { kind: 'house', how: 'clipboard', via: 'mission' },
+        { kind: 'house', how: 'share', via: 'mission' },
+      ]),
+    );
   });
 
   it('코드 카드에 복사·링크 공유 버튼이 뜨고, 공유는 랜딩 링크를 싣는다', async () => {

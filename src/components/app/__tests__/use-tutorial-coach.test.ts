@@ -14,7 +14,11 @@ describe('tutorialCoachStep (#1324)', () => {
     ]);
     expect(tutorialCoachStep('invite-house', 'myRoom')?.target).toBe('nav-house');
     expect(tutorialCoachStep('invite-house', 'house')?.target).toBe('house-manage');
-    expect(tutorialCoachStep('invite-house', 'houseMembers')?.target).toBe('house-invite-share');
+    // 공유와 "지금은 혼자 할게요"를 함께 짚는다 (#1673).
+    expect(tutorialCoachStep('invite-house', 'houseMembers')?.targets).toEqual([
+      'house-invite-share',
+      'house-invite-later',
+    ]);
   });
 
   it('집이 없어 집 탐색으로 간 동안은 초대 미션 코치마크를 접는다', () => {

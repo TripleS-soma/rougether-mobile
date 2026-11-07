@@ -15,6 +15,7 @@ import { pressedStyle } from '@/components/ui/press-feedback';
 import { useToast } from '@/components/ui/toast';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
+import { track } from '@/lib/analytics';
 import { shareOrCopy } from '@/lib/share-link';
 import type { CharacterId } from '@/constants/characters';
 import { HOUSE_PRIVATE_ACCENT, houseCapacityOptions } from '@/constants/house-themes';
@@ -53,6 +54,13 @@ export type HouseMembersScreenProps = {
    * 행동에 걸려 미션이 영영 안 끝난다.
    */
   onInviteShared?: () => void;
+  /**
+   * 초대 미션을 초대 없이 마친다 — "지금은 혼자 할게요" (#1673). 넘겼을 때만(초대 미션 진행 중)
+   * 공유 버튼 아래에 같은 줄로 뜬다. 친구가 없는 사람에게 초대를 강제하지 않는다.
+   */
+  onInviteLater?: () => void;
+  /** 복사·공유 계측의 출처 (#1673) — mission(초대 미션 중) | manage(평소). */
+  inviteVia?: 'mission' | 'manage';
   /** Kick a member via the API (owner only); shown when the house has ids. */
   onKickMember?: (houseId: number, membershipId: number) => void;
   /** 입주 신청 수락 (#526, 방장 전용). */
@@ -92,6 +100,8 @@ export function HouseMembersScreen({
   memberCharacterId,
   onBack,
   onInviteShared,
+  onInviteLater,
+  inviteVia = 'manage',
   onKickMember,
   onAcceptJoinRequest,
   onRejectJoinRequest,
@@ -125,6 +135,7 @@ export function HouseMembersScreen({
     try {
       await Clipboard.setStringAsync(displayCode);
       toast(tr('house.members.codeCopied'));
+      track('invite_code_copy', { kind: 'house', how: 'clipboard', via: inviteVia });
       onInviteShared?.();
     } catch {
       // 클립보드 실패 — 코드는 화면에 그대로 보인다.
@@ -140,7 +151,10 @@ export function HouseMembersScreen({
     );
     // 공유 시트가 없는 브라우저는 복사로 대신했으니 알려 준다. 취소는 조용히.
     if (outcome === 'copied') toast(tr('house.members.linkCopied'));
-    if (outcome !== 'cancelled') onInviteShared?.();
+    if (outcome !== 'cancelled') {
+      track('invite_code_copy', { kind: 'house', how: 'share', via: inviteVia });
+      onInviteShared?.();
+    }
   };
   const headerInset = useHeaderInsetStyle();
   const screenStyle = useScreenStyle([]);
@@ -325,6 +339,24 @@ export function HouseMembersScreen({
                   </Pressable>
                 </CoachTarget>
               </View>
+            ) : null}
+            {onInviteLater ? (
+              // 초대와 같은 무게의 출구 (#1673) — 작은 링크가 아니라 같은 폭의 버튼. 코치마크도 함께 짚는다.
+              <CoachTarget id="house-invite-later">
+                <Pressable
+                  onPress={onInviteLater}
+                  accessibilityRole="button"
+                  accessibilityLabel={tr('house.members.inviteLater')}
+                  style={({ pressed }) => [
+                    styles.inviteLaterBtn,
+                    { borderColor: t.border },
+                    pressed && pressedStyle('dim', t),
+                  ]}>
+                  <Text style={[Typography.supporting, { color: t.text }]}>
+                    {tr('house.members.inviteLater')}
+                  </Text>
+                </Pressable>
+              </CoachTarget>
             ) : null}
           </View>
         ) : null}
@@ -856,6 +888,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.two,
     marginTop: Spacing.two,
+  },
+  inviteLaterBtn: {
+    marginTop: Spacing.two,
+    alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.two,
   },
   inviteActionBtn: {
     flex: 1,

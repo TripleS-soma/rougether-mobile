@@ -25,8 +25,11 @@ export async function shareOrCopy(message: string): Promise<ShareOutcome> {
     return 'copied';
   }
   try {
-    await Share.share({ message });
-    return 'shared';
+    const result = await Share.share({ message });
+    // iOS는 시트를 그냥 닫으면 예외 대신 dismissedAction을 돌려준다 (#1673) — 예전엔 이것도
+    // 'shared'로 봐서, 시트를 열었다 닫기만 해도 초대 미션이 끝나고 공유로 셌다.
+    // Android는 취소를 알려주지 않아(항상 sharedAction) 구분할 수 없다 — OS 한계.
+    return result.action === Share.dismissedAction ? 'cancelled' : 'shared';
   } catch {
     return 'cancelled';
   }

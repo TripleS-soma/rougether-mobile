@@ -150,6 +150,18 @@ export function useOnboardingMissions(autoStart: boolean) {
     setState({ active: true, stepIndex: next, completedIndex: s.stepIndex });
   }, []);
 
+  /**
+   * 친구 초대 단계만 "지금은 혼자 할게요"로 마칠 수 있다 (#1673) — 친구가 없는 사람에게 초대를
+   * 강제하면, 미션을 넘기려고 코드만 복사하거나 이탈한다(GA: 초대 단계 완료 109/110명인데 실제
+   * 입주 5명). 고른 사실은 invite_later로 남기고, 체인은 초대한 것과 똑같이 끝낸다(축하 시트 포함).
+   */
+  const completeInviteLater = useCallback(() => {
+    const s = stateRef.current;
+    if (!s.active || ONBOARDING_MISSION_STEPS[s.stepIndex]?.id !== 'invite-house') return;
+    track('invite_later', { via: 'mission' });
+    complete('invite-house');
+  }, [complete]);
+
   /** 전체 건너뛰기 — 확인 다이얼로그는 배너 몫, 여기는 확정 시점. */
   const skip = useCallback(() => {
     const s = stateRef.current;
@@ -175,6 +187,7 @@ export function useOnboardingMissions(autoStart: boolean) {
     completedIndex: state.completedIndex,
     totalSteps: ONBOARDING_MISSION_STEPS.length,
     complete,
+    completeInviteLater,
     skip,
     dismissCompleted,
   };

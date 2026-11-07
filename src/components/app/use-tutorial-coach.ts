@@ -67,8 +67,9 @@ export function tutorialCoachStep(
         : backToRoom();
     case 'invite-house':
       if (screen === 'houseMembers') {
+        // 공유와 "지금은 혼자 할게요"를 함께 짚는다 (#1673) — 공유만 비추면 그게 유일한 길로 읽힌다.
         return {
-          target: 'house-invite-share',
+          targets: ['house-invite-share', 'house-invite-later'],
           ...copy('shareInvite'),
         };
       }
