@@ -504,7 +504,7 @@
         },
         "shareInvite": {
           "title": "Send a friend an invite link",
-          "body": "Tap Share link and your friend can join the house right away."
+          "body": "Send the link and a friend can move in right away. Going solo for now is fine too."
         },
         "houseManage": {
           "title": "Tap the member count to manage your house",

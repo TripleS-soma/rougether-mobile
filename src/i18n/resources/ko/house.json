@@ -165,7 +165,8 @@
         "classicHint": "각자 꾸민 방 전체를 함께 보는 집",
         "displayModeShared": "방장이 선택한 방식으로 모든 구성원에게 보여요.",
         "classicCoverFallback": "이 테마는 ‘내 방 그대로’에서 기본 집 외관으로 보여요. 원래 테마는 그대로 보관돼요."
-      }
+      },
+      "inviteLater": "지금은 혼자 할게요"
     },
     "missions": {
       "unlinkA11y": "{{title}} 연동 루틴 정리",

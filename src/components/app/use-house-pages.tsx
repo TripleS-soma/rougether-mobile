@@ -83,6 +83,8 @@ export function useHousePages({
   visitFriend,
   openMyRoom,
   completeMission,
+  inviteMissionActive,
+  completeInviteLater,
   catalogue,
   shopLoading,
   nickname,
@@ -158,6 +160,10 @@ export function useHousePages({
   openMyRoom: () => void;
   /** 온보딩 미션 완료 (#571) — 셸이 넘겨 미션 체인을 진행시킨다. */
   completeMission: (id: OnboardingMissionStepId) => void;
+  /** 지금 진행 중인 미션이 친구 초대인가 (#1673) — 집 관리 화면의 "지금은 혼자 할게요"·계측 구분. */
+  inviteMissionActive: boolean;
+  /** 초대 미션을 초대 없이 마친다 (#1673). */
+  completeInviteLater: () => void;
   /** 상점 카탈로그 — 방 미리보기·집 미리보기의 assetKey 해석. */
   catalogue: ShopCatalogue;
   shopLoading: boolean;
@@ -523,6 +529,8 @@ export function useHousePages({
         memberCharacterId={(m) => characterIdForMember(m, roomPreviews, wornCharacterId)}
         onBack={closeMembers}
         onInviteShared={handleInviteShared}
+        inviteVia={inviteMissionActive ? 'mission' : 'manage'}
+        onInviteLater={inviteMissionActive ? completeInviteLater : undefined}
         onKickMember={kickMember}
         onAcceptJoinRequest={acceptJoinRequest}
         onRejectJoinRequest={rejectJoinRequest}
