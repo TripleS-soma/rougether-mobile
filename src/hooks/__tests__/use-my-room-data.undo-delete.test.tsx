@@ -28,15 +28,15 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-async function setup({ failDelete = false } = {}) {
+async function setup({ failDelete = false, count = 1 } = {}) {
   const deletes: string[] = [];
-  const todo = {
-    id: 7,
-    title: '우유 사기',
+  const todos = Array.from({ length: count }, (_, i) => ({
+    id: 7 + i,
+    title: `할 일 ${i + 1}`,
     categoryId: 1,
     status: 'PENDING',
     dueDate: calendarToday(),
-  };
+  }));
   global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
     const method = init?.method ?? 'GET';
     if (method === 'DELETE') {
@@ -47,7 +47,11 @@ async function setup({ failDelete = false } = {}) {
     if (url.includes('/categories')) return jsonRes({ items: [{ id: 1, name: '생활' }] });
     // 실패한 삭제는 서버에 그대로 남는다.
     if (url.endsWith('/todos'))
-      return jsonRes({ items: deletes.length && !failDelete ? [] : [todo] });
+      return jsonRes({
+        items: failDelete
+          ? todos
+          : todos.filter((t) => !deletes.some((u) => u.endsWith(`/${t.id}`))),
+      });
     if (url.endsWith('/routines')) return jsonRes({ items: [] });
     if (url.endsWith('/today')) return jsonRes({ categories: [], summary: {}, streak: {} });
     if (url.endsWith('/me')) return jsonRes({ userId: 1, nickname: '테스터' });
@@ -56,7 +60,7 @@ async function setup({ failDelete = false } = {}) {
   const hook = await renderHook(() => useMyRoomData(), {
     wrapper: queryWrapper(createTestQueryClient()),
   });
-  await waitFor(() => expect(hook.result.current.routines).toHaveLength(1));
+  await waitFor(() => expect(hook.result.current.routines).toHaveLength(count));
   return { ...hook, deletes, id: hook.result.current.routines[0].id };
 }
 
@@ -122,4 +126,25 @@ it('서버 삭제가 실패하면 행을 돌려놓고 알린다 (#1677 리뷰)',
   jest.useRealTimers();
   await waitFor(() => expect(result.current.routines.map((r) => r.id)).toEqual([id]));
   expect(mockToast).toHaveBeenCalledWith('삭제에 실패했어요', 'error');
+});
+
+it('연달아 지우면 앞 삭제는 바로 확정된다 — 토스트와 되돌릴 대상이 1:1 (#1677 리뷰)', async () => {
+  const { result, deletes } = await setup({ count: 2 });
+  const [a, b] = result.current.routines.map((r) => r.id);
+  await act(async () => result.current.deleteRoutineUndoable(a));
+  expect(deletes).toHaveLength(0);
+  await act(async () => result.current.deleteRoutineUndoable(b));
+  // 앞(A)의 토스트는 B 토스트로 덮였다 — 버튼 없는 5초를 기다리지 않고 지금 지운다.
+  await waitFor(() => expect(deletes).toEqual([expect.stringContaining('/todos/7')]));
+  // B는 아직 되돌릴 수 있다.
+  const undoB = mockToast.mock.calls.at(-1)![2].action.onPress as () => void;
+  await act(async () => undoB());
+  expect(result.current.routines.map((r) => r.id)).toEqual([b]);
+});
+
+it('화면이 사라지면 남은 삭제를 확정한다 — 되돌릴 사람이 없다', async () => {
+  const { result, deletes, id, unmount } = await setup();
+  await act(async () => result.current.deleteRoutineUndoable(id));
+  await unmount();
+  await waitFor(() => expect(deletes).toHaveLength(1));
 });

@@ -554,6 +554,9 @@ export function useMyRoomData() {
     (id: string) => {
       const item = findItem(id);
       if (!item || pendingDeletes.current.has(id)) return;
+      // 토스트는 새것이 옛것을 덮는다 — 앞 삭제는 되돌릴 버튼이 사라지니 지금 확정한다(토스트와
+      // 되돌릴 대상을 1:1로, #1677 리뷰). 그렇지 않으면 버튼 없이 5초를 기다리다 지워진다.
+      for (const prevId of [...pendingDeletes.current.keys()]) void commitPendingDelete(prevId);
       setRoutines((prev) => prev.filter((r) => r.id !== id));
       // 그 날의 마지막 투두면 달력 점도 바로 걷는다 (#1133) — 되돌리면 다시 받는다.
       if (item.kind === 'todo' && item.dueDate) {
