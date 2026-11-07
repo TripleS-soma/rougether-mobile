@@ -67,6 +67,8 @@ export type AnalyticsEvent =
   | 'starter_routine_failed'
   | 'routine_create'
   | 'routine_complete'
+  /** 삭제 직후 토스트의 '실행 취소' (#1676) — 실수로 지운 비율을 본다. */
+  | 'routine_delete_undo'
   | 'gacha_draw'
   | 'room_save'
   /** 꾸미기 화면 진입 (#1043) — from: 'gacha'(뽑은 것 배치하러) | 'direct'(나의 방·미션). */
@@ -311,6 +313,7 @@ export type AnalyticsParams = {
   starter_routine_view: { recommendation_count: number };
   starter_routine_failed: { template_id: string };
   routine_create: { kind: 'routine' | 'todo'; source?: 'onboarding'; template_id?: string };
+  routine_delete_undo: { kind: 'routine' | 'todo' };
   routine_complete: { kind: 'routine' | 'todo' };
   gacha_draw: { gachaId: number | string; count: number };
   room_save: { item_count: number };

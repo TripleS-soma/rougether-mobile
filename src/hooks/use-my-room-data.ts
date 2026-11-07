@@ -14,6 +14,7 @@
  * memoized consumers (#539 memo boundaries) get stable references.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { useMutation } from '@tanstack/react-query';
 
 import type { CategoryDeleteMode } from '@/api/categories';
@@ -69,6 +70,7 @@ import { useMyProfile } from '@/hooks/use-my-profile';
 import { useWallet } from '@/hooks/use-wallet';
 import { fetchMyRoomBootData, takeMyRoomPrefetch } from '@/lib/my-room-prefetch';
 import { i18n } from '@/i18n';
+import { useLatestRef } from '@/hooks/use-stable-value';
 
 /** 완료 토글 결과 — 코인 보상액과 서버 자동 미션 기여 결과 (#578). */
 export type CompletionToggleResult = {
@@ -77,6 +79,9 @@ export type CompletionToggleResult = {
   /** 서버가 연동 미션에 자동 기여한 결과 — null/생략이면 미연동·스킵. */
   houseMissionContribution?: HouseMissionContributeResponse | null;
 };
+
+/** 삭제 실행 취소 창 (#1676) — 토스트가 떠 있는 시간과 같다. */
+export const UNDO_DELETE_MS = 5000;
 
 export function useMyRoomData() {
   const [routines, setRoutines] = useState<Routine[]>([]);
@@ -489,6 +494,103 @@ export function useMyRoomData() {
     [findItem, invalidateCalendar, unmarkTodoDate, toast, routines, calendarDays],
   );
 
+  /**
+   * 실행 취소가 되는 삭제 (#1676) — 나의 방·달력 목록(스와이프·행 메뉴)이 쓴다. 행은 바로 빼고
+   * "실행 취소" 토스트를 띄운 뒤, **UNDO_DELETE_MS가 지나야** 서버에 지운다. 되돌리면 서버
+   * 요청 없이 행만 돌려놓아 id·완료 기록이 그대로다. 앱이 백그라운드로 가거나 화면이 사라지면
+   * 남은 삭제를 바로 확정한다(되돌릴 사람이 없다). 커밋은 토스트가 아니라 여기 타이머가 쥔다 —
+   * 토스트가 없는 환경(테스트·갤러리)에서도 삭제가 끝난다.
+   */
+  const pendingDeletes = useRef(
+    new Map<string, { item: Routine; timer: ReturnType<typeof setTimeout> }>(),
+  );
+  const routinesRef = useLatestRef(routines);
+  const calendarDaysRef = useLatestRef(calendarDays);
+  const commitPendingDelete = useCallback(
+    async (id: string) => {
+      const pending = pendingDeletes.current.get(id);
+      if (!pending) return;
+      clearTimeout(pending.timer);
+      pendingDeletes.current.delete(id);
+      const { item } = pending;
+      try {
+        if (item.kind === 'todo') await deleteTodo(toServerItemId(id));
+        else await apiDeleteRoutine(toServerItemId(id));
+      } catch {
+        setRoutines((prev) => (prev.some((r) => r.id === id) ? prev : [...prev, item]));
+        toast(i18n.t('routineTodo.toast.deleteFailed'), 'error');
+      } finally {
+        invalidateCalendar();
+      }
+    },
+    [invalidateCalendar, toast],
+  );
+  const undoDelete = useCallback(
+    (id: string) => {
+      const pending = pendingDeletes.current.get(id);
+      // 이미 확정됐으면(백그라운드 전환 등) 되돌릴 게 없다.
+      if (!pending) return;
+      clearTimeout(pending.timer);
+      pendingDeletes.current.delete(id);
+      setRoutines((prev) => (prev.some((r) => r.id === id) ? prev : [...prev, pending.item]));
+      // 먼저 걷어 둔 달력 점을 서버 값으로 되살린다.
+      invalidateCalendar();
+      track('routine_delete_undo', { kind: pending.item.kind === 'todo' ? 'todo' : 'routine' });
+    },
+    [invalidateCalendar],
+  );
+  const deleteRoutineUndoable = useCallback(
+    (id: string) => {
+      const item = findItem(id);
+      if (!item || pendingDeletes.current.has(id)) return;
+      setRoutines((prev) => prev.filter((r) => r.id !== id));
+      // 그 날의 마지막 투두면 달력 점도 바로 걷는다 (#1133) — 되돌리면 다시 받는다.
+      if (item.kind === 'todo' && item.dueDate) {
+        const date = item.dueDate;
+        const stillHasTodo =
+          routinesRef.current.some((r) => r.id !== id && r.kind === 'todo' && r.dueDate === date) ||
+          (calendarDaysRef.current[date] ?? []).some((c) => c.kind === 'todo' && c.id !== id);
+        if (!stillHasTodo) unmarkTodoDate(date);
+      }
+      const timer = setTimeout(() => void commitPendingDelete(id), UNDO_DELETE_MS);
+      pendingDeletes.current.set(id, { item, timer });
+      toast(
+        i18n.t(
+          item.kind === 'todo'
+            ? 'routineTodo.toast.todoDeleted'
+            : 'routineTodo.toast.routineDeleted',
+        ),
+        'info',
+        {
+          action: { label: i18n.t('routineTodo.toast.undo'), onPress: () => undoDelete(id) },
+          durationMs: UNDO_DELETE_MS,
+        },
+      );
+    },
+    [
+      findItem,
+      unmarkTodoDate,
+      commitPendingDelete,
+      undoDelete,
+      toast,
+      routinesRef,
+      calendarDaysRef,
+    ],
+  );
+  // 백그라운드 전환·화면 해제 때 남은 삭제 확정 — 되돌릴 기회가 끝났다.
+  useEffect(() => {
+    const flush = () => {
+      for (const id of [...pendingDeletes.current.keys()]) void commitPendingDelete(id);
+    };
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') flush();
+    });
+    return () => {
+      sub.remove();
+      flush();
+    };
+  }, [commitPendingDelete]);
+
   /** Create a category; returns the created meta (null on failure) so callers
    * can immediately file a routine under it (미션 → 루틴 연동). */
   const createRoutineCategory = useCallback(
@@ -744,6 +846,7 @@ export function useMyRoomData() {
       updateTodoDueDate,
       moveRoutineOccurrence,
       deleteRoutine,
+      deleteRoutineUndoable,
       createRoutineCategory,
       ensureCategory,
       unlinkRoutineMission,
@@ -784,6 +887,7 @@ export function useMyRoomData() {
       updateTodoDueDate,
       moveRoutineOccurrence,
       deleteRoutine,
+      deleteRoutineUndoable,
       createRoutineCategory,
       ensureCategory,
       unlinkRoutineMission,

@@ -1,27 +1,56 @@
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
-import { SwipeDeleteRow } from '@/components/screens/my-room/swipe-delete-row';
+import {
+  __resetOpenSwipeRow,
+  closeOpenSwipeRow,
+  SwipeDeleteRow,
+} from '@/components/screens/my-room/swipe-delete-row';
 import { hapticSelection } from '@/utils/haptics';
 
-// 스와이프 부품이 받는 props만 본다 — 실제 제스처는 RNGH 몫.
+jest.mock('@/utils/haptics', () => ({ hapticSelection: jest.fn() }));
+
+// 스와이프 부품이 받는 props만 본다 — 실제 제스처는 RNGH 몫. ref는 행마다 close 목을 준다.
 const mockSwipeProps: Record<string, unknown>[] = [];
+const mockClose: jest.Mock[] = [];
 jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => {
-  const { forwardRef } = jest.requireActual('react');
-  return {
-    __esModule: true,
-    default: forwardRef(
-      (props: Record<string, unknown> & { children?: unknown }, _ref: unknown) => {
-        mockSwipeProps.push(props);
-        return props.children;
+  const React = jest.requireActual('react');
+  const MockSwipeable = React.forwardRef(
+    (
+      props: Record<string, unknown> & {
+        children?: unknown;
+        renderRightActions?: () => unknown;
       },
-    ),
-  };
+      ref: unknown,
+    ) => {
+      mockSwipeProps.push(props);
+      const close = React.useMemo(() => {
+        const fn = jest.fn();
+        mockClose.push(fn);
+        return fn;
+      }, []);
+      React.useImperativeHandle(ref, () => ({ close }), [close]);
+      return React.createElement(
+        React.Fragment,
+        null,
+        props.children,
+        props.renderRightActions?.(),
+      );
+    },
+  );
+  MockSwipeable.displayName = 'MockSwipeable';
+  return { __esModule: true, default: MockSwipeable };
 });
 
 beforeEach(() => {
   mockSwipeProps.length = 0;
+  mockClose.length = 0;
+  __resetOpenSwipeRow();
+  jest.mocked(hapticSelection).mockClear();
 });
+
+const openRowAt = (index: number) =>
+  (mockSwipeProps.filter((p) => p.onSwipeableWillOpen)[index].onSwipeableWillOpen as () => void)();
 
 describe('SwipeDeleteRow 햅틱 (2026-11-04)', () => {
   it('삭제가 켜진 행은 열리기로 정해지는 순간 선택 햅틱을 낸다', async () => {
@@ -30,7 +59,8 @@ describe('SwipeDeleteRow 햅틱 (2026-11-04)', () => {
         <Text>물 마시기</Text>
       </SwipeDeleteRow>,
     );
-    expect(mockSwipeProps.at(-1)?.onSwipeableWillOpen).toBe(hapticSelection);
+    openRowAt(0);
+    expect(hapticSelection).toHaveBeenCalledTimes(1);
   });
 
   it('삭제가 꺼진 행은 열리지 않으니 햅틱도 걸지 않는다', async () => {
@@ -40,5 +70,53 @@ describe('SwipeDeleteRow 햅틱 (2026-11-04)', () => {
       </SwipeDeleteRow>,
     );
     expect(mockSwipeProps.at(-1)?.onSwipeableWillOpen).toBeUndefined();
+  });
+});
+
+/**
+ * 열린 삭제 버튼은 다른 동작에 닫힌다 (#1676) — 예전엔 삭제를 누르거나 되밀기 전까지 남았다.
+ * 앱 셸 루트가 모든 누르기 시작에 closeOpenSwipeRow를 부른다.
+ */
+describe('SwipeDeleteRow — 다른 동작이면 닫힘 (#1676)', () => {
+  const rows = (onDelete = jest.fn()) => (
+    <>
+      <SwipeDeleteRow label="물 마시기" onDelete={onDelete}>
+        <Text>물 마시기</Text>
+      </SwipeDeleteRow>
+      <SwipeDeleteRow label="영양제" onDelete={jest.fn()}>
+        <Text>영양제</Text>
+      </SwipeDeleteRow>
+    </>
+  );
+
+  it('다른 행을 열면 먼저 열린 행이 닫힌다 — 한 번에 하나', async () => {
+    await render(rows());
+    openRowAt(0);
+    openRowAt(1);
+    expect(mockClose[0]).toHaveBeenCalledTimes(1);
+    expect(mockClose[1]).not.toHaveBeenCalled();
+  });
+
+  it('다른 곳을 누르면(루트의 누르기 시작) 열린 행이 닫힌다', async () => {
+    await render(rows());
+    openRowAt(0);
+    closeOpenSwipeRow();
+    expect(mockClose[0]).toHaveBeenCalledTimes(1);
+    // 닫힌 뒤엔 더 할 일이 없다.
+    closeOpenSwipeRow();
+    expect(mockClose[0]).toHaveBeenCalledTimes(1);
+  });
+
+  it('삭제 버튼을 누른 터치는 닫지 않고 삭제가 나간다', async () => {
+    const onDelete = jest.fn();
+    const ui = await render(rows(onDelete));
+    openRowAt(0);
+    const del = ui.getByLabelText('물 마시기 스와이프 삭제');
+    // 터치는 버튼 → 루트 순으로 올라온다.
+    fireEvent(del, 'touchStart');
+    closeOpenSwipeRow();
+    expect(mockClose[0]).not.toHaveBeenCalled();
+    await fireEvent.press(del);
+    expect(onDelete).toHaveBeenCalledTimes(1);
   });
 });

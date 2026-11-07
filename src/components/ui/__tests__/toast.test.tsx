@@ -78,4 +78,36 @@ describe('Toast', () => {
     await fireEvent.press(getByLabelText('알림 닫기'));
     await waitFor(() => expect(queryByText('저장에 실패했어요')).toBeNull());
   });
+
+  /**
+   * 동작 버튼 토스트 (#1676) — "실행 취소"처럼 방금 한 일을 되돌릴 때. 다른 곳을 눌러도 남아야
+   * 되돌릴 기회를 빼앗지 않는다.
+   */
+  it('동작 버튼을 누르면 그 동작을 부르고 닫힌다 — 다른 곳을 눌러도 남는다 (#1676)', async () => {
+    const undo = jest.fn();
+    function UndoTrigger() {
+      const { show } = useToast();
+      return (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() =>
+            show('할 일을 삭제했어요', 'info', { action: { label: '실행 취소', onPress: undo } })
+          }>
+          <Text>fire</Text>
+        </Pressable>
+      );
+    }
+    const { getByText, getByLabelText, queryByText } = await render(
+      <ToastProvider>
+        <UndoTrigger />
+        <Text>elsewhere</Text>
+      </ToastProvider>,
+    );
+    await fireEvent.press(getByText('fire'));
+    await fireEvent(getByText('elsewhere'), 'touchStart');
+    expect(getByText('할 일을 삭제했어요')).toBeTruthy();
+    await fireEvent.press(getByLabelText('실행 취소'));
+    expect(undo).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(queryByText('할 일을 삭제했어요')).toBeNull());
+  });
 });

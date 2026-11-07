@@ -1,3 +1,7 @@
+import {
+  closeOpenSwipeRow,
+  PRESS_START_EVENT,
+} from '@/components/screens/my-room/swipe-delete-row';
 import { useT } from '@/i18n';
 import { SpeakerSheet } from '@/components/room/speaker-sheet';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -743,6 +747,8 @@ export function AppShell({
   return (
     <View
       style={styles.root}
+      // 열린 스와이프 삭제 버튼은 다른 어떤 터치에도 닫힌다 (#1676) — 터치는 루트까지 올라온다.
+      {...{ [PRESS_START_EVENT]: closeOpenSwipeRow }}
       onLayout={(e) =>
         setCoachFrame({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
       }>

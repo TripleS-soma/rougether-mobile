@@ -73,7 +73,10 @@
       "categoryReorderFailed": "Couldn't save the category order",
       "categoryInUse": "This category still has routines and can't be deleted",
       "categoryDeleteFailed": "Couldn't delete the category",
-      "calendarLoadFailed": "Couldn't load the calendar"
+      "calendarLoadFailed": "Couldn't load the calendar",
+      "todoDeleted": "To-do deleted",
+      "routineDeleted": "Routine deleted",
+      "undo": "Undo"
     },
     "calendarProgress": {
       "pending": "Checking totals",

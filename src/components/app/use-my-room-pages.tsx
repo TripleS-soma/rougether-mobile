@@ -96,6 +96,7 @@ export function useMyRoomPages({
     | 'updateTodoDueDate'
     | 'moveRoutineOccurrence'
     | 'deleteRoutine'
+    | 'deleteRoutineUndoable'
     | 'createRoutineCategory'
     | 'updateRoutineCategory'
     | 'deleteRoutineCategory'
@@ -172,6 +173,7 @@ export function useMyRoomPages({
     updateTodoDueDate,
     moveRoutineOccurrence,
     deleteRoutine,
+    deleteRoutineUndoable,
     createRoutineCategory,
     updateRoutineCategory,
     deleteRoutineCategory,
@@ -593,7 +595,9 @@ export function useMyRoomPages({
     onUpdateRoutineTime: updateRoutineTime,
     onUpdateTodoDueDate: updateTodoDueDate,
     onMoveRoutineOccurrence: moveRoutineOccurrence,
-    onDeleteRoutine: deleteRoutine,
+    // 나의 방·달력 목록의 삭제(스와이프·행 메뉴)는 실행 취소가 된다 (#1676). 수정 화면의 삭제는
+    // 종전대로 즉시(아래 AddRoutineScreen).
+    onDeleteRoutine: deleteRoutineUndoable,
     routineOrder,
     onReorderRoutines: reorderRoutines,
     onMoveRoutineCategory: moveRoutineCategory,

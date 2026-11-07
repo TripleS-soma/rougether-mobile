@@ -5,16 +5,43 @@ import { expect, screen } from 'storybook/test';
 import { Button } from '@/components/ui/button';
 import { ToastProvider, type ToastType, useToast } from '@/components/ui/toast';
 
-function ToastDemo({ message, type }: { message: string; type: ToastType }) {
+function ToastDemo({
+  message,
+  type,
+  actionLabel,
+}: {
+  message: string;
+  type: ToastType;
+  actionLabel?: string;
+}) {
   const toast = useToast();
-  return <Button label="토스트 띄우기" onPress={() => toast.show(message, type)} />;
+  return (
+    <Button
+      label="토스트 띄우기"
+      onPress={() =>
+        toast.show(
+          message,
+          type,
+          actionLabel ? { action: { label: actionLabel, onPress: () => {} } } : undefined,
+        )
+      }
+    />
+  );
 }
 
-function ToastPlayground({ message, type }: { message: string; type: ToastType }) {
+function ToastPlayground({
+  message,
+  type,
+  actionLabel,
+}: {
+  message: string;
+  type: ToastType;
+  actionLabel?: string;
+}) {
   return (
     <ToastProvider>
       <View style={{ minHeight: 320, justifyContent: 'flex-start' }}>
-        <ToastDemo message={message} type={type} />
+        <ToastDemo message={message} type={type} actionLabel={actionLabel} />
       </View>
     </ToastProvider>
   );
@@ -29,7 +56,7 @@ const meta = {
     docs: {
       description: {
         component:
-          '앱 전역 일시 안내입니다. 루트의 ToastProvider 아래 어디서든 `useToast().show(message, type)`로 띄우고, 2.5초 뒤 내려갑니다. 버튼을 눌러 확인하세요.',
+          '앱 전역 일시 안내입니다. 루트의 ToastProvider 아래 어디서든 `useToast().show(message, type)`로 띄우고, 2.5초 뒤 내려갑니다. 세 번째 인자로 `{ action, durationMs }`를 주면 "실행 취소" 같은 동작 버튼이 붙고, 동작 토스트는 다른 곳을 눌러도 닫히지 않습니다. 버튼을 눌러 확인하세요.',
       },
     },
   },
@@ -52,3 +79,12 @@ export const Error: Story = {
   args: { message: '네트워크 연결을 확인해 주세요', type: 'error' },
 };
 export const Info: Story = { name: '안내', args: { message: '새 소식이 있어요', type: 'info' } };
+export const WithAction: Story = {
+  name: '실행 취소',
+  args: { message: '할 일을 삭제했어요', type: 'info', actionLabel: '실행 취소' },
+  play: async ({ canvas, userEvent, args }) => {
+    await userEvent.click(canvas.getByRole('button', { name: '토스트 띄우기' }));
+    await expect(await screen.findByText(args.message)).toBeVisible();
+    await expect(await screen.findByRole('button', { name: '실행 취소' })).toBeVisible();
+  },
+};
