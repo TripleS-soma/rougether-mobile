@@ -98,10 +98,19 @@ export function useMyRoomData() {
   );
   // 서버 삭제 요청이 나가 있는 id — 요청이 끝나기 전의 재조회가 행을 되살리지 않게(#1677 리뷰).
   const inFlightDeletes = useRef(new Set<string>());
-  // 같은 id 집합을 상태로도 들어, 바뀌면 달력 날짜 목록을 다시 거른다.
+  // 서버에서 지워진 id — 달력 월 목록은 다시 받기 전까지 옛 값이라 그 사이에도 숨긴다(#1677 리뷰).
+  const confirmedDeletes = useRef(new Set<string>());
+  // 대기·진행 중·확정 id를 합쳐 상태로도 들어, 바뀌면 달력 날짜 목록을 다시 거른다.
   const [pendingDeleteIds, setPendingDeleteIds] = useState<ReadonlySet<string>>(() => new Set());
   const syncPendingIds = useCallback(
-    () => setPendingDeleteIds(new Set(pendingDeletes.current.keys())),
+    () =>
+      setPendingDeleteIds(
+        new Set([
+          ...pendingDeletes.current.keys(),
+          ...inFlightDeletes.current,
+          ...confirmedDeletes.current,
+        ]),
+      ),
     [],
   );
   const [loading, setLoading] = useState(true);
@@ -525,17 +534,20 @@ export function useMyRoomData() {
       if (!pending) return;
       clearTimeout(pending.timer);
       pendingDeletes.current.delete(id);
+      inFlightDeletes.current.add(id);
       syncPendingIds();
       const { item } = pending;
-      inFlightDeletes.current.add(id);
       try {
         if (item.kind === 'todo') await deleteTodo(toServerItemId(id));
         else await apiDeleteRoutine(toServerItemId(id));
+        confirmedDeletes.current.add(id);
       } catch {
         setRoutines((prev) => (prev.some((r) => r.id === id) ? prev : [...prev, item]));
         toast(i18n.t('routineTodo.toast.deleteFailed'), 'error');
       } finally {
         inFlightDeletes.current.delete(id);
+        // 실패면 숨김이 풀려 달력 목록에도 돌아온다.
+        syncPendingIds();
         invalidateCalendar();
       }
     },

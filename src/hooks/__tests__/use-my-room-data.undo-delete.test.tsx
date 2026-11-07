@@ -51,6 +51,19 @@ async function setup({
       return jsonRes({});
     }
     if (url.includes('/categories')) return jsonRes({ items: [{ id: 1, name: '생활' }] });
+    // 달력 날짜 목록 — 서버에 남은 투두를 그대로 돌려준다(삭제 반영 전엔 옛 값).
+    if (url.includes('/calendar?'))
+      return jsonRes({
+        categories: [
+          {
+            categoryId: 1,
+            todos: todos
+              .filter((t) => failDelete || !deletes.some((u) => u.endsWith(`/${t.id}`)))
+              .map((t) => ({ id: t.id, title: t.title, status: t.status })),
+          },
+        ],
+        summary: {},
+      });
     // 실패한 삭제는 서버에 그대로 남는다.
     if (url.endsWith('/todos'))
       return jsonRes({
@@ -177,4 +190,37 @@ it('다른 토스트가 실행 취소 토스트를 덮으면 기다리지 않고
   const onDismiss = mockToast.mock.calls.at(-1)![2].onDismiss as () => void;
   await act(async () => onDismiss());
   await waitFor(() => expect(deletes).toHaveLength(1));
+});
+
+it('서버 삭제 요청이 나가 있는 동안·끝난 직후에도 달력 날짜 목록에 되살아나지 않는다 (#1677 리뷰)', async () => {
+  let release!: () => void;
+  const holdDelete = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const { result, id } = await setup({ holdDelete });
+  const day = '2026-12-01';
+  await act(async () => {
+    await result.current.loadCalendarDay(day);
+  });
+  await waitFor(() => expect(result.current.calendarDays[day]?.map((c) => c.id)).toEqual([id]));
+  await act(async () => result.current.deleteRoutineUndoable(id));
+  expect(result.current.calendarDays[day]).toEqual([]);
+  // 확정 요청이 나갔지만 서버엔 아직 있다.
+  await act(async () => appStateListener?.('background'));
+  expect(result.current.calendarDays[day]).toEqual([]);
+  // 요청이 끝난 뒤, 월 목록을 다시 받기 전에도 숨긴 채로.
+  await act(async () => release());
+  expect(result.current.calendarDays[day]).toEqual([]);
+});
+
+it('서버 삭제가 실패하면 달력 날짜 목록에도 돌아온다 (#1677 리뷰)', async () => {
+  const { result, id } = await setup({ failDelete: true });
+  const day = '2026-12-01';
+  await act(async () => {
+    await result.current.loadCalendarDay(day);
+  });
+  await waitFor(() => expect(result.current.calendarDays[day]?.map((c) => c.id)).toEqual([id]));
+  await act(async () => result.current.deleteRoutineUndoable(id));
+  await act(async () => appStateListener?.('background'));
+  await waitFor(() => expect(result.current.calendarDays[day]?.map((c) => c.id)).toEqual([id]));
 });
