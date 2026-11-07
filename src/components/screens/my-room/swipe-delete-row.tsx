@@ -107,6 +107,11 @@ export function SwipeDeleteRow({
                 {...{
                   [PRESS_START_EVENT]: () => {
                     touchOnDeleteAction = true;
+                    // 루트까지 올라오지 않는 터치(모달 안 등)면 표시가 남아 다음 터치의 닫기를
+                    // 한 번 삼킨다 — 같은 이벤트 처리가 끝난 뒤(다음 틱)엔 지운다(#1677 리뷰).
+                    setTimeout(() => {
+                      touchOnDeleteAction = false;
+                    }, 0);
                   },
                 }}
                 onPress={() => {

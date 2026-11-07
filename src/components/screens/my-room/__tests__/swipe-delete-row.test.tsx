@@ -107,6 +107,17 @@ describe('SwipeDeleteRow — 다른 동작이면 닫힘 (#1676)', () => {
     expect(mockClose[0]).toHaveBeenCalledTimes(1);
   });
 
+  it('루트까지 안 올라온 삭제 버튼 터치(모달 안 등)는 다음 틱에 표시가 지워진다 (#1677 리뷰)', async () => {
+    const ui = await render(rows());
+    openRowAt(0);
+    fireEvent(ui.getByLabelText('물 마시기 스와이프 삭제'), 'touchStart');
+    // 루트가 이 터치를 못 받았다 — 다음 이벤트 처리 전에 표시가 풀려야 한다.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    closeOpenSwipeRow();
+    expect(mockClose[0]).toHaveBeenCalledTimes(1);
+  });
+
+  // press는 맨 끝에 — Pressable 내부 타이머가 다음 테스트의 렌더를 비우는 일이 있었다.
   it('삭제 버튼을 누른 터치는 닫지 않고 삭제가 나간다', async () => {
     const onDelete = jest.fn();
     const ui = await render(rows(onDelete));
@@ -118,5 +129,25 @@ describe('SwipeDeleteRow — 다른 동작이면 닫힘 (#1676)', () => {
     expect(mockClose[0]).not.toHaveBeenCalled();
     await fireEvent.press(del);
     expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('SwipeDeleteRow — 누르기 시작 이벤트 이름', () => {
+  // 웹은 마우스 클릭에 touchstart가 없어 포인터로, 네이티브는 터치로 — 둘을 같이 걸면 한 번에 두 번 불린다.
+  it.each([
+    ['ios', 'onTouchStart'],
+    ['android', 'onTouchStart'],
+    ['web', 'onPointerDown'],
+  ])('%s는 %s', (os, expected) => {
+    jest.isolateModules(() => {
+      const { Platform } = jest.requireActual('react-native');
+      const restore = jest.replaceProperty(Platform, 'OS', os as 'ios');
+      try {
+        const mod = jest.requireActual('@/components/screens/my-room/swipe-delete-row');
+        expect(mod.PRESS_START_EVENT).toBe(expected);
+      } finally {
+        restore.restore();
+      }
+    });
   });
 });

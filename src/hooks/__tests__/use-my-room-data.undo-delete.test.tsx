@@ -28,7 +28,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-async function setup() {
+async function setup({ failDelete = false } = {}) {
   const deletes: string[] = [];
   const todo = {
     id: 7,
@@ -41,10 +41,13 @@ async function setup() {
     const method = init?.method ?? 'GET';
     if (method === 'DELETE') {
       deletes.push(url);
+      if (failDelete) return jsonRes({ code: 'INTERNAL' }, 500);
       return jsonRes({});
     }
     if (url.includes('/categories')) return jsonRes({ items: [{ id: 1, name: '생활' }] });
-    if (url.endsWith('/todos')) return jsonRes({ items: deletes.length ? [] : [todo] });
+    // 실패한 삭제는 서버에 그대로 남는다.
+    if (url.endsWith('/todos'))
+      return jsonRes({ items: deletes.length && !failDelete ? [] : [todo] });
     if (url.endsWith('/routines')) return jsonRes({ items: [] });
     if (url.endsWith('/today')) return jsonRes({ categories: [], summary: {}, streak: {} });
     if (url.endsWith('/me')) return jsonRes({ userId: 1, nickname: '테스터' });
@@ -98,4 +101,25 @@ it('앱이 백그라운드로 가면 남은 삭제를 바로 확정한다 — �
   const undo = mockToast.mock.calls.at(-1)![2].action.onPress as () => void;
   await act(async () => undo());
   expect(result.current.routines).toHaveLength(0);
+});
+
+it('기다리는 동안 다시 불러와도 지운 행이 되살아나지 않는다 (#1677 리뷰)', async () => {
+  const { result, deletes, id } = await setup();
+  await act(async () => result.current.deleteRoutineUndoable(id));
+  // 서버엔 아직 있다 — 포커스 재조회 등.
+  await act(async () => {
+    await result.current.reload();
+  });
+  expect(deletes).toHaveLength(0);
+  expect(result.current.routines).toHaveLength(0);
+});
+
+it('서버 삭제가 실패하면 행을 돌려놓고 알린다 (#1677 리뷰)', async () => {
+  const { result, id } = await setup({ failDelete: true });
+  jest.useFakeTimers();
+  await act(async () => result.current.deleteRoutineUndoable(id));
+  await act(async () => jest.advanceTimersByTime(UNDO_DELETE_MS));
+  jest.useRealTimers();
+  await waitFor(() => expect(result.current.routines.map((r) => r.id)).toEqual([id]));
+  expect(mockToast).toHaveBeenCalledWith('삭제에 실패했어요', 'error');
 });
