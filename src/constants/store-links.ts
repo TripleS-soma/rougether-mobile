@@ -28,3 +28,17 @@ export function storeWebUrl(os: string = Platform.OS): string | undefined {
   if (os === 'android') return `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE}`;
   return undefined;
 }
+
+/**
+ * 리뷰 작성 화면 (#1678) — 설정의 '앱 평가하기'. iOS는 `action=write-review`로 리뷰 작성 시트까지
+ * 바로 연다. Play엔 리뷰 작성 딥링크가 없어 앱 상세(리뷰 칸이 있는 곳)로 간다.
+ */
+export function storeReviewAppUrl(os: string = Platform.OS): string | undefined {
+  if (os === 'ios') return `itms-apps://apps.apple.com/app/id${IOS_ASC_APP_ID}?action=write-review`;
+  return storeAppUrl(os);
+}
+
+export function storeReviewWebUrl(os: string = Platform.OS): string | undefined {
+  if (os === 'ios') return `https://apps.apple.com/app/id${IOS_ASC_APP_ID}?action=write-review`;
+  return storeWebUrl(os);
+}

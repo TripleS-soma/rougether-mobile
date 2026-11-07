@@ -150,6 +150,15 @@ describe('SettingsScreen', () => {
     expect(onOpenPrivacy).toHaveBeenCalledTimes(1);
   });
 
+  it('앱 평가하기 행 — 배선되면 보이고 누르면 연다, 없으면(웹) 숨긴다 (#1678)', async () => {
+    const onRateApp = jest.fn();
+    const ui = await render(<SettingsScreen onRateApp={onRateApp} />);
+    await fireEvent.press(ui.getByText('앱 평가하기'));
+    expect(onRateApp).toHaveBeenCalledTimes(1);
+    await ui.rerender(<SettingsScreen />);
+    expect(ui.queryByText('앱 평가하기')).toBeNull();
+  });
+
   it('replays onboarding', async () => {
     const onReplayOnboarding = jest.fn();
     const { getByText } = await render(<SettingsScreen onReplayOnboarding={onReplayOnboarding} />);

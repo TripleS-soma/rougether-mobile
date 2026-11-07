@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
-import { Linking } from 'react-native';
+import { Linking, Platform } from 'react-native';
 
 import { type Screen } from '@/components/app/navigation';
 import { useInviteArrival } from '@/components/app/use-invite-arrival';
@@ -32,6 +32,7 @@ import { useCalendarImport } from '@/hooks/use-calendar-import';
 import type { CharacterId } from '@/constants/characters';
 import { MODERATION_ENABLED } from '@/constants/moderation';
 import { SUPPORT_EMAIL } from '@/constants/policy';
+import { storeReviewAppUrl, storeReviewWebUrl } from '@/constants/store-links';
 import { useAuth } from '@/hooks/use-auth';
 import { previewDiagnostics, useBugReports } from '@/hooks/use-bug-reports';
 import { type InviteVia, useInvites } from '@/hooks/use-invites';
@@ -299,6 +300,18 @@ export function useSettingsSurface({
     () => router.push({ pathname: '/policy', params: { doc: 'privacy' } }),
     [],
   );
+  // 앱 평가하기 (#1678) — 사용자가 직접 누르는 링크라 리뷰 요청 쿼터·정책과 무관하다.
+  // 웹은 스토어가 없어 행을 숨긴다.
+  const rateApp = useCallback(() => {
+    track('rate_app_tap');
+    const app = storeReviewAppUrl();
+    const web = storeReviewWebUrl();
+    const fallback = () => {
+      if (web) void Linking.openURL(web).catch(() => {});
+    };
+    if (app) void Linking.openURL(app).catch(fallback);
+    else fallback();
+  }, []);
   const openBugReport = useCallback(() => {
     setScreen('bugReport');
     void loadBugReports();
@@ -353,6 +366,7 @@ export function useSettingsSurface({
     onOpenBlockedUsers: MODERATION_ENABLED ? openBlockedUsers : undefined,
     onOpenTerms: openTerms,
     onOpenPrivacy: openPrivacy,
+    onRateApp: Platform.OS === 'web' ? undefined : rateApp,
     onReplayOnboarding,
     onLogout: handleLogout,
     onWithdraw: handleWithdraw,

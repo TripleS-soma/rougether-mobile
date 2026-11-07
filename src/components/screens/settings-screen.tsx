@@ -79,6 +79,11 @@ export type SettingsScreenProps = ScrollRestoreProps & {
   /** 스토어 요건 — 인앱 약관/개인정보처리방침 링크 (#545). */
   onOpenTerms?: () => void;
   onOpenPrivacy?: () => void;
+  /**
+   * 앱 평가하기 (#1678) — 스토어 리뷰 작성 화면으로. 없으면 행을 숨긴다(웹). 만족도를 먼저
+   * 묻지 않는다 — 누구에게나 같은 행이어야 리뷰 게이팅이 아니다.
+   */
+  onRateApp?: () => void;
   onLogout?: () => void;
   /**
    * 회원탈퇴 (#547) — 확인 다이얼로그를 통과했을 때만 호출된다. 성공/실패
@@ -117,6 +122,7 @@ export const SettingsScreen = memo(function SettingsScreen({
   onOpenBlockedUsers,
   onOpenTerms,
   onOpenPrivacy,
+  onRateApp,
   onReplayOnboarding,
   onLogout,
   onWithdraw,
@@ -165,6 +171,9 @@ export const SettingsScreen = memo(function SettingsScreen({
       id: 'etc',
       title: tr('settings.sectionEtc'),
       rows: [
+        ...(onRateApp
+          ? [{ icon: 'star' as const, label: tr('settings.rateApp'), onPress: onRateApp }]
+          : []),
         { icon: 'refresh', label: tr('settings.replayTutorial'), onPress: onReplayOnboarding },
         ...(onOpenBlockedUsers
           ? [
