@@ -27,7 +27,12 @@ export type ToastType = 'info' | 'success' | 'error';
  * 새 토스트가 오면 내려간다.
  */
 export type ToastAction = { label: string; onPress: () => void };
-export type ToastOptions = { action?: ToastAction; durationMs?: number };
+/**
+ * onDismiss — 동작 버튼을 누르지 않고 내려갈 때 한 번(시간 만료·탭으로 닫음·**다른 토스트가 덮음**).
+ * "실행 취소" 토스트가 다른 토스트에 덮여 버튼이 사라지면, 되돌릴 수 없는 보류를 남기지 않고
+ * 바로 확정하라는 신호다(#1677 리뷰).
+ */
+export type ToastOptions = { action?: ToastAction; durationMs?: number; onDismiss?: () => void };
 
 type ToastContextValue = {
   /** Show a transient message; a new call replaces the current toast. */
@@ -58,20 +63,31 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   // 사라질 때는 다시 내려간 뒤 언마운트한다.
   const progress = useAnimatedValue(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 지금 떠 있는 토스트의 onDismiss — 동작 버튼을 누르면 비우고, 내려가거나 덮이면 한 번 부른다.
+  const dismissRef = useRef<(() => void) | null>(null);
+  const fireDismiss = useCallback(() => {
+    const fn = dismissRef.current;
+    dismissRef.current = null;
+    fn?.();
+  }, []);
 
   const hide = useCallback(() => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
     hideTimer.current = null;
+    fireDismiss();
     Animated.timing(progress, {
       toValue: 0,
       duration: FADE_MS,
       useNativeDriver: NATIVE_DRIVER,
     }).start(() => setToast(null));
-  }, [progress]);
+  }, [progress, fireDismiss]);
 
   const show = useCallback(
     (message: string, type: ToastType = 'info', options?: ToastOptions) => {
       if (hideTimer.current) clearTimeout(hideTimer.current);
+      // 앞 토스트가 덮인다 — 그 토스트의 동작 버튼도 사라지니 알린다.
+      fireDismiss();
+      dismissRef.current = options?.onDismiss ?? null;
       setToast({ message, type, key: Date.now(), action: options?.action });
       Animated.timing(progress, {
         toValue: 1,
@@ -80,7 +96,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       }).start();
       hideTimer.current = setTimeout(hide, options?.durationMs ?? VISIBLE_MS);
     },
-    [progress, hide],
+    [progress, hide, fireDismiss],
   );
 
   useEffect(
@@ -100,7 +116,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <View style={styles.fill} onTouchStart={toast && !toast.action ? hide : undefined}>
         {children}
       </View>
-      {toast ? <ToastView toast={toast} progress={progress} onPress={hide} /> : null}
+      {toast ? (
+        <ToastView
+          toast={toast}
+          progress={progress}
+          onPress={hide}
+          onAction={() => {
+            // 동작을 골랐으니 '그냥 내려감' 알림은 보내지 않는다.
+            dismissRef.current = null;
+            toast.action?.onPress();
+            hide();
+          }}
+        />
+      ) : null}
     </ToastContext.Provider>
   );
 }
@@ -109,10 +137,12 @@ function ToastView({
   toast,
   progress,
   onPress,
+  onAction,
 }: {
   toast: ToastState;
   progress: Animated.Value;
   onPress: () => void;
+  onAction: () => void;
 }) {
   const t = useTokens();
   const tr = useT();
@@ -158,10 +188,7 @@ function ToastView({
           </Pressable>
           {toast.action ? (
             <Pressable
-              onPress={() => {
-                toast.action?.onPress();
-                onPress();
-              }}
+              onPress={onAction}
               accessibilityRole="button"
               accessibilityLabel={toast.action.label}
               hitSlop={Spacing.two}

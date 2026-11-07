@@ -28,7 +28,11 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-async function setup({ failDelete = false, count = 1 } = {}) {
+async function setup({
+  failDelete = false,
+  count = 1,
+  holdDelete,
+}: { failDelete?: boolean; count?: number; holdDelete?: Promise<void> } = {}) {
   const deletes: string[] = [];
   const todos = Array.from({ length: count }, (_, i) => ({
     id: 7 + i,
@@ -40,6 +44,8 @@ async function setup({ failDelete = false, count = 1 } = {}) {
   global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
     const method = init?.method ?? 'GET';
     if (method === 'DELETE') {
+      // 요청을 붙잡아 '서버에 아직 반영 안 됨'을 흉내 낸다.
+      if (holdDelete) await holdDelete;
       deletes.push(url);
       if (failDelete) return jsonRes({ code: 'INTERNAL' }, 500);
       return jsonRes({});
@@ -146,5 +152,29 @@ it('화면이 사라지면 남은 삭제를 확정한다 — 되돌릴 사람이
   const { result, deletes, id, unmount } = await setup();
   await act(async () => result.current.deleteRoutineUndoable(id));
   await unmount();
+  await waitFor(() => expect(deletes).toHaveLength(1));
+});
+
+it('서버 삭제 요청이 나가 있는 동안 다시 불러와도 되살아나지 않는다 (#1677 리뷰)', async () => {
+  let release!: () => void;
+  const holdDelete = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const { result, id } = await setup({ holdDelete });
+  await act(async () => result.current.deleteRoutineUndoable(id));
+  // 백그라운드 → 확정 요청이 나갔지만 서버엔 아직 있다.
+  await act(async () => appStateListener?.('background'));
+  await act(async () => {
+    await result.current.reload();
+  });
+  expect(result.current.routines).toHaveLength(0);
+  await act(async () => release());
+});
+
+it('다른 토스트가 실행 취소 토스트를 덮으면 기다리지 않고 확정한다 (#1677 리뷰)', async () => {
+  const { result, deletes, id } = await setup();
+  await act(async () => result.current.deleteRoutineUndoable(id));
+  const onDismiss = mockToast.mock.calls.at(-1)![2].onDismiss as () => void;
+  await act(async () => onDismiss());
   await waitFor(() => expect(deletes).toHaveLength(1));
 });

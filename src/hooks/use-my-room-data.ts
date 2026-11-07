@@ -96,6 +96,8 @@ export function useMyRoomData() {
   const pendingDeletes = useRef(
     new Map<string, { item: Routine; timer: ReturnType<typeof setTimeout> }>(),
   );
+  // 서버 삭제 요청이 나가 있는 id — 요청이 끝나기 전의 재조회가 행을 되살리지 않게(#1677 리뷰).
+  const inFlightDeletes = useRef(new Set<string>());
   // 같은 id 집합을 상태로도 들어, 바뀌면 달력 날짜 목록을 다시 거른다.
   const [pendingDeleteIds, setPendingDeleteIds] = useState<ReadonlySet<string>>(() => new Set());
   const syncPendingIds = useCallback(
@@ -136,7 +138,9 @@ export function useMyRoomData() {
     // Retain deleted category metadata for historical records.
     setAllCategories([...appCats, ...appCatsAll.filter((c) => c.deleted)]);
     // 실행 취소 대기 중인 삭제는 서버에 아직 있어도 되살리지 않는다 (#1676).
-    setRoutines(items.filter((r) => !pendingDeletes.current.has(r.id)));
+    setRoutines(
+      items.filter((r) => !pendingDeletes.current.has(r.id) && !inFlightDeletes.current.has(r.id)),
+    );
     setCompletions(todayCompletions(today, todayIso()));
     setWallet(toWallet(wals));
     setStreak(today.streak?.currentCount ?? 0);
@@ -523,6 +527,7 @@ export function useMyRoomData() {
       pendingDeletes.current.delete(id);
       syncPendingIds();
       const { item } = pending;
+      inFlightDeletes.current.add(id);
       try {
         if (item.kind === 'todo') await deleteTodo(toServerItemId(id));
         else await apiDeleteRoutine(toServerItemId(id));
@@ -530,6 +535,7 @@ export function useMyRoomData() {
         setRoutines((prev) => (prev.some((r) => r.id === id) ? prev : [...prev, item]));
         toast(i18n.t('routineTodo.toast.deleteFailed'), 'error');
       } finally {
+        inFlightDeletes.current.delete(id);
         invalidateCalendar();
       }
     },
@@ -579,6 +585,9 @@ export function useMyRoomData() {
         {
           action: { label: i18n.t('routineTodo.toast.undo'), onPress: () => undoDelete(id) },
           durationMs: UNDO_DELETE_MS,
+          // 다른 토스트가 덮어 버튼이 사라지면 기다리지 않고 확정한다(#1677 리뷰). 시간 만료로
+          // 내려갈 때도 불리지만 타이머와 같은 일이라 한 번만 나간다.
+          onDismiss: () => void commitPendingDelete(id),
         },
       );
     },
