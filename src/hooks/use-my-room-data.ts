@@ -82,6 +82,12 @@ export type CompletionToggleResult = {
 
 /** 삭제 실행 취소 창 (#1676) — 토스트가 떠 있는 시간과 같다. */
 export const UNDO_DELETE_MS = 5000;
+/**
+ * 확정 타이머는 토스트보다 조금 늦게 — 토스트가 사라지면 그 onDismiss가 먼저 확정한다. 같은 시각이면
+ * 타이머가 먼저 돌아 아직 보이는 "실행 취소"가 무동작이 되는 틈이 생긴다(#1677 리뷰). 타이머는
+ * 토스트가 없는 환경(테스트·갤러리)의 안전망이다.
+ */
+export const UNDO_COMMIT_GRACE_MS = 500;
 
 export function useMyRoomData() {
   const [routines, setRoutines] = useState<Routine[]>([]);
@@ -584,7 +590,10 @@ export function useMyRoomData() {
           (calendarDaysRef.current[date] ?? []).some((c) => c.kind === 'todo' && c.id !== id);
         if (!stillHasTodo) unmarkTodoDate(date);
       }
-      const timer = setTimeout(() => void commitPendingDelete(id), UNDO_DELETE_MS);
+      const timer = setTimeout(
+        () => void commitPendingDelete(id),
+        UNDO_DELETE_MS + UNDO_COMMIT_GRACE_MS,
+      );
       pendingDeletes.current.set(id, { item, timer });
       syncPendingIds();
       toast(
@@ -622,8 +631,10 @@ export function useMyRoomData() {
     const flush = () => {
       for (const id of [...pendingDeletes.current.keys()]) void commitPendingDeleteRef.current(id);
     };
+    // background만 — iOS는 알림센터·제어센터를 내리거나 시스템 창이 뜨기만 해도 inactive가 되는데,
+    // 그때 확정하면 토스트는 남아 있는데 "실행 취소"가 무동작이 된다(#1677 리뷰).
     const sub = AppState.addEventListener('change', (state) => {
-      if (state !== 'active') flush();
+      if (state === 'background') flush();
     });
     return () => {
       sub.remove();

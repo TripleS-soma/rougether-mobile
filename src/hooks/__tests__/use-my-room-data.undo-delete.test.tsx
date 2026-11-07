@@ -5,7 +5,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { AppState, type AppStateStatus } from 'react-native';
 
-import { UNDO_DELETE_MS, useMyRoomData } from '@/hooks/use-my-room-data';
+import { UNDO_COMMIT_GRACE_MS, UNDO_DELETE_MS, useMyRoomData } from '@/hooks/use-my-room-data';
 import { createTestQueryClient, queryWrapper } from '@/test-utils/query-wrapper';
 import { jsonRes } from '@/test-utils/fetch';
 import { calendarToday } from '@/utils/calendar-progress';
@@ -102,7 +102,7 @@ it('실행 취소하면 서버 요청 없이 같은 행이 돌아온다', async 
   await act(async () => undo());
   expect(result.current.routines.map((r) => r.id)).toEqual([id]);
   jest.useFakeTimers();
-  await act(async () => jest.advanceTimersByTime(UNDO_DELETE_MS + 100));
+  await act(async () => jest.advanceTimersByTime(UNDO_DELETE_MS + UNDO_COMMIT_GRACE_MS + 100));
   expect(deletes).toHaveLength(0);
 });
 
@@ -111,8 +111,21 @@ it('되돌리지 않으면 시간이 지난 뒤 서버에 지운다', async () =
   jest.useFakeTimers();
   await act(async () => result.current.deleteRoutineUndoable(id));
   expect(deletes).toHaveLength(0);
+  // 토스트가 사라지는 순간엔 아직 — 토스트의 onDismiss가 먼저 확정하고, 타이머는 안전망이다.
   await act(async () => jest.advanceTimersByTime(UNDO_DELETE_MS));
+  expect(deletes).toHaveLength(0);
+  await act(async () => jest.advanceTimersByTime(UNDO_COMMIT_GRACE_MS));
   expect(deletes).toEqual([expect.stringContaining('/todos/7')]);
+});
+
+it('inactive(알림센터·시스템 창)로는 확정하지 않는다 — 토스트가 남아 있다 (#1677 리뷰)', async () => {
+  const { result, deletes, id } = await setup();
+  await act(async () => result.current.deleteRoutineUndoable(id));
+  await act(async () => appStateListener?.('inactive'));
+  expect(deletes).toHaveLength(0);
+  const undo = mockToast.mock.calls.at(-1)![2].action.onPress as () => void;
+  await act(async () => undo());
+  expect(result.current.routines.map((r) => r.id)).toEqual([id]);
 });
 
 it('앱이 백그라운드로 가면 남은 삭제를 바로 확정한다 — 되돌릴 사람이 없다', async () => {
@@ -141,7 +154,7 @@ it('서버 삭제가 실패하면 행을 돌려놓고 알린다 (#1677 리뷰)',
   const { result, id } = await setup({ failDelete: true });
   jest.useFakeTimers();
   await act(async () => result.current.deleteRoutineUndoable(id));
-  await act(async () => jest.advanceTimersByTime(UNDO_DELETE_MS));
+  await act(async () => jest.advanceTimersByTime(UNDO_DELETE_MS + UNDO_COMMIT_GRACE_MS));
   jest.useRealTimers();
   await waitFor(() => expect(result.current.routines.map((r) => r.id)).toEqual([id]));
   expect(mockToast).toHaveBeenCalledWith('삭제에 실패했어요', 'error');
