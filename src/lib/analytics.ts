@@ -100,6 +100,8 @@ export type AnalyticsEvent =
   | 'invite_arrival_view'
   /** 확인 시트에서 나중에 (#1007) — 코드는 친구 초대 화면 입력란에 남는다. */
   | 'invite_arrival_later'
+  /** 초대 미션에서 "지금은 혼자 할게요" (#1673) — 초대를 강제하지 않는 대신 몇 명이 고르는지 센다. */
+  | 'invite_later'
   /** 온보딩 직후 1회 '초대받아 오셨나요?' 붙여넣기 시트 노출 (#1007). */
   | 'invite_paste_view'
   /** 붙여넣기 결과 (#1007) — kind: friend|house|invalid|dismiss. */
@@ -319,7 +321,16 @@ export type AnalyticsParams = {
   house_join_request: { via: 'browse' | 'code' };
   house_joined: { via: string };
   /** `how`는 공유 방식이 둘인 친구 초대에만. */
-  invite_code_copy: { kind: 'friend' | 'house'; how?: 'clipboard' | 'share' };
+  /**
+   * via (#1673): 집 관리 화면에서 — mission(초대 미션 진행 중) | manage(평소). 미션을 넘기려는 복사와
+   * 진짜 초대를 가른다. 친구 초대 화면(invite-friends)은 via 없이 종전대로.
+   */
+  invite_code_copy: {
+    kind: 'friend' | 'house';
+    how?: 'clipboard' | 'share';
+    via?: 'mission' | 'manage';
+  };
+  invite_later: { via: 'mission' };
   invite_redeem: { via: string };
   invite_arrival_view: { via: string };
   invite_paste_result: { kind: string };

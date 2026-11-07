@@ -532,6 +532,8 @@ export function AppShell({
     visitFriend,
     openMyRoom: myRoomPages.openMyRoom,
     completeMission,
+    inviteMissionActive: missions.step?.id === 'invite-house',
+    completeInviteLater: missions.completeInviteLater,
     catalogue,
     shopLoading,
     nickname,

@@ -26,6 +26,9 @@ describe('shareOrCopy', () => {
       expect(share).toHaveBeenCalledWith({ message: 'hi' });
       share.mockRejectedValueOnce(new Error('dismissed'));
       await expect(shareOrCopy('hi')).resolves.toBe('cancelled');
+      // iOS에서 시트를 그냥 닫으면 예외가 아니라 dismissedAction — 이것도 취소다 (#1673).
+      share.mockResolvedValueOnce({ action: Share.dismissedAction });
+      await expect(shareOrCopy('hi')).resolves.toBe('cancelled');
     } finally {
       share.mockRestore();
       os.restore();

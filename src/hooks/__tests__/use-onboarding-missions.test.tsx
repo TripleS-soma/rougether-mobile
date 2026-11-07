@@ -129,6 +129,25 @@ describe('useOnboardingMissions (#571)', () => {
     await waitFor(async () => expect(await AsyncStorage.getItem(KEY)).toBe('completed'));
   });
 
+  it('초대 단계만 "지금은 혼자 할게요"로 마친다 — 초대한 것과 똑같이 체인이 끝난다 (#1673)', async () => {
+    const { result } = await renderHook(() => useOnboardingMissions(true));
+    await waitFor(() => expect(result.current.active).toBe(true));
+    // 초대 단계가 아니면 아무 일도 없다 — 1~3단계엔 '나중에'가 없다.
+    await act(async () => result.current.completeInviteLater());
+    expect(result.current.stepIndex).toBe(0);
+    for (const step of ONBOARDING_MISSION_STEPS.slice(0, -1)) {
+      await act(async () => result.current.complete(step.id));
+    }
+    expect(result.current.step?.id).toBe('invite-house');
+    await act(async () => result.current.completeInviteLater());
+    expect(result.current.active).toBe(false);
+    // 축하 시트는 그대로 뜨고, 플래그는 '완료'다(건너뛰기와 다르다).
+    expect(result.current.completedIndex).toBe(3);
+    await waitFor(async () => expect(await AsyncStorage.getItem(KEY)).toBe('completed'));
+    expect(track).toHaveBeenCalledWith('invite_later', { via: 'mission' });
+    expect(track).toHaveBeenCalledWith('onboarding_mission_complete', { step: 'invite-house' });
+  });
+
   it('건너뛰기는 즉시 종료하고 스킵 플래그를 영속한다', async () => {
     const { result } = await renderHook(() => useOnboardingMissions(true));
     await waitFor(() => expect(result.current.active).toBe(true));
