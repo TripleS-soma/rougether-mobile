@@ -12,7 +12,7 @@ import {
 
 const DAY = 24 * 60 * 60 * 1000;
 
-// 스토어 리뷰 요청 조건 (#1107) — 설치 3일+, 완료 10회+, 90일 쿨다운.
+// 스토어 리뷰 요청 조건 (#1107·#1678) — 설치 2일+, 완료 5회+, 90일 쿨다운.
 describe('shouldRequestReview', () => {
   const t0 = 1_700_000_000_000;
   const eligible = {
@@ -22,15 +22,21 @@ describe('shouldRequestReview', () => {
   };
   const later = t0 + MIN_DAYS_SINCE_FIRST_OPEN * DAY;
 
+  it('기준은 설치 2일·완료 5회 (#1678 완화)', () => {
+    expect(MIN_DAYS_SINCE_FIRST_OPEN).toBe(2);
+    expect(MIN_COMPLETIONS).toBe(5);
+    expect(COOLDOWN_DAYS).toBe(90);
+  });
+
   it('조건을 다 채우면 요청한다', () => {
     expect(shouldRequestReview(eligible, later)).toBe(true);
   });
 
-  it('설치 3일 전이면 안 한다', () => {
+  it('설치 기준일 전이면 안 한다', () => {
     expect(shouldRequestReview(eligible, later - 1)).toBe(false);
   });
 
-  it('완료 10회 미만이면 안 한다', () => {
+  it('완료 기준 미만이면 안 한다', () => {
     expect(shouldRequestReview({ ...eligible, completions: MIN_COMPLETIONS - 1 }, later)).toBe(
       false,
     );

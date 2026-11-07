@@ -14,6 +14,7 @@
  * memoized consumers (#539 memo boundaries) get stable references.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { useMutation } from '@tanstack/react-query';
 
 import type { CategoryDeleteMode } from '@/api/categories';
@@ -69,6 +70,7 @@ import { useMyProfile } from '@/hooks/use-my-profile';
 import { useWallet } from '@/hooks/use-wallet';
 import { fetchMyRoomBootData, takeMyRoomPrefetch } from '@/lib/my-room-prefetch';
 import { i18n } from '@/i18n';
+import { useLatestRef } from '@/hooks/use-stable-value';
 
 /** 완료 토글 결과 — 코인 보상액과 서버 자동 미션 기여 결과 (#578). */
 export type CompletionToggleResult = {
@@ -78,6 +80,15 @@ export type CompletionToggleResult = {
   houseMissionContribution?: HouseMissionContributeResponse | null;
 };
 
+/** 삭제 실행 취소 창 (#1676) — 토스트가 떠 있는 시간과 같다. */
+export const UNDO_DELETE_MS = 5000;
+/**
+ * 확정 타이머는 토스트보다 조금 늦게 — 토스트가 사라지면 그 onDismiss가 먼저 확정한다. 같은 시각이면
+ * 타이머가 먼저 돌아 아직 보이는 "실행 취소"가 무동작이 되는 틈이 생긴다(#1677 리뷰). 타이머는
+ * 토스트가 없는 환경(테스트·갤러리)의 안전망이다.
+ */
+export const UNDO_COMMIT_GRACE_MS = 500;
+
 export function useMyRoomData() {
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [completions, setCompletions] = useState<Record<string, string[]>>({});
@@ -86,6 +97,28 @@ export function useMyRoomData() {
   const [allCategories, setAllCategories] = useState<RoutineCategoryMeta[]>([]);
   // Identity + streak, surfaced in the my-room header / profile edit.
   const [streak, setStreak] = useState(0);
+  // 실행 취소를 기다리는 삭제 (#1676) — 타이머·원본을 쥔다. 아래 deleteRoutineUndoable 참고.
+  // 재조회(부트·포커스)와 달력 날짜 목록이 아직 서버에 있는 행을 되살리지 않게 위쪽에 둔다.
+  const pendingDeletes = useRef(
+    new Map<string, { item: Routine; timer: ReturnType<typeof setTimeout> }>(),
+  );
+  // 서버 삭제 요청이 나가 있는 id — 요청이 끝나기 전의 재조회가 행을 되살리지 않게(#1677 리뷰).
+  const inFlightDeletes = useRef(new Set<string>());
+  // 서버에서 지워진 id — 달력 월 목록은 다시 받기 전까지 옛 값이라 그 사이에도 숨긴다(#1677 리뷰).
+  const confirmedDeletes = useRef(new Set<string>());
+  // 대기·진행 중·확정 id를 합쳐 상태로도 들어, 바뀌면 달력 날짜 목록을 다시 거른다.
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<ReadonlySet<string>>(() => new Set());
+  const syncPendingIds = useCallback(
+    () =>
+      setPendingDeleteIds(
+        new Set([
+          ...pendingDeletes.current.keys(),
+          ...inFlightDeletes.current,
+          ...confirmedDeletes.current,
+        ]),
+      ),
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { show: toast } = useToast();
@@ -119,7 +152,10 @@ export function useMyRoomData() {
     setCategories(appCats);
     // Retain deleted category metadata for historical records.
     setAllCategories([...appCats, ...appCatsAll.filter((c) => c.deleted)]);
-    setRoutines(items);
+    // 실행 취소 대기 중인 삭제는 서버에 아직 있어도 되살리지 않는다 (#1676).
+    setRoutines(
+      items.filter((r) => !pendingDeletes.current.has(r.id) && !inFlightDeletes.current.has(r.id)),
+    );
     setCompletions(todayCompletions(today, todayIso()));
     setWallet(toWallet(wals));
     setStreak(today.streak?.currentCount ?? 0);
@@ -489,6 +525,133 @@ export function useMyRoomData() {
     [findItem, invalidateCalendar, unmarkTodoDate, toast, routines, calendarDays],
   );
 
+  /**
+   * 실행 취소가 되는 삭제 (#1676) — 나의 방·달력 목록(스와이프·행 메뉴)이 쓴다. 행은 바로 빼고
+   * "실행 취소" 토스트를 띄운 뒤, **UNDO_DELETE_MS가 지나야** 서버에 지운다. 되돌리면 서버
+   * 요청 없이 행만 돌려놓아 id·완료 기록이 그대로다. 앱이 백그라운드로 가거나 화면이 사라지면
+   * 남은 삭제를 바로 확정한다(되돌릴 사람이 없다). 커밋은 토스트가 아니라 여기 타이머가 쥔다 —
+   * 토스트가 없는 환경(테스트·갤러리)에서도 삭제가 끝난다.
+   */
+  const routinesRef = useLatestRef(routines);
+  const calendarDaysRef = useLatestRef(calendarDays);
+  const commitPendingDelete = useCallback(
+    async (id: string) => {
+      const pending = pendingDeletes.current.get(id);
+      if (!pending) return;
+      clearTimeout(pending.timer);
+      pendingDeletes.current.delete(id);
+      inFlightDeletes.current.add(id);
+      syncPendingIds();
+      const { item } = pending;
+      try {
+        if (item.kind === 'todo') await deleteTodo(toServerItemId(id));
+        else await apiDeleteRoutine(toServerItemId(id));
+        confirmedDeletes.current.add(id);
+      } catch {
+        setRoutines((prev) => (prev.some((r) => r.id === id) ? prev : [...prev, item]));
+        toast(i18n.t('routineTodo.toast.deleteFailed'), 'error');
+      } finally {
+        inFlightDeletes.current.delete(id);
+        // 실패면 숨김이 풀려 달력 목록에도 돌아온다.
+        syncPendingIds();
+        invalidateCalendar();
+      }
+    },
+    [invalidateCalendar, toast, syncPendingIds],
+  );
+  const undoDelete = useCallback(
+    (id: string) => {
+      const pending = pendingDeletes.current.get(id);
+      // 이미 확정됐으면(백그라운드 전환 등) 되돌릴 게 없다.
+      if (!pending) return;
+      clearTimeout(pending.timer);
+      pendingDeletes.current.delete(id);
+      syncPendingIds();
+      setRoutines((prev) => (prev.some((r) => r.id === id) ? prev : [...prev, pending.item]));
+      // 먼저 걷어 둔 달력 점을 서버 값으로 되살린다.
+      invalidateCalendar();
+      track('routine_delete_undo', { kind: pending.item.kind === 'todo' ? 'todo' : 'routine' });
+    },
+    [invalidateCalendar, syncPendingIds],
+  );
+  const deleteRoutineUndoable = useCallback(
+    (id: string) => {
+      const item = findItem(id);
+      if (!item || pendingDeletes.current.has(id)) return;
+      // 토스트는 새것이 옛것을 덮는다 — 앞 삭제는 되돌릴 버튼이 사라지니 지금 확정한다(토스트와
+      // 되돌릴 대상을 1:1로, #1677 리뷰). 그렇지 않으면 버튼 없이 5초를 기다리다 지워진다.
+      for (const prevId of [...pendingDeletes.current.keys()]) void commitPendingDelete(prevId);
+      setRoutines((prev) => prev.filter((r) => r.id !== id));
+      // 그 날의 마지막 투두면 달력 점도 바로 걷는다 (#1133) — 되돌리면 다시 받는다.
+      if (item.kind === 'todo' && item.dueDate) {
+        const date = item.dueDate;
+        const stillHasTodo =
+          routinesRef.current.some((r) => r.id !== id && r.kind === 'todo' && r.dueDate === date) ||
+          (calendarDaysRef.current[date] ?? []).some((c) => c.kind === 'todo' && c.id !== id);
+        if (!stillHasTodo) unmarkTodoDate(date);
+      }
+      const timer = setTimeout(
+        () => void commitPendingDelete(id),
+        UNDO_DELETE_MS + UNDO_COMMIT_GRACE_MS,
+      );
+      pendingDeletes.current.set(id, { item, timer });
+      syncPendingIds();
+      toast(
+        i18n.t(
+          item.kind === 'todo'
+            ? 'routineTodo.toast.todoDeleted'
+            : 'routineTodo.toast.routineDeleted',
+        ),
+        'info',
+        {
+          action: { label: i18n.t('routineTodo.toast.undo'), onPress: () => undoDelete(id) },
+          durationMs: UNDO_DELETE_MS,
+          // 다른 토스트가 덮어 버튼이 사라지면 기다리지 않고 확정한다(#1677 리뷰). 시간 만료로
+          // 내려갈 때도 불리지만 타이머와 같은 일이라 한 번만 나간다.
+          onDismiss: () => void commitPendingDelete(id),
+        },
+      );
+    },
+    [
+      findItem,
+      unmarkTodoDate,
+      commitPendingDelete,
+      undoDelete,
+      toast,
+      routinesRef,
+      calendarDaysRef,
+      syncPendingIds,
+    ],
+  );
+  // 백그라운드 전환·화면 해제 때 남은 삭제 확정 — 되돌릴 기회가 끝났다. 커밋 함수는 최신 ref로
+  // 읽고 효과는 마운트 때 한 번만 건다 — deps에 두면 toast·invalidateCalendar 참조가 바뀔 때마다
+  // cleanup이 돌아 5초를 안 채우고 확정돼 실행 취소가 사라진다(#1677 리뷰).
+  const commitPendingDeleteRef = useLatestRef(commitPendingDelete);
+  useEffect(() => {
+    const flush = () => {
+      for (const id of [...pendingDeletes.current.keys()]) void commitPendingDeleteRef.current(id);
+    };
+    // background만 — iOS는 알림센터·제어센터를 내리거나 시스템 창이 뜨기만 해도 inactive가 되는데,
+    // 그때 확정하면 토스트는 남아 있는데 "실행 취소"가 무동작이 된다(#1677 리뷰).
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'background') flush();
+    });
+    return () => {
+      sub.remove();
+      flush();
+    };
+  }, [commitPendingDeleteRef]);
+
+  // 달력 날짜 목록(오늘이 아닌 날은 서버 값으로 그린다)에서도 대기 중인 삭제를 뺀다 (#1676).
+  const visibleCalendarDays = useMemo(() => {
+    if (pendingDeleteIds.size === 0) return calendarDays;
+    const out: typeof calendarDays = {};
+    for (const [date, items] of Object.entries(calendarDays)) {
+      out[date] = items.filter((c) => !pendingDeleteIds.has(c.id));
+    }
+    return out;
+  }, [calendarDays, pendingDeleteIds]);
+
   /** Create a category; returns the created meta (null on failure) so callers
    * can immediately file a routine under it (미션 → 루틴 연동). */
   const createRoutineCategory = useCallback(
@@ -715,7 +878,7 @@ export function useMyRoomData() {
       completions,
       categories,
       allCategories,
-      calendarDays,
+      calendarDays: visibleCalendarDays,
       loadCalendarDay,
       loadCalendarMonth,
       markedTodoDates,
@@ -744,6 +907,7 @@ export function useMyRoomData() {
       updateTodoDueDate,
       moveRoutineOccurrence,
       deleteRoutine,
+      deleteRoutineUndoable,
       createRoutineCategory,
       ensureCategory,
       unlinkRoutineMission,
@@ -758,7 +922,7 @@ export function useMyRoomData() {
       completions,
       categories,
       allCategories,
-      calendarDays,
+      visibleCalendarDays,
       loadCalendarDay,
       loadCalendarMonth,
       markedTodoDates,
@@ -784,6 +948,7 @@ export function useMyRoomData() {
       updateTodoDueDate,
       moveRoutineOccurrence,
       deleteRoutine,
+      deleteRoutineUndoable,
       createRoutineCategory,
       ensureCategory,
       unlinkRoutineMission,

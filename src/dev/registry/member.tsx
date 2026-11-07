@@ -421,7 +421,7 @@ export const memberEntries: GalleryEntry[] = [
       '내 정보의 서브화면 (#1088): 디자인(다크모드·테마·폰트)·알림·기타·로그아웃·회원탈퇴. 업데이트 카드는 #1095에서 뺐다.',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
-        <SettingsScreen onBack={() => {}} />
+        <SettingsScreen onBack={() => {}} onRateApp={() => {}} />
       </View>
     ),
   },
