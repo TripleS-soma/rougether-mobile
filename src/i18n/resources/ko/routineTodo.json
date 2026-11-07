@@ -73,7 +73,10 @@
       "categoryReorderFailed": "카테고리 순서 저장에 실패했어요",
       "categoryInUse": "카테고리에 루틴이 남아 있어 삭제할 수 없어요",
       "categoryDeleteFailed": "카테고리 삭제에 실패했어요",
-      "calendarLoadFailed": "달력 기록을 불러오지 못했어요"
+      "calendarLoadFailed": "달력 기록을 불러오지 못했어요",
+      "todoDeleted": "할 일을 삭제했어요",
+      "routineDeleted": "루틴을 삭제했어요",
+      "undo": "실행 취소"
     },
     "calendarProgress": {
       "pending": "집계 확인 중",
