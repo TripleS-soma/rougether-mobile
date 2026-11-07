@@ -32,7 +32,6 @@ import { useCalendarImport } from '@/hooks/use-calendar-import';
 import type { CharacterId } from '@/constants/characters';
 import { MODERATION_ENABLED } from '@/constants/moderation';
 import { SUPPORT_EMAIL } from '@/constants/policy';
-import { storeReviewAppUrl, storeReviewWebUrl } from '@/constants/store-links';
 import { useAuth } from '@/hooks/use-auth';
 import { previewDiagnostics, useBugReports } from '@/hooks/use-bug-reports';
 import { type InviteVia, useInvites } from '@/hooks/use-invites';
@@ -42,6 +41,7 @@ import { useNotificationSettings } from '@/hooks/use-notification-settings';
 import { useBrandTheme } from '@/hooks/use-tokens';
 import { useStartTab } from '@/hooks/use-start-tab';
 import { clearPendingFriendInviteCode } from '@/lib/pending-invite';
+import { openStorePage } from '@/lib/open-store';
 import { pickLibraryImage } from '@/lib/pick-image';
 import type { ScrollRestoreProps } from '@/hooks/use-scroll-restore';
 import { useConstant, useStableCallback } from '@/hooks/use-stable-value';
@@ -304,13 +304,7 @@ export function useSettingsSurface({
   // 웹은 스토어가 없어 행을 숨긴다.
   const rateApp = useCallback(() => {
     track('rate_app_tap');
-    const app = storeReviewAppUrl();
-    const web = storeReviewWebUrl();
-    const fallback = () => {
-      if (web) void Linking.openURL(web).catch(() => {});
-    };
-    if (app) void Linking.openURL(app).catch(fallback);
-    else fallback();
+    openStorePage({ review: true });
   }, []);
   const openBugReport = useCallback(() => {
     setScreen('bugReport');
