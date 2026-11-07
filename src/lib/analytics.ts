@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+import type { ReviewTrigger } from '@/lib/store-review';
+
 /**
  * 제품 분석 이벤트 레이어 (#437·#438 → #799) — 화면·핵심 행동을 하나의 창구로
  * 모아 **Firebase GA4**로 전달한다. 계측 지점은 track/screenView만 알면 되고,
@@ -90,7 +92,10 @@ export type AnalyticsEvent =
   // 있으면 "푸시로 온 사람 수"는 알아도 "그냥 연 사람 수"를 못 센다.
   | 'app_open'
   // 스토어 리뷰 요청 (#1107) — 요청 사실만; 실제 시트 표시는 OS 몫이라 알 수 없다.
+  // from(#1678): 어느 좋은 순간이었나 — all_done·streak·mission_claim·room_save.
   | 'review_prompt_requested'
+  // 설정의 '앱 평가하기'를 눌렀다 (#1678) — 스토어 리뷰 작성 화면으로 간다.
+  | 'rate_app_tap'
   // 소셜 — 집에 들어간 사람이 더 오래 남는가 (#803)
   | 'house_preview'
   | 'house_create'
@@ -320,7 +325,8 @@ export type AnalyticsParams = {
   decor_open: { from: 'gacha' | 'direct' };
   decor_leave_unsaved: { action: 'save' | 'discard' | 'stay' };
   app_open: { source: string };
-  review_prompt_requested: { completions: number };
+  review_prompt_requested: { completions: number; from: ReviewTrigger };
+  rate_app_tap: undefined;
   house_join_request: { via: 'browse' | 'code' };
   house_joined: { via: string };
   /** `how`는 공유 방식이 둘인 친구 초대에만. */

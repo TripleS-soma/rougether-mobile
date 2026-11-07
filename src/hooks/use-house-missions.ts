@@ -20,6 +20,7 @@ import {
 } from '@/api';
 import type { HouseMissionContributeResponse } from '@/api/types';
 import { useToast } from '@/components/ui/toast';
+import { requestReviewAtGoodMoment } from '@/hooks/use-store-review';
 import { i18n } from '@/i18n';
 import type { House, NewHouseMission } from '@/components/screens/house/types';
 
@@ -94,6 +95,8 @@ export function useHouseMissions({
           i18n.t('house.missionToast.claimed', { points: res.grantedGrowthPoints ?? 0 }),
           'success',
         );
+        // 함께 이룬 미션의 보상을 받은 순간 — 리뷰를 청하기 좋은 때 (#1678).
+        requestReviewAtGoodMoment('mission_claim');
         await reloadHouse(houseId);
       } catch (err) {
         const notAchieved =

@@ -12,7 +12,7 @@ import { NAV_ORDER, SCREEN_FOR_TAB, type Screen } from '@/components/app/navigat
 import { PhoneColumn } from '@/components/app/app-frame';
 import { TabPager } from '@/components/app/tab-pager';
 import { useAppNavigation } from '@/components/app/use-app-navigation';
-import { useStoreReview } from '@/hooks/use-store-review';
+import { requestReviewAtGoodMoment, useStoreReview } from '@/hooks/use-store-review';
 import { useScreenTransition } from '@/components/app/use-screen-transition';
 import { useFriendVisit } from '@/components/app/use-friend-visit';
 import { hasNoHouses, useHousePages } from '@/components/app/use-house-pages';
@@ -470,6 +470,7 @@ export function AppShell({
   useStoreReview({
     doneCount: todayDoneCount,
     totalCount: todayRoutines.length,
+    streak,
     ready: !myRoomLoading,
     suppressed: (screen !== 'myRoom' && screen !== 'calendar') || attendancePending,
   });
@@ -703,6 +704,8 @@ export function AppShell({
               // 닫힌 지점. 미션은 스킵 가능하므로 저장 자체를 센다.
               track('room_save', { item_count: its.length });
               completeMission('place-furniture');
+              // 방을 꾸며 저장한 순간 — 리뷰를 청하기 좋은 때 (#1678).
+              requestReviewAtGoodMoment('room_save');
             }
             return result;
           }}
