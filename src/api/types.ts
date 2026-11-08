@@ -1169,6 +1169,7 @@ export type MyMarketOrderListResponse = {
 export type NotificationItem = {
   notificationId?: number;
   type?:
+    | 'ADMIN_NOTICE'
     | 'FEED_COMMENT'
     | 'HOUSE_KICK'
     | 'ROUTINE_REMINDER'
