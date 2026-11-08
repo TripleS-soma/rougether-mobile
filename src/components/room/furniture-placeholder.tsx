@@ -16,6 +16,11 @@ export type FurniturePlaceholderProps = {
   style?: StyleProp<ViewStyle>;
   /** 원본 해상도 디코딩 — 카메라 줌 대상(집 창문)용. */
   sharp?: boolean;
+  /**
+   * 장식으로만 그린다 (#1685) — 이름 라벨을 달지 않는다. 리디자인 집 칸처럼 바깥 요소가 이미
+   * '○○의 방' 라벨을 가질 때, 칸마다 가구 이름을 전부 읽히지 않게 한다.
+   */
+  decorative?: boolean;
 };
 
 /**
@@ -32,12 +37,16 @@ export const FurniturePlaceholder = memo(function FurniturePlaceholder({
   showName = true,
   style,
   sharp = false,
+  decorative = false,
 }: FurniturePlaceholderProps) {
   const emph = useFontEmphasis();
   const t = useTokens();
   if (isCdnKey(item.assetKey)) {
     return (
-      <View accessibilityLabel={item.name} style={[styles.tile, style]}>
+      <View
+        accessibilityLabel={decorative ? undefined : item.name}
+        accessible={decorative ? false : undefined}
+        style={[styles.tile, style]}>
         <Image
           source={isSpeakerFurniture(item) ? SPEAKER_IMAGE : assetSource(item.assetKey)}
           alt=""
@@ -60,7 +69,8 @@ export const FurniturePlaceholder = memo(function FurniturePlaceholder({
   }
   return (
     <View
-      accessibilityLabel={item.name}
+      accessibilityLabel={decorative ? undefined : item.name}
+      accessible={decorative ? false : undefined}
       style={[styles.tile, { backgroundColor: CATEGORY_COLORS[item.category] }, style]}>
       {/* Pastel tile background is fixed regardless of theme — onTint ink. */}
       {showName ? (

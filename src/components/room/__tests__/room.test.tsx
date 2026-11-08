@@ -175,7 +175,9 @@ describe('Room', () => {
     expect(queryByLabelText('원목 바닥')).toBeNull();
     expect(queryByLabelText('해변 배경')).toBeNull();
     expect(queryByLabelText('거미줄이 꼈어요')).toBeNull();
-    expect(getByLabelText('포근한 침대')).toBeTruthy();
+    // 가구는 그리되 장식으로 — 칸 자체가 '○○의 방' 라벨을 가진다(웹 axe: 역할 없는 aria-label 금지).
+    expect(getByTestId('room-furniture-bed')).toBeTruthy();
+    expect(queryByLabelText('포근한 침대')).toBeNull();
     expect(getByLabelText('고양이')).toBeTruthy();
     expect(StyleSheet.flatten(getByTestId('room-canvas').props.style).backgroundColor).toBe(
       'transparent',

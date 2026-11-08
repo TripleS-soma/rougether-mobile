@@ -369,7 +369,7 @@ export const Room = memo(function Room({
                   <SpeakerSprite playing={speakerPlaying} />
                 </Pressable>
               ) : (
-                <FurniturePlaceholder item={item} sharp={sharp} />
+                <FurniturePlaceholder item={item} sharp={sharp} decorative={bare} />
               )}
             </View>
           ))
