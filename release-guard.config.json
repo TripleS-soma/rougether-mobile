@@ -1,0 +1,81 @@
+{
+  "ios": {
+    "infoPlist": {
+      "path": "ios/Rougether/Info.plist",
+      "requiredKeys": [
+        {
+          "key": "NSCalendarsUsageDescription",
+          "reason": "캘린더 가져오기(#844). 없으면 권한 요청 자체가 불가."
+        },
+        { "key": "NSCalendarsFullAccessUsageDescription", "reason": "iOS 17+ 캘린더 전체 접근." },
+        {
+          "key": "NSRemindersUsageDescription",
+          "reason": "안 쓰지만 필수 — expo-calendar가 시작 시 조회한다. 지우면 스플래시에서 즉사(#913)."
+        },
+        { "key": "NSRemindersFullAccessUsageDescription", "reason": "위와 같은 이유(iOS 17+)." },
+        { "key": "NSPhotoLibraryAddUsageDescription", "reason": "방 사진 앨범 저장." },
+        { "key": "NSPhotoLibraryUsageDescription", "reason": "버그 제보 스크린샷 첨부." },
+        {
+          "key": "NSUserTrackingUsageDescription",
+          "reason": "Meta 설치 광고 측정 ATT 요청(#1616). 없으면 requestTrackingPermissionsAsync가 앱을 죽인다."
+        }
+      ]
+    }
+  },
+  "android": {
+    "permissions": {
+      "required": [
+        { "name": "INTERNET", "reason": "서버 통신." },
+        { "name": "READ_CALENDAR", "reason": "기기 캘린더 가져오기 (#844)." },
+        { "name": "VIBRATE", "reason": "햅틱 피드백." }
+      ],
+      "requiredMerged": [
+        {
+          "name": "POST_NOTIFICATIONS",
+          "reason": "expo-notifications가 자기 매니페스트로 넣는다. 없으면 Android 13+에서 푸시 권한을 요청조차 못 한다 (#405)."
+        },
+        {
+          "name": "com.google.android.gms.permission.AD_ID",
+          "reason": "Meta 설치 광고 측정(#1616). 없으면 광고 ID가 0으로 읽혀 설치 귀속이 사라진다. 방침·Play 데이터 보안 설문과 어긋난다."
+        }
+      ],
+      "forbidden": [
+        {
+          "name": "CAMERA",
+          "reason": "#752에서 차단 — expo-image-picker는 앨범 선택만 쓴다.",
+          "blockedInSource": true
+        },
+        {
+          "name": "RECORD_AUDIO",
+          "reason": "#752에서 차단 — 오디오 녹음 기능이 없다. 스토어에 \"마이크\"로 뜬다.",
+          "blockedInSource": true
+        },
+        {
+          "name": "READ_MEDIA_IMAGES",
+          "reason": "#1310에서 차단 — Play 정책은 시스템 사진 선택기를 요구한다.",
+          "blockedInSource": true
+        },
+        {
+          "name": "READ_MEDIA_VIDEO",
+          "reason": "#1310에서 차단 — 동영상을 쓰는 기능이 없다.",
+          "blockedInSource": true
+        },
+        {
+          "name": "READ_MEDIA_AUDIO",
+          "reason": "#1310에서 차단 — 오디오 파일을 쓰는 기능이 없다.",
+          "blockedInSource": true
+        },
+        { "name": "ACCESS_FINE_LOCATION", "reason": "위치를 쓰는 기능이 없다." },
+        { "name": "ACCESS_COARSE_LOCATION", "reason": "위치를 쓰는 기능이 없다." },
+        { "name": "ACCESS_BACKGROUND_LOCATION", "reason": "위치를 쓰는 기능이 없다." },
+        {
+          "name": "READ_CONTACTS",
+          "reason": "연락처를 읽는 기능이 없다. 초대는 코드·딥링크로 한다."
+        },
+        { "name": "READ_SMS", "reason": "SMS를 쓰는 기능이 없다." },
+        { "name": "RECEIVE_SMS", "reason": "SMS를 쓰는 기능이 없다." },
+        { "name": "READ_PHONE_STATE", "reason": "기기 식별자 접근으로 읽힌다 — 쓰는 기능이 없다." }
+      ]
+    }
+  }
+}

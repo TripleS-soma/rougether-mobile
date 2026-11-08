@@ -18,7 +18,8 @@
  *   **둘 다** 요구한다. WRITE를 빼면 권한이 영영 안 떨어져 기능이 죽는다.
  *
  * **이 파일은 입력(app.json)만 본다.** 산출물(Info.plist)은
- * `scripts/check-ios-plist.mjs`가 본다 (#915) — config plugin이 prebuild 때
+ * `expo-release-guard`의 ios-plist 검사가 본다 (#915, 규칙은 release-guard.config.json) —
+ * config plugin이 prebuild 때
  * 키를 지우는 경우는 여기서 못 잡기 때문이다. 둘 다 있어야 그물이 닫힌다.
  *
  * 그래서 이 키들은 "안 써도 선언해야 하는" 것이다. 실제로 쓰지 않는다는 사실은
