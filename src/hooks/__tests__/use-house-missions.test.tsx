@@ -13,8 +13,16 @@ jest.mock('@/components/ui/toast', () => ({
   useToast: () => ({ show: mockToast }),
 }));
 
+const mockRequestReview = jest.fn();
+jest.mock('@/hooks/use-store-review', () => ({
+  requestReviewAtGoodMoment: (...args: unknown[]) => mockRequestReview(...args),
+}));
+
 const realFetch = global.fetch;
-beforeEach(() => mockToast.mockClear());
+beforeEach(() => {
+  mockToast.mockClear();
+  mockRequestReview.mockClear();
+});
 afterEach(() => {
   global.fetch = realFetch;
 });
@@ -109,5 +117,37 @@ describe('useHouses — 이미 받은 보상 (#1655)', () => {
     });
     expect(mockToast).toHaveBeenCalledWith('이미 받은 보상이에요', 'info');
     expect(calls.some((c) => c.startsWith('GET') && c.includes('/houses/7'))).toBe(true);
+    // 받지 못한 순간은 리뷰를 청할 좋은 순간이 아니다 (#1678).
+    expect(mockRequestReview).not.toHaveBeenCalled();
+  });
+});
+
+describe('useHouses — 보상 받기는 리뷰를 청할 좋은 순간 (#1678)', () => {
+  it('보상을 받으면 mission_claim 순간으로 리뷰를 청한다', async () => {
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/missions/12/claim') && init?.method === 'POST')
+        return res({ missionId: 12, status: 'COMPLETED', grantedGrowthPoints: 30 });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      await result.current.claimMission(7, 12);
+    });
+    expect(mockRequestReview).toHaveBeenCalledWith('mission_claim');
+  });
+
+  it('보상 받기가 실패하면 청하지 않는다', async () => {
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/missions/12/claim') && init?.method === 'POST')
+        return { ok: false, status: 500, text: async () => '{}' };
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      await result.current.claimMission(7, 12);
+    });
+    expect(mockRequestReview).not.toHaveBeenCalled();
   });
 });

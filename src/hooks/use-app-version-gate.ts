@@ -1,9 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Linking, Platform } from 'react-native';
+import { Platform } from 'react-native';
 
 import { getSessionUserId } from '@/api';
-import { storeAppUrl, storeWebUrl } from '@/constants/store-links';
 import { useAuth } from '@/hooks/use-auth';
 import {
   decideVersionGate,
@@ -11,6 +10,7 @@ import {
   installedRuntime,
   type VersionGateVerdict,
 } from '@/lib/app-version-gate';
+import { openStorePage } from '@/lib/open-store';
 import { loadDismissedVersion, saveDismissedVersion } from '@/lib/version-gate-store';
 
 /** 하루에 여러 번 받을 이유가 없다 — 포커스 복귀마다 왕복하지 않게 길게 잡는다. */
@@ -97,15 +97,7 @@ export function useAppVersionGate(): AppVersionGate {
     void saveDismissedVersion(userId, raw.latestVersion);
   }, [raw.latestVersion, userId]);
 
-  const openStore = useCallback(() => {
-    const app = storeAppUrl();
-    const web = storeWebUrl();
-    const fallback = () => {
-      if (web) void Linking.openURL(web).catch(() => {});
-    };
-    if (app) void Linking.openURL(app).catch(fallback);
-    else fallback();
-  }, []);
+  const openStore = useCallback(() => openStorePage(), []);
 
   return useMemo(() => ({ verdict, later, openStore }), [verdict, later, openStore]);
 }
