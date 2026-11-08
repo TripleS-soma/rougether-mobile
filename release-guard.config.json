@@ -31,6 +31,13 @@
           "key": "NSUserTrackingUsageDescription",
           "reason": "Meta 설치 광고 측정 ATT 요청(#1616). 없으면 requestTrackingPermissionsAsync가 앱을 죽인다."
         }
+      ],
+      "forbidden": [
+        {
+          "key": "UIBackgroundModes",
+          "values": ["processing"],
+          "reason": "Android 전용 작업(rougether-app-icon 등)이 iOS 백그라운드 권한을 끌어오면 심사에서 사유를 요구받는다."
+        }
       ]
     },
     "alternateIcons": {
@@ -128,7 +135,8 @@
         "MainActivityDailySuccess",
         "MainActivityStreakChampion"
       ],
-      "enabledByDefault": "MainActivityDefault"
+      "enabledByDefault": "MainActivityDefault",
+      "mainActivityActions": ["android.intent.action.VIEW"]
     }
   }
 }
