@@ -5,13 +5,14 @@ import night_observatory from '@/assets/houses/shared-v1/night-observatory.webp'
 import forest_canopy from '@/assets/houses/shared-v1/forest-canopy.webp';
 import evening_brick from '@/assets/houses/shared-v1/evening-brick.webp';
 
+import { ROOM_ASPECT_RATIO } from '@/components/room/room-render-contract';
 import { houseDisplayMode, type HouseDisplayMode } from '@/resources/house-display-mode';
 import type { HouseWindowRect } from '@/resources/house-frame';
-import type { FurnitureItem, PlacedFurniture } from '@/resources/furniture';
 import { DEFAULT_HOUSE_COVER_KEY } from '@/resources/house-frame';
-import { isCdnKey } from '@/resources/asset';
 
 export const HOUSE_DIORAMA_ASPECT = 2 / 3;
+/** 집 그림(1024×1536) 안 구성원 칸 하나의 크기 — 층마다 왼쪽·오른쪽 두 칸. */
+export const DIORAMA_WINDOW = { width: 369, height: 300 } as const;
 export const FOREST_CANOPY_COVER_KEY = 'house/forest-canopy/house-forest-canopy-frame-v1.png';
 export const EVENING_BRICK_COVER_KEY = 'house/evening-brick/house-evening-brick-frame-v1.png';
 
@@ -99,9 +100,9 @@ export function dioramaWindowRects(theme: HouseDioramaTheme): readonly HouseWind
   return theme.feet.flatMap((foot) =>
     [125, 530].map((left) => ({
       left: `${(left / 1024) * 100}%` as const,
-      top: `${((foot - 300) / 1536) * 100}%` as const,
-      width: `${(369 / 1024) * 100}%` as const,
-      height: `${(300 / 1536) * 100}%` as const,
+      top: `${((foot - DIORAMA_WINDOW.height) / 1536) * 100}%` as const,
+      width: `${(DIORAMA_WINDOW.width / 1024) * 100}%` as const,
+      height: `${(DIORAMA_WINDOW.height / 1536) * 100}%` as const,
     })),
   );
 }
@@ -122,47 +123,14 @@ export function dioramaSeatPages(rows: number[][]): (number | null)[][] {
   });
 }
 
-/** Show only already placed, resolvable objects. A missing catalogue must never invent decor. */
-export function selectDioramaFurniture(
-  placements: PlacedFurniture[] = [],
-  catalog: FurnitureItem[] = [],
-) {
-  const items = new Map(catalog.map((item) => [item.id, item]));
-  const seen = new Set<string>();
-  return [...placements]
-    .sort((a, b) => {
-      const rank = (p: PlacedFurniture) => (items.get(p.furnitureId)?.category === '가구' ? 1 : 0);
-      return (
-        rank(b) - rank(a) ||
-        (b.scale ?? 1) - (a.scale ?? 1) ||
-        b.z - a.z ||
-        a.furnitureId.localeCompare(b.furnitureId)
-      );
-    })
-    .flatMap((placement) => {
-      const item = items.get(placement.furnitureId);
-      if (!item || !isCdnKey(item.assetKey) || seen.has(item.id)) return [];
-      seen.add(item.id);
-      return [{ item, flipped: !!placement.flipped }];
-    })
-    .slice(0, 2);
-}
-
-/** Fixed disjoint contain boxes make arbitrary furniture aspect ratios safe. */
-export function dioramaMemberBoxes(side: 0 | 1) {
-  const order =
-    side === 0
-      ? (['secondary', 'hero', 'character'] as const)
-      : (['character', 'hero', 'secondary'] as const);
-  const widths = { secondary: 82, hero: 210, character: 146 };
-  const scale = (369 - 24) / 438;
-  let left = 0;
-  return order.map((kind) => {
-    const width = widths[kind] * scale;
-    const height = (kind === 'character' ? 150 : 230) * scale;
-    const bottom = kind === 'character' ? 0 : kind === 'hero' ? 9 : 20;
-    const box = { kind, x: left, y: 300 - bottom - height, width, height };
-    left += width + 12;
-    return box;
-  });
+/**
+ * 칸 안에서 방이 차지하는 상자 (#1685) — 칸 비율(0~1).
+ *
+ * 예전엔 가구 2개만 골라 칸마다 고정 자리에 넣어(#1617) 방 배치와 달라 보였다. 이제 방을
+ * 통째로 같은 비율로 줄인다: 높이를 칸에 맞추고(방 5:6이 칸보다 세로로 길다) 가로는 가운데.
+ * 칸이 방보다 가로로 넓어 남는 양옆은 집 그림의 빈 벽으로 둔다.
+ */
+export function dioramaRoomBox() {
+  const width = (DIORAMA_WINDOW.height * ROOM_ASPECT_RATIO) / DIORAMA_WINDOW.width;
+  return { left: (1 - width) / 2, width };
 }

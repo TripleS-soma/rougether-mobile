@@ -189,7 +189,6 @@ function SeatTileBase({
             단색 틴트 + 아바타가 자리를 지킨다. */}
         {dioramaSide != null && !empty ? (
           <HouseDioramaMember
-            side={dioramaSide}
             preview={preview}
             furniture={catalogs.furniture}
             characterId={avatarCharacterId}
