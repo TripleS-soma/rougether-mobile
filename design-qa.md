@@ -19,11 +19,11 @@ npm run lint
 npm run format:check
 npm test -- --maxWorkers=2 --watchman=false
 CI=1 EXPO_OFFLINE=1 SENTRY_DISABLE_AUTO_UPLOAD=true node_modules/.bin/expo prebuild --platform android --no-install
-node scripts/check-android-manifest.mjs --source
+npx --yes expo-release-guard@0.1.0 check android-manifest
 ```
 
 Android SDK·JDK 17 환경에서 `android/gradlew :app:processReleaseMainManifest`를 실행한 뒤
-루트에서 `node scripts/check-android-manifest.mjs --merged`로 최종 병합 권한을 검사합니다.
+루트에서 `npx --yes expo-release-guard@0.1.0 check android-merged-manifest`로 최종 병합 권한을 검사합니다.
 
 ## 검증 결과
 

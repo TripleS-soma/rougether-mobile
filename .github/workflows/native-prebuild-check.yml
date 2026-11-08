@@ -9,6 +9,8 @@ on:
 
 jobs:
   # iOS Info.plist 산출물 검증 (#915) — **라벨 없이 모든 PR에서** 돌린다.
+  # 검사 규칙은 release-guard.config.json, 실행은 expo-release-guard CLI(이 저장소의 옛
+  # scripts/check-*.mjs를 독립 패키지로 옮긴 것, github.com/evan7484/expo-release-guard).
   # 1.2.0 빌드 47을 죽인 #913의 PR(#914)은 native-build 라벨이 없어 아래
   # prebuild 잡을 건너뛰었다. 그 구멍이 이번 사고의 한 축이라, 이 잡만은
   # 라벨과 무관하게 항상 돈다(prebuild --no-install이라 몇십 초면 끝난다).
@@ -28,7 +30,7 @@ jobs:
         run: npx expo prebuild --platform ios --clean --no-install
       - name: Info.plist 필수 권한 키 검증
         run: |
-          node scripts/check-ios-plist.mjs
+          npx --yes expo-release-guard@0.1.0 check ios-plist
           node scripts/check-app-icons.mjs
 
   # Android 매니페스트 권한 검증 (#921 후속) — **라벨 없이 모든 PR에서** 돈다.
@@ -56,7 +58,7 @@ jobs:
         run: npx expo prebuild --platform android --no-install
       - name: 매니페스트 권한 검증 (소스)
         run: |
-          node scripts/check-android-manifest.mjs --source
+          npx --yes expo-release-guard@0.1.0 check android-manifest
           node scripts/check-app-icons.mjs
 
   prebuild:
@@ -107,7 +109,7 @@ jobs:
       # POST_NOTIFICATIONS처럼 라이브러리가 주는 필수 권한이 들어왔는지 본다.
       - name: 매니페스트 권한 검증 (병합 산출물)
         run: |
-          node scripts/check-android-manifest.mjs --merged
+          npx --yes expo-release-guard@0.1.0 check android-merged-manifest
           manifest=$(find android/app/build/intermediates -path '*/merged_manifest*/release/*/AndroidManifest.xml' -print -quit)
           test -n "$manifest"
           node scripts/check-app-icons.mjs "$manifest"
