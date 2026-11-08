@@ -24,6 +24,6 @@ background 모듈은 Android에서만 로드·등록하며 iOS autolinking에서
 새 이미지·모듈·앱 설정을 포함하므로 1.5.0 네이티브 빌드가 필요하다. 기존 설치본에는 OTA만으로 아이콘 기능이 생기지 않는다. 서버 PR #366, spec PR #102, 공개 개인정보처리방침 landing PR #36을 먼저 반영한다. 신규 foreground API를 호출한 사용자만 미접속 알림에 등록되므로 기존 사용자의 접속 기록을 소급 사용하지 않는다.
 
 - 기본: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test -- --ci`.
-- 산출물: Expo prebuild 후 `node scripts/check-app-icons.mjs`. CI가 기본 launcher 1개, 실 Activity 활성 상태와 VIEW 링크, iOS 5종 추가 에셋·등록을 검증한다. Android 모듈도 Release Kotlin 컴파일한다.
+- 산출물: Expo prebuild 후 `npx --yes expo-release-guard@0.2.0 check ios-alternate-icons android-launcher-aliases`(규칙은 `release-guard.config.json`)가 별칭 6개·기본 켜짐 1개·메인 Activity 활성(런처 아님), iOS 5종 빌드 등록·에셋을 검증한다. 메인 Activity의 VIEW 링크와 iOS processing 백그라운드 모드 없음은 `node scripts/check-native-extras.mjs`가 본다. Android 모듈도 Release Kotlin 컴파일한다.
 - Release 실행: 시뮬레이터 첫 화면을 확인하고, 루틴 완료 후 자동 변경·재실행·로그인 링크 진입을 확인한다.
 - 스토어 문구는 `store/ko-KR`에 반영했으며 실제 콘솔 반영 여부는 `store/README.md`에 별도로 기록한다.
