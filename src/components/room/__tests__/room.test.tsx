@@ -148,6 +148,40 @@ describe('Room', () => {
     expect(getByLabelText('해변 배경')).toBeTruthy();
   });
 
+  // #1685: 리디자인 집 칸은 자기 벽·바닥 그림 위에 방 배치만 얹는다.
+  it('bare면 배경·벽지·바닥·거미줄 없이 가구와 캐릭터만 투명하게 그린다', async () => {
+    const surface = (id: string, name: string) => ({
+      id,
+      name,
+      price: 100,
+      assetKey: `items/a/${id}.png`,
+      color: '#EEE',
+    });
+    const { getByLabelText, queryByLabelText, getByTestId } = await render(
+      <Room
+        bare
+        wallpaperId="w1"
+        wallpapers={[surface('w1', '나뭇잎 벽지')]}
+        floorId="f1"
+        floors={[surface('f1', '원목 바닥')]}
+        backgroundId="b1"
+        backgrounds={[surface('b1', '해변 배경')]}
+        cobweb={{ assetKey: 'items/cobweb.png', cleanable: true }}
+        onCleanCobweb={() => {}}
+        placements={[{ furnitureId: 'bed', x: 0.3, y: 0.7, z: 1 }]}
+      />,
+    );
+    expect(queryByLabelText('나뭇잎 벽지')).toBeNull();
+    expect(queryByLabelText('원목 바닥')).toBeNull();
+    expect(queryByLabelText('해변 배경')).toBeNull();
+    expect(queryByLabelText('거미줄이 꼈어요')).toBeNull();
+    expect(getByLabelText('포근한 침대')).toBeTruthy();
+    expect(getByLabelText('고양이')).toBeTruthy();
+    expect(StyleSheet.flatten(getByTestId('room-canvas').props.style).backgroundColor).toBe(
+      'transparent',
+    );
+  });
+
   it('exposes a tappable character that cycles poses when interactive', async () => {
     const { getByLabelText } = await render(<Room interactiveCharacter />);
     const character = getByLabelText('고양이, 눌러서 포즈 바꾸기');

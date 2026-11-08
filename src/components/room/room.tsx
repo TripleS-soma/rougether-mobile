@@ -95,6 +95,12 @@ export type RoomProps = {
    * 가구를 원본으로 풀어 4인실에서도 네이티브 메모리가 약 43MB 늘었다).
    */
   sharp?: boolean;
+  /**
+   * 가구와 캐릭터만 그린다 (#1685) — 배경·벽지·바닥·거미줄 없이 투명하게. 리디자인 집 칸이
+   * 자기 벽·바닥 그림 위에 방 배치를 그대로 축소해 얹을 때 쓴다. 좌표·크기는 방과 같은
+   * 코드 경로라, 칸에서도 내가 둔 순서·위치·비율이 유지된다.
+   */
+  bare?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -191,6 +197,7 @@ export const Room = memo(function Room({
   activeRegion = null,
   fill = false,
   sharp = fill,
+  bare = false,
   style,
 }: RoomProps) {
   const t = useTokens();
@@ -254,10 +261,10 @@ export const Room = memo(function Room({
       testID="room-canvas"
       style={[
         fill ? styles.roomFill : styles.room,
-        { backgroundColor: wallpaper?.color ?? DEFAULT_WALLPAPER_COLOR },
+        { backgroundColor: bare ? 'transparent' : (wallpaper?.color ?? DEFAULT_WALLPAPER_COLOR) },
         style,
       ]}>
-      {background ? (
+      {bare ? null : background ? (
         isCdnKey(background.assetKey) ? (
           <Image
             source={assetSource(background.assetKey)}
@@ -276,7 +283,7 @@ export const Room = memo(function Room({
       {/* Wallpaper art renders as the wall band on top of the background —
           the room backgroundColor alone is invisible once a background covers
           it, which made applied wallpapers look like a no-op. */}
-      {wallpaper && isCdnKey(wallpaper.assetKey) ? (
+      {bare ? null : wallpaper && isCdnKey(wallpaper.assetKey) ? (
         <Image
           source={assetSource(wallpaper.assetKey)}
           style={styles.wall}
@@ -290,7 +297,7 @@ export const Room = memo(function Room({
       ) : background && wallpaper ? (
         <View style={[styles.wall, { backgroundColor: wallpaper.color }]} />
       ) : null}
-      {floor ? (
+      {bare ? null : floor ? (
         isCdnKey(floor.assetKey) ? (
           <Image
             source={assetSource(floor.assetKey)}
@@ -307,7 +314,7 @@ export const Room = memo(function Room({
         )
       ) : null}
       {/* Surface touch bands sit under the furniture so item taps win. */}
-      {editable ? (
+      {editable && !bare ? (
         <>
           <Pressable
             onPress={() => onRegionPress?.('wall')}
@@ -401,7 +408,7 @@ export const Room = memo(function Room({
       )}
       {/* 장기 미접속 거미줄 (#829) — 캐릭터·가구 위, 왼쪽 위 모서리.
           청소 탭은 다음 단계(#830·#831)라 지금은 표시 전용이다. */}
-      {isCdnKey(cobweb?.assetKey) ? (
+      {!bare && isCdnKey(cobweb?.assetKey) ? (
         cobweb.cleanable && onCleanCobweb ? (
           <Pressable
             onPress={(e) => onCleanCobweb({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY })}

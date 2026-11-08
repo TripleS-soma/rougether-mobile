@@ -1,93 +1,55 @@
-import { Image } from 'expo-image';
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { CharacterAvatar } from '@/components/room/character-avatar';
-import type { MemberRoomPreview } from '@/components/room/room';
+import { Room, type MemberRoomPreview } from '@/components/room/room';
 import type { CharacterId } from '@/constants/characters';
-import { Radius } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
-import { assetSource } from '@/resources/asset';
-import { dioramaMemberBoxes, selectDioramaFurniture } from '@/resources/house-diorama';
 import type { FurnitureItem } from '@/resources/furniture';
+import { dioramaRoomBox } from '@/resources/house-diorama';
 
 type Props = {
-  side: 0 | 1;
   preview?: MemberRoomPreview;
   furniture?: FurnitureItem[];
   characterId: CharacterId;
   sharp?: boolean;
 };
 
+const ROOM_BOX = dioramaRoomBox();
+const NO_PLACEMENTS: NonNullable<MemberRoomPreview['placements']> = [];
+
+/**
+ * 리디자인 집 칸 하나 (#1685) — 그 사람의 방 배치를 같은 비율로 통째로 축소해 얹는다.
+ *
+ * 예전(#1617)엔 가구 2개만 골라 칸마다 정해 둔 자리에 넣어, 내가 둔 순서·위치·크기와
+ * 달라 보였다. 이제 방과 같은 `Room` 렌더러를 `bare`로 써서 벽지·바닥만 빼고 가구 전부와
+ * 캐릭터를 방 좌표 그대로 그린다. 벽·바닥은 집 그림이 대신한다.
+ */
 export const HouseDioramaMember = memo(function HouseDioramaMember({
-  side,
   preview,
   furniture,
   characterId,
   sharp = false,
 }: Props) {
-  const t = useTokens();
-  const selected = useMemo(
-    () => selectDioramaFurniture(preview?.placements, furniture),
-    [preview?.placements, furniture],
-  );
-  const boxes = useMemo(() => dioramaMemberBoxes(side), [side]);
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none" testID="diorama-member">
-      {boxes.map((box) => {
-        const entry = box.kind === 'hero' ? selected[0] : selected[1];
-        if (box.kind !== 'character' && !entry) return null;
-        return (
-          <View
-            key={box.kind}
-            testID={`diorama-${box.kind}`}
-            style={[
-              styles.object,
-              {
-                left: `${(box.x / 369) * 100}%`,
-                top: `${(box.y / 300) * 100}%`,
-                width: `${(box.width / 369) * 100}%`,
-                height: `${(box.height / 300) * 100}%`,
-              },
-            ]}>
-            <View style={[styles.shadow, { backgroundColor: t.text }]} />
-            {box.kind === 'character' ? (
-              <CharacterAvatar
-                characterId={characterId}
-                style={styles.art}
-                sharp={sharp}
-                contentPosition="bottom"
-              />
-            ) : (
-              <Image
-                source={assetSource(entry!.item.assetKey)}
-                style={[styles.art, entry!.flipped && styles.flipped]}
-                contentFit="contain"
-                contentPosition="bottom"
-                cachePolicy="memory-disk"
-                allowDownscaling={!sharp}
-                accessible={false}
-                accessibilityLabel=""
-              />
-            )}
-          </View>
-        );
-      })}
+      <View
+        testID="diorama-room"
+        style={[
+          styles.room,
+          { left: `${ROOM_BOX.left * 100}%`, width: `${ROOM_BOX.width * 100}%` },
+        ]}>
+        <Room
+          bare
+          fill
+          placements={preview?.placements ?? NO_PLACEMENTS}
+          furniture={furniture}
+          characterId={characterId}
+          sharp={sharp}
+        />
+      </View>
     </View>
   );
 });
 
 const styles = StyleSheet.create({
-  object: { position: 'absolute' },
-  art: { width: '100%', height: '100%' },
-  flipped: { transform: [{ scaleX: -1 }] },
-  shadow: {
-    position: 'absolute',
-    left: '20%',
-    bottom: 0,
-    width: '60%',
-    height: '4%',
-    opacity: 0.12,
-    borderRadius: Radius.sm,
-  },
+  room: { position: 'absolute', top: 0, height: '100%' },
 });

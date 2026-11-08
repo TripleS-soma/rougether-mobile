@@ -52,7 +52,6 @@ export function HouseDioramaPreview({
         return (
           <View key={i} style={[styles.slot, rect]} testID="preview-room">
             <HouseDioramaMember
-              side={(i % 2) as 0 | 1}
               preview={room}
               furniture={furniture}
               characterId={room?.characterId ?? DEFAULT_CHARACTER_ID}

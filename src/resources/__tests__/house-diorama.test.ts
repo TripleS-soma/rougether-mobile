@@ -1,22 +1,13 @@
+import { ROOM_ASPECT_RATIO } from '@/components/room/room-render-contract';
 import {
-  dioramaMemberBoxes,
+  dioramaRoomBox,
   dioramaSeatPages,
   houseDioramaTheme,
-  selectDioramaFurniture,
+  DIORAMA_WINDOW,
   HOUSE_DIORAMA_THEMES,
   FOREST_CANOPY_COVER_KEY,
   EVENING_BRICK_COVER_KEY,
 } from '@/resources/house-diorama';
-import type { FurnitureItem } from '@/resources/furniture';
-
-const item = (id: string, category: FurnitureItem['category'] = '가구'): FurnitureItem => ({
-  id,
-  name: id,
-  category,
-  assetKey: `items/test/furniture/${id}.png`,
-  slot: 'bottomLeft',
-  price: 0,
-});
 describe('shared house diorama', () => {
   it('supports both approved new covers and the existing four without changing stored keys', () => {
     expect(HOUSE_DIORAMA_THEMES).toHaveLength(6);
@@ -25,43 +16,14 @@ describe('shared house diorama', () => {
     expect(houseDioramaTheme('house/unknown/frame.png')).toBeUndefined();
     expect(houseDioramaTheme(FOREST_CANOPY_COVER_KEY, false)).toBeUndefined();
   });
-  it('never decorates an empty room or invents unresolved/unplaced furniture', () => {
-    expect(selectDioramaFurniture([], [item('bed')])).toEqual([]);
-    expect(
-      selectDioramaFurniture([{ furnitureId: 'unknown', x: 0, y: 0, z: 1 }], [item('bed')]),
-    ).toEqual([]);
-  });
-  it('chooses only two placed real assets, with deterministic ordering and no duplicates', () => {
-    const placements = ['lamp', 'bed', 'desk', 'bed'].map((id, i) => ({
-      furnitureId: id,
-      x: 0.5,
-      y: 0.5,
-      z: i,
-      flipped: id === 'bed',
-    }));
-    const selected = selectDioramaFurniture(placements, [
-      item('lamp', '장식'),
-      item('bed'),
-      item('desk'),
-      item('unplaced'),
-    ]);
-    expect(selected.map((s) => s.item.id)).toEqual(['bed', 'desk']);
-    expect(selected[0].flipped).toBe(true);
-    expect(placements).toHaveLength(4);
-  });
-  it.each([0, 1] as const)('keeps every sprite contain box disjoint on side %i', (side) => {
-    const boxes = dioramaMemberBoxes(side);
-    for (const a of boxes) {
-      expect(a.x).toBeGreaterThanOrEqual(0);
-      expect(a.x + a.width).toBeLessThanOrEqual(369 + 1e-8);
-      expect(a.y).toBeGreaterThanOrEqual(0);
-      expect(a.y + a.height).toBeLessThanOrEqual(300);
-      for (const b of boxes.filter((b) => b !== a)) {
-        const overlapX = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
-        const overlapY = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
-        expect(overlapX <= 0 || overlapY <= 0).toBe(true);
-      }
-    }
+  // #1685: 칸에는 방(5:6)을 통째로 축소해 넣는다 — 높이를 칸에 맞추고 가로는 가운데.
+  it('fits the whole room to the window height and centers it horizontally', () => {
+    const box = dioramaRoomBox();
+    expect(box.width).toBeCloseTo(
+      (DIORAMA_WINDOW.height * ROOM_ASPECT_RATIO) / DIORAMA_WINDOW.width,
+    );
+    expect(box.width).toBeLessThan(1); // 칸이 방보다 가로로 넓다 — 양옆은 빈 벽.
+    expect(box.left).toBeCloseTo((1 - box.width) / 2);
   });
   it.each([1, 3, 4, 6, 8, 10, 12])(
     'keeps all %i persisted seats reachable, including odd rows',
