@@ -2,11 +2,9 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { getLastLoginFailure, loginErrorMessage } from '@/lib/login-error';
-import { IntroScreen } from '@/components/screens/intro-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
 import { useAuth } from '@/hooks/use-auth';
 import { track } from '@/lib/analytics';
-import { loadIntroSeen, markIntroSeen } from '@/lib/intro-store';
 import { hasGoogleRedirect } from '@/lib/google-auth';
 import { hasKakaoRedirect } from '@/lib/kakao-auth';
 import { loadLastLoginProvider, type SocialProvider } from '@/lib/last-login';
@@ -29,20 +27,19 @@ function tracked(provider: SocialProvider, login: SocialLogin): SocialLogin {
   };
 }
 
-/** 로그인 화면에 어떻게 왔나 — `login_view`의 via. */
-type LoginVia = 'intro' | 'have_account' | 'direct' | 'kakao_redirect' | 'google_redirect';
+/**
+ * 로그인 화면에 어떻게 왔나 — `login_view`의 via. 로그인 전 소개 슬라이드(#1282)는
+ * 없앴다 — 앱을 열면 곧장 로그인 화면이고, 사용법은 로그인 뒤 튜토리얼 미션이 맡는다.
+ */
+type LoginVia = 'direct' | 'kakao_redirect' | 'google_redirect';
 
 export default function Login() {
   const { login, loginWithGoogle, loginWithKakao, loginWithApple } = useAuth();
   // 최근 로그인 배지 (#489 후속) — 로딩 전에는 배지 없이 그린다(깜빡임 무해).
   const [lastProvider, setLastProvider] = useState<SocialProvider | null>(null);
-  // 로그인 전 소개 (#1282) — 이 기기에서 처음이면 로그인 화면보다 먼저 보여 준다.
-  // null = 아직 모름. 저장소를 읽기 전에 로그인 화면을 그리면 소개가 뒤늦게 덮으며
-  // 깜빡이므로 그동안은 아무것도 그리지 않는다. hasKakaoRedirect는 window를 읽어
-  // 정적 export 렌더에서 부를 수 없으니 초기값이 아니라 이펙트에서 판정한다 —
-  // 판정은 아래 복귀 이펙트 한 곳에서만 한다(교환이 복귀 파라미터를 걷어내므로
-  // 다른 이펙트가 다시 물으면 false가 나온다).
-  const [introSeen, setIntroSeen] = useState<boolean | null>(null);
+  // hasKakaoRedirect는 window를 읽어 정적 export 렌더에서 부를 수 없으니 초기값이
+  // 아니라 이펙트에서 판정한다 — 판정은 아래 복귀 이펙트 한 곳에서만 한다(교환이 복귀
+  // 파라미터를 걷어내므로 다른 이펙트가 다시 물으면 false가 나온다).
   const via = useRef<LoginVia>('direct');
   // 웹 카카오·구글 로그인은 페이지 리다이렉트로 돌아온다(구글은 #1532부터) — 복귀
   // 진입이면 사용자가 다시 누르지 않아도 나머지 절반(카카오: 코드 교환, 구글: 프래그먼트의
@@ -54,10 +51,8 @@ export default function Login() {
   useEffect(() => {
     const provider = hasKakaoRedirect() ? 'kakao' : hasGoogleRedirect() ? 'google' : null;
     if (!provider) return;
-    // 이미 로그인 버튼을 누르고 돌아온 사람이다 — 소개 차례가 아니다. 이어가기 전에
-    // 기록한다: 토큰을 꺼내는 쪽이 URL·세션스토리지의 복귀 파라미터를 지운다.
+    // 이어가기 전에 기록한다: 토큰을 꺼내는 쪽이 URL·세션스토리지의 복귀 파라미터를 지운다.
     via.current = provider === 'kakao' ? 'kakao_redirect' : 'google_redirect';
-    setIntroSeen(true);
     setResuming(true);
     const resume = provider === 'kakao' ? loginWithKakao : loginWithGoogle;
     void resume().then((result) => {
@@ -74,18 +69,6 @@ export default function Login() {
     });
   }, [loginWithKakao, loginWithGoogle]);
   useEffect(() => {
-    // 복귀 판정은 위 이펙트가 이미 했다(같은 커밋에서 선언 순서대로 돈다).
-    if (via.current === 'kakao_redirect' || via.current === 'google_redirect') return;
-    let active = true;
-    void loadIntroSeen().then((seen) => {
-      // 이미 정해졌으면(복귀) 뒤늦은 저장소 값으로 덮지 않는다.
-      if (active) setIntroSeen((prev) => prev ?? seen);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-  useEffect(() => {
     let active = true;
     void loadLastLoginProvider().then((p) => {
       if (active) setLastProvider(p);
@@ -95,14 +78,11 @@ export default function Login() {
     };
   }, []);
 
-  // 로그인 화면 노출 — 마운트당 1회. 소개에서 넘어온 경우도 여기서 센다.
-  const showLogin = introSeen === true;
-  const loginViewed = useRef(false);
+  // 로그인 화면 노출 — 마운트당 1회. 복귀 판정(위 이펙트)이 via를 먼저 정한 뒤에
+  // 돈다(같은 커밋에서 선언 순서대로).
   useEffect(() => {
-    if (!showLogin || loginViewed.current) return;
-    loginViewed.current = true;
     track('login_view', { via: via.current });
-  }, [showLogin]);
+  }, []);
 
   const social = useMemo(
     () => ({
@@ -113,23 +93,6 @@ export default function Login() {
     [loginWithGoogle, loginWithKakao, loginWithApple],
   );
 
-  const leaveIntro = (exit: 'intro_complete' | 'intro_have_account') => {
-    track(exit);
-    via.current = exit === 'intro_complete' ? 'intro' : 'have_account';
-    setIntroSeen(true);
-    void markIntroSeen();
-  };
-
-  if (introSeen === null) return null;
-  if (!introSeen) {
-    return (
-      <IntroScreen
-        onSlideView={(step, index) => track('intro_view', { step, index })}
-        onHaveAccount={() => leaveIntro('intro_have_account')}
-        onDone={() => leaveIntro('intro_complete')}
-      />
-    );
-  }
   return (
     <LoginScreen
       onLogin={login}
