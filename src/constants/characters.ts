@@ -12,13 +12,12 @@ export type CharacterId = 'cat' | 'dog' | 'tiger' | 'panda' | 'bear' | 'sheep' |
 export type CharacterOption = {
   id: CharacterId;
   name: string;
-  description: string;
   /** Fallback glyph used where the animated sprite isn't rendered. */
   bg: string;
 };
 
 /**
- * 이름·설명은 i18n (#893) — 접근 시점에 `i18n.t()`를 부르는 getter라 언어를 바꾸면
+ * 이름은 i18n (#893) — 접근 시점에 `i18n.t()`를 부르는 getter라 언어를 바꾸면
  * 다음 렌더부터 새 언어로 읽힌다(모듈 로드 때 한 번 굳히면 언어 변경이 반영되지 않는다).
  */
 function localized(id: CharacterId, bg: string): CharacterOption {
@@ -26,9 +25,6 @@ function localized(id: CharacterId, bg: string): CharacterOption {
     id,
     get name() {
       return i18n.t(`member.characters.${id}.name`);
-    },
-    get description() {
-      return i18n.t(`member.characters.${id}.description`);
     },
     bg,
   };

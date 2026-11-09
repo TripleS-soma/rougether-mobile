@@ -114,7 +114,7 @@ export function CharacterStep({
               key={c.id}
               onPress={() => focusCharacter(i)}
               accessibilityRole="radio"
-              accessibilityLabel={`${c.name}. ${c.description}`}
+              accessibilityLabel={c.name}
               accessibilityState={{ selected: isActive }}
               style={({ pressed }) => [
                 styles.characterSlide,
@@ -136,11 +136,6 @@ export function CharacterStep({
               </View>
               <View style={styles.characterMeta}>
                 <Text style={[Typography.h2, { color: t.text }]}>{c.name}</Text>
-                <Text
-                  style={[Typography.body, styles.center, { color: t.textMuted }]}
-                  numberOfLines={2}>
-                  {c.description}
-                </Text>
               </View>
             </Pressable>
           );
