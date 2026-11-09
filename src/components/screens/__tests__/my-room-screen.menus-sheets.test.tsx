@@ -1,10 +1,18 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { calendarToday } from '@/utils/calendar-progress';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { ToastProvider } from '@/components/ui/toast';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 import { calendarCellLabel, OTHER_DAY, TODAY } from '@/test-utils/my-room-screen-fixtures';
+
+/** Reproduce JS exit followed by UIKit's native dismissal, not just elapsed time. */
+async function finishNativeSheetDismissal(onDismiss: () => void) {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  });
+  await act(async () => onDismiss());
+}
 
 describe('MyRoomScreen', () => {
   it('행 메뉴 → 루틴 수정을 누르면 그 루틴으로 onEditRoutine을 부른다 (#465)', async () => {
@@ -44,14 +52,16 @@ describe('MyRoomScreen', () => {
     const todos = [
       { id: 't9', title: '장보기', kind: 'todo' as const, dueDate: TODAY, category: '건강' },
     ];
-    const { getByText, getByLabelText, findByLabelText, queryByText } = await render(
+    const { getByText, getByLabelText, findByLabelText, queryByText, getByTestId } = await render(
       <MyRoomScreen routines={todos} onUpdateTodoDueDate={onUpdateTodoDueDate} />,
     );
 
     await fireEvent.press(getByText('장보기')); // row body → menu sheet
     expect(queryByText('시간 수정')).toBeNull(); // 시간 없는 항목은 '시간 추가' (#325)
 
-    await fireEvent.press(getByText('날짜 바꾸기')); // → calendar bottom sheet
+    const onMenuDismissed = getByTestId('bottom-sheet-modal').props.onDismiss;
+    await fireEvent.press(getByText('날짜 바꾸기'));
+    await finishNativeSheetDismissal(onMenuDismissed); // → calendar bottom sheet
     await fireEvent.press(
       await findByLabelText(calendarCellLabel(OTHER_DAY), {}, { timeout: 3000 }),
     ); // draft only — not saved yet
@@ -66,27 +76,34 @@ describe('MyRoomScreen', () => {
     const todos = [
       { id: 't9', title: '장보기', kind: 'todo' as const, dueDate: TODAY, category: '건강' },
     ];
-    const { getByText, getByLabelText, findByLabelText } = await render(
+    const { getByText, getByLabelText, findByLabelText, getByTestId } = await render(
       <MyRoomScreen routines={todos} onUpdateRoutineTime={onUpdateRoutineTime} />,
     );
     await fireEvent.press(getByText('장보기'));
     // 알림 시간 시트 재사용 — 토글 켜고 저장하면 기본 07:00으로 콜백.
+    const onMenuDismissed = getByTestId('bottom-sheet-modal').props.onDismiss;
     await fireEvent.press(getByText('시간 추가'));
+    await finishNativeSheetDismissal(onMenuDismissed);
     await fireEvent.press(await findByLabelText('알림 받기'));
     await fireEvent.press(getByLabelText('알림 저장'));
     expect(onUpdateRoutineTime).toHaveBeenCalledWith('t9', true, '07:00');
   });
 
   it('시간 라벨 분기 — 시간 있는 루틴은 시간 수정, 없는 루틴은 시간 추가 (#325)', async () => {
-    const { getByText, queryByText, findByText, findByLabelText } = await render(
+    const { getByText, queryByText, findByText, findByLabelText, getByTestId } = await render(
       <MyRoomScreen routines={SAMPLE_ROUTINES} />,
     );
     // '하루 회고'는 23:00 알림 보유 → 시간 수정.
     await fireEvent.press(getByText('하루 회고'));
     expect(getByText('시간 수정')).toBeTruthy();
     // 시간 수정 → (메뉴 퇴장 뒤) 알림 시트 열림 → 닫기.
+    const onMenuDismissed = getByTestId('bottom-sheet-modal').props.onDismiss;
     await fireEvent.press(getByText('시간 수정'));
-    await fireEvent.press(await findByLabelText('닫기'));
+    await finishNativeSheetDismissal(onMenuDismissed);
+    const closeTime = await findByLabelText('닫기');
+    const onTimeDismissed = getByTestId('bottom-sheet-modal').props.onDismiss;
+    await fireEvent.press(closeTime);
+    await finishNativeSheetDismissal(onTimeDismissed);
     // '물 2L 마시기'는 alarmEnabled: false → 시간 추가.
     await fireEvent.press(getByText('물 2L 마시기'));
     expect(await findByText('시간 추가')).toBeTruthy();
@@ -98,12 +115,14 @@ describe('MyRoomScreen', () => {
     const todos = [
       { id: 't9', title: '장보기', kind: 'todo' as const, dueDate: TODAY, category: '건강' },
     ];
-    const { getByText, getByLabelText, findByLabelText } = await render(
+    const { getByText, getByLabelText, findByLabelText, getByTestId } = await render(
       <MyRoomScreen routines={todos} onUpdateTodoDueDate={onUpdateTodoDueDate} />,
     );
 
     await fireEvent.press(getByText('장보기'));
+    const onMenuDismissed = getByTestId('bottom-sheet-modal').props.onDismiss;
     await fireEvent.press(getByText('날짜 바꾸기'));
+    await finishNativeSheetDismissal(onMenuDismissed);
     await fireEvent.press(
       await findByLabelText(calendarCellLabel(OTHER_DAY), {}, { timeout: 3000 }),
     );
@@ -113,12 +132,14 @@ describe('MyRoomScreen', () => {
 
   it('moves a single routine occurrence via 날짜 바꾸기, repeat untouched', async () => {
     const onMoveRoutineOccurrence = jest.fn();
-    const { getByText, getByLabelText, findByText } = await render(
+    const { getByText, getByLabelText, findByText, getByTestId } = await render(
       <MyRoomScreen routines={SAMPLE_ROUTINES} onMoveRoutineOccurrence={onMoveRoutineOccurrence} />,
     );
 
     await fireEvent.press(getByText('하루 회고')); // routine row → menu sheet
+    const onMenuDismissed = getByTestId('bottom-sheet-modal').props.onDismiss;
     await fireEvent.press(getByText('날짜 바꾸기'));
+    await finishNativeSheetDismissal(onMenuDismissed);
     // Routines get the occurrence-move note.
     expect(await findByText(/루틴 반복은 그대로 두고/, {}, { timeout: 3000 })).toBeTruthy();
 

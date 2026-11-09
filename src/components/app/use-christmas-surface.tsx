@@ -102,9 +102,8 @@ export function useChristmasSurface({
       if (christmas.event?.active && !christmas.event.popupDismissed) show('popup');
       return;
     }
-    if (flow.current === dayKey) return;
+    if (flow.current === dayKey || !christmas.event?.active) return;
     flow.current = dayKey;
-    if (!christmas.event?.active) return;
     pendingPopup.current = !christmas.event.popupDismissed;
     if (
       christmas.status?.availableToday &&
@@ -146,7 +145,14 @@ export function useChristmasSurface({
   const open = useCallback(() => {
     if (activeRef.current) return;
     wanted.current = true;
-    flow.current = dayKey;
+    if (
+      latest.current.event?.active &&
+      latest.current.loaded &&
+      !latest.current.fetching &&
+      !latest.current.error
+    ) {
+      flow.current = dayKey;
+    }
     pendingPopup.current = false;
     show('attendance');
     void latest.current.refresh();
