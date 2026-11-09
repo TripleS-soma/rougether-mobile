@@ -10,11 +10,13 @@ const sha = /^[a-f0-9]{40}$/;
 const uuid = /^[a-f0-9-]{36}$/;
 
 async function inspect(env = process.env, request = fetch) {
+  const fields = `id status platform appVersion appBuildVersion gitCommitHash buildProfile
+    runtime { version } fingerprint { hash } updateChannel { name }`;
   const query = `query ProductionStatus($appId: String!) {
-    app { byId(appId: $appId) { builds(offset: 0, limit: 100) {
-      id status platform appVersion appBuildVersion gitCommitHash buildProfile
-      runtime { version } fingerprint { hash } updateChannel { name }
-    } } }
+    app { byId(appId: $appId) {
+      android: builds(offset: 0, limit: 100, filter: {platform: ANDROID}) { ${fields} }
+      ios: builds(offset: 0, limit: 100, filter: {platform: IOS}) { ${fields} }
+    } }
   }`;
   const response = await request('https://api.expo.dev/graphql', {
     method: 'POST',
@@ -24,10 +26,14 @@ async function inspect(env = process.env, request = fetch) {
   });
   if (!response.ok) throw new Error(`EAS status HTTP ${response.status}`);
   const eas = await response.json();
-  if (eas.errors || !Array.isArray(eas.data?.app?.byId?.builds)) {
+  if (
+    eas.errors ||
+    !Array.isArray(eas.data?.app?.byId?.android) ||
+    !Array.isArray(eas.data?.app?.byId?.ios)
+  ) {
     throw new Error('EAS status response incomplete.');
   }
-  const builds = eas.data.app.byId.builds.map((b) => ({
+  const builds = [...eas.data.app.byId.android, ...eas.data.app.byId.ios].map((b) => ({
     id: safe(b.id, uuid),
     platform: safe(b.platform, word),
     status: safe(b.status, word),
