@@ -67,10 +67,15 @@ export function GachaLobby({
   // 온보딩 첫 뽑기(#1325)는 스피커 확정 — 카테고리 탭을 숨기고 문구를 바꾼다.
   // 문구는 "무엇이 나오는가"만 (2026-11-09) — 감성 제목·소개 문구는 정보가 없어 뺐다(사용자 제보).
   const copy: { title?: string; detail: string } = starterDrawState
-    ? {
-        title: tr('roomShop.gacha.lobby.starter.title'),
-        detail: tr('roomShop.gacha.lobby.starter.detail'),
-      }
+    ? starterDrawState === 'CLAIMED'
+      ? {
+          title: tr('roomShop.gacha.lobby.starter.claimedTitle'),
+          detail: tr('roomShop.gacha.lobby.starter.claimedDetail'),
+        }
+      : {
+          title: tr('roomShop.gacha.lobby.starter.title'),
+          detail: tr('roomShop.gacha.lobby.starter.detail'),
+        }
     : locked
       ? {
           title: tr('roomShop.gacha.lobby.characterLocked.title', { level: characterLockLevel }),

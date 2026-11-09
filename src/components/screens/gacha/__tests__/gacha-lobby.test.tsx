@@ -206,3 +206,9 @@ it('첫 뽑기는 무료라는 것과 스피커가 나온다는 것만 알린다
   expect(screen.getByText('첫 뽑기는 무료예요')).toBeTruthy();
   expect(screen.getByText('스피커가 나와요. 받은 뒤 원하는 곳에 놓을 수 있어요.')).toBeTruthy();
 });
+
+it('스피커를 이미 받았으면 무료 안내 대신 받았다고 말한다 (#1705 리뷰)', async () => {
+  const screen = await render(<GachaLobby {...lobbyProps({ starterDrawState: 'CLAIMED' })} />);
+  expect(screen.queryByText('첫 뽑기는 무료예요')).toBeNull();
+  expect(screen.getByText('스피커를 받았어요')).toBeTruthy();
+});

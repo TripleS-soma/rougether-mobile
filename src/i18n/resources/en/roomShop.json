@@ -253,6 +253,8 @@
         "starter": {
           "title": "Your first draw is free",
           "detail": "You get a speaker. Place it anywhere you like.",
+          "claimedTitle": "You got the speaker",
+          "claimedDetail": "Place it anywhere you like.",
           "drawFree": "First furniture draw (free)",
           "claimed": "See your speaker"
         },

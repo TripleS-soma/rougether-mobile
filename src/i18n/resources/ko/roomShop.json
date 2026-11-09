@@ -253,6 +253,8 @@
         "starter": {
           "title": "첫 뽑기는 무료예요",
           "detail": "스피커가 나와요. 받은 뒤 원하는 곳에 놓을 수 있어요.",
+          "claimedTitle": "스피커를 받았어요",
+          "claimedDetail": "원하는 곳에 놓을 수 있어요.",
           "drawFree": "첫 가구 뽑기 (무료)",
           "claimed": "받은 스피커 확인"
         },
