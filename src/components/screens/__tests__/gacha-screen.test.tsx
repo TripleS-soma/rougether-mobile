@@ -591,14 +591,21 @@ describe('GachaScreen', () => {
       .fn()
       .mockImplementationOnce(() => oldResponse.promise)
       .mockImplementationOnce(() => newResponse.promise);
-    const { getByLabelText, getByText, queryByText } = await render(
+    const { getByLabelText, getByText, queryByText, getByTestId, findByText } = await render(
       <GachaScreen gachas={machines} coinBalance={5600} onLoadRewards={onLoadRewards} />,
     );
     await act(() => {
       void pressHandler(getByLabelText('나올 수 있는 보상 보기'))();
     });
     expect(onLoadRewards).toHaveBeenCalledWith(103);
+    const onOldSheetDismissed = getByTestId('bottom-sheet-modal').props.onDismiss;
     await fireEvent.press(getByLabelText('시트 닫기'));
+    // Complete the first native modal lifetime before reopening the same sheet.
+    // Keep the first request pending; resolve the two requests in reverse order below.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    });
+    await act(async () => onOldSheetDismissed());
     await fireEvent.press(getByLabelText('벽지 뽑기'));
     await act(() => {
       void pressHandler(getByLabelText('나올 수 있는 보상 보기'))();
@@ -607,7 +614,7 @@ describe('GachaScreen', () => {
     await act(() =>
       newResponse.resolve([{ rewardType: 'ITEM', itemId: 70, name: '새 벽지', rarity: '일반' }]),
     );
-    expect(getByText('새 벽지')).toBeTruthy();
+    expect(await findByText('새 벽지')).toBeTruthy();
     await act(() =>
       oldResponse.resolve([{ rewardType: 'ITEM', itemId: 7, name: '늦은 소파', rarity: '일반' }]),
     );

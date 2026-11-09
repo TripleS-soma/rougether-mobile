@@ -213,3 +213,47 @@ it('ignores an old account popup dismissal failure after the modal queue is rese
   expect(result.current.active).toBe(false);
   expect(props(result.current, 1)).toMatchObject({ visible: false, error: false });
 });
+
+it('does not consume the KST day while inactive and opens after same-day activation is refetched', async () => {
+  jest.mocked(useChristmasEvent).mockReturnValue({
+    ...state,
+    event: { ...event, active: false },
+    status: { ...status, availableToday: false },
+  } as unknown as ReturnType<typeof useChristmasEvent>);
+  const { result, rerender } = await renderHook(
+    (input: typeof args) => useChristmasSurface(input),
+    { initialProps: args },
+  );
+  expect(result.current.active).toBe(false);
+  expect(props(result.current, 0).visible).toBe(false);
+  expect(props(result.current, 1).visible).toBe(false);
+  jest
+    .mocked(useChristmasEvent)
+    .mockReturnValue(state as unknown as ReturnType<typeof useChristmasEvent>);
+  await rerender(args);
+  await waitFor(() => expect(props(result.current, 0).visible).toBe(true));
+  expect(props(result.current, 1).visible).toBe(false);
+});
+
+it('does not consume the day when an inactive event is opened and closed manually before activation', async () => {
+  jest.mocked(useChristmasEvent).mockReturnValue({
+    ...state,
+    event: { ...event, active: false },
+    status: { ...status, availableToday: false },
+  } as unknown as ReturnType<typeof useChristmasEvent>);
+  const { result, rerender } = await renderHook(
+    (input: typeof args) => useChristmasSurface(input),
+    { initialProps: { ...args, home: false } },
+  );
+  await act(async () => result.current.open());
+  expect(props(result.current, 0).visible).toBe(true);
+  await act(async () => props(result.current, 0).onClose());
+  await act(async () => props(result.current, 0).onDismissed());
+  expect(result.current.active).toBe(false);
+  jest
+    .mocked(useChristmasEvent)
+    .mockReturnValue(state as unknown as ReturnType<typeof useChristmasEvent>);
+  await rerender(args);
+  await waitFor(() => expect(props(result.current, 0).visible).toBe(true));
+  expect(props(result.current, 1).visible).toBe(false);
+});
