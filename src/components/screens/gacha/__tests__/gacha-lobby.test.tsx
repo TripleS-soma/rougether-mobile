@@ -49,6 +49,42 @@ function lobbyProps(overrides: Partial<ComponentProps<typeof GachaLobby>> = {}) 
 }
 
 describe('GachaLobby', () => {
+  it('shows the placement bonus and exclusions only for the Christmas machine', async () => {
+    const christmas: GachaMachine = {
+      ...furniture,
+      id: 2026,
+      code: 'christmas_2026',
+      category: undefined,
+      name: '크리스마스',
+    };
+    const props = lobbyProps({
+      selected: christmas,
+      onRewards: jest.fn(),
+      seasonalGacha: {
+        machine: christmas,
+        title: '크리스마스',
+        endsLabel: '12.25까지',
+        hero: null,
+      },
+    });
+    const screen = await render(<GachaLobby {...props} />);
+    expect(screen.getByText('배치한 크리스마스 가구 종류마다 코인 +10%')).toBeTruthy();
+    expect(screen.queryByText('루틴·할 일 완료 보상 · 중복·벽지·바닥 제외')).toBeNull();
+    expect(screen.getByLabelText(/같은 종류의 중복 배치와 벽지, 바닥은 제외/)).toBeTruthy();
+    expect(screen.getByText('나올 수 있는 보상')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('tab', { name: '크리스마스' }));
+    expect(props.onSelect).toHaveBeenCalledWith(christmas);
+    expect(screen.getByLabelText('1회 뽑기, 37 코인')).toBeTruthy();
+    expect(screen.queryByText('어떤 선물이 기다릴까요?')).toBeNull();
+
+    await screen.rerender(<GachaLobby {...props} selected={floor} />);
+    expect(screen.queryByText('배치한 크리스마스 가구 종류마다 코인 +10%')).toBeNull();
+    expect(screen.queryByLabelText(/같은 종류의 중복 배치와 벽지, 바닥은 제외/)).toBeNull();
+    expect(screen.getByText('포근함을 깔아볼까요')).toBeTruthy();
+    expect(screen.getByText('어떤 선물이 기다릴까요?')).toBeTruthy();
+    expect(props.onDraw).not.toHaveBeenCalled();
+  });
+
   it('omits the extra footer copy while retaining explicit draw counts and prices', async () => {
     const screen = await render(<GachaLobby {...lobbyProps()} />);
     expect(screen.queryByText(/5회 가격으로 6개/)).toBeNull();

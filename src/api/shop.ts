@@ -1,4 +1,6 @@
 /** Shop (items) + gacha endpoints. */
+import { CHRISTMAS_GACHA_CODE } from '@/constants/gacha';
+
 import { apiGetList, apiPost } from './client';
 import type {
   GachaDrawResponse,
@@ -27,16 +29,22 @@ export function purchaseItem(itemId: number) {
 export const CHARACTER_GACHA_CODE = 'character_gacha';
 
 /**
- * 뽑기 로비 목록 = 꾸미기 3종(`GET /gacha?catalog=category`) + 캐릭터 머신.
- * 캐릭터 머신은 `category`가 없어 통합 목록에서 빠지므로(spec) 기존 목록 `GET /gacha`에서
- * 코드로 골라 붙인다(2026-10-14 캐릭터 뽑기 재개). 기존 목록이 실패해도 꾸미기 3종은 보여 준다.
+ * Category boxes plus exact legacy codes for character and Christmas machines.
+ * Christmas is returned only while available on the server. A failed legacy request
+ * keeps the ordinary category boxes usable and never invents an event machine.
  */
 export async function fetchGachas() {
   const [categories, legacy] = await Promise.all([
     apiGetList<GachaResponse>('/gacha?catalog=category'),
     apiGetList<GachaResponse>('/gacha').catch(() => [] as GachaResponse[]),
   ]);
-  return [...categories, ...legacy.filter((g) => g.code === CHARACTER_GACHA_CODE)];
+  return [
+    ...categories,
+    ...legacy.filter(
+      (g) =>
+        g.active !== false && (g.code === CHARACTER_GACHA_CODE || g.code === CHRISTMAS_GACHA_CODE),
+    ),
+  ];
 }
 
 /** POST /gacha/{id}/draw — draw `count` times. */

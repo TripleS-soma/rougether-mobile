@@ -99,6 +99,7 @@ const GACHA_ICONS: PictogramName[] = [
 ];
 
 export type GachaMachine = {
+  active?: boolean;
   id: number;
   name: string;
   costCurrencyType: 'COIN' | 'DIAMOND';
@@ -124,6 +125,7 @@ export function toGachaMachine(g: GachaResponse, index = 0): GachaMachine {
   const categoryMeta = category ? GACHA_CATEGORY_META[category] : undefined;
   return {
     id: g.gachaId ?? 0,
+    active: g.active,
     code: g.code,
     name: g.name ?? '',
     costCurrencyType: g.costCurrencyType ?? 'COIN',

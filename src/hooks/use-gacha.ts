@@ -5,14 +5,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { drawGacha, fetchGachas, type GachaDrawCount } from '@/api';
 import { queryKeys } from '@/lib/query-keys';
 import { type GachaMachine, toGachaMachine, toWallet } from '@/api/adapters';
-import { getCategoryGachas } from '@/constants/gacha';
+import { getLobbyGachas } from '@/constants/gacha';
 import type { DrawResult, GachaResponse } from '@/api/types';
 import { useWallet } from '@/hooks/use-wallet';
 import { track } from '@/lib/analytics';
 
 const NO_GACHAS: GachaMachine[] = [];
 const selectGachas = (list: GachaResponse[]) =>
-  getCategoryGachas(list.filter((gacha) => gacha.active !== false).map(toGachaMachine));
+  getLobbyGachas(list.filter((gacha) => gacha.active !== false).map(toGachaMachine));
 
 /**
  * `enabled` — 뽑기 화면에 처음 들어갈 때 켠다 (성능 장부 N3). 예전엔 앱 시작마다 카탈로그를

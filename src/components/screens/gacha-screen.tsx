@@ -19,7 +19,7 @@ import { Loading } from '@/components/ui/loading';
 import { BottomSheet, SheetDragExclude } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { GachaLobby } from '@/components/screens/gacha/gacha-lobby';
+import { GachaLobby, type GachaSeasonalPresentation } from '@/components/screens/gacha/gacha-lobby';
 import giftRoom from '@/assets/images/gacha/gift-room-hero-v2.webp';
 import { RewardRow } from '@/components/screens/gacha/reward-row';
 import { RetryState } from '@/components/ui/retry-state';
@@ -30,7 +30,8 @@ import { useToast } from '@/components/ui/toast';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { track } from '@/lib/analytics';
 import { CHARACTER_UNLOCK_LEVEL } from '@/constants/characters';
-import { getCategoryGachas, getGachaCategory } from '@/constants/gacha';
+import { getLobbyGachas, getGachaCategory, isChristmasGacha } from '@/constants/gacha';
+import type { CinematicTheme } from '@/components/screens/gacha/cinematic-timeline';
 import { APP_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
@@ -92,6 +93,8 @@ export type GachaScreenProps = {
   characterUnlocked?: boolean;
   /** 해금 레벨 — 서버 `characterUnlockLevel`, 없으면 앱 기본값. */
   characterUnlockLevel?: number;
+  /** Presentation for the actual seasonal machine returned by the catalogue. */
+  seasonalGacha?: GachaSeasonalPresentation;
 };
 
 /** 보상 시트의 등급 그룹 순서 (#620, 서버 등급 어휘) — 미지의 등급은 맨 뒤 '기타'. */
@@ -144,6 +147,7 @@ export function GachaScreen({
   soundEffectsEnabled = true,
   characterUnlocked = false,
   characterUnlockLevel = CHARACTER_UNLOCK_LEVEL,
+  seasonalGacha,
 }: GachaScreenProps) {
   const t = useTokens();
   const { split } = useAppFrame();
@@ -160,6 +164,8 @@ export function GachaScreen({
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [phase, setPhase] = useState<Phase>('idle');
+  // Capture the selected theme before the paid request. Catalogue refreshes must not change an in-flight reveal.
+  const [drawTheme, setDrawTheme] = useState<CinematicTheme>('default');
   const [pulled, setPulled] = useState<DrawResult[]>([]);
   const [resultActionsHeight, setResultActionsHeight] = useState(0);
   const revealPlan = useMemo(
@@ -249,7 +255,7 @@ export function GachaScreen({
 
   // The free onboarding box uses its own endpoint, so it has no catalog gacha ID.
   const machines = useMemo(
-    () => (starterDrawState ? gachas.slice(0, 1) : getCategoryGachas(gachas)),
+    () => (starterDrawState ? gachas.slice(0, 1) : getLobbyGachas(gachas)),
     [gachas, starterDrawState],
   );
   const box =
@@ -258,6 +264,7 @@ export function GachaScreen({
     machines[0];
   const featuredRevealItem =
     revealPlan.items.find((item) => item.tier === revealPlan.bestTier) ?? revealPlan.items[0];
+  const resultText = t.onTint;
   const balanceFor = (c: 'COIN' | 'DIAMOND') => (c === 'COIN' ? coinBalance : diamondBalance);
   const drawCost = (count: GachaDrawCount) =>
     box ? box.costAmount * (count === 1 ? 1 : BONUS_DRAW_COST_MULTIPLIER) : 0;
@@ -284,6 +291,7 @@ export function GachaScreen({
     setPulled([]);
     const run = ++drawRun.current;
     if (!shouldReduceMotion) hapticImpact();
+    setDrawTheme(isChristmasGacha(box) ? 'christmas' : 'default');
     setPhase('charging');
     let results: DrawResult[] | null | undefined;
     try {
@@ -389,6 +397,7 @@ export function GachaScreen({
             topInset={headerInset}
             bottomInset={insets.bottom}
             characterLockLevel={characterUnlocked ? undefined : characterUnlockLevel}
+            seasonalGacha={seasonalGacha}
           />
         </View>
       ) : (
@@ -449,7 +458,11 @@ export function GachaScreen({
             ) : null}
             {phase === 'charging' ? (
               <View style={styles.charging}>
-                <Image source={giftRoom} style={styles.chargingArt} contentFit="cover" />
+                {drawTheme === 'christmas' && seasonalGacha ? (
+                  <View style={styles.chargingArt}>{seasonalGacha.hero}</View>
+                ) : (
+                  <Image source={giftRoom} style={styles.chargingArt} contentFit="cover" />
+                )}
                 <Loading />
                 <Text style={[Typography.label, { color: t.text }]}>
                   {tr('roomShop.gacha.preparing')}
@@ -462,6 +475,7 @@ export function GachaScreen({
               revealPlan.items.length > 1 ? (
                 <MultiReveal
                   plan={revealPlan}
+                  theme={drawTheme}
                   soundEffectsEnabled={soundEffectsEnabled}
                   reducedMotion={shouldReduceMotion}
                   onComplete={finishCinematic}
@@ -470,6 +484,7 @@ export function GachaScreen({
                 <CinematicRevealShell
                   entry={featuredRevealItem}
                   profile={revealPlan.profile}
+                  theme={drawTheme}
                   soundEffectsEnabled={soundEffectsEnabled}
                   reducedMotion={shouldReduceMotion}
                   onComplete={finishCinematic}
@@ -480,11 +495,17 @@ export function GachaScreen({
                 <CinematicRewardStage
                   entry={featuredRevealItem}
                   tier={revealPlan.bestTier}
+                  theme={drawTheme}
                   showArtwork={revealPlan.items.length === 1}
                 />
                 {revealPlan.items.length === 1 ? (
-                  <View style={styles.singleCaption} accessibilityLiveRegion="polite">
-                    <Text style={[Typography.supporting, emph('semibold'), { color: t.onTint }]}>
+                  <View
+                    style={[
+                      styles.singleCaption,
+                      drawTheme === 'christmas' && styles.christmasCaption,
+                    ]}
+                    accessibilityLiveRegion="polite">
+                    <Text style={[Typography.supporting, emph('semibold'), { color: resultText }]}>
                       {featuredRevealItem?.badgeLabel
                         ? tr(
                             rarityLabelKey(featuredRevealItem.badgeLabel) ??
@@ -493,15 +514,17 @@ export function GachaScreen({
                         : tr('roomShop.gacha.newDiscovery')}
                     </Text>
                     <Text
-                      style={[Typography.h2, emph('bold'), styles.center, { color: t.onTint }]}
+                      style={[Typography.h2, emph('bold'), styles.center, { color: resultText }]}
                       numberOfLines={2}>
                       {featuredRevealItem?.displayName}
                     </Text>
-                    <Text style={[Typography.supporting, styles.center, { color: t.onTint }]}>
-                      {featuredRevealItem?.conversionLabel
-                        ? featuredRevealItem.conversionLabel
-                        : tr('roomShop.gacha.newGiftWaiting')}
-                    </Text>
+                    {drawTheme !== 'christmas' || featuredRevealItem?.conversionLabel ? (
+                      <Text style={[Typography.supporting, styles.center, { color: resultText }]}>
+                        {featuredRevealItem?.conversionLabel
+                          ? featuredRevealItem.conversionLabel
+                          : tr('roomShop.gacha.newGiftWaiting')}
+                      </Text>
+                    ) : null}
                   </View>
                 ) : (
                   <View
@@ -517,11 +540,12 @@ export function GachaScreen({
                       },
                     ]}
                     testID="gacha-multi-results">
-                    <Text style={[Typography.h2, emph('bold'), styles.center, { color: t.onTint }]}>
+                    <Text
+                      style={[Typography.h2, emph('bold'), styles.center, { color: resultText }]}>
                       {tr('roomShop.gacha.resultsTitle')}
                     </Text>
                     <Text
-                      style={[Typography.supporting, { color: t.onTint }]}
+                      style={[Typography.supporting, { color: resultText }]}
                       accessibilityLiveRegion="polite">
                       {tr('roomShop.gacha.resultsCount', { n: revealPlan.items.length })}
                     </Text>
@@ -691,6 +715,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
   },
+  christmasCaption: { top: '54%' },
   multiResults: {
     position: 'absolute',
     top: 0,

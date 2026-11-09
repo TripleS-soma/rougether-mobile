@@ -1,9 +1,11 @@
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Animated, AppState, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import type { CinematicCompletionReason } from '@/components/screens/gacha/cinematic-reveal';
+import type { CinematicTheme } from '@/components/screens/gacha/cinematic-timeline';
 import {
   createMultiRevealCueTracker,
   getMultiRevealArtFrame,
@@ -19,8 +21,11 @@ import { useAnimatedValue, useConstant, useLatestRef } from '@/hooks/use-stable-
 import { hapticImpact } from '@/utils/haptics';
 
 import multiVideo from '@/assets/videos/gacha-reveal-multi.mp4';
+import christmasMultiVideo from '@/assets/videos/gacha-reveal-christmas-multi.mp4';
+import christmasMultiPoster from '@/assets/images/gacha/cinematic-christmas-multi.jpg';
 
 export type MultiRevealProps = {
+  theme?: CinematicTheme;
   plan: RevealPlan;
   soundEffectsEnabled?: boolean;
   reducedMotion?: boolean;
@@ -33,7 +38,7 @@ export function MultiReveal(props: MultiRevealProps) {
   return reduced || props.plan.items.length !== MULTI_REVEAL_TIMING.maxItems ? (
     <ImmediateResults {...props} reason={reduced ? 'reduced-motion' : 'error'} />
   ) : (
-    <PlayingMultiReveal {...props} />
+    <PlayingMultiReveal key={props.theme ?? 'default'} {...props} />
   );
 }
 
@@ -57,7 +62,12 @@ const HAPTIC_STYLES: Record<MultiRevealCue['strength'], Haptics.ImpactFeedbackSt
   heavy: Haptics.ImpactFeedbackStyle.Heavy,
 };
 
-function PlayingMultiReveal({ plan, soundEffectsEnabled = true, onComplete }: MultiRevealProps) {
+function PlayingMultiReveal({
+  plan,
+  theme = 'default',
+  soundEffectsEnabled = true,
+  onComplete,
+}: MultiRevealProps) {
   const draw = useConstant(() => plan);
   const viewport = useWindowDimensions();
   const [size, setSize] = useState({ width: viewport.width, height: viewport.height });
@@ -72,14 +82,17 @@ function PlayingMultiReveal({ plan, soundEffectsEnabled = true, onComplete }: Mu
   const completed = useRef(false);
   const started = useRef(false);
   const complete = useLatestRef(onComplete);
-  const player = useVideoPlayer(multiVideo, (instance) => {
-    instance.loop = false;
-    instance.muted = !soundEffectsEnabled;
-    instance.volume = soundEffectsEnabled ? 0.86 : 0;
-    instance.timeUpdateEventInterval = 1 / 30;
-    instance.staysActiveInBackground = false;
-    instance.audioMixingMode = 'mixWithOthers';
-  });
+  const player = useVideoPlayer(
+    theme === 'christmas' ? christmasMultiVideo : multiVideo,
+    (instance) => {
+      instance.loop = false;
+      instance.muted = !soundEffectsEnabled;
+      instance.volume = soundEffectsEnabled ? 0.86 : 0;
+      instance.timeUpdateEventInterval = 1 / 30;
+      instance.staysActiveInBackground = false;
+      instance.audioMixingMode = 'mixWithOthers';
+    },
+  );
 
   // Layout cleanup runs before useVideoPlayer's passive native-object release.
   useLayoutEffect(() => {
@@ -170,6 +183,14 @@ function PlayingMultiReveal({ plan, soundEffectsEnabled = true, onComplete }: Mu
         )
           setSize({ width: next.width, height: next.height });
       }}>
+      {theme === 'christmas' ? (
+        <Image
+          source={christmasMultiPoster}
+          style={styles.video}
+          contentFit="cover"
+          transition={0}
+        />
+      ) : null}
       {!finished ? (
         <VideoView
           player={player}

@@ -48,9 +48,12 @@ export function assetSource(key?: string | null) {
   // The first-draw reward is bundled for offline result recovery.
   const source = {
     uri:
-      path === STARTER_SPEAKER_KEY
-        ? Asset.fromModule(SPEAKER_IMAGE).uri
-        : `${RESOURCE_BASE}/${path}`,
+      // Local Christmas fixture assets only; this is not an event API or a CDN rollout.
+      __DEV__ && path.startsWith('items/local-christmas-preview/')
+        ? `http://127.0.0.1:18094/${path}`
+        : path === STARTER_SPEAKER_KEY
+          ? Asset.fromModule(SPEAKER_IMAGE).uri
+          : `${RESOURCE_BASE}/${path}`,
   };
   SOURCE_CACHE.set(path, source);
   return source;
