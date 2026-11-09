@@ -255,6 +255,10 @@
         "drawOne": "Draw 1",
         "drawBonus": "Draw 5+1",
         "drawA11y": "{{label}}, {{cost}} {{currency}}",
+        "christmasPlacement": {
+          "bonus": "+10% coins per placed Christmas furniture type",
+          "a11y": "Each distinct type of Christmas furniture placed in your room adds 10% to routine and to-do completion coin rewards. Duplicate placements of the same type, wallpapers and floors are excluded."
+        },
         "starter": {
           "title": "Your first furniture: a cozy speaker",
           "detail": "Your first draw gives you a speaker. Place it anywhere you like.",
@@ -269,7 +273,12 @@
       },
       "giftOpenA11y": "Open the gift box",
       "giftOpenHint": "Opens the gift you already drew. No extra currency is spent.",
-      "starterMachineName": "First furniture"
+      "starterMachineName": "First furniture",
+      "christmas": {
+        "title": "Christmas",
+        "endsLabel": "Until Dec 25",
+        "heroA11y": "Christmas furniture room preview"
+      }
     },
     "studio": {
       "title": "AI furniture studio",

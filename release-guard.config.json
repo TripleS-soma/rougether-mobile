@@ -7,27 +7,58 @@
           "key": "NSCalendarsUsageDescription",
           "reason": "캘린더 가져오기(#844). 없으면 권한 요청 자체가 불가."
         },
-        { "key": "NSCalendarsFullAccessUsageDescription", "reason": "iOS 17+ 캘린더 전체 접근." },
+        {
+          "key": "NSCalendarsFullAccessUsageDescription",
+          "reason": "iOS 17+ 캘린더 전체 접근."
+        },
         {
           "key": "NSRemindersUsageDescription",
           "reason": "안 쓰지만 필수 — expo-calendar가 시작 시 조회한다. 지우면 스플래시에서 즉사(#913)."
         },
-        { "key": "NSRemindersFullAccessUsageDescription", "reason": "위와 같은 이유(iOS 17+)." },
-        { "key": "NSPhotoLibraryAddUsageDescription", "reason": "방 사진 앨범 저장." },
-        { "key": "NSPhotoLibraryUsageDescription", "reason": "버그 제보 스크린샷 첨부." },
+        {
+          "key": "NSRemindersFullAccessUsageDescription",
+          "reason": "위와 같은 이유(iOS 17+)."
+        },
+        {
+          "key": "NSPhotoLibraryAddUsageDescription",
+          "reason": "방 사진 앨범 저장."
+        },
+        {
+          "key": "NSPhotoLibraryUsageDescription",
+          "reason": "버그 제보 스크린샷 첨부."
+        },
         {
           "key": "NSUserTrackingUsageDescription",
           "reason": "Meta 설치 광고 측정 ATT 요청(#1616). 없으면 requestTrackingPermissionsAsync가 앱을 죽인다."
         }
+      ],
+      "forbidden": [
+        {
+          "key": "UIBackgroundModes",
+          "values": ["processing"],
+          "reason": "Android 전용 작업(rougether-app-icon 등)이 iOS 백그라운드 권한을 끌어오면 심사에서 사유를 요구받는다."
+        }
       ]
+    },
+    "alternateIcons": {
+      "names": ["MissingYou", "Teary", "Sobbing", "DailySuccess", "StreakChampion"]
     }
   },
   "android": {
     "permissions": {
       "required": [
-        { "name": "INTERNET", "reason": "서버 통신." },
-        { "name": "READ_CALENDAR", "reason": "기기 캘린더 가져오기 (#844)." },
-        { "name": "VIBRATE", "reason": "햅틱 피드백." }
+        {
+          "name": "INTERNET",
+          "reason": "서버 통신."
+        },
+        {
+          "name": "READ_CALENDAR",
+          "reason": "기기 캘린더 가져오기 (#844)."
+        },
+        {
+          "name": "VIBRATE",
+          "reason": "햅틱 피드백."
+        }
       ],
       "requiredMerged": [
         {
@@ -65,17 +96,47 @@
           "reason": "#1310에서 차단 — 오디오 파일을 쓰는 기능이 없다.",
           "blockedInSource": true
         },
-        { "name": "ACCESS_FINE_LOCATION", "reason": "위치를 쓰는 기능이 없다." },
-        { "name": "ACCESS_COARSE_LOCATION", "reason": "위치를 쓰는 기능이 없다." },
-        { "name": "ACCESS_BACKGROUND_LOCATION", "reason": "위치를 쓰는 기능이 없다." },
+        {
+          "name": "ACCESS_FINE_LOCATION",
+          "reason": "위치를 쓰는 기능이 없다."
+        },
+        {
+          "name": "ACCESS_COARSE_LOCATION",
+          "reason": "위치를 쓰는 기능이 없다."
+        },
+        {
+          "name": "ACCESS_BACKGROUND_LOCATION",
+          "reason": "위치를 쓰는 기능이 없다."
+        },
         {
           "name": "READ_CONTACTS",
           "reason": "연락처를 읽는 기능이 없다. 초대는 코드·딥링크로 한다."
         },
-        { "name": "READ_SMS", "reason": "SMS를 쓰는 기능이 없다." },
-        { "name": "RECEIVE_SMS", "reason": "SMS를 쓰는 기능이 없다." },
-        { "name": "READ_PHONE_STATE", "reason": "기기 식별자 접근으로 읽힌다 — 쓰는 기능이 없다." }
+        {
+          "name": "READ_SMS",
+          "reason": "SMS를 쓰는 기능이 없다."
+        },
+        {
+          "name": "RECEIVE_SMS",
+          "reason": "SMS를 쓰는 기능이 없다."
+        },
+        {
+          "name": "READ_PHONE_STATE",
+          "reason": "기기 식별자 접근으로 읽힌다 — 쓰는 기능이 없다."
+        }
       ]
+    },
+    "launcherAliases": {
+      "aliases": [
+        "MainActivityDefault",
+        "MainActivityMissingYou",
+        "MainActivityTeary",
+        "MainActivitySobbing",
+        "MainActivityDailySuccess",
+        "MainActivityStreakChampion"
+      ],
+      "enabledByDefault": "MainActivityDefault",
+      "mainActivityActions": ["android.intent.action.VIEW"]
     }
   }
 }

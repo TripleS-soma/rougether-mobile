@@ -46,7 +46,7 @@ jobs:
         run: |
           xcodebuild -version
           npx expo prebuild --platform ios --no-install
-          npx --yes expo-release-guard@0.1.0 check ios-plist
+          npx --yes expo-release-guard@0.3.0 check ios-plist
           cd ios
           pod install
       # Fail fast on CoreSimulator hangs before spending time on a native build.

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=720, height=1560" />
+<title>크리스마스 선물 뽑기 연출 시안</title>
+<script src="assets/gsap.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 720px; height: 1560px; overflow: hidden; background: #fff2de; }
+#stage, .clip { position: relative; width: 720px; height: 1560px; overflow: hidden; }
+#room { position: absolute; inset: 0; }
+img { position: absolute; object-fit: contain; }
+#wall { inset: 0; width: 720px; height: 1140px; object-fit: cover; }
+#floor { left: 0; top: 1140px; width: 720px; height: 420px; object-fit: cover; }
+#wreath { left: 270px; top: 130px; width: 180px; height: 180px; }
+#window { left: 18px; top: 340px; width: 220px; height: 220px; }
+#fireplace { left: 24px; top: 990px; width: 280px; height: 280px; }
+#rug { left: 100px; top: 1120px; width: 570px; height: 285px; }
+#gifts { left: 155px; top: 895px; width: 410px; height: 410px; transform-origin: 50% 86%; }
+
+#magic { position: absolute; inset: 0; width: 720px; height: 1560px; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="stage" data-composition-id="{{ID}}" data-start="0" data-duration="{{DURATION}}" data-fps="30" data-width="720" data-height="1560">
+<div id="room" class="clip" data-start="0" data-duration="{{DURATION}}" data-track-index="0" data-layout-allow-overlap>
+<img id="wall" src="assets/snowflake-wallpaper-panel-free-v2.png" alt="" data-layout-ignore />
+<img id="floor" src="assets/honey-winter-floor-v1.png" alt="" data-layout-ignore />
+<img id="wreath" src="assets/christmas-wreath-v1.png" alt="" data-layout-ignore />
+<img id="window" src="assets/snowy-window.png" alt="" data-layout-ignore />
+<img id="rug" src="assets/winter-rug-v1.png" alt="" data-layout-ignore />
+<img id="fireplace" src="assets/stocking-fireplace.png" alt="" data-layout-ignore />
+<img id="gifts" src="assets/gift-stack-v1.png" alt="리본 선물 꾸러미" data-layout-ignore />
+<canvas id="magic" width="720" height="1560" data-layout-ignore></canvas>
+<!-- Actual rewards are transparent artwork composed by the app, never baked into this shell. -->
+</div>
+</div>
+<script>
+// Fixed seed and pure repaint adapted from the installed particle-image-reveal primitive.
+const canvas = document.getElementById('magic');
+const ctx = canvas.getContext('2d');
+const state = { time: 0 };
+const REVEAL = {{REVEAL}};
+const REVEALS = {{REVEALS}};
+let seed = 0x50a71c1e;
+const next = () => { seed = (Math.imul(1664525, seed) + 1013904223) >>> 0; return seed / 4294967296; };
+const flakes = Array.from({ length: 18 }, () => ({ x: 25 + next() * 670, y: 100 + next() * 900, radius: 2 + next() * 3, speed: 18 + next() * 20, phase: next() * 6.28 }));
+const sparks = Array.from({ length: 25 }, (_, index) => ({ angle: -Math.PI + next() * Math.PI, speed: 160 + next() * 280, radius: 3 + next() * 5, star: index % 3 === 0 }));
+const clamp = (n) => Math.max(0, Math.min(1, n));
+function star(x, y, radius, alpha) {
+ctx.save(); ctx.translate(x, y); ctx.globalAlpha = alpha; ctx.fillStyle = '#e9bc69'; ctx.beginPath();
+for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; const r = i % 2 ? radius * 0.28 : radius; const px = Math.cos(a) * r; const py = Math.sin(a) * r; if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+ctx.closePath(); ctx.fill(); ctx.restore();
+}
+function paint() {
+ctx.clearRect(0, 0, 720, 1560);
+const t = state.time;
+flakes.forEach((p) => { ctx.globalAlpha = 0.32; ctx.fillStyle = '#fffdfa'; ctx.beginPath(); ctx.arc(p.x + Math.sin(t + p.phase) * 7, p.y + t * p.speed, p.radius, 0, Math.PI * 2); ctx.fill(); });
+REVEALS.forEach((onset) => {
+const age = t - onset;
+if (age > 0 && age < 1.35) {
+sparks.forEach((p) => {
+const x = 360 + Math.cos(p.angle) * p.speed * age;
+const y = 1060 + Math.sin(p.angle) * p.speed * age - 160 * age + 80 * age * age;
+const alpha = clamp(age / 0.08) * clamp((1.35 - age) / 0.7) * 0.9;
+if (p.star) star(x, y, p.radius * 1.5, alpha);
+else { ctx.globalAlpha = alpha; ctx.fillStyle = '#fffdfa'; ctx.beginPath(); ctx.arc(x, y, p.radius, 0, Math.PI * 2); ctx.fill(); }
+});
+}
+});
+ctx.globalAlpha = 1;
+}
+const tl = gsap.timeline({ paused: true });
+{{GIFT_MOTION}}
+tl.to(state, { time: {{DURATION}}, duration: {{DURATION}}, ease: 'none', onUpdate: paint }, 0);
+window.__timelines['{{ID}}'] = tl;
+tl.seek(0); paint();
+</script>
+</body>
+</html>
