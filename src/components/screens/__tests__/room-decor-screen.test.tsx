@@ -42,6 +42,17 @@ const tapItem = (id: string) =>
     ]),
   );
 
+/** 캔버스 핀치(#1713)를 배율 scale로 발사한다 — 두 손가락이 가구 위가 아니어도 된다. */
+const pinchCanvas = (scale: number) =>
+  act(() =>
+    fireGestureHandler(getByGestureTestId('canvas-pinch'), [
+      { state: State.BEGAN },
+      { state: State.ACTIVE },
+      { state: State.ACTIVE, scale },
+      { state: State.END, scale },
+    ]),
+  );
+
 const lastApply = (fn: jest.Mock) =>
   fn.mock.calls[fn.mock.calls.length - 1][0] as PlacedFurniture[];
 
@@ -913,14 +924,7 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     // 선택된 가구만 이동·크기 조절을 받는다 (#768).
     await tapItem('plant');
 
-    await act(() =>
-      fireGestureHandler(getByGestureTestId('item-pinch-plant'), [
-        { state: State.BEGAN },
-        { state: State.ACTIVE },
-        { state: State.ACTIVE, scale: 5 },
-        { state: State.END, scale: 5 },
-      ]),
-    );
+    await pinchCanvas(5);
     await fireEvent.press(getByText('적용하기'));
     await waitFor(() => expect(onApply).toHaveBeenCalled());
     // scale 3.5(#654 상한)에서 실제 폭이 0.98이 되므로 기존 x=0.20도 최소 중심
@@ -928,17 +932,62 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     expect(lastApply(onApply)[0].scale).toBe(3.5);
     expect(lastApply(onApply)[0].x).toBeCloseTo(0.49, 5);
 
-    await act(() =>
-      fireGestureHandler(getByGestureTestId('item-pinch-plant'), [
-        { state: State.BEGAN },
-        { state: State.ACTIVE },
-        { state: State.ACTIVE, scale: 0.01 },
-        { state: State.END, scale: 0.01 },
-      ]),
-    );
+    await pinchCanvas(0.01);
     await fireEvent.press(getByText('적용하기'));
     await waitFor(() => expect(onApply).toHaveBeenCalledTimes(2));
     expect(lastApply(onApply)[0]).toEqual(expect.objectContaining({ scale: 0.5 }));
+  });
+
+  it('선택한 가구는 방 어디서든 두 손가락 핀치로 크기가 바뀐다 (#1713)', async () => {
+    // 핀치는 캔버스가 받는다 — 예전엔 가구 박스(수축된 터치 영역)에서만 시작돼 작은 소품은
+    // 두 손가락을 올릴 자리가 없었다. 가구에는 이제 핀치 핸들러가 없다.
+    const onApply = jest.fn();
+    const ui = await render(<RoomDecorScreen initialItems={items(['plant'])} onApply={onApply} />);
+    await layoutCanvas(ui.getByTestId);
+    await tapItem('plant');
+    expect(() => getByGestureTestId('item-pinch-plant')).toThrow();
+
+    await pinchCanvas(2);
+    await fireEvent.press(ui.getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    expect(lastApply(onApply)[0].scale).toBe(2);
+  });
+
+  it('선택을 바꾸면 핀치 대상도 따라간다 — 이전 가구는 그대로 (#1713)', async () => {
+    const onApply = jest.fn();
+    const ui = await render(
+      <RoomDecorScreen initialItems={items(['plant', 'bed'])} onApply={onApply} />,
+    );
+    await layoutCanvas(ui.getByTestId);
+    await tapItem('plant');
+    await tapItem('bed');
+
+    await pinchCanvas(1.5);
+    await fireEvent.press(ui.getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    const byId = Object.fromEntries(lastApply(onApply).map((p) => [p.furnitureId, p.scale ?? 1]));
+    expect(byId).toEqual({ plant: 1, bed: 1.5 });
+  });
+
+  it('선택이 없으면 캔버스 핀치는 아무 가구도 바꾸지 않는다 (#1713)', async () => {
+    const onApply = jest.fn();
+    const ui = await render(<RoomDecorScreen initialItems={items(['plant'])} onApply={onApply} />);
+    await layoutCanvas(ui.getByTestId);
+
+    await pinchCanvas(2);
+    // 바뀐 게 없음을 확인하려고 가구 하나를 살짝 옮겨 적용한다 — 크기는 그대로여야 한다.
+    await tapItem('plant');
+    await act(() =>
+      fireGestureHandler(getByGestureTestId('item-pan-plant'), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE, translationX: 0, translationY: 0 },
+        { state: State.ACTIVE, translationX: 10, translationY: 0 },
+        { state: State.END, translationX: 10, translationY: 0 },
+      ]),
+    );
+    await fireEvent.press(ui.getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    expect(lastApply(onApply)[0].scale ?? 1).toBe(1);
   });
 
   it('resize handle drag commits a new scale', async () => {
@@ -1001,7 +1050,6 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     // 선택하지 않은 가구에는 팬·핀치 핸들러가 아예 조합되지 않는다 — 비활성 팬을
     // Exclusive에 두면 웹에서 탭이 영영 대기하던 것(2026-09-09). 끌거나 집을 수 없다.
     expect(() => getByGestureTestId('item-pan-plant')).toThrow();
-    expect(() => getByGestureTestId('item-pinch-plant')).toThrow();
 
     await fireEvent.press(getByText('적용하기'));
     await waitFor(() => expect(onApply).toHaveBeenCalled());
@@ -1319,14 +1367,12 @@ describe('RoomDecorScreen — 카탈로그 열 수 (#725)', () => {
       <RoomDecorScreen initialItems={[{ furnitureId: 'plant', x: 0.5, y: 0.5, z: 1 }]} />,
     );
     await layoutCanvas(ui.getByTestId);
-    // 선택 전: 팬·핀치 핸들러가 아예 조합되지 않는다.
+    // 선택 전: 팬 핸들러가 아예 조합되지 않는다. 핀치는 캔버스가 갖는다 (#1713).
     expect(() => getByGestureTestId('item-pan-plant')).toThrow();
-    expect(() => getByGestureTestId('item-pinch-plant')).toThrow();
     expect(getByGestureTestId('item-tap-plant')).toBeTruthy();
     await tapItem('plant');
-    // 선택 후: 이동·크기 조절이 붙는다.
+    // 선택 후: 이동이 붙는다(크기 조절은 캔버스 핀치·핸들).
     expect(getByGestureTestId('item-pan-plant')).toBeTruthy();
-    expect(getByGestureTestId('item-pinch-plant')).toBeTruthy();
     expect(ui.getByTestId('selection-ring-plant')).toBeTruthy();
   });
 });
