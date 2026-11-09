@@ -105,6 +105,16 @@ export const onboardingStyles = StyleSheet.create({
     gap: Spacing.four,
     paddingHorizontal: Spacing.five,
   },
+  nicknameField: {
+    alignSelf: 'stretch',
+  },
+  /** 안드로이드 전용 플레이스홀더 겹침 — 입력칸과 같은 박스에 가운데 정렬. */
+  nicknamePlaceholder: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.four,
+  },
   nicknameInput: {
     alignSelf: 'stretch',
     textAlign: 'center',
