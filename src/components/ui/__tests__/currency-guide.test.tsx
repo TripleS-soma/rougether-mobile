@@ -4,19 +4,22 @@ import { CurrencyGuide } from '@/components/ui/currency-guide';
 
 describe('CurrencyGuide (#789)', () => {
   it('기본은 접혀 있고, 탭하면 두 재화의 수급처·사용처를 펼친다', async () => {
-    const { getByLabelText, getByText, queryByText } = await render(<CurrencyGuide />);
+    const { getByLabelText, getByText, getAllByText, queryByText } = await render(
+      <CurrencyGuide />,
+    );
 
     // 내역을 보러 온 사람을 막지 않는다 — 제목만 보인다.
     expect(queryByText('루틴 완료')).toBeNull();
 
     await fireEvent.press(getByLabelText('코인·다이아는 어떻게 모으나요?'));
 
-    // 코인 쪽: 적립 규칙은 서버 고정 정책이라 수치를 그대로 적는다.
+    // 코인 쪽: 루틴과 할 일의 기본 보상은 같고, 이벤트 추가 지급은 별도다.
     expect(getByText('루틴 완료')).toBeTruthy();
-    expect(getByText('+10')).toBeTruthy();
     expect(getByText('할 일 완료')).toBeTruthy();
+    expect(getAllByText('기본 +10')).toHaveLength(2);
     // "왜 코인이 안 들어오지?"의 답 — 상한을 반드시 노출한다.
-    expect(getByText(/하루 4건까지/)).toBeTruthy();
+    expect(getByText(/하루 100코인까지/)).toBeTruthy();
+    expect(getByText('이벤트 추가 보상은 기본 한도와 별도로 지급')).toBeTruthy();
     // 다이아 쪽: 코인 → 뽑기 → 중복 전환 → 가구 구매로 경제가 이어지도록
     // 어느 필을 눌러도 두 재화를 함께 보여준다.
     expect(getByText(/이미 가진 아이템이 나오면 전환/)).toBeTruthy();

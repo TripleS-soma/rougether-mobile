@@ -24,13 +24,9 @@ export type CurrencyGuide = {
 
 /**
  * 재화 안내 문구 (#789) — 재화 내역 시트 상단의 접이식 안내가 이걸 그린다.
- * 정책이 바뀌면 **이 파일만** 고치면 되도록 문구를 한곳에 모았다.
- *
- * 수치 원칙: **루틴·할 일 완료 보상만** 숫자를 적는다(스펙 고정 정책,
- * routine-todo/features.md — 실서버 이력에서 ROUTINE_COMPLETE=+10 확인). 뽑기
- * 계열(비용·중복 전환·캐릭터 환급)은 **서버 데이터**라 숫자를 쓰지 않는다 —
- * 실서버는 뽑기 −25 / 중복 전환 +3으로, 스펙 문서의 250·30과 다르다. 여기 값을
- * 박아 두면 운영이 가격을 바꾼 순간 안내가 거짓말이 된다.
+ * 기본 완료 보상과 기본 일일 한도를 안내한다. 이벤트 추가 보상은 별도이며,
+ * 실제 지급액·지갑 반영·완료 연출은 서버의 rewardAmount를 사용한다.
+ * 뽑기 비용·중복 전환·캐릭터 환급 금액은 서버 데이터이므로 고정하지 않는다.
  */
 export function getCurrencyGuides(): CurrencyGuide[] {
   // 호출 시점에 번역 (#893·#1369) — 모듈 로드 때 고정하면 언어를 바꿔도 안 따라온다.
@@ -40,11 +36,12 @@ export function getCurrencyGuides(): CurrencyGuide[] {
       currency: 'coin',
       name: t('coin'),
       earn: [
-        { label: t('earnRoutine'), detail: '+10' },
-        { label: t('earnTodo'), detail: '+5' },
+        { label: t('earnRoutine'), detail: t('earnBaseReward') },
+        { label: t('earnTodo'), detail: t('earnBaseReward') },
         // 상한은 "왜 코인이 안 들어오지?"의 유일한 답 — 완료 토스트(#444)에만
         // 있던 정보라 여기 적는다.
         { label: t('earnDailyCap') },
+        { label: t('earnEventBonus') },
         { label: t('earnBonus') },
         { label: t('earnDupCharacter') },
       ],
