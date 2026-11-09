@@ -291,9 +291,11 @@ describe('OnboardingScreen 캐릭터 캐러셀', () => {
   });
 
   it('피크 카드를 탭하면 그 캐릭터가 활성이 된다', async () => {
-    const { getByLabelText, getByText } = await openCarousel();
-    await fireEvent.press(getByLabelText(/판다\. /));
+    const { getByRole, getByText, queryByText } = await openCarousel();
+    await fireEvent.press(getByRole('radio', { name: '판다' }));
     expect(getByText('판다랑 함께하기')).toBeTruthy();
+    // 카드에는 이름만 — 종별 한 줄 소개는 뺐다.
+    expect(queryByText(/루틴 친구/)).toBeNull();
   });
 });
 
