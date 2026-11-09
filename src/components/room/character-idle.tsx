@@ -64,12 +64,12 @@ export function CharacterIdle({
     return () => cancelAnimation(breath);
   }, [animate, breath]);
 
-  const firstPulse = useRef(true);
+  // 직전 pulseKey와 실제로 다를 때만 튄다 — animate만 바뀌는 경우(캐러셀 카드가 활성이 됨,
+  // 동작 줄이기 해제)에 effect가 다시 돌아도 포즈는 그대로라 튀면 안 된다(#1703 리뷰).
+  const lastPulse = useRef(pulseKey);
   useEffect(() => {
-    if (firstPulse.current) {
-      firstPulse.current = false;
-      return;
-    }
+    if (lastPulse.current === pulseKey) return;
+    lastPulse.current = pulseKey;
     if (!animate) return;
     squash.value = withSequence(
       withTiming(1, { duration: 90, easing: Easing.out(Easing.quad) }),

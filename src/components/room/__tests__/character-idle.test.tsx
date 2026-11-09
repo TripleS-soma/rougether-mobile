@@ -84,6 +84,28 @@ describe('CharacterIdle', () => {
   });
 });
 
+it('활성이 될 때(active false → true)는 포즈가 그대로면 튀지 않는다 (#1703 리뷰)', async () => {
+  const sequence = jest.spyOn(Reanimated, 'withSequence');
+  const ui = await render(
+    <CharacterIdle active={false} pulseKey={0}>
+      <Text>고양이</Text>
+    </CharacterIdle>,
+  );
+  await ui.rerender(
+    <CharacterIdle active pulseKey={0}>
+      <Text>고양이</Text>
+    </CharacterIdle>,
+  );
+  expect(sequence).not.toHaveBeenCalled();
+  // 그 뒤 포즈가 바뀌면 그때 튄다.
+  await ui.rerender(
+    <CharacterIdle active pulseKey={1}>
+      <Text>고양이</Text>
+    </CharacterIdle>,
+  );
+  expect(sequence).toHaveBeenCalledTimes(1);
+});
+
 describe('CharacterAvatar 서버 움짤', () => {
   it('서버 포즈 프레임(움직이는 webp)은 재생하지 않고 첫 장면에 멈춘다', async () => {
     expect(CHARACTER_ART_AUTOPLAY).toBe(false);
