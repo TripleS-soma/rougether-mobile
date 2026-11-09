@@ -13,36 +13,28 @@
     },
     "characters": {
       "cat": {
-        "name": "고양이",
-        "description": "조용하고 따뜻한 루틴 친구"
+        "name": "고양이"
       },
       "dog": {
-        "name": "강아지",
-        "description": "밝고 활발한 루틴 친구"
+        "name": "강아지"
       },
       "tiger": {
-        "name": "호랑이",
-        "description": "당차고 용감한 루틴 친구"
+        "name": "호랑이"
       },
       "panda": {
-        "name": "판다",
-        "description": "느긋하고 다정한 루틴 친구"
+        "name": "판다"
       },
       "bear": {
-        "name": "곰",
-        "description": "든든하고 포근한 루틴 친구"
+        "name": "곰"
       },
       "sheep": {
-        "name": "양",
-        "description": "부드럽고 순한 루틴 친구"
+        "name": "양"
       },
       "horse": {
-        "name": "망아지",
-        "description": "씩씩하고 활기찬 루틴 친구"
+        "name": "망아지"
       },
       "otter": {
-        "name": "수달",
-        "description": "장난기 많고 사랑스러운 루틴 친구"
+        "name": "수달"
       }
     },
     "login": {

@@ -1,5 +1,5 @@
 import { act, render } from '@testing-library/react-native';
-import { AccessibilityInfo, Text } from 'react-native';
+import { AccessibilityInfo, Platform, Text } from 'react-native';
 import * as Reanimated from 'react-native-reanimated';
 
 import { CHARACTER_ART_AUTOPLAY, CharacterAvatar } from '@/components/room/character-avatar';
@@ -113,5 +113,14 @@ describe('CharacterAvatar 서버 움짤', () => {
       <CharacterAvatar characterId="cat" frames={['characters/cat/idle.webp']} />,
     );
     expect(ui.getByTestId('cdn-animation').props.autoplay).toBe(false);
+  });
+
+  it('웹은 움짤을 멈출 수 없어 번들 정지 그림을 쓴다', async () => {
+    jest.replaceProperty(Platform, 'OS', 'web');
+    const ui = await render(
+      <CharacterAvatar characterId="cat" frames={['characters/cat/idle.webp']} />,
+    );
+    expect(ui.queryByTestId('cdn-animation')).toBeNull();
+    expect(ui.getByLabelText('고양이')).toBeTruthy();
   });
 });
