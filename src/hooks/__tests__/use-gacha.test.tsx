@@ -39,6 +39,40 @@ describe('useGacha', () => {
     expect(result.current.gachas).toHaveLength(1);
   });
 
+  it('keeps only a live exact Christmas machine with the real ID and cost', async () => {
+    const christmas = { gachaId: 812, code: 'christmas_2026', costAmount: 47, category: null };
+    global.fetch = jest.fn(async (url: string) =>
+      res({
+        items: url.endsWith('?catalog=category')
+          ? MACHINES.items
+          : [
+              { ...christmas, gachaId: 0 },
+              { ...christmas, gachaId: 5, active: false },
+              { ...christmas, gachaId: 6, code: 'christmas_2026_extra' },
+              christmas,
+              { ...christmas, gachaId: 813 },
+            ],
+      }),
+    ) as unknown as typeof fetch;
+    const client = createTestQueryClient();
+    const { result, unmount } = await renderHook(() => useGacha(), {
+      wrapper: queryWrapper(client),
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.gachas.map(({ id }) => id)).toEqual([81, 812]);
+    expect(result.current.gachas[1]).toMatchObject({
+      id: 812,
+      code: 'christmas_2026',
+      costAmount: 47,
+      category: undefined,
+    });
+    expect((global.fetch as jest.Mock).mock.calls.every(([, init]) => init.method === 'GET')).toBe(
+      true,
+    );
+    await unmount();
+    client.clear();
+  });
+
   // 로드 실패는 빈 상태('뽑기 없음')로 위장하지 않는다 (#549).
   it('로드 실패 시 error, 재시도 성공 시 해제된다 (#549)', async () => {
     let broken = true;

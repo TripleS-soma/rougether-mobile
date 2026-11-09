@@ -1,0 +1,92 @@
+[
+  {
+    "slug": "christmas-tree",
+    "name": "별빛 크리스마스트리",
+    "width": 512,
+    "height": 512,
+    "bottom": 0.94140625,
+    "filename": "christmas-tree-animated-v1.webp",
+    "surface": null
+  },
+  {
+    "slug": "stocking-fireplace",
+    "name": "양말 걸린 크림 벽난로",
+    "width": 512,
+    "height": 512,
+    "bottom": 0.857421875,
+    "filename": "stocking-fireplace-animated-v1.webp",
+    "surface": null
+  },
+  {
+    "slug": "plaid-sofa",
+    "name": "크리스마스 체크 소파",
+    "width": 1448,
+    "height": 1086,
+    "bottom": 0.8756906077348067,
+    "filename": "plaid-sofa-v1.png",
+    "surface": null
+  },
+  {
+    "slug": "gift-stack",
+    "name": "리본 선물 상자",
+    "width": 1254,
+    "height": 1254,
+    "bottom": 0.8604465709728868,
+    "filename": "gift-stack-v1.png",
+    "surface": null
+  },
+  {
+    "slug": "cocoa-table",
+    "name": "따뜻한 코코아 테이블",
+    "width": 512,
+    "height": 341,
+    "bottom": 0.8123167155425219,
+    "filename": "cocoa-table-animated-v1.webp",
+    "surface": null
+  },
+  {
+    "slug": "snowy-window",
+    "name": "눈 내리는 겨울 창문",
+    "width": 512,
+    "height": 512,
+    "bottom": 0.833984375,
+    "filename": "snowy-window-animated-v1.webp",
+    "surface": null
+  },
+  {
+    "slug": "christmas-wreath",
+    "name": "빨간 리본 크리스마스 리스",
+    "width": 1254,
+    "height": 1254,
+    "bottom": 0.930622009569378,
+    "filename": "christmas-wreath-v1.png",
+    "surface": null
+  },
+  {
+    "slug": "winter-rug",
+    "name": "눈꽃 크리스마스 러그",
+    "width": 1774,
+    "height": 887,
+    "bottom": 0.8906426155580609,
+    "filename": "winter-rug-v1.png",
+    "surface": null
+  },
+  {
+    "slug": "snowflake-wallpaper",
+    "name": "크리스마스 눈꽃 벽지",
+    "width": 1205,
+    "height": 964,
+    "bottom": 1.0,
+    "filename": "snowflake-wallpaper-panel-free-v2.png",
+    "surface": "wallpaper"
+  },
+  {
+    "slug": "honey-winter-floor",
+    "name": "겨울 산장 원목 바닥",
+    "width": 1205,
+    "height": 482,
+    "bottom": 1.0,
+    "filename": "honey-winter-floor-v1.png",
+    "surface": "floor"
+  }
+]

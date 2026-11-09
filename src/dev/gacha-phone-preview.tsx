@@ -8,6 +8,7 @@ import type { GachaMachine } from '@/api/adapters';
 import { GachaScreen } from '@/components/screens/gacha-screen';
 import { Button } from '@/components/ui/button';
 import { GACHA_CATEGORIES, GACHA_CATEGORY_META, type LobbyGachaCategory } from '@/constants/gacha';
+import { CHRISTMAS_PREVIEW, CHRISTMAS_PREVIEW_REWARDS } from '@/dev/christmas-gacha-preview';
 
 type DemoRarity = '일반' | '희귀' | '전설';
 
@@ -88,6 +89,13 @@ function categoryForId(gachaId: number): LobbyGachaCategory {
 }
 
 function demoDraw(gachaId: number, count: GachaDrawCount, rarity: DemoRarity): DrawResult[] {
+  if (gachaId === CHRISTMAS_PREVIEW.machine.id) {
+    return Array.from({ length: count }, (_, index) => ({
+      ...CHRISTMAS_PREVIEW_REWARDS[index % CHRISTMAS_PREVIEW_REWARDS.length],
+      rarity,
+      converted: false,
+    }));
+  }
   const pool = DEMO_REWARDS[categoryForId(gachaId)];
   if (count === 1) return [{ ...pool[0], rarity }];
   return [
@@ -105,6 +113,7 @@ function demoDraw(gachaId: number, count: GachaDrawCount, rarity: DemoRarity): D
 }
 
 function demoRewardList(gachaId: number, rarity: DemoRarity): GachaRewardResponse[] {
+  if (gachaId === CHRISTMAS_PREVIEW.machine.id) return CHRISTMAS_PREVIEW_REWARDS;
   const category = categoryForId(gachaId);
   return DEMO_REWARDS[category].map((reward, index) => ({
     ...reward,
@@ -138,18 +147,24 @@ export function GachaPhonePreview({
   const [open, setOpen] = useState(() => fullscreen && Boolean(entry));
   const screen = (
     <GachaScreen
-      gachas={DEMO_MACHINES}
+      gachas={[...DEMO_MACHINES, CHRISTMAS_PREVIEW.machine]}
       coinBalance={5600}
       diamondBalance={120}
       reducedMotion={reducedMotion}
       characterUnlocked={characterUnlocked}
+      seasonalGacha={CHRISTMAS_PREVIEW}
       soundEffectsEnabled
       onBack={fullscreen ? () => setOpen(false) : undefined}
       onDraw={async (gachaId, count) => demoDraw(gachaId, count, rarity)}
       onLoadRewards={async (gachaId) => demoRewardList(gachaId, rarity)}
-      placeableItemIds={Object.values(DEMO_REWARDS).flatMap((pool) =>
-        pool.map((reward) => String(reward.itemId)),
-      )}
+      placeableItemIds={[
+        ...Object.values(DEMO_REWARDS).flatMap((pool) =>
+          pool.map((reward) => String(reward.itemId)),
+        ),
+        ...CHRISTMAS_PREVIEW_REWARDS.filter((reward) => reward.placementType === 'positioned').map(
+          (reward) => String(reward.itemId),
+        ),
+      ]}
       onGoPlace={() => undefined}
     />
   );

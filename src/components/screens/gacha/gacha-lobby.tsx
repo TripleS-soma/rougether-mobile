@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import giftRoom from '@/assets/images/gacha/gift-room-hero-v2.webp';
@@ -15,6 +16,14 @@ import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { hapticSelection } from '@/utils/haptics';
 import { useT } from '@/i18n';
 
+/** Local dev-fixture slot; not a server event or a released seasonal machine. */
+export type GachaSeasonalPresentation = {
+  machine: GachaMachine;
+  title: string;
+  endsLabel: string;
+  hero: ReactNode;
+};
+
 export function GachaLobby({
   starterDrawState,
   machines,
@@ -28,6 +37,7 @@ export function GachaLobby({
   topInset = 0,
   bottomInset = 0,
   characterLockLevel,
+  seasonalGacha,
 }: {
   starterDrawState?: 'PENDING' | 'CLAIMED';
   machines: GachaMachine[];
@@ -45,12 +55,14 @@ export function GachaLobby({
    * 보상 목록을 볼 수 있지만, 뽑기 버튼 대신 잠금 안내가 나온다. undefined면 열려 있다.
    */
   characterLockLevel?: number;
+  seasonalGacha?: GachaSeasonalPresentation;
 }) {
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const tr = useT();
   const category = getGachaCategory(selected) ?? 'FURNITURE';
+  const seasonalSelected = selected.id === seasonalGacha?.machine.id;
   const locked = category === 'CHARACTER' && characterLockLevel != null;
   // 온보딩 첫 뽑기(#1325)는 스피커 확정 — 카테고리 탭을 숨기고 문구를 바꾼다.
   const copy = starterDrawState
@@ -72,20 +84,22 @@ export function GachaLobby({
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.content, { paddingTop: topInset + Spacing.three }]}>
-        <View style={styles.heading}>
-          <Text style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}>
-            {tr('roomShop.gacha.lobby.eyebrow')}
-          </Text>
-          <Text style={[Typography.h1, { color: t.text }]}>
-            {tr('roomShop.gacha.lobby.heading')}
-          </Text>
-        </View>
+        {!seasonalSelected ? (
+          <View style={styles.heading}>
+            <Text style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}>
+              {tr('roomShop.gacha.lobby.eyebrow')}
+            </Text>
+            <Text style={[Typography.h1, { color: t.text }]}>
+              {tr('roomShop.gacha.lobby.heading')}
+            </Text>
+          </View>
+        ) : null}
 
         {!starterDrawState ? (
           <View style={[styles.categories, { backgroundColor: t.surfaceMuted }]}>
             {GACHA_CATEGORIES.map((key) => {
               const machine = machines.find((candidate) => getGachaCategory(candidate) === key);
-              const active = category === key;
+              const active = !seasonalSelected && category === key;
               const meta = GACHA_CATEGORY_META[key];
               return (
                 <ScalePressable
@@ -117,26 +131,77 @@ export function GachaLobby({
           </View>
         ) : null}
 
-        <View style={styles.hero}>
-          <Image
-            source={giftRoom}
-            contentFit="cover"
-            style={styles.illustration}
-            accessibilityLabel={tr('roomShop.gacha.lobby.heroA11y')}
-          />
-          <View style={[styles.heroTag, { backgroundColor: t.surface }]}>
-            <Text style={[Typography.supporting, emph('semibold'), { color: t.text }]}>
-              {tr('roomShop.gacha.lobby.boxTag', { label: GACHA_CATEGORY_META[category].label })}
+        {!starterDrawState && seasonalGacha ? (
+          <ScalePressable
+            disabled={busy}
+            accessibilityRole="tab"
+            accessibilityLabel={seasonalGacha.title}
+            accessibilityState={{ selected: seasonalSelected, disabled: busy }}
+            onPress={() => {
+              hapticSelection();
+              onSelect(seasonalGacha.machine);
+            }}
+            style={[
+              styles.seasonalTab,
+              {
+                backgroundColor: seasonalSelected ? t.primarySoft : t.surfaceMuted,
+                borderColor: seasonalSelected ? t.primary : 'transparent',
+              },
+            ]}>
+            <Pictogram name="gift" size={23} />
+            <Text style={[Typography.label, styles.seasonalName, { color: t.primaryText }]}>
+              {seasonalGacha.title}
             </Text>
-          </View>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {seasonalGacha.endsLabel}
+            </Text>
+          </ScalePressable>
+        ) : null}
+
+        <View style={styles.hero}>
+          {seasonalSelected ? (
+            seasonalGacha?.hero
+          ) : (
+            <>
+              <Image
+                source={giftRoom}
+                contentFit="cover"
+                style={styles.illustration}
+                accessibilityLabel={tr('roomShop.gacha.lobby.heroA11y')}
+              />
+              <View style={[styles.heroTag, { backgroundColor: t.surface }]}>
+                <Text style={[Typography.supporting, emph('semibold'), { color: t.text }]}>
+                  {tr('roomShop.gacha.lobby.boxTag', {
+                    label: GACHA_CATEGORY_META[category].label,
+                  })}
+                </Text>
+              </View>
+            </>
+          )}
         </View>
 
-        <View style={styles.description}>
-          <Text style={[Typography.h3, styles.center, { color: t.text }]}>{copy.title}</Text>
-          <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
-            {copy.detail}
-          </Text>
-        </View>
+        {!seasonalSelected ? (
+          <View style={styles.description}>
+            <Text style={[Typography.h3, styles.center, { color: t.text }]}>{copy.title}</Text>
+            <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
+              {copy.detail}
+            </Text>
+          </View>
+        ) : null}
+
+        {seasonalSelected ? (
+          <View
+            accessible
+            accessibilityLabel={tr('roomShop.gacha.lobby.christmasPlacement.a11y')}
+            style={[styles.placementBonus, { backgroundColor: t.primarySoft }]}>
+            <Icon name="coin" size={18} color={t.warning} />
+            <View style={styles.placementBonusCopy}>
+              <Text style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}>
+                {tr('roomShop.gacha.lobby.christmasPlacement.bonus')}
+              </Text>
+            </View>
+          </View>
+        ) : null}
 
         {onRewards ? (
           <ScalePressable
@@ -149,11 +214,17 @@ export function GachaLobby({
             </View>
             <View style={styles.rewardCopy}>
               <Text style={[Typography.label, { color: t.text }]}>
-                {tr('roomShop.gacha.lobby.rewardsTitle')}
+                {tr(
+                  seasonalSelected
+                    ? 'roomShop.gacha.rewardsTitle'
+                    : 'roomShop.gacha.lobby.rewardsTitle',
+                )}
               </Text>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                {tr('roomShop.gacha.lobby.rewardsHint')}
-              </Text>
+              {!seasonalSelected ? (
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  {tr('roomShop.gacha.lobby.rewardsHint')}
+                </Text>
+              ) : null}
             </View>
             <Icon name="forward" size={17} color={t.textMuted} />
           </ScalePressable>
@@ -289,6 +360,18 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
   },
   unavailable: { opacity: 0.4 },
+  seasonalTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    minHeight: 44,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderWidth: 1,
+    borderRadius: Radius.lg,
+    borderCurve: 'continuous',
+  },
+  seasonalName: { flex: 1 },
   hero: { width: '100%', aspectRatio: 4 / 3, overflow: 'hidden', borderRadius: Radius.xl },
   illustration: { width: '100%', height: '100%' },
   heroTag: {
@@ -300,6 +383,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
   },
   description: { gap: Spacing.two },
+  placementBonus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    padding: Spacing.two,
+    borderRadius: Radius.md,
+  },
+  placementBonusCopy: { flex: 1, gap: Spacing.half },
   center: { textAlign: 'center' },
   rewards: {
     flexDirection: 'row',

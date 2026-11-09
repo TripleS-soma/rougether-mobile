@@ -3,6 +3,12 @@ import type { PictogramName } from '@/components/ui/pictograms';
 import { GachaAccents } from '@/constants/theme';
 import { i18n } from '@/i18n';
 
+export const CHRISTMAS_GACHA_CODE = 'christmas_2026';
+
+/** Exact server identity only; names and numeric IDs are not event identifiers. */
+export const isChristmasGacha = (machine: { code?: string }) =>
+  machine.code === CHRISTMAS_GACHA_CODE;
+
 /**
  * 뽑기 로비의 상자 4종. 꾸미기 3종은 서버 `category`가 있는 통합 뽑기이고, 캐릭터는 서버
  * `category`가 없는 전용 머신(`character_gacha`, spec gacha/api "캐릭터 뽑기")이라 코드로 찾는다.
@@ -70,6 +76,7 @@ export function getGachaCategory(machine: {
   category?: unknown;
   code?: string;
 }): LobbyGachaCategory | undefined {
+  if (isChristmasGacha(machine)) return undefined;
   if (machine.category != null) {
     return GACHA_CATEGORIES.find((category) => category === machine.category);
   }
@@ -83,11 +90,24 @@ export function getCategoryGachas(machines: readonly GachaMachine[]): GachaMachi
       (candidate) =>
         candidate.id > 0 &&
         Number.isInteger(candidate.id) &&
+        candidate.active !== false &&
         isDrawableGacha(candidate) &&
         getGachaCategory(candidate) === category,
     );
     return machine ? [machine] : [];
   });
+}
+
+/** The live legacy response may add one Christmas machine; retain its ID and price. */
+export function getLobbyGachas(machines: readonly GachaMachine[]): GachaMachine[] {
+  const christmas = machines.find(
+    (machine) =>
+      isChristmasGacha(machine) &&
+      machine.active !== false &&
+      Number.isInteger(machine.id) &&
+      machine.id > 0,
+  );
+  return [...getCategoryGachas(machines), ...(christmas ? [christmas] : [])];
 }
 
 /**

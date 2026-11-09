@@ -1,5 +1,11 @@
 import type { GachaMachine } from '@/api/adapters';
-import { getCategoryGachas, getGachaCategory, isDrawableGacha } from '@/constants/gacha';
+import {
+  getCategoryGachas,
+  getGachaCategory,
+  getLobbyGachas,
+  isChristmasGacha,
+  isDrawableGacha,
+} from '@/constants/gacha';
 
 const machine = (code?: string): GachaMachine =>
   ({ id: 1, name: '뽑기', code, kind: 'furniture' }) as GachaMachine;
@@ -77,5 +83,34 @@ describe('theme-independent category boxes', () => {
         { ...machine('floor_gacha'), id: 5 },
       ]),
     ).toEqual([floor]);
+  });
+});
+
+describe('live Christmas legacy machine', () => {
+  it('uses the exact code without replacing actual IDs, prices or the four categories', () => {
+    const christmas = { ...machine('christmas_2026'), id: 812, costAmount: 47 };
+    const categories = ['wallpaper_gacha', 'floor_gacha', 'furniture_gacha', 'character_gacha'].map(
+      (code, index) => ({ ...machine(code), id: 100 + index }),
+    );
+    const selected = getLobbyGachas([christmas, ...categories]);
+    expect(selected).toEqual([...categories, christmas]);
+    expect(selected[4]).toBe(christmas);
+    expect(getGachaCategory({ ...christmas, category: 'FURNITURE' })).toBeUndefined();
+    expect(isChristmasGacha({ code: 'christmas_2026_old' })).toBe(false);
+  });
+
+  it('ignores invalid, inactive, duplicate and unknown seasonal machines', () => {
+    const christmas = { ...machine('christmas_2026'), id: 812 };
+    expect(
+      getLobbyGachas([
+        { ...christmas, id: 0 },
+        { ...christmas, id: 1.5 },
+        { ...christmas, id: 8, active: false },
+        { ...machine('christmas_2026_extra'), id: 9 },
+        christmas,
+        { ...christmas, id: 813 },
+      ]),
+    ).toEqual([christmas]);
+    expect(getLobbyGachas([machine('winter_2026')])).toEqual([]);
   });
 });

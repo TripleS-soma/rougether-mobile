@@ -60,3 +60,44 @@ describe('cinematic media contract', () => {
     expect(advance(1550)).toEqual([]);
   });
 });
+
+describe('Christmas gift media contract', () => {
+  it.each(['common', 'rare', 'legendary'] as const)(
+    'keeps %s rewards hidden until the Christmas gift releases',
+    (tier) => {
+      const theme = 'christmas';
+      expect(getCinematicMotion(tier, theme).durationMs).toBe(3400);
+      expect(getCinematicArtFrame(tier, 1549, theme).opacity).toBe(0);
+      expect(getCinematicArtFrame(tier, 1800, theme).opacity).toBe(1);
+      expect(getCinematicArtFrame(tier, 3400, theme)).toEqual({
+        opacity: 1,
+        translateY: 0,
+        scale: 1,
+        rotation: 0,
+      });
+    },
+  );
+
+  it.each([
+    [390, 844],
+    [402, 874],
+    [360, 800],
+  ])('aligns Christmas artwork with the blank 720×1560 movie at %d×%d', (width, height) => {
+    const slot = getCinematicStageLayout(width, height, 'christmas');
+    const coverScale = Math.max(width / 720, height / 1560);
+    const movieTop = (height - 1560 * coverScale) / 2;
+    expect(slot.left).toBeCloseTo(width / 2 - 195 * coverScale);
+    expect(slot.top).toBeCloseTo(movieTop + 440 * coverScale);
+    expect(slot.width).toBeCloseTo(390 * coverScale);
+    expect(slot.height).toBeCloseTo(390 * coverScale);
+  });
+
+  it('synchronizes the Christmas haptic to release once, without replaying after a rewind', () => {
+    const advance = createCinematicCueTracker('legendary', 'christmas');
+    expect(advance(1549)).toEqual([]);
+    expect(advance(1555)).toEqual([{ atMs: 1550, strength: 'heavy' }]);
+    expect(advance(800)).toEqual([]);
+    expect(advance(1559)).toEqual([]);
+    expect(advance(1780)).toEqual([]);
+  });
+});

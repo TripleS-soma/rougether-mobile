@@ -4,6 +4,8 @@ import { fetchGachaRewards } from '@/api';
 import { toGachaMachine } from '@/api/adapters';
 import type { Screen } from '@/components/app/navigation';
 import { GachaScreen } from '@/components/screens/gacha-screen';
+import { ChristmasRoomHero } from '@/components/screens/gacha/christmas-room-hero';
+import { isChristmasGacha } from '@/constants/gacha';
 import type { Wallet } from '@/constants/currency';
 import { useGacha } from '@/hooks/use-gacha';
 import { useStarterGacha } from '@/hooks/use-starter-gacha';
@@ -74,10 +76,22 @@ export function useGachaSurface({
     [tr],
   );
 
+  const seasonalGacha = useMemo(() => {
+    const machine = gachas.find(isChristmasGacha);
+    if (starterAllowed || !machine) return undefined;
+    return {
+      machine,
+      title: tr('roomShop.gacha.christmas.title'),
+      endsLabel: tr('roomShop.gacha.christmas.endsLabel'),
+      hero: <ChristmasRoomHero />,
+    };
+  }, [gachas, starterAllowed, tr]);
+
   const subScreen =
     screen === 'gacha' ? (
       <GachaScreen
         gachas={starterAllowed ? starterMachines : gachas}
+        seasonalGacha={seasonalGacha}
         starterDrawState={
           starterAllowed
             ? starterGacha.state?.state === 'CLAIMED'
