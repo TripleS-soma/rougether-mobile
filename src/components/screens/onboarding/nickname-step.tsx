@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
+import { CharacterIdle } from '@/components/room/character-idle';
 import { PrimaryButton, TextButton } from '@/components/screens/onboarding/onboarding-buttons';
 import { onboardingStyles as styles } from '@/components/screens/onboarding/onboarding-styles';
 import type { CharacterId } from '@/constants/characters';
@@ -83,7 +84,9 @@ export function NicknameStep({
           style={styles.nicknameBody}
           onPress={Platform.OS === 'web' ? undefined : Keyboard.dismiss}
           accessible={false}>
-          <CharacterAvatar characterId={characterId} frames={characterFrames} size={120} />
+          <CharacterIdle>
+            <CharacterAvatar characterId={characterId} frames={characterFrames} size={120} />
+          </CharacterIdle>
           <View style={styles.nicknameField}>
             <TextInput
               value={nickname}
