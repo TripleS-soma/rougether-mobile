@@ -130,11 +130,13 @@ function demoRewardList(gachaId: number, rarity: DemoRarity): GachaRewardRespons
  * real viewport instead of placing a fake phone-sized View around the screen.
  */
 export function GachaPhonePreview({
+  initialMachineId,
   fullscreen = false,
   rarity = '전설',
   reducedMotion = false,
   characterUnlocked = false,
 }: {
+  initialMachineId?: number;
   fullscreen?: boolean;
   rarity?: DemoRarity;
   reducedMotion?: boolean;
@@ -147,6 +149,7 @@ export function GachaPhonePreview({
   const [open, setOpen] = useState(() => fullscreen && Boolean(entry));
   const screen = (
     <GachaScreen
+      initialMachineId={initialMachineId}
       gachas={[...DEMO_MACHINES, CHRISTMAS_PREVIEW.machine]}
       coinBalance={5600}
       diamondBalance={120}

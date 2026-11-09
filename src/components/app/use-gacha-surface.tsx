@@ -19,6 +19,7 @@ type GachaScreenProps = ComponentProps<typeof GachaScreen>;
  */
 export function useGachaSurface({
   screen,
+  initialMachineId,
   wallet,
   characterUnlocked,
   characterUnlockLevel,
@@ -30,6 +31,7 @@ export function useGachaSurface({
   onFirstDrawConfirmed,
 }: {
   screen: Screen;
+  initialMachineId?: number;
   wallet: Wallet;
   /** 캐릭터 뽑기 해금 (방 레벨 10, 2026-10-14) — 내 방 응답에서. */
   characterUnlocked: boolean;
@@ -90,6 +92,7 @@ export function useGachaSurface({
   const subScreen =
     screen === 'gacha' ? (
       <GachaScreen
+        initialMachineId={initialMachineId}
         gachas={starterAllowed ? starterMachines : gachas}
         seasonalGacha={seasonalGacha}
         starterDrawState={

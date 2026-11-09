@@ -705,3 +705,56 @@ describe('onboarding starter draw', () => {
     expect(screen.queryByLabelText('첫 가구 뽑기 (무료)')).toBeNull();
   });
 });
+
+it('selects the requested actual seasonal machine and falls back safely for an absent ID', async () => {
+  const christmas = {
+    ...machine,
+    id: 812,
+    code: 'christmas_2026',
+    category: undefined,
+    costAmount: 47,
+  };
+  const seasonalGacha = {
+    machine: christmas,
+    title: '크리스마스',
+    endsLabel: '12.25까지',
+    hero: null,
+  };
+  const screen = await render(
+    <ToastProvider>
+      <GachaScreen
+        gachas={[...machines, christmas]}
+        initialMachineId={812}
+        seasonalGacha={seasonalGacha}
+        coinBalance={500}
+      />
+    </ToastProvider>,
+  );
+  expect(screen.getByRole('tab', { name: '크리스마스' }).props.accessibilityState.selected).toBe(
+    true,
+  );
+  expect(screen.getByLabelText('1회 뽑기, 47 코인')).toBeTruthy();
+  await fireEvent.press(screen.getByRole('tab', { name: '벽지 뽑기' }));
+  await screen.rerender(
+    <ToastProvider>
+      <GachaScreen
+        gachas={[...machines, { ...christmas }]}
+        initialMachineId={812}
+        seasonalGacha={seasonalGacha}
+        coinBalance={500}
+      />
+    </ToastProvider>,
+  );
+  expect(screen.getByRole('tab', { name: '벽지 뽑기' }).props.accessibilityState.selected).toBe(
+    true,
+  );
+  await screen.unmount();
+  const absent = await render(
+    <ToastProvider>
+      <GachaScreen gachas={machines} initialMachineId={99999} coinBalance={500} />
+    </ToastProvider>,
+  );
+  expect(absent.getByRole('tab', { name: '가구 뽑기' }).props.accessibilityState.selected).toBe(
+    true,
+  );
+});

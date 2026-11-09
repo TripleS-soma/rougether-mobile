@@ -46,6 +46,8 @@ type Phase = 'idle' | 'charging' | 'burst' | 'reveal';
 const BONUS_DRAW_COST_MULTIPLIER = 5;
 
 export type GachaScreenProps = {
+  /** Requested live machine; selection still resolves against the actual available catalogue. */
+  initialMachineId?: number;
   starterDrawState?: 'PENDING' | 'CLAIMED';
   onBack?: () => void;
   /** Machines from the API (`GET /gacha`). */
@@ -130,6 +132,7 @@ function RewardGap() {
 }
 
 export function GachaScreen({
+  initialMachineId,
   starterDrawState,
   onBack,
   gachas = [],
@@ -161,7 +164,7 @@ export function GachaScreen({
   const headerInset = useHeaderContentInset();
   const column = useResponsiveColumn(520);
   const { show: toast } = useToast();
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(initialMachineId ?? null);
   const [error, setError] = useState('');
   const [phase, setPhase] = useState<Phase>('idle');
   // Capture the selected theme before the paid request. Catalogue refreshes must not change an in-flight reveal.
@@ -258,6 +261,17 @@ export function GachaScreen({
     () => (starterDrawState ? gachas.slice(0, 1) : getLobbyGachas(gachas)),
     [gachas, starterDrawState],
   );
+  const consumedInitialSelection = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (
+      initialMachineId != null &&
+      consumedInitialSelection.current !== initialMachineId &&
+      machines.some((machine) => machine.id === initialMachineId)
+    ) {
+      consumedInitialSelection.current = initialMachineId;
+      setSelectedId(initialMachineId);
+    }
+  }, [initialMachineId, machines]);
   const box =
     machines.find((b) => b.id === selectedId) ??
     machines.find((b) => getGachaCategory(b) === 'FURNITURE') ??

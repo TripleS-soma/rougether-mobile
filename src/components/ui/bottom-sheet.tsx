@@ -24,6 +24,7 @@ import {
 } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { registerAppSheet, usePriorityModalPresent } from '@/lib/modal-presence';
 import { ModalFrame } from '@/components/app/app-frame';
 import { Overlay } from '@/constants/theme';
 import { useAnimatedValue, useConstant, useLatestRef } from '@/hooks/use-stable-value';
@@ -175,7 +176,11 @@ export function BottomSheet({
   const progress = useAnimatedValue(0);
   // 손가락으로 끌어내린 추가 오프셋(아래로만). 놓으면 0으로 튕겨 돌아가거나 닫힘.
   const dragY = useAnimatedValue(0);
-  const [rendered, setRendered] = useState(visible);
+  const priorityModalPresent = usePriorityModalPresent();
+  const [rendered, setRendered] = useState(visible && !priorityModalPresent);
+  const [mounted, setMounted] = useState(visible && !priorityModalPresent);
+  const nativeClosingRef = useRef(false);
+  const dismissFrameRef = useRef<ReturnType<typeof requestAnimationFrame> | null>(null);
   const [cardH, setCardH] = useState(0);
   // 카드 상단의 화면 y (#514) — 오버레이가 창 전체를 덮으므로 layout.y가 곧
   // 페이지 좌표. transform(입장 슬라이드)은 layout에 안 잡혀 정지 위치 기준.
@@ -216,6 +221,10 @@ export function BottomSheet({
       }),
   );
 
+  useEffect(() => {
+    if (mounted) return registerAppSheet();
+  }, [mounted]);
+
   // 이 시트가 지금 퇴장 카운트에 들어가 있는지 — 정확히 한 번만 빼기 위해.
   const renderedRef = useLatestRef(rendered);
   const closingRef = useRef(false);
@@ -224,12 +233,20 @@ export function BottomSheet({
     closingRef.current = false;
     markClosing(-1);
   }, []);
+  const finishNativeDismissal = useCallback(() => {
+    if (!nativeClosingRef.current) return;
+    nativeClosingRef.current = false;
+    setMounted(false);
+    leaveClosing();
+  }, [leaveClosing]);
   useEffect(() => {
     if (visible) {
+      if (priorityModalPresent && !renderedRef.current) return;
       // 다시 열리면 퇴장 중이던 상태는 취소.
-      leaveClosing();
+      if (!nativeClosingRef.current) leaveClosing();
       const open = () => {
         dragY.setValue(0);
+        setMounted(true);
         setRendered(true);
         Animated.spring(progress, {
           toValue: 1,
@@ -254,19 +271,39 @@ export function BottomSheet({
       closingRef.current = true;
       markClosing(1);
     }
-    Animated.timing(progress, {
+    const animation = Animated.timing(progress, {
       toValue: 0,
       duration: 200,
       easing: Easing.in(Easing.cubic),
       useNativeDriver: NATIVE_DRIVER,
-    }).start(({ finished }) => {
-      if (!finished) return;
-      setRendered(false);
-      leaveClosing();
     });
-  }, [visible, progress, dragY, leaveClosing, renderedRef]);
+    animation.start(({ finished }) => {
+      if (!finished) return;
+      nativeClosingRef.current = true;
+      setRendered(false);
+      // Keep the Modal mounted with visible=false until UIKit confirms dismissal.
+      if (Platform.OS !== 'ios') {
+        dismissFrameRef.current = requestAnimationFrame(finishNativeDismissal);
+      }
+    });
+    return () => animation.stop();
+  }, [
+    visible,
+    progress,
+    dragY,
+    leaveClosing,
+    renderedRef,
+    priorityModalPresent,
+    finishNativeDismissal,
+  ]);
   // 퇴장 애니메이션 도중 언마운트돼도 카운트가 남지 않게.
-  useEffect(() => leaveClosing, [leaveClosing]);
+  useEffect(
+    () => () => {
+      if (dismissFrameRef.current != null) cancelAnimationFrame(dismissFrameRef.current);
+      leaveClosing();
+    },
+    [leaveClosing],
+  );
 
   // 아래로 끄는 팬만 가로챈다 — 수직 우세 + 클레임 범위(dragScope) 안에서
   // 시작한 드래그만 claim한다. 기본 'header'는 카드 상단(그립/헤더) 한정
@@ -293,7 +330,7 @@ export function BottomSheet({
     }),
   );
 
-  if (!rendered) return null;
+  if (!mounted) return null;
 
   // 카드 높이를 재기 전 첫 프레임은 화면 높이만큼 내려 시작 — 깜빡임 방지.
   // 진입 애니메이션 오프셋에 손가락 드래그 오프셋을 더해 카드를 움직인다.
@@ -364,8 +401,10 @@ export function BottomSheet({
 
   return (
     <Modal
+      testID="bottom-sheet-modal"
       transparent
-      visible
+      visible={rendered}
+      onDismiss={finishNativeDismissal}
       statusBarTranslucent
       animationType="none"
       onRequestClose={onClose}

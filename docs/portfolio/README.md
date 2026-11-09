@@ -43,6 +43,8 @@ Claude(또는 작업자)가 대화·작업 중 아래에 해당한다고 **스�
 
 ## 목록
 
+- [2026-11-09, 이벤트 모달의 닫힘 완료와 계정 전환 경계를 분리한 사례](2026-11-09-event-modal-dismissal-session-boundary.md)
+
 - [2026-11-05 · 방 꾸미기 편집기에 실행 취소·다시 실행 넣기 — 명령 패턴 대신 스냅샷 스택을 고른 이유](2026-11-05-room-editor-undo-redo.md)
 - [2026-11-05, 제작 가구의 원본 보관과 고정가 판매 전환](2026-11-05-fixed-price-market-transition.md)
 - [2026-11-04 · Meta SDK를 넣자 iOS Release 링크가 깨진 문제 — 미리 컴파일된 RN 코어와 옛 podspec](2026-11-04-fbsdk-prebuilt-rn-link-failure.md)

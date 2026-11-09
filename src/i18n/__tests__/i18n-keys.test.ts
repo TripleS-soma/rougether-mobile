@@ -24,6 +24,7 @@ describe('i18n resources', () => {
     // 병합 결과의 키 수가 각 파일 키 수의 합과 같아야 한다 — 겹치면 하나가 사라진다.
     const files = [
       require('@/i18n/resources/ko/common.json'),
+      require('@/i18n/resources/ko/christmas.json'),
       require('@/i18n/resources/ko/settings.json'),
       require('@/i18n/resources/ko/member.json'),
       require('@/i18n/resources/ko/routineTodo.json'),

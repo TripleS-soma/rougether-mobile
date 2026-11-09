@@ -23,9 +23,9 @@ export type AttendanceDailyReward = {
 
 export type AttendanceReward = {
   itemId: number | null;
-  type?: 'FURNITURE' | 'GENERATION_CREDIT';
+  type?: 'FURNITURE' | 'GENERATION_CREDIT' | 'NONE';
   generationCreditAmount?: number;
-  name: string;
+  name: string | null;
   assetKey: string | null;
   userItemId: number | null;
   received: boolean;
@@ -39,6 +39,10 @@ export type AttendanceStatus = {
   endsOn: string;
   targetDays: number;
   currentStreak: number;
+  mode?: 'STREAK' | 'CUMULATIVE';
+  progressDays?: number;
+  active?: boolean;
+  availableToday?: boolean;
   checkedInToday: boolean;
   completed: boolean;
   checkInDates: string[];
@@ -73,3 +77,22 @@ export function fetchAttendance() {
 export function checkInAttendance() {
   return apiPost<AttendanceCheckInResult>('/events/attendance/check-ins');
 }
+
+export type ChristmasEvent = {
+  code: 'christmas_2026';
+  title: string;
+  active: boolean;
+  startsOn: string;
+  endsOn: string;
+  gachaId: number | null;
+  attendanceEventId: number | null;
+  popupDismissed: boolean;
+};
+
+/** Stable, account-scoped event identity; inactive events remain readable. */
+export const fetchChristmasEvent = () => apiGet<ChristmasEvent>('/events/christmas');
+export const dismissChristmasPopup = () => apiPost<void>('/events/christmas/popup-dismissal');
+export const fetchAttendanceEvent = (eventId: number) =>
+  apiGet<AttendanceStatus>(`/events/attendance/${eventId}`);
+export const checkInAttendanceEvent = (eventId: number) =>
+  apiPost<AttendanceCheckInResult>(`/events/attendance/${eventId}/check-ins`);

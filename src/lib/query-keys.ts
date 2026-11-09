@@ -67,6 +67,10 @@ export const queryKeys = {
   /** 내 버그 제보 목록 (#496). */
   bugReports: (userId: number | null | undefined) => ['bug-reports', userId] as const,
   /** 진행 중인 출석 이벤트 (#851) — 없으면 null. */
+  christmas: (userId: number | null | undefined) =>
+    ['christmas', userId, 'christmas_2026'] as const,
+  attendanceEvent: (userId: number | null | undefined, eventId: number | null | undefined) =>
+    ['attendance-event', userId, eventId] as const,
   attendance: (userId: number | null | undefined) => ['attendance', userId] as const,
   /** 상점 공개 카탈로그 (GET /items) — 사용자 무관. `owned` 플래그는 인벤토리로 덮는다. */
   items: ['items'] as const,

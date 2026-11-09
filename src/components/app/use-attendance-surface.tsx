@@ -37,8 +37,10 @@ export const AUTO_ATTENDANCE_DELAY_MS = REVIEW_PROMPT_DELAY_MS;
  */
 export function useAttendanceSurface({
   setScreen,
+  blocked,
 }: {
   setScreen: Dispatch<SetStateAction<Screen>>;
+  blocked?: () => boolean;
 }) {
   // 지갑 캐시 (장부 16번) — 출석 보상 뒤 잔액을 셸을 거치지 않고 직접 반영한다.
   const { setWallet } = useWallet();
@@ -58,9 +60,10 @@ export function useAttendanceSurface({
     // 기다리던 자동 열림은 버린다 — 사용자가 직접 연 시트가 2.6초 뒤 자동 모드로 바뀌면
     // 누르지 않은 출석이 나간다 (#1295 리뷰).
     cancelAutoTimer();
+    if (blocked?.()) return;
     setAutoCheckIn(false);
     setAttendanceOpen(true);
-  }, [cancelAutoTimer]);
+  }, [cancelAutoTimer, blocked]);
   const closeAttendance = useCallback(() => {
     setAttendanceOpen(false);
     setAutoCheckIn(false);
@@ -81,7 +84,7 @@ export function useAttendanceSurface({
   const openAttendanceAfterFirstCompletion = useCallback(() => {
     const eligible = () => {
       const status = statusRef.current;
-      return !!status && !status.checkedInToday && !status.completed;
+      return !blocked?.() && !!status && !status.checkedInToday && !status.completed;
     };
     // 출석일은 KST 서버 날짜라 하루 1회 가드도 같은 기준으로 센다(#1295 리뷰).
     const today = calendarToday();
@@ -94,7 +97,7 @@ export function useAttendanceSurface({
       setAutoCheckIn(true);
       setAttendanceOpen(true);
     }, AUTO_ATTENDANCE_DELAY_MS);
-  }, [statusRef, cancelAutoTimer]);
+  }, [statusRef, cancelAutoTimer, blocked]);
 
   const walletHistory = useWalletHistory();
   const [walletHistoryOpen, setWalletHistoryOpen] = useState(false);
@@ -140,6 +143,7 @@ export function useAttendanceSurface({
   );
 
   return {
+    active: attendanceOpen || walletHistoryOpen,
     attendance,
     attendancePending,
     openAttendance,

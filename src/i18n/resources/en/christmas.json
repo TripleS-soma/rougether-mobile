@@ -1,0 +1,27 @@
+{
+  "christmas": {
+    "title": "Christmas",
+    "close": "Close",
+    "attendance": "Attendance",
+    "gacha": "Draw",
+    "endsOn": "Until {{date}}",
+    "dayClaimed": "Check-in {{day}}, gift received",
+    "dayClosed": "Check-in {{day}}, closed gift envelope",
+    "cumulativeHint": "Once a day. Missed days keep your progress.",
+    "checkIn": "Check in",
+    "checkingIn": "Checking in",
+    "checkedIn": "Checked in today",
+    "completed": "30 check-ins complete",
+    "ended": "Event ended",
+    "loading": "Loading attendance",
+    "todayReward": "{{amount}} coins today",
+    "coinReceived": "+{{amount}} coins",
+    "loadError": "Could not confirm attendance. Please try again.",
+    "retry": "Try again",
+    "goEvent": "Go to event draws",
+    "neverShow": "Do not show again",
+    "saving": "Saving",
+    "dismissError": "Could not save your preference. Please try again.",
+    "popupHeading": "Christmas in your room"
+  }
+}

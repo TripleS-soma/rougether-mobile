@@ -89,6 +89,7 @@ export function useSettingsSurface({
   /** 내 정보 바로가기 (#1089) — 출석·재화 내역 시트는 셸이 들고 있다. */
   shortcuts?: {
     onOpenAttendance?: () => void;
+    onOpenChristmasEvent?: () => void;
     attendancePending?: boolean;
     onOpenWalletHistory?: () => void;
   };
@@ -323,6 +324,7 @@ export function useSettingsSurface({
     onEditProfile: openProfileEdit,
     onOpenSettings: openSettings,
     onOpenAttendance: shortcuts?.onOpenAttendance,
+    onOpenChristmasEvent: shortcuts?.onOpenChristmasEvent,
     attendancePending: shortcuts?.attendancePending ?? false,
     onOpenWalletHistory: shortcuts?.onOpenWalletHistory,
     onOpenWeeklyReport,
@@ -502,5 +504,6 @@ export function useSettingsSurface({
     soundSettings,
     enableSpeakerMusic,
     inviteSheets: inviteArrival.sheets,
+    inviteActive: inviteArrival.active,
   };
 }

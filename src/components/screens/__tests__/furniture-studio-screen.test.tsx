@@ -1,7 +1,15 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { FurnitureStudioScreen } from '@/components/screens/furniture-studio-screen';
 import { __resetSheetSerializer } from '@/components/ui/bottom-sheet';
+
+/** JS exit finishes first; UIKit then emits native Modal.onDismiss. */
+async function finishNativeSheetDismissal(onDismiss: () => void) {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  });
+  await act(async () => onDismiss());
+}
 
 // 시트 퇴장 대기열은 모듈 전역이다 — 한 테스트가 닫는 중에 끝나도 다음 테스트로 새지 않게.
 afterEach(() => __resetSheetSerializer());
@@ -392,10 +400,13 @@ describe('내 가구 탭 — 2열 타일 + 상세 시트 (#1666)', () => {
     await openHistory(ui);
     expect(ui.getByLabelText('내가 만든 가구 자세히')).toBeTruthy();
     expect(ui.queryByLabelText('가구 판매하기')).toBeNull();
+    const onDetailDismissed = ui.getByTestId('bottom-sheet-modal').props.onDismiss;
     await fireEvent.press(ui.getByLabelText('판매하기'));
     // 상세 시트의 내용은 바로 비고, 판매 시트는 상세 시트가 다 닫힌 뒤에 뜬다 — BottomSheet의
     // iOS Modal 직렬화(퇴장 중인 시트 위에 새 Modal을 올리지 못함)가 그 순서를 지킨다.
     expect(ui.queryByLabelText('방에 배치하기')).toBeNull();
+    expect(ui.queryByLabelText('가구 판매하기')).toBeNull();
+    await finishNativeSheetDismissal(onDetailDismissed);
     await waitFor(() => expect(ui.getAllByLabelText('가구 판매하기').length).toBeGreaterThan(0));
   });
 });
