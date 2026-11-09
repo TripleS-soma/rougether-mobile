@@ -115,6 +115,7 @@ export function CharacterPickerSheet({
                       )}
                     </View>
                     <Text style={[Typography.label, { color: t.text }]}>{c.name}</Text>
+                    {/* 이름과 착용 표시만 — 종마다 붙던 한 줄 소개는 뺐다(11/9). */}
                     {c.selected ? (
                       <View style={[styles.badge, { backgroundColor: t.primary }]}>
                         <Icon name="check" size={10} color={t.onPrimary} />
@@ -122,11 +123,7 @@ export function CharacterPickerSheet({
                           {tr('app.characterPicker.wearing')}
                         </Text>
                       </View>
-                    ) : (
-                      <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                        {meta?.description ?? ''}
-                      </Text>
-                    )}
+                    ) : null}
                   </Pressable>
                 );
               })}

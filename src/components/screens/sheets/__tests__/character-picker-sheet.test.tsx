@@ -18,6 +18,13 @@ describe('CharacterPickerSheet', () => {
     expect(getByLabelText('판다 착용').props.accessibilityState.selected).toBe(false);
   });
 
+  it('shows only name and worn badge — no per-character tagline', async () => {
+    const { queryByText } = await render(
+      <CharacterPickerSheet visible characters={CHARACTERS} onSelect={jest.fn()} onClose={jest.fn()} />, // prettier-ignore
+    );
+    expect(queryByText(/루틴 친구/)).toBeNull();
+  });
+
   it('selects an unworn character and closes; worn taps only close', async () => {
     const onSelect = jest.fn();
     const onClose = jest.fn();
