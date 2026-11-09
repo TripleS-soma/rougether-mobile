@@ -30,8 +30,7 @@ jobs:
         run: npx expo prebuild --platform ios --clean --no-install
       - name: Info.plist 필수 권한 키 검증
         run: |
-          npx --yes expo-release-guard@0.2.0 check ios-plist ios-alternate-icons
-          node scripts/check-native-extras.mjs
+          npx --yes expo-release-guard@0.3.0 check ios-plist ios-alternate-icons
 
   # Android 매니페스트 권한 검증 (#921 후속) — **라벨 없이 모든 PR에서** 돈다.
   # 아래 prebuild 잡은 Gradle이 필요해 라벨 게이트가 걸려 있는데, #913이 가르친
@@ -58,8 +57,7 @@ jobs:
         run: npx expo prebuild --platform android --no-install
       - name: 매니페스트 권한 검증 (소스)
         run: |
-          npx --yes expo-release-guard@0.2.0 check android-manifest android-launcher-aliases
-          node scripts/check-native-extras.mjs
+          npx --yes expo-release-guard@0.3.0 check android-manifest android-launcher-aliases
 
   prebuild:
     # 라벨이 native-build인 PR에서만.
@@ -109,7 +107,4 @@ jobs:
       # POST_NOTIFICATIONS처럼 라이브러리가 주는 필수 권한이 들어왔는지 본다.
       - name: 매니페스트 권한 검증 (병합 산출물)
         run: |
-          npx --yes expo-release-guard@0.2.0 check android-merged-manifest
-          manifest=$(find android/app/build/intermediates -path '*/merged_manifest*/release/*/AndroidManifest.xml' -print -quit)
-          test -n "$manifest"
-          node scripts/check-native-extras.mjs "$manifest"
+          npx --yes expo-release-guard@0.3.0 check android-merged-manifest
