@@ -228,30 +228,21 @@
       "lobby": {
         "copy": {
           "WALLPAPER": {
-            "title": "A new look for your walls",
-            "detail": "Wallpapers from many themes, all in one box."
+            "detail": "You get 1 wallpaper."
           },
           "FLOOR": {
-            "title": "Lay down some coziness",
-            "detail": "Change the mood of your room with floors from many themes."
+            "detail": "You get 1 floor."
           },
           "FURNITURE": {
-            "title": "A piece you'll love",
-            "detail": "Discover furniture and decor from many themes."
+            "detail": "You get 1 piece of furniture or decor."
           },
           "CHARACTER": {
-            "title": "Meet a new friend",
-            "detail": "This box holds character friends to keep your room company. If you get one you already have, you get coins back."
+            "detail": "You get 1 character. A duplicate is refunded in coins."
           }
         },
-        "eyebrow": "A little thrill for today",
-        "heading": "A gift arrived in your room",
         "categoryA11y": "{{label}} draw",
         "heroA11y": "A gift box with a green ribbon in a sunlit room",
-        "boxTag": "{{label}} box",
         "rewardsA11y": "See possible rewards",
-        "rewardsTitle": "What gift awaits you?",
-        "rewardsHint": "See possible rewards",
         "drawOne": "Draw 1",
         "drawBonus": "Draw 5+1",
         "drawA11y": "{{label}}, {{cost}} {{currency}}",
@@ -260,14 +251,16 @@
           "a11y": "Each distinct type of Christmas furniture placed in your room adds 10% to routine and to-do completion coin rewards. Duplicate placements of the same type, wallpapers and floors are excluded."
         },
         "starter": {
-          "title": "Your first furniture: a cozy speaker",
-          "detail": "Your first draw gives you a speaker. Place it anywhere you like.",
+          "title": "Your first draw is free",
+          "detail": "You get a speaker. Place it anywhere you like.",
+          "claimedTitle": "You got the speaker",
+          "claimedDetail": "Place it anywhere you like.",
           "drawFree": "First furniture draw (free)",
           "claimed": "See your speaker"
         },
         "characterLocked": {
           "title": "Unlocks at room level {{level}}",
-          "detail": "Complete routines to grow your room and unlock both character draws and character switching. You can already see which friends are inside.",
+          "detail": "Complete routines to raise your room level and unlock character draws and switching. You can already see which characters are inside.",
           "button": "Unlocks at Lv. {{level}}"
         }
       },
