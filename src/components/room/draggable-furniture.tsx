@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { type MutableRefObject, useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, type GestureType } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
   useAnimatedStyle,
@@ -49,6 +49,18 @@ export function hitSlopInset(boxSize: number): number {
 }
 export const dragClampBounds = furnitureClampBounds;
 
+/**
+ * 캔버스 핀치의 대상 (#1713) — 선택된 가구가 자기 크기 SV를 여기에 건다. 핀치가
+ * 가구 박스(수축된 터치 영역)에서만 시작되면 작은 소품은 두 손가락을 올릴 자리가
+ * 없어서, 핀치는 캔버스가 받고 선택된 가구에 배율만 넘긴다.
+ */
+export type FurniturePinchTarget = {
+  begin: () => void;
+  /** 핀치 시작 대비 배율(e.scale) — 시작 크기 × 배율을 상·하한으로 자른다. */
+  update: (factor: number) => void;
+  end: () => void;
+};
+
 export type DraggableFurnitureProps = {
   item: FurnitureItem;
   placement: PlacedFurniture;
@@ -82,6 +94,10 @@ export type DraggableFurnitureProps = {
    * 캔버스의 가이드 선이 Animated 스타일로 읽는다. dragActiveSV와 같은 이유로 SV 전용.
    */
   guideSV?: SharedValue<{ x: number; y: number }>;
+  /** 선택되면 자기 크기 조절을 여기에 건다 — 캔버스 핀치가 부른다 (#1713). */
+  pinchTargetRef?: MutableRefObject<FurniturePinchTarget | null>;
+  /** 캔버스 핀치 — 가구를 끄는 중 두 번째 손가락이 닿아도 이동과 크기 조절이 같이 되게. */
+  canvasPinch?: GestureType;
 };
 
 /**
@@ -102,6 +118,8 @@ export function DraggableFurniture({
   guideSV,
   preview = false,
   previewPrice,
+  pinchTargetRef,
+  canvasPinch,
 }: DraggableFurnitureProps) {
   const t = useTokens();
   const emph = useFontEmphasis();
@@ -139,6 +157,7 @@ export function DraggableFurniture({
     // 탭(선택)만 받는다.
     .enabled(selected)
     .hitSlop(shrink)
+    .simultaneousWithExternalGesture(...(canvasPinch ? [canvasPinch] : []))
     .onStart(() => {
       dragging.value = true;
       if (dragActiveSV) dragActiveSV.value = true;
@@ -190,32 +209,35 @@ export function DraggableFurniture({
       if (success) runOnJS(select)();
     });
 
-  // 핀치 크기 조절 (#333) — 어디서든 두 손가락으로.
-  const pinch = Gesture.Pinch()
-    .withTestId(`item-pinch-${placement.furnitureId}`)
-    // 크기 조절도 선택된 것만 (#768) — 드래그와 같은 이유로, 겹친 이웃이
-    // 의도치 않게 커지지 않게 한다.
-    .enabled(selected)
-    .hitSlop(shrink)
-    .onStart(() => {
-      baseScale.value = scaleSV.value;
-    })
-    .onUpdate((e) => {
-      // 라이브 클램프 (#654) — 상한·하한에서 즉시 멈춰, 손을 뗄 때
-      // commitScale이 되돌리는 스냅백이 보이지 않게 한다.
-      scaleSV.value = Math.min(SCALE_MAX, Math.max(SCALE_MIN, baseScale.value * e.scale));
-    })
-    .onEnd(() => {
-      runOnJS(commitScale)(scaleSV.value);
-    });
+  // 핀치 크기 조절 (#333) — 캔버스 어디서든 두 손가락으로 (#1713). 핀치 제스처는
+  // 캔버스가 갖고, 선택된 가구만 자기 크기 SV를 대상으로 건다(#768: 선택된 것만 크기 조절).
+  // 캔버스 핀치는 JS 스레드에서 돌아 SV에 직접 쓴다 — 핀치 중 React 상태는 안 바뀐다.
+  useEffect(() => {
+    if (!selected || !pinchTargetRef) return;
+    const target: FurniturePinchTarget = {
+      begin: () => {
+        baseScale.value = scaleSV.value;
+      },
+      update: (factor) => {
+        // 라이브 클램프 (#654) — 상한·하한에서 즉시 멈춰, 손을 뗄 때
+        // commitScale이 되돌리는 스냅백이 보이지 않게 한다.
+        scaleSV.value = Math.min(SCALE_MAX, Math.max(SCALE_MIN, baseScale.value * factor));
+      },
+      end: () => onScaleEnd?.(placement.furnitureId, scaleSV.value),
+    };
+    pinchTargetRef.current = target;
+    return () => {
+      if (pinchTargetRef.current === target) pinchTargetRef.current = null;
+    };
+  }, [selected, pinchTargetRef, baseScale, scaleSV, onScaleEnd, placement.furnitureId]);
 
-  // 탭은 팬의 실패만 기다린다 — 핀치까지 기다리면(웹) 마우스 핀치가 영영
+  // 탭은 팬의 실패만 기다린다 — 핀치(캔버스)까지 기다리면(웹) 마우스 핀치가 영영
   // 실패하지 않아 탭이 무한 대기한다.
   // 선택 전에는 **탭만** 조합한다 — 비활성(enabled=false) 팬을 Exclusive에 두면
   // 웹 RNGH 오케스트레이터가 그 팬을 "아직 안 끝난 핸들러"로 보고 탭을 영영
   // 기다려, 데스크톱 웹에서 가구를 아예 고를 수 없었다(2026-09-09 실측). 네이티브는
   // 비활성 인식기를 실패로 치니 두 조합이 같은 뜻이다.
-  const gesture = selected ? Gesture.Simultaneous(Gesture.Exclusive(pan, tap), pinch) : tap;
+  const gesture = selected ? Gesture.Exclusive(pan, tap) : tap;
 
   // 크기 핸들(우하단) 드래그 — 대각선 이동량을 스케일로 환산 (#333).
   const handlePan = Gesture.Pan()
