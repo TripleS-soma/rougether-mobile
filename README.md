@@ -248,7 +248,7 @@ flowchart TD
 - 실기기 녹화로 "새 화면 마운트가 300ms 동안 JS를 막는다"는 원인을 확정하고, 새 화면 대신 **같은 컴포넌트의 모드 전환**으로 바꿨습니다. 접힘은 UI 스레드로, 위치는 늦게 오는 레이아웃 이벤트 대신 기하로 계산합니다. 탭 → 접힘 시작 약 400ms → 160ms. → [사례 기록](docs/portfolio/2026-11-04-calendar-week-circle-jank.md)
 
 <details>
-<summary><b>📚 전체 사례 기록 (27건)</b></summary>
+<summary><b>📚 전체 사례 기록 (26건)</b></summary>
 
 작업 중 만난 기술적 챌린지와 트러블슈팅을 "무엇이 어려웠고, 어떻게 원인을 좁혔고, 무엇을 배웠나" 형식으로 남깁니다. 수치는 실측값만 적습니다. → [`docs/portfolio/`](docs/portfolio)
 
