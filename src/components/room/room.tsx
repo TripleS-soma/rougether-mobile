@@ -5,6 +5,7 @@ import { memo, useMemo, useState } from 'react';
 import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
+import { CharacterIdle } from '@/components/room/character-idle';
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import {
   ROOM_RENDER_CONTRACT,
@@ -382,15 +383,19 @@ export const Room = memo(function Room({
           accessibilityRole="button"
           accessibilityLabel={tr('app.room.poseA11y', { name: character.name })}
           style={styles.character}>
-          <CharacterAvatar
-            characterId={characterId}
-            frames={characterFrames}
-            pose={pose}
-            // 여기서만 포즈가 넘어간다 — 다음 장을 미리 받아둘 값어치가 있다 (#970).
-            prefetchFrames
-            style={styles.characterFill}
-            sharp={sharp}
-          />
+          {/* 대기 동작(숨쉬기·탭 반응)은 내가 만지는 방에서만 — 집 좌석처럼 여럿이 함께 보이는
+              곳은 정지 그대로 둔다(2026-11-09). */}
+          <CharacterIdle pulseKey={pose} style={styles.characterFill}>
+            <CharacterAvatar
+              characterId={characterId}
+              frames={characterFrames}
+              pose={pose}
+              // 여기서만 포즈가 넘어간다 — 다음 장을 미리 받아둘 값어치가 있다 (#970).
+              prefetchFrames
+              style={styles.characterFill}
+              sharp={sharp}
+            />
+          </CharacterIdle>
         </Pressable>
       ) : (
         // 인터랙티브 분기와 같은 두 겹 — 자리 박스(계약 좌표)에 아바타를 꽉 채운다.

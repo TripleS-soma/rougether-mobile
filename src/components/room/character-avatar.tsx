@@ -51,6 +51,14 @@ const SPRITES: Partial<Record<CharacterId, number[]>> = {
   tiger: [tiger1, tiger2, tiger3, tiger4],
 };
 
+/**
+ * 서버 포즈 프레임(움직이는 webp)을 재생할지 (2026-11-09). **끈다** — 몸 전체가 계속 출렁여
+ * "떠다니는" 느낌이었다(사용자 제보). 첫 장면에 멈춘 그림 위에 `CharacterIdle`(숨쉬기·탭 반응)을
+ * 얹는다. 그림 출처(admin 등록 포즈)는 그대로라 아트가 바뀌어도 앱 수정이 필요 없다.
+ * iOS·Android만 — expo-image의 autoplay는 웹에서 무시된다.
+ */
+export const CHARACTER_ART_AUTOPLAY = false;
+
 /** Number of poses available per character. */
 const POSE_COUNT = 4;
 
@@ -140,6 +148,7 @@ export const CharacterAvatar = memo(function CharacterAvatar({
         cachePolicy="memory-disk"
         // 줌 대상에서는 원본 해상도로 — 다운스케일 디코딩은 확대 시 흐려진다.
         allowDownscaling={!sharp}
+        autoplay={CHARACTER_ART_AUTOPLAY}
         accessibilityLabel={character.name}
         testID="cdn-animation"
       />

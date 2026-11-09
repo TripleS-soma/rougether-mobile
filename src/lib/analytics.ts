@@ -44,15 +44,10 @@ export type RoomAction =
  * 에러로 터지지 않고 조용히 포기하는 순간(로그인 취소·잔액 부족)이 특히 그렇다.
  */
 export type AnalyticsEvent =
-  // 로그인 전 (#1282) — 설치 후 로그인 전에 떠나는 사람이 소개에서 떠나는지,
-  // 로그인 화면에서 떠나는지, 버튼을 눌렀다가 계정 선택·동의 화면에서 물러나는지를 가른다.
-  /** 소개 슬라이드 노출 — step: 슬라이드 id(my-room·routines·decor·house·calendar). 장에 들어갈 때마다. */
-  | 'intro_view'
-  /** 소개 첫 장의 '이미 계정이 있어요' — 기존 사용자가 소개를 건너 로그인으로. */
-  | 'intro_have_account'
-  /** 소개 마지막 장 '시작하기' — 끝까지 본 사람. */
-  | 'intro_complete'
-  /** 로그인 화면 진입 — 마운트당 1회. */
+  // 로그인 전 (#1282) — 설치 후 로그인 전에 떠나는 사람이 로그인 화면에서 떠나는지,
+  // 버튼을 눌렀다가 계정 선택·동의 화면에서 물러나는지를 가른다. 소개 슬라이드와 그
+  // 계측(intro_*)은 #1700에서 없앴다 — 앱을 열면 곧장 로그인 화면이다.
+  /** 로그인 화면 진입 — 마운트당 1회. via: direct·kakao_redirect·google_redirect. */
   | 'login_view'
   /** 소셜 로그인 버튼 탭 — provider. 성공·실패·취소의 분모. */
   | 'login_tap'
@@ -303,7 +298,6 @@ const RESERVED_PARAMS = new Set(['items', 'extend_session']);
  * 여기 없는 이벤트는 파라미터를 받지 않는다. 값이 있을 때만 붙는 필드는 선택(`?`).
  */
 export type AnalyticsParams = {
-  intro_view: { step: string; index: number };
   login_view: { via: string };
   login_tap: { provider: string };
   login_cancel: { provider: string };
