@@ -1,5 +1,10 @@
 name: christmas-production-readonly-status
 on:
+  push:
+    branches: [codex/christmas-production-readonly-status]
+    paths:
+      - .github/workflows/christmas-production-readonly-status.yml
+      - scripts/inspect-christmas-production.js
   workflow_dispatch:
 permissions:
   contents: read
