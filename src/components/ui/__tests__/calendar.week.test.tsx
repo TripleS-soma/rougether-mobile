@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Calendar } from '@/components/ui/calendar';
@@ -121,4 +121,39 @@ it('주 이동으로 남는 줄이 바뀌면 그 줄을 새로 그린다 — 접
   // 접힌 줄(숨김)이던 3번째 줄이 남는 줄이 되면서 다른 인스턴스로 바뀐다.
   expect(after).not.toBe(before);
   expect(after.props.accessibilityElementsHidden).toBe(false);
+});
+
+describe('Calendar — 접힌 주간 보기의 선택 원 자리 (2026-11-09 제보)', () => {
+  const layout = (x: number, y: number, width: number, height: number) => ({
+    nativeEvent: { layout: { x, y, width, height } },
+  });
+  const ROW_H = 50;
+  const HEADER = 40;
+
+  it('남는 줄의 마지막 onLayout이 오지 않아도 원은 첫 줄 자리에 선다 — 월 보기 때의 줄 자리가 아니라', async () => {
+    // 2026-11-19(목)는 11월의 세 번째 줄(15~21). 월 보기에선 그 줄의 y가 HEADER + 2 × ROW_H.
+    const ui = await render(
+      <Calendar value="2026-11-19" onSelect={jest.fn()} weekOf="2026-11-19" />,
+    );
+    const rows = [0, 1, 2, 3, 4].map((wi) =>
+      ui.getByTestId(`calendar-week-row-${wi}`, { includeHiddenElements: true }),
+    );
+    // 줄들은 월 보기 자리만 보고하고(접힌 뒤의 onLayout은 오지 않음), 그 뒤 접힘이 끝난다.
+    await act(async () => {
+      rows.forEach((row, wi) =>
+        fireEvent(row, 'layout', layout(0, HEADER + wi * ROW_H, 350, ROW_H)),
+      );
+    });
+    await act(async () => {
+      fireEvent(ui.getByLabelText(/^2026-11-19(,|$)/), 'layout', layout(200, 0, 50, ROW_H));
+    });
+    const circle = ui.getByTestId('calendar-selected-circle', { includeHiddenElements: true });
+    const { transform } = StyleSheet.flatten(circle.props.style as StyleProp<ViewStyle>) as {
+      transform: { translateY?: number }[];
+    };
+    const translateY = transform.find((t) => t.translateY != null)?.translateY;
+    // 첫 줄 자리(HEADER) 기준 — 월 보기 자리(HEADER + 100)였다면 두 줄 아래에 떴다.
+    expect(translateY).toBeLessThan(HEADER + ROW_H);
+    expect(translateY).toBeGreaterThanOrEqual(HEADER - ROW_H);
+  });
 });
