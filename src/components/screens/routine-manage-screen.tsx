@@ -154,7 +154,7 @@ export function RoutineManageScreen({
                                   <Icon name="bell" size={11} color={t.textMuted} />
                                   <Text
                                     style={[
-                                      styles.badgeText,
+                                      Typography.caption,
                                       emph('normal'),
                                       { color: t.textMuted },
                                     ]}>
@@ -260,8 +260,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.half,
-  },
-  badgeText: {
-    fontSize: 13,
   },
 });

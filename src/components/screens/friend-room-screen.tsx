@@ -469,7 +469,7 @@ export function FriendRoomScreen({
                                 <Icon name="bell" size={11} color={t.textMuted} />
                                 <Text
                                   style={[
-                                    styles.badgeText,
+                                    Typography.caption,
                                     emph('normal'),
                                     { color: t.textMuted },
                                   ]}>
@@ -867,9 +867,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
-  },
-  badgeText: {
-    fontSize: 13,
   },
   cheers: {
     gap: Spacing.two,
