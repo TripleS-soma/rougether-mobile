@@ -278,7 +278,9 @@
         "title": "크리스마스",
         "endsLabel": "12.25까지",
         "heroA11y": "크리스마스 가구 배치 미리보기"
-      }
+      },
+      "requestedMachineLoading": "이벤트 뽑기를 확인하고 있어요.",
+      "requestedMachineUnavailable": "이벤트 뽑기를 사용할 수 없어요. 다시 확인해주세요."
     },
     "studio": {
       "title": "AI 가구 만들기",

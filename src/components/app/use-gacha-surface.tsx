@@ -92,7 +92,8 @@ export function useGachaSurface({
   const subScreen =
     screen === 'gacha' ? (
       <GachaScreen
-        initialMachineId={initialMachineId}
+        initialMachineId={starterAllowed ? undefined : initialMachineId}
+        onRefreshMachines={starterAllowed ? undefined : retryGachas}
         gachas={starterAllowed ? starterMachines : gachas}
         seasonalGacha={seasonalGacha}
         starterDrawState={

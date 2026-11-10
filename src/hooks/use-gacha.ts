@@ -49,7 +49,8 @@ export function useGacha({ enabled = true } = {}) {
   });
 
   const retry = useCallback(async () => {
-    await refetch();
+    const response = await refetch();
+    return !response.isError;
   }, [refetch]);
 
   const draw = useCallback(
