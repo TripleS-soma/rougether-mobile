@@ -34,6 +34,7 @@ export type MyPageScreenProps = ScrollRestoreProps & {
   onOpenSettings?: () => void;
   /** 출석 이벤트 바로가기 (#851 → #1089) — 이벤트가 있을 때만 배선, 없으면 타일이 숨는다. */
   onOpenAttendance?: () => void;
+  onOpenChristmasEvent?: () => void;
   /** 오늘 미출석 — 타일에 빨간 점. */
   attendancePending?: boolean;
   /** 재화 내역 바로가기 (#734 → #1089). */
@@ -71,6 +72,7 @@ export const MyPageScreen = memo(function MyPageScreen({
   onEditProfile,
   onOpenSettings,
   onOpenAttendance,
+  onOpenChristmasEvent,
   attendancePending = false,
   onOpenWalletHistory,
   onOpenWeeklyReport,
@@ -113,6 +115,9 @@ export const MyPageScreen = memo(function MyPageScreen({
 
   // 바로가기 타일 — 배선된 것만. 캐릭터 교체는 기능 제외 상태(#637)라 없다.
   const tiles: { icon: IconName; label: string; onPress: () => void; dot?: boolean }[] = [
+    ...(onOpenChristmasEvent
+      ? [{ icon: 'gift' as const, label: tr('christmas.title'), onPress: onOpenChristmasEvent }]
+      : []),
     ...(onOpenAttendance
       ? [
           {

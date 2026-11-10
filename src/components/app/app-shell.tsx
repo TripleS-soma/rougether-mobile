@@ -64,6 +64,8 @@ import { useTabScroll } from '@/components/app/use-tab-scroll';
 import { MinigameActiveContext, useMinigameSurface } from '@/components/app/use-minigame-surface';
 import { notificationDestination } from '@/components/app/notification-destination';
 import type { NotificationEntry } from '@/components/screens/notification-list-screen';
+import { useChristmasSurface } from '@/components/app/use-christmas-surface';
+import { useAppSheetPresent } from '@/lib/modal-presence';
 import { requestAdTrackingOnce } from '@/lib/ad-tracking';
 
 // 내비게이션 상수·backTargetFor는 navigation.ts로 이동 (#692) — 기존
@@ -109,6 +111,13 @@ export function AppShell({
   missionSkipEnabled = false,
   characterFrames = NO_CHARACTER_FRAMES,
 }: AppShellProps) {
+  const christmasActiveRef = useRef(false);
+  const isChristmasBlocking = useCallback(() => christmasActiveRef.current, []);
+  const openChristmasRef = useRef<() => void>(() => undefined);
+  const openChristmas = useCallback(() => openChristmasRef.current(), []);
+  const [christmasMachineId, setChristmasMachineId] = useState<number | undefined>();
+  const [nativePromptsReady, setNativePromptsReady] = useState(false);
+  const appSheetPresent = useAppSheetPresent();
   // 집 하늘 연출용 현재 비 여부 (#360) — 서울 고정, 30분 캐시.
   // 위젯에 넘길 실효 라이트/다크 (#746) — 앱 테마 모드 설정이 적용된 값.
   const resolvedScheme = useResolvedScheme();
@@ -189,7 +198,7 @@ export function AppShell({
     openFurnitureStudio,
     openWalletHistory,
     sheets: attendanceSheets,
-  } = useAttendanceSurface({ setScreen });
+  } = useAttendanceSurface({ setScreen, blocked: isChristmasBlocking });
 
   // Owned characters + worn one (GET /me/characters). Once loaded, the worn
   // character overrides the onboarding pick everywhere but friend rooms.
@@ -280,7 +289,13 @@ export function AppShell({
 
   // Meta 설치 광고 측정의 ATT 요청 (#1616) — 메인 화면 진입 때 한 번(결정되면 다시 안 묻는다).
   useEffect(() => {
-    void requestAdTrackingOnce();
+    let alive = true;
+    void requestAdTrackingOnce().finally(() => {
+      if (alive) setNativePromptsReady(true);
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   // 꾸미기 진입 (#630·#897·#1043) — 뽑기에서 온 NEW 강조·열 탭·진입 계측. use-decor-entry.ts (장부 5번).
@@ -366,6 +381,7 @@ export function AppShell({
     // 바로가기 (#1089) — 출석은 이벤트가 있을 때만 배선(없으면 타일이 숨는다).
     shortcuts: {
       onOpenAttendance: attendance.status ? openAttendance : undefined,
+      onOpenChristmasEvent: openChristmas,
       attendancePending,
       onOpenWalletHistory: openWalletHistory,
     },
@@ -378,6 +394,7 @@ export function AppShell({
   const completeFirstDraw = useCallback(() => completeMission('first-draw'), [completeMission]);
   const gachaSurface = useGachaSurface({
     screen,
+    initialMachineId: christmasMachineId,
     wallet,
     characterUnlocked,
     characterUnlockLevel,
@@ -472,7 +489,10 @@ export function AppShell({
     totalCount: todayRoutines.length,
     streak,
     ready: !myRoomLoading,
-    suppressed: (screen !== 'myRoom' && screen !== 'calendar') || attendancePending,
+    suppressed:
+      (screen !== 'myRoom' && screen !== 'calendar') ||
+      attendancePending ||
+      christmasActiveRef.current,
   });
 
   // 화면 전환 추적 (#437) — 셸의 screen 상태가 곧 내비게이션 단위.
@@ -586,6 +606,29 @@ export function AppShell({
   useEffect(() => {
     setTutorialLocked(coachStep != null);
   }, [coachStep, setTutorialLocked]);
+
+  const goChristmasGacha = useCallback((machineId: number) => {
+    setChristmasMachineId(machineId);
+    setScreen('gacha');
+  }, []);
+  useEffect(() => {
+    if (screen !== 'gacha') setChristmasMachineId(undefined);
+  }, [screen]);
+  const christmasSurface = useChristmasSurface({
+    home: screen === 'myRoom',
+    ready: nativePromptsReady && !myRoomLoading && missions.loaded !== false,
+    blocked:
+      appSheetPresent ||
+      !!coachStep ||
+      marketTour.visible ||
+      missions.step != null ||
+      missions.completedIndex != null ||
+      settingsSurface.inviteActive ||
+      speakerOpen,
+    onGoGacha: goChristmasGacha,
+  });
+  christmasActiveRef.current = christmasSurface.active;
+  openChristmasRef.current = christmasSurface.open;
 
   // 시작 화면이 집인데 집이 없으면(#571 규칙) 탐색으로 — 집 목록이 도착한 첫 순간 한 번만.
   const startHouseCorrectedRef = useRef(initialScreen !== 'house');
@@ -815,6 +858,7 @@ export function AppShell({
 
       {/* 출석·재화 내역 시트 (#851·#1089) — use-attendance-surface가 그린다. */}
       {attendanceSheets}
+      {christmasSurface.overlays}
 
       {/* 친구 초대 확인·붙여넣기 시트 (#1007) — use-settings-surface가 그린다. */}
       {settingsSurface.inviteSheets}

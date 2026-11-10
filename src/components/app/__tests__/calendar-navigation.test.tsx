@@ -79,8 +79,10 @@ describe('달력 하단 탭 왕복 (#1159)', () => {
     await fireEvent.press(ui.getByLabelText(dateLabel(PREVIOUS_MONTH_DATE)));
     await fireEvent.press(ui.getByLabelText('선택한 날에 추가'));
     expect(ui.getByLabelText('루틴 제목')).toBeTruthy();
+    const firstComposeDismissed = ui.getByTestId('bottom-sheet-modal').props.onDismiss;
     await fireEvent.press(ui.getByLabelText('취소'));
     await finishTransition();
+    await act(async () => firstComposeDismissed());
     // 연 곳(주간 보기)으로 돌아오고 선택 날짜도 그대로.
     await waitFor(() =>
       expect(ui.getByRole('header', { name: calendarHeading(PREVIOUS_MONTH_DATE) })).toBeTruthy(),
@@ -99,8 +101,10 @@ describe('달력 하단 탭 왕복 (#1159)', () => {
     expect(ui.getByLabelText(dateLabel(TODAY)).props.accessibilityState.selected).toBe(true);
     await fireEvent.press(ui.getByLabelText(dateLabel(TODAY)));
     await fireEvent.press(ui.getByLabelText('선택한 날에 추가'));
+    const secondComposeDismissed = ui.getByTestId('bottom-sheet-modal').props.onDismiss;
     await fireEvent.press(ui.getByLabelText('취소'));
     await finishTransition();
+    await act(async () => secondComposeDismissed());
     await waitFor(() =>
       expect(ui.getByRole('header', { name: calendarHeading(TODAY) })).toBeTruthy(),
     );

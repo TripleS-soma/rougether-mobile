@@ -1,5 +1,6 @@
 import { type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
@@ -7,6 +8,7 @@ import { CharacterAvatar } from '@/components/room/character-avatar';
 import {
   DraggableFurniture,
   dragClampBounds,
+  type FurniturePinchTarget,
   SCALE_MAX,
   SCALE_MIN,
 } from '@/components/room/draggable-furniture';
@@ -538,6 +540,18 @@ export function RoomDecorScreen({
   // 스마트 가이드 (#1644) — 드래그 중 팬 워클릿이 쓰는 가이드 선 위치(px). dragActive와 같은
   // 이유로 useRef 앵커. 후보는 선택된 가구에만 계산해 넘긴다(선택된 것만 끌 수 있다).
   const guide = useRef(useSharedValue({ x: NO_GUIDE, y: NO_GUIDE })).current;
+  // 캔버스 핀치 (#1713) — 가구가 선택돼 있으면 방 어디서든 두 손가락으로 그 가구 크기를
+  // 바꾼다. 예전엔 핀치가 가구 박스(수축된 터치 영역, #768)에서만 시작돼 작은 소품은 두
+  // 손가락을 올릴 자리가 없었다. 선택된 가구가 pinchTarget에 자기 크기 SV를 걸고,
+  // 핀치는 JS 스레드에서 배율만 넘긴다(핀치 중 React 상태는 바꾸지 않는다).
+  const pinchTarget = useRef<FurniturePinchTarget | null>(null);
+  const canvasPinch = Gesture.Pinch()
+    .withTestId('canvas-pinch')
+    .runOnJS(true)
+    .enabled(selectedId != null)
+    .onStart(() => pinchTarget.current?.begin())
+    .onUpdate((e) => pinchTarget.current?.update(e.scale))
+    .onEnd(() => pinchTarget.current?.end());
   const guideXStyle = useAnimatedStyle(() => ({
     opacity: guide.value.x === NO_GUIDE ? 0 : 1,
     transform: [{ translateX: Math.max(0, guide.value.x) }],
@@ -763,149 +777,153 @@ export function RoomDecorScreen({
     <View style={[styles.preview, column]}>
       {/* 캔버스 = 방과 정확히 같은 박스 — 오버레이 좌표·정규화의 기준.
         (preview의 padding 박스 기준으로 재면 저장 좌표가 어긋난다.) */}
-      <View
-        testID="decor-canvas"
-        style={styles.canvas}
-        onLayout={(e) =>
-          setRoomSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
-        }>
-        {/* 가구는 Room이 아니라 드래그 오버레이가 그린다 — 방은 표면만. */}
-        <Room
-          characterId={null}
-          wallpaperId={wallpaperId}
-          floorId={floorId}
-          backgroundId={backgroundId}
-          placements={[]}
-          furniture={furniture}
-          wallpapers={wallpapers}
-          floors={floors}
-          backgrounds={backgrounds}
-          editable
-          onRegionPress={onRegionPress}
-          activeRegion={activeRegion}
-        />
-        {/* 선택 중에만 존재하는 투명 레이어 — 빈 캔버스 탭 = 선택 해제.
-          아이템(z≥1)보다 아래라 가구 탭·드래그는 그대로 통과한다. */}
-        {selectedId ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={tr('roomShop.decor.deselectA11y')}
-            style={StyleSheet.absoluteFill}
-            onPress={() => setSelectedId(null)}
+      <GestureDetector gesture={canvasPinch}>
+        <View
+          testID="decor-canvas"
+          style={styles.canvas}
+          onLayout={(e) =>
+            setRoomSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
+          }>
+          {/* 가구는 Room이 아니라 드래그 오버레이가 그린다 — 방은 표면만. */}
+          <Room
+            characterId={null}
+            wallpaperId={wallpaperId}
+            floorId={floorId}
+            backgroundId={backgroundId}
+            placements={[]}
+            furniture={furniture}
+            wallpapers={wallpapers}
+            floors={floors}
+            backgrounds={backgrounds}
+            editable
+            onRegionPress={onRegionPress}
+            activeRegion={activeRegion}
           />
-        ) : null}
-        {roomSize.w > 0 && roomSize.h > 0
-          ? [...items]
-              .sort((a, b) => a.z - b.z)
-              .map((p) => {
-                const item = furniture.find((f) => f.id === p.furnitureId);
-                if (!item) return null;
-                return (
-                  <DraggableFurniture
-                    key={p.furnitureId}
-                    item={item}
-                    placement={p}
-                    roomSize={roomSize}
-                    selected={p.furnitureId === selectedId}
-                    onSelect={handleFurnitureSelect}
-                    onDragEnd={commitDrag}
-                    onScaleEnd={commitScale}
-                    dragActiveSV={dragActive}
-                    snapTargets={p.furnitureId === selectedId ? selectedSnapTargets : undefined}
-                    guideSV={guide}
-                    preview={!owned.has(p.furnitureId)}
-                    previewPrice={item.price}
-                  />
-                );
-              })
-          : null}
-        {/* 표면류 프리뷰 가격 칩 (#501) — 탭하면 구매 확인. */}
-        {surfacePreviews.length > 0 ? (
-          <View style={styles.previewChips} pointerEvents="box-none">
-            {surfacePreviews.map((sp) => (
-              <Pressable
-                key={sp.kind}
-                onPress={() => requestBuy({ id: sp.id, name: sp.name, price: sp.price })}
-                accessibilityRole="button"
-                accessibilityLabel={tr('roomShop.decor.surfacePreviewBuyA11y', {
-                  surface: SURFACE_LABEL[sp.kind],
-                })}
-                style={({ pressed }) => [pressed && pressedStyle('dim', t)]}>
-                <GlassSurface style={styles.previewChip} fallbackColor={t.surface}>
-                  <Icon name="diamond" size={10} color={t.primary} />
-                  <Text style={[Typography.supporting, { color: t.text }]}>
-                    {SURFACE_LABEL[sp.kind]} {sp.price}
-                  </Text>
-                </GlassSurface>
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
-        {/* 스마트 가이드 선 (#1644) — 드래그 중 붙은 축에만 보인다. 리렌더 없이 SV로만 움직인다. */}
-        <Animated.View
-          pointerEvents="none"
-          testID="snap-guide-x"
-          style={[styles.guideX, { backgroundColor: t.primary }, guideXStyle]}
-        />
-        <Animated.View
-          pointerEvents="none"
-          testID="snap-guide-y"
-          style={[styles.guideY, { backgroundColor: t.primary }, guideYStyle]}
-        />
-        {/* 캐릭터는 항상 가구 앞 — 오버레이(드래그 중 z 9999)보다 위 전용 레이어. */}
-        <View pointerEvents="none" style={styles.characterLayer}>
-          {/* Room과 같은 두 겹(자리 박스 + 꽉 채운 아바타) — 아바타에 자리 스타일을
-            직접 주면 기본 96px 높이가 남아 나의 방보다 작게 그려졌다. */}
-          <View style={styles.characterFigure}>
-            <CharacterAvatar
-              characterId={characterId}
-              frames={characterFrames}
-              style={styles.characterFill}
+          {/* 선택 중에만 존재하는 투명 레이어 — 빈 캔버스 탭 = 선택 해제.
+          아이템(z≥1)보다 아래라 가구 탭·드래그는 그대로 통과한다. */}
+          {selectedId ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={tr('roomShop.decor.deselectA11y')}
+              style={StyleSheet.absoluteFill}
+              onPress={() => setSelectedId(null)}
             />
-          </View>
-        </View>
-        {/* 선택 툴바 (#333) — 캔버스 위 플로팅, 캐릭터 레이어보다도 위.
-          벽 쪽(상반부) 가구를 가리지 않게 하단으로 회피하고(#608), 점프가
-          거슬리지 않게 드래그 중에는 숨겼다가 드롭 시점에 재배치된다. */}
-        {selectedId ? (
-          <Animated.View
-            testID="selection-toolbar"
-            style={[
-              styles.toolbar,
-              (items.find((p) => p.furnitureId === selectedId)?.y ?? 1) < 0.5
-                ? styles.toolbarBottom
-                : styles.toolbarTop,
-              toolbarDragStyle,
-            ]}>
-            <GlassSurface style={styles.toolbarFace} fallbackColor={t.surface}>
-              {(
-                [
-                  ['rotate-ccw', 'roomShop.decor.tool.rotateCcw', () => rotateSelected(-1)],
-                  ['rotate-cw', 'roomShop.decor.tool.rotateCw', () => rotateSelected(1)],
-                  ['flip', 'roomShop.decor.tool.flip', flipSelected],
-                  ['layer-up', 'roomShop.decor.tool.toFront', bringToFront],
-                  ['layer-down', 'roomShop.decor.tool.toBack', sendToBack],
-                  ['trash', 'roomShop.decor.tool.remove', () => removeItem(selectedId)],
-                ] as const
-              ).map(([icon, labelKey, onPress]) => (
+          ) : null}
+          {roomSize.w > 0 && roomSize.h > 0
+            ? [...items]
+                .sort((a, b) => a.z - b.z)
+                .map((p) => {
+                  const item = furniture.find((f) => f.id === p.furnitureId);
+                  if (!item) return null;
+                  return (
+                    <DraggableFurniture
+                      key={p.furnitureId}
+                      item={item}
+                      placement={p}
+                      roomSize={roomSize}
+                      selected={p.furnitureId === selectedId}
+                      onSelect={handleFurnitureSelect}
+                      onDragEnd={commitDrag}
+                      onScaleEnd={commitScale}
+                      dragActiveSV={dragActive}
+                      snapTargets={p.furnitureId === selectedId ? selectedSnapTargets : undefined}
+                      guideSV={guide}
+                      preview={!owned.has(p.furnitureId)}
+                      previewPrice={item.price}
+                      pinchTargetRef={pinchTarget}
+                      canvasPinch={canvasPinch}
+                    />
+                  );
+                })
+            : null}
+          {/* 표면류 프리뷰 가격 칩 (#501) — 탭하면 구매 확인. */}
+          {surfacePreviews.length > 0 ? (
+            <View style={styles.previewChips} pointerEvents="box-none">
+              {surfacePreviews.map((sp) => (
                 <Pressable
-                  key={icon}
-                  onPress={onPress}
+                  key={sp.kind}
+                  onPress={() => requestBuy({ id: sp.id, name: sp.name, price: sp.price })}
                   accessibilityRole="button"
-                  accessibilityLabel={tr(labelKey)}
-                  hitSlop={4}
-                  style={({ pressed }) => [
-                    styles.toolBtn,
-                    { backgroundColor: t.surfaceMuted },
-                    pressed && pressedStyle('dim', t),
-                  ]}>
-                  <Icon name={icon} size={18} color={icon === 'trash' ? t.danger : t.text} />
+                  accessibilityLabel={tr('roomShop.decor.surfacePreviewBuyA11y', {
+                    surface: SURFACE_LABEL[sp.kind],
+                  })}
+                  style={({ pressed }) => [pressed && pressedStyle('dim', t)]}>
+                  <GlassSurface style={styles.previewChip} fallbackColor={t.surface}>
+                    <Icon name="diamond" size={10} color={t.primary} />
+                    <Text style={[Typography.supporting, { color: t.text }]}>
+                      {SURFACE_LABEL[sp.kind]} {sp.price}
+                    </Text>
+                  </GlassSurface>
                 </Pressable>
               ))}
-            </GlassSurface>
-          </Animated.View>
-        ) : null}
-      </View>
+            </View>
+          ) : null}
+          {/* 스마트 가이드 선 (#1644) — 드래그 중 붙은 축에만 보인다. 리렌더 없이 SV로만 움직인다. */}
+          <Animated.View
+            pointerEvents="none"
+            testID="snap-guide-x"
+            style={[styles.guideX, { backgroundColor: t.primary }, guideXStyle]}
+          />
+          <Animated.View
+            pointerEvents="none"
+            testID="snap-guide-y"
+            style={[styles.guideY, { backgroundColor: t.primary }, guideYStyle]}
+          />
+          {/* 캐릭터는 항상 가구 앞 — 오버레이(드래그 중 z 9999)보다 위 전용 레이어. */}
+          <View pointerEvents="none" style={styles.characterLayer}>
+            {/* Room과 같은 두 겹(자리 박스 + 꽉 채운 아바타) — 아바타에 자리 스타일을
+            직접 주면 기본 96px 높이가 남아 나의 방보다 작게 그려졌다. */}
+            <View style={styles.characterFigure}>
+              <CharacterAvatar
+                characterId={characterId}
+                frames={characterFrames}
+                style={styles.characterFill}
+              />
+            </View>
+          </View>
+          {/* 선택 툴바 (#333) — 캔버스 위 플로팅, 캐릭터 레이어보다도 위.
+          벽 쪽(상반부) 가구를 가리지 않게 하단으로 회피하고(#608), 점프가
+          거슬리지 않게 드래그 중에는 숨겼다가 드롭 시점에 재배치된다. */}
+          {selectedId ? (
+            <Animated.View
+              testID="selection-toolbar"
+              style={[
+                styles.toolbar,
+                (items.find((p) => p.furnitureId === selectedId)?.y ?? 1) < 0.5
+                  ? styles.toolbarBottom
+                  : styles.toolbarTop,
+                toolbarDragStyle,
+              ]}>
+              <GlassSurface style={styles.toolbarFace} fallbackColor={t.surface}>
+                {(
+                  [
+                    ['rotate-ccw', 'roomShop.decor.tool.rotateCcw', () => rotateSelected(-1)],
+                    ['rotate-cw', 'roomShop.decor.tool.rotateCw', () => rotateSelected(1)],
+                    ['flip', 'roomShop.decor.tool.flip', flipSelected],
+                    ['layer-up', 'roomShop.decor.tool.toFront', bringToFront],
+                    ['layer-down', 'roomShop.decor.tool.toBack', sendToBack],
+                    ['trash', 'roomShop.decor.tool.remove', () => removeItem(selectedId)],
+                  ] as const
+                ).map(([icon, labelKey, onPress]) => (
+                  <Pressable
+                    key={icon}
+                    onPress={onPress}
+                    accessibilityRole="button"
+                    accessibilityLabel={tr(labelKey)}
+                    hitSlop={4}
+                    style={({ pressed }) => [
+                      styles.toolBtn,
+                      { backgroundColor: t.surfaceMuted },
+                      pressed && pressedStyle('dim', t),
+                    ]}>
+                    <Icon name={icon} size={18} color={icon === 'trash' ? t.danger : t.text} />
+                  </Pressable>
+                ))}
+              </GlassSurface>
+            </Animated.View>
+          ) : null}
+        </View>
+      </GestureDetector>
     </View>
   );
   const catalogBody = (

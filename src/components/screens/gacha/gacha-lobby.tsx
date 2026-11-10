@@ -33,6 +33,8 @@ export function GachaLobby({
   onRewards,
   canAfford,
   busy,
+  drawDisabled = false,
+  drawNotice,
   error,
   topInset = 0,
   bottomInset = 0,
@@ -47,6 +49,8 @@ export function GachaLobby({
   onRewards?: () => void;
   canAfford: (count: GachaDrawCount) => boolean;
   busy: boolean;
+  drawDisabled?: boolean;
+  drawNotice?: ReactNode;
   error: string;
   topInset?: number;
   bottomInset?: number;
@@ -223,6 +227,7 @@ export function GachaLobby({
             paddingBottom: Math.max(bottomInset, Spacing.three),
           },
         ]}>
+        {drawNotice}
         {error ? (
           <Text
             accessibilityRole="alert"
@@ -269,9 +274,9 @@ export function GachaLobby({
                   style={{ flex: primary ? 1.5 : 1 }}>
                   <ScalePressable
                     onPress={() => onDraw(count)}
-                    disabled={busy}
+                    disabled={busy || drawDisabled}
                     accessibilityRole="button"
-                    accessibilityState={{ disabled: busy }}
+                    accessibilityState={{ disabled: busy || drawDisabled }}
                     accessibilityLabel={
                       starterDrawState
                         ? label
@@ -289,11 +294,12 @@ export function GachaLobby({
                       styles.draw,
                       {
                         borderColor: primary ? 'transparent' : t.border,
-                        backgroundColor: !affordable
-                          ? t.disabledBg
-                          : primary
-                            ? t.primary
-                            : t.surface,
+                        backgroundColor:
+                          !affordable || drawDisabled
+                            ? t.disabledBg
+                            : primary
+                              ? t.primary
+                              : t.surface,
                       },
                     ]}>
                     <Text style={[Typography.label, { color: ink }]}>{label}</Text>

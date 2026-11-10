@@ -1,6 +1,9 @@
 import { createInstance } from 'i18next';
 import { initReactI18next, useTranslation } from 'react-i18next';
 
+import enChristmas from '@/i18n/resources/en/christmas.json';
+import koChristmas from '@/i18n/resources/ko/christmas.json';
+
 import enCommon from '@/i18n/resources/en/common.json';
 import enMember from '@/i18n/resources/en/member.json';
 import enRoutineTodo from '@/i18n/resources/en/routineTodo.json';
@@ -55,6 +58,7 @@ export function isAppLanguage(value: unknown): value is AppLanguage {
  * 각 파일의 최상위 키는 그 도메인 접두(예: `member`, `routineTodo`)로 서로 겹치지 않아야 한다.
  */
 export const koResources = {
+  ...koChristmas,
   ...koCommon,
   ...koSettings,
   ...koMember,
@@ -68,6 +72,7 @@ export const koResources = {
   ...koMarket,
 };
 export const enResources = {
+  ...enChristmas,
   ...enCommon,
   ...enSettings,
   ...enMember,

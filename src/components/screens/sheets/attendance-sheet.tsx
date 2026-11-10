@@ -135,7 +135,9 @@ export function AttendanceSheet({
     if (
       result.rewardGrantedNow &&
       result.status.reward &&
-      result.status.reward.type !== 'GENERATION_CREDIT'
+      result.status.reward.type !== 'GENERATION_CREDIT' &&
+      result.status.reward.type !== 'NONE' &&
+      result.status.reward.name != null
     ) {
       setTrophy({
         name: result.status.reward.name,

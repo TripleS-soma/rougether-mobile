@@ -129,6 +129,24 @@ describe('Calendar — 접힌 주간 보기의 선택 원 자리 (2026-11-09 제
   });
   const ROW_H = 50;
   const HEADER = 40;
+  /**
+   * 원의 세로 자리. 좌표는 Reanimated 공유 값이라(2026-11-10) jest 목에서는 다시 그려야 스타일에
+   * 반영된다 — 같은 값으로 한 번 더 그린 뒤 읽는다(onSelect를 새로 줘 memo를 지나간다).
+   */
+  const circleY = async (
+    ui: Awaited<ReturnType<typeof render>>,
+    value: string,
+    weekOf: string | null,
+  ) => {
+    // 두 번 — 첫 렌더의 이펙트가 값을 옮기고, 둘째 렌더가 그 값을 스타일로 읽는다.
+    await ui.rerender(<Calendar value={value} onSelect={jest.fn()} weekOf={weekOf} />);
+    await ui.rerender(<Calendar value={value} onSelect={jest.fn()} weekOf={weekOf} />);
+    const circle = ui.getByTestId('calendar-selected-circle', { includeHiddenElements: true });
+    const { transform } = StyleSheet.flatten(circle.props.style as StyleProp<ViewStyle>) as {
+      transform: { translateY?: number }[];
+    };
+    return transform.find((t) => t.translateY != null)?.translateY as number;
+  };
 
   it('남는 줄의 마지막 onLayout이 오지 않아도 원은 첫 줄 자리에 선다 — 월 보기 때의 줄 자리가 아니라', async () => {
     // 2026-11-19(목)는 11월의 세 번째 줄(15~21). 월 보기에선 그 줄의 y가 HEADER + 2 × ROW_H.
@@ -147,13 +165,38 @@ describe('Calendar — 접힌 주간 보기의 선택 원 자리 (2026-11-09 제
     await act(async () => {
       fireEvent(ui.getByLabelText(/^2026-11-19(,|$)/), 'layout', layout(200, 0, 50, ROW_H));
     });
-    const circle = ui.getByTestId('calendar-selected-circle', { includeHiddenElements: true });
-    const { transform } = StyleSheet.flatten(circle.props.style as StyleProp<ViewStyle>) as {
-      transform: { translateY?: number }[];
-    };
-    const translateY = transform.find((t) => t.translateY != null)?.translateY;
+    expect(await circleY(ui, '2026-11-19', '2026-11-19')).toBeLessThan(HEADER + ROW_H);
+    const translateY = await circleY(ui, '2026-11-19', '2026-11-19');
     // 첫 줄 자리(HEADER) 기준 — 월 보기 자리(HEADER + 100)였다면 두 줄 아래에 떴다.
     expect(translateY).toBeLessThan(HEADER + ROW_H);
     expect(translateY).toBeGreaterThanOrEqual(HEADER - ROW_H);
+  });
+
+  it('다른 날짜를 눌러 들어와도 원은 누른 날짜의 줄에 선다 — 월 보기 자리로 가던 이동이 남지 않는다 (2026-11-10 제보)', async () => {
+    // 월 보기에서 11/10(둘째 줄)이 선택돼 있다가 11/26(넷째 줄)을 누르면, 원은 먼저 11/26의
+    // 월 보기 자리로 미끄러지기 시작하고 곧바로 달력이 접힌다. 접힘이 끝나면 첫 줄 자리여야 한다.
+    const ui = await render(<Calendar value="2026-11-10" onSelect={jest.fn()} />);
+    const fireLayouts = async () => {
+      await act(async () => {
+        [0, 1, 2, 3, 4].forEach((wi) =>
+          fireEvent(
+            ui.getByTestId(`calendar-week-row-${wi}`, { includeHiddenElements: true }),
+            'layout',
+            layout(0, HEADER + wi * ROW_H, 350, ROW_H),
+          ),
+        );
+        fireEvent(ui.getByLabelText(/^2026-11-10(,|$)/), 'layout', layout(100, 0, 50, ROW_H));
+        fireEvent(ui.getByLabelText(/^2026-11-26(,|$)/), 'layout', layout(200, 0, 50, ROW_H));
+      });
+    };
+    await fireLayouts();
+    // 날짜만 바뀐 렌더 — 원이 11/26의 월 보기 자리(넷째 줄)로 간다.
+    expect(await circleY(ui, '2026-11-26', null)).toBeGreaterThanOrEqual(
+      HEADER + 3 * ROW_H - ROW_H,
+    );
+    // 이어서 주간 보기로 접힌다(줄들은 월 보기 자리만 보고한 상태).
+    const y = await circleY(ui, '2026-11-26', '2026-11-26');
+    expect(y).toBeLessThan(HEADER + ROW_H);
+    expect(y).toBeGreaterThanOrEqual(HEADER - ROW_H);
   });
 });

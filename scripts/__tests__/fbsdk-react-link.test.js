@@ -1,5 +1,9 @@
+/* global describe, it, expect */
 const { execFileSync } = require('node:child_process');
-const { addFbsdkReactLink } = require('../../plugins/with-fbsdk-react-link');
+const {
+  addFbsdkReactLink,
+  addFbsdkDownloadLoader,
+} = require('../../plugins/with-fbsdk-react-link');
 
 describe('react-native-fbsdk-next React linking (#1616)', () => {
   const podfile = 'post_install do |installer|\nend\n';
@@ -45,5 +49,20 @@ ${generated}
   it('is idempotent across prebuilds', () => {
     const once = addFbsdkReactLink('post_install do |installer|\nend\n');
     expect(addFbsdkReactLink(once)).toBe(once);
+  });
+
+  it('loads the exact SDK download adapter before native dependencies and only once', () => {
+    const source = `require 'expo/autolinking'\n${podfile}`;
+    const generated = addFbsdkDownloadLoader(addFbsdkReactLink(source));
+    expect(
+      generated.indexOf("require File.expand_path('../plugins/fbsdk-http-download'"),
+    ).toBeLessThan(generated.indexOf("require 'expo/autolinking'"));
+    expect(generated).toContain("target.name == 'react-native-fbsdk-next'");
+    expect(addFbsdkDownloadLoader(generated)).toBe(generated);
+    expect(generated.match(/require File\.expand_path/g)).toHaveLength(1);
+  });
+
+  it('fails if the Expo Podfile require anchor is missing', () => {
+    expect(() => addFbsdkDownloadLoader(podfile)).toThrow();
   });
 });
