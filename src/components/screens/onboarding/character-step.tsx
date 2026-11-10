@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
+import { CharacterIdle } from '@/components/room/character-idle';
 import { PrimaryButton, TextButton } from '@/components/screens/onboarding/onboarding-buttons';
 import { onboardingStyles as styles } from '@/components/screens/onboarding/onboarding-styles';
 import { type CharacterId, STARTER_CHARACTER_OPTIONS } from '@/constants/characters';
@@ -113,7 +114,7 @@ export function CharacterStep({
               key={c.id}
               onPress={() => focusCharacter(i)}
               accessibilityRole="radio"
-              accessibilityLabel={`${c.name}. ${c.description}`}
+              accessibilityLabel={c.name}
               accessibilityState={{ selected: isActive }}
               style={({ pressed }) => [
                 styles.characterSlide,
@@ -122,21 +123,19 @@ export function CharacterStep({
                 pressed && pressedStyle('card', t),
               ]}>
               <View style={[styles.characterStage, { backgroundColor: c.bg }]}>
-                <CharacterAvatar
-                  characterId={c.id}
-                  size={Math.min(Math.round(cardW * 0.55), 220)}
-                  // 활성 카드만 서버 프레임을 넘긴다 — CharacterAvatar는 유효한
-                  // CDN 키가 있으면 그 webp를, 없으면 번들 정적 포즈를 그린다.
-                  frames={isActive ? frames : undefined}
-                />
+                {/* 활성 카드만 숨쉰다 — 넘기는 동안 옆 카드들까지 움직이면 산만하다. */}
+                <CharacterIdle active={isActive}>
+                  <CharacterAvatar
+                    characterId={c.id}
+                    size={Math.min(Math.round(cardW * 0.55), 220)}
+                    // 활성 카드만 서버 프레임을 넘긴다 — CharacterAvatar는 유효한
+                    // CDN 키가 있으면 그 webp를, 없으면 번들 정적 포즈를 그린다.
+                    frames={isActive ? frames : undefined}
+                  />
+                </CharacterIdle>
               </View>
               <View style={styles.characterMeta}>
                 <Text style={[Typography.h2, { color: t.text }]}>{c.name}</Text>
-                <Text
-                  style={[Typography.body, styles.center, { color: t.textMuted }]}
-                  numberOfLines={2}>
-                  {c.description}
-                </Text>
               </View>
             </Pressable>
           );

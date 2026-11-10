@@ -4,59 +4,38 @@ import { DeviceEventEmitter, Keyboard, Platform, StyleSheet } from 'react-native
 import { OnboardingScreen, withRang } from '@/components/screens/onboarding-screen';
 import { ToastProvider } from '@/components/ui/toast';
 
-// 소개 슬라이드 자체(5장 순회·스와이프·도트)는 intro-screen.test.tsx가 본다 (#1282).
 describe('OnboardingScreen', () => {
-  // #1282 — 첫 실행의 소개는 로그인 전으로 옮겼다. 로그인 뒤에는 곧장 목표 설문.
-  it('첫 실행은 목표 설문부터 시작한다 (#1282)', async () => {
+  // #1700 — 소개 슬라이드는 없앴다. 첫 실행은 로그인 뒤 곧장 목표 설문.
+  it('첫 실행은 목표 설문부터 시작하고, 돌아갈 곳이 없다', async () => {
     const { getByText, queryByText } = await render(<OnboardingScreen />);
     expect(getByText('관심 있는 목표를 골라주세요')).toBeTruthy();
     expect(queryByText('루게더에 오신 걸 환영해요')).toBeNull();
-    // 돌아갈 소개가 없으니 '이전'도 없다.
     expect(queryByText('이전')).toBeNull();
+    expect(queryByText('건너뛰기')).toBeNull();
   });
 
-  // #1023 — 처음 온 사람은 소개를 지나칠 수 없다. 건너뛰기는 설정 → 튜토리얼
-  // 다시 보기로 들어온 경우에만 붙고, 그때는 목표 설문이 아니라 앱으로 나간다.
-  describe('다시 보기는 소개부터 (#1023, #1282)', () => {
-    it('첫 실행에는 건너뛰기가 없다', async () => {
-      const { queryByText } = await render(<OnboardingScreen />);
-      expect(queryByText('건너뛰기')).toBeNull();
-    });
-
-    it('다시 보기면 소개와 건너뛰기가 보이고, 누르면 온보딩을 끝낸다', async () => {
-      const onSkip = jest.fn();
-      const onDone = jest.fn();
+  // #1023 — 설정 → 튜토리얼 다시 보기. #1700부터 소개 없이 목표 설문부터이고,
+  // '이전'이 예전 건너뛰기 자리(저장 없이 앱으로)를 맡는다.
+  describe('다시 보기는 목표 설문부터 (#1023, #1700)', () => {
+    it('소개 슬라이드 없이 목표 설문이 먼저 보인다', async () => {
       const { getByText, queryByText } = await render(
-        <OnboardingScreen replay onSkip={onSkip} onDone={onDone} />,
+        <OnboardingScreen replay onSkip={jest.fn()} />,
       );
-      expect(getByText('루게더에 오신 걸 환영해요')).toBeTruthy();
-
-      await fireEvent.press(getByText('건너뛰기'));
-
-      expect(onSkip).toHaveBeenCalled();
-      // 목표 설문으로 새지 않는다 — 예전 동작과 갈리는 지점.
-      expect(queryByText('관심 있는 목표를 골라주세요')).toBeNull();
-      // 저장 경로도 타지 않는다(목표·닉네임은 서버에 이미 있다).
-      expect(onDone).not.toHaveBeenCalled();
-    });
-
-    it('다시 보기에는 로그인 전용 출구가 없다', async () => {
-      const { queryByText } = await render(<OnboardingScreen replay onSkip={jest.fn()} />);
+      expect(getByText('관심 있는 목표를 골라주세요')).toBeTruthy();
+      expect(queryByText('루게더에 오신 걸 환영해요')).toBeNull();
       expect(queryByText('이미 계정이 있어요')).toBeNull();
     });
 
-    it('마지막 장 목표 선택하기 → 목표 설문, 이전 → 소개로 돌아간다', async () => {
-      const { getByLabelText, getByText, queryByText } = await render(
-        <OnboardingScreen replay onSkip={jest.fn()} />,
+    it('이전을 누르면 저장 없이 온보딩을 끝낸다', async () => {
+      const onSkip = jest.fn();
+      const onDone = jest.fn();
+      const { getByText } = await render(
+        <OnboardingScreen replay onSkip={onSkip} onDone={onDone} />,
       );
-      await fireEvent.press(getByLabelText('5번째 슬라이드로 이동'));
-      // 마지막 장에서는 건너뛰기 대신 CTA.
-      expect(queryByText('건너뛰기')).toBeNull();
-      await fireEvent.press(getByText('목표 선택하기'));
-      expect(getByText('관심 있는 목표를 골라주세요')).toBeTruthy();
-
       await fireEvent.press(getByText('이전'));
-      expect(queryByText('관심 있는 목표를 골라주세요')).toBeNull();
+      expect(onSkip).toHaveBeenCalledTimes(1);
+      // 저장 경로를 타지 않는다(목표·닉네임은 서버에 이미 있다).
+      expect(onDone).not.toHaveBeenCalled();
     });
   });
 
@@ -312,9 +291,11 @@ describe('OnboardingScreen 캐릭터 캐러셀', () => {
   });
 
   it('피크 카드를 탭하면 그 캐릭터가 활성이 된다', async () => {
-    const { getByLabelText, getByText } = await openCarousel();
-    await fireEvent.press(getByLabelText(/판다\. /));
+    const { getByRole, getByText, queryByText } = await openCarousel();
+    await fireEvent.press(getByRole('radio', { name: '판다' }));
     expect(getByText('판다랑 함께하기')).toBeTruthy();
+    // 카드에는 이름만 — 종별 한 줄 소개는 뺐다.
+    expect(queryByText(/루틴 친구/)).toBeNull();
   });
 });
 

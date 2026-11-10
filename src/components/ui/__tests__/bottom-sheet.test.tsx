@@ -1,7 +1,9 @@
-import { registerPriorityModal, useAppSheetPresent } from '@/lib/modal-presence';
-
 import { act, fireEvent, render, renderHook, waitFor } from '@testing-library/react-native';
-import { PanResponder, StyleSheet, Text } from 'react-native';
+import { Animated, PanResponder, StyleSheet, Text } from 'react-native';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
+import { State } from 'react-native-gesture-handler';
+
+import { registerPriorityModal, useAppSheetPresent } from '@/lib/modal-presence';
 
 import {
   BottomSheet,
@@ -129,6 +131,107 @@ describe('BottomSheet', () => {
     } finally {
       createSpy.mockRestore();
     }
+  });
+
+  it('놓을 때의 손가락 속도를 복귀 스프링에 싣는다 — 위로 놓으면 제자리를 넘지 않는다', async () => {
+    const createSpy = jest.spyOn(PanResponder, 'create');
+    const springSpy = jest.spyOn(Animated, 'spring');
+    try {
+      const onClose = jest.fn();
+      await render(
+        <BottomSheet visible onClose={onClose}>
+          <Text>시트 내용</Text>
+        </BottomSheet>,
+      );
+      const config = createSpy.mock.calls[0][0];
+      springSpy.mockClear();
+
+      // 조금 끌다 아래로 움직이는 중에 놓음(거리·속도 모두 닫기 미달) — px/ms → px/s.
+      await act(async () =>
+        config.onPanResponderRelease?.(null as any, { dy: 40, vy: 0.3 } as any),
+      );
+      expect(onClose).not.toHaveBeenCalled();
+      expect(springSpy.mock.calls[0][1]).toMatchObject({
+        toValue: 0,
+        velocity: 300,
+        overshootClamping: false,
+      });
+
+      // 위로 올리며 놓음 — 속도는 싣되 제자리에서 멈춘다.
+      await act(async () =>
+        config.onPanResponderRelease?.(null as any, { dy: 40, vy: -1.2 } as any),
+      );
+      expect(springSpy.mock.calls[1][1]).toMatchObject({
+        velocity: -1200,
+        overshootClamping: true,
+      });
+
+      // 다른 뷰가 제스처를 가져가면 속도 없이 돌아간다.
+      await act(async () =>
+        config.onPanResponderTerminate?.(null as any, { dy: 40, vy: 2 } as any),
+      );
+      expect(springSpy.mock.calls[2][1]).toMatchObject({ velocity: 0 });
+    } finally {
+      createSpy.mockRestore();
+      springSpy.mockRestore();
+    }
+  });
+
+  describe('nativeDrag — 끌기가 UI 스레드에서 돈다', () => {
+    const renderNative = async (onClose = jest.fn()) => {
+      const ui = await render(
+        <BottomSheet visible nativeDrag onClose={onClose}>
+          <Text>시트 내용</Text>
+        </BottomSheet>,
+      );
+      return { ui, onClose };
+    };
+
+    it('카드를 이동용 래퍼로 감싸고 PanResponder 핸들러는 붙이지 않는다', async () => {
+      const { ui } = await renderNative();
+      expect(ui.getByTestId('bottom-sheet-native-drag')).toBeTruthy();
+      expect(ui.getByTestId('bottom-sheet-card').props.onMoveShouldSetResponder).toBeUndefined();
+    });
+
+    it('충분히 끌어내리면 닫는다', async () => {
+      const { onClose } = await renderNative();
+      fireGestureHandler(getByGestureTestId('bottom-sheet-dismiss-pan'), [
+        { state: State.BEGAN, translationY: 0, velocityY: 0 },
+        { state: State.ACTIVE, translationY: 60, velocityY: 100 },
+        { state: State.END, translationY: 140, velocityY: 100 },
+      ]);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('짧아도 빠르게 튕기면 닫는다 (px/s → px/ms)', async () => {
+      const { onClose } = await renderNative();
+      fireGestureHandler(getByGestureTestId('bottom-sheet-dismiss-pan'), [
+        { state: State.BEGAN, translationY: 0, velocityY: 0 },
+        { state: State.ACTIVE, translationY: 20, velocityY: 900 },
+        { state: State.END, translationY: 30, velocityY: 900 },
+      ]);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('조금 끌다 놓으면 닫지 않는다', async () => {
+      const { onClose } = await renderNative();
+      fireGestureHandler(getByGestureTestId('bottom-sheet-dismiss-pan'), [
+        { state: State.BEGAN, translationY: 0, velocityY: 0 },
+        { state: State.ACTIVE, translationY: 30, velocityY: 100 },
+        { state: State.END, translationY: 40, velocityY: 100 },
+      ]);
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it('위로 끈 건 닫기가 아니다', async () => {
+      const { onClose } = await renderNative();
+      fireGestureHandler(getByGestureTestId('bottom-sheet-dismiss-pan'), [
+        { state: State.BEGAN, translationY: 0, velocityY: 0 },
+        { state: State.ACTIVE, translationY: -30, velocityY: -900 },
+        { state: State.END, translationY: -40, velocityY: -900 },
+      ]);
+      expect(onClose).not.toHaveBeenCalled();
+    });
   });
 
   it('처음부터 닫혀 있으면 아무것도 그리지 않는다', async () => {

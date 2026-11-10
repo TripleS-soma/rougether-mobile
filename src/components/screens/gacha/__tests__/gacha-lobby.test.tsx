@@ -75,13 +75,12 @@ describe('GachaLobby', () => {
     await fireEvent.press(screen.getByRole('tab', { name: '크리스마스' }));
     expect(props.onSelect).toHaveBeenCalledWith(christmas);
     expect(screen.getByLabelText('1회 뽑기, 37 코인')).toBeTruthy();
-    expect(screen.queryByText('어떤 선물이 기다릴까요?')).toBeNull();
 
     await screen.rerender(<GachaLobby {...props} selected={floor} />);
     expect(screen.queryByText('배치한 크리스마스 가구 종류마다 코인 +10%')).toBeNull();
     expect(screen.queryByLabelText(/같은 종류의 중복 배치와 벽지, 바닥은 제외/)).toBeNull();
-    expect(screen.getByText('포근함을 깔아볼까요')).toBeTruthy();
-    expect(screen.getByText('어떤 선물이 기다릴까요?')).toBeTruthy();
+    expect(screen.getByText('바닥 1개가 나와요.')).toBeTruthy();
+    expect(screen.getByText('나올 수 있는 보상')).toBeTruthy();
     expect(props.onDraw).not.toHaveBeenCalled();
   });
 
@@ -126,7 +125,7 @@ describe('GachaLobby', () => {
 
     await screen.rerender(<GachaLobby {...props} selected={floor} />);
     expect(screen.getByRole('tab', { name: '바닥 뽑기' })).toBeSelected();
-    expect(screen.getByText('포근함을 깔아볼까요')).toBeTruthy();
+    expect(screen.getByText('바닥 1개가 나와요.')).toBeTruthy();
   });
 
   it.each([
@@ -191,4 +190,25 @@ describe('GachaLobby', () => {
     expect(onRewards).toHaveBeenCalledTimes(1);
     expect(props.onDraw).not.toHaveBeenCalled();
   });
+});
+
+it('감성 문구 없이 무엇이 나오는지만 말한다 (2026-11-09)', async () => {
+  const screen = await render(<GachaLobby {...lobbyProps({ onRewards: jest.fn() })} />);
+  for (const gone of ['오늘의 작은 설렘', '내 방에 도착한 선물', '어떤 선물이 기다릴까요?']) {
+    expect(screen.queryByText(gone)).toBeNull();
+  }
+  expect(screen.queryByText(/상자$/)).toBeNull();
+  expect(screen.getByText('나올 수 있는 보상')).toBeTruthy();
+});
+
+it('첫 뽑기는 무료라는 것과 스피커가 나온다는 것만 알린다 (2026-11-09)', async () => {
+  const screen = await render(<GachaLobby {...lobbyProps({ starterDrawState: 'PENDING' })} />);
+  expect(screen.getByText('첫 뽑기는 무료예요')).toBeTruthy();
+  expect(screen.getByText('스피커가 나와요. 받은 뒤 원하는 곳에 놓을 수 있어요.')).toBeTruthy();
+});
+
+it('스피커를 이미 받았으면 무료 안내 대신 받았다고 말한다 (#1705 리뷰)', async () => {
+  const screen = await render(<GachaLobby {...lobbyProps({ starterDrawState: 'CLAIMED' })} />);
+  expect(screen.queryByText('첫 뽑기는 무료예요')).toBeNull();
+  expect(screen.getByText('스피커를 받았어요')).toBeTruthy();
 });

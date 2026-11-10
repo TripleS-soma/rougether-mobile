@@ -31,13 +31,23 @@ import { useAnimatedValue, useConstant, useLatestRef } from '@/hooks/use-stable-
 import { useAndroidKeyboardHeight } from '@/hooks/use-android-keyboard-height';
 import { NATIVE_DRIVER } from '@/utils/animation';
 import { useT } from '@/i18n';
+import Reanimated, {
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 // 스와이프-다운 닫기 (#469) — 이만큼 끌어내리거나(플링) 이 속도를 넘기면 닫는다.
 const DISMISS_DISTANCE = 96;
 const DISMISS_VELOCITY = 0.6;
+/** 네이티브 팬에서 놓았을 때 제자리로 돌아가는 시간(ms) — 손가락이 닿았던 동작이라 스프링. */
+export const NATIVE_SNAP_BACK_MS = 400;
 
-/** 놓는 순간의 끌어내린 거리(dy)·속도(vy)로 닫을지 판정. */
+/** 놓는 순간의 끌어내린 거리(dy)·속도(vy, px/ms)로 닫을지 판정. 네이티브 팬(UI 스레드)에서도 부른다. */
 export function shouldDismiss(dy: number, vy: number): boolean {
+  'worklet';
   return dy > DISMISS_DISTANCE || vy > DISMISS_VELOCITY;
 }
 
@@ -145,7 +155,12 @@ export type BottomSheetProps = {
    * 세로 제스처를 쓰는 자식은 `SheetDragExclude`로 감싼다. 'header'는 종전 #514.
    */
   dragScope?: BottomSheetDragScope;
-  /** Native card pan for action sheets without scrollable children or SheetDragExclude. */
+  /**
+   * 네이티브 카드 팬 — 스크롤 자식·SheetDragExclude가 없는 액션 시트용. 끌기가 UI 스레드에서
+   * 돌아 JS가 바빠도 손가락을 따라오고, 놓을 때 손가락 속도가 복귀 스프링에 실린다.
+   * 카드가 이동용 래퍼 뷰 안에 들어가므로 cardStyle에 % 높이(maxHeight: '85%' 등)를 쓰는
+   * 시트에는 켜지 말 것 — 기준이 화면이 아니라 래퍼가 된다.
+   */
   nativeDrag?: boolean;
   /** Keep input sheets above the keyboard without changing other sheets. */
   avoidKeyboard?: boolean;
@@ -192,11 +207,28 @@ export function BottomSheet({
   // 이 터치가 SheetDragExclude 안에서 시작했는가 (#1132) — 자식이 true, 카드가 false.
   const excludedRef = useRef(false);
   const useNativeDrag = nativeDrag && dragEnabled && dragScope === 'card' && Platform.OS !== 'web';
-  const resetDrag = useConstant(() => () => {
+  // 네이티브 팬 전용 끌기 오프셋 — UI 스레드에서만 쓰고 읽는다(드래그 중 React 렌더 0회).
+  // jest의 useSharedValue는 렌더마다 새 객체라 useRef로 앵커(calendar·character-idle과 같은 계약).
+  const nativeDragY = useRef(useSharedValue(0)).current;
+  const nativeDragStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: nativeDragY.value }],
+  }));
+  // 다시 열릴 때 지난번에 끌어내린 자리에서 시작하지 않게.
+  useEffect(() => {
+    if (visible) nativeDragY.value = 0;
+  }, [visible, nativeDragY]);
+  const closeFromGesture = useConstant(() => () => onCloseRef.current?.());
+  // 놓는 순간의 손가락 속도를 복귀 스프링에 싣는다 — 속도 없이 출발하면 빠르게 놓아도 느리게
+  // 놓아도 똑같이 돌아가 손에서 떨어지는 순간이 끊겨 보인다. PanResponder의 vy는 px/ms,
+  // RN 스프링의 velocity는 px/s라 1000을 곱한다. 위로 올리며 놓은 경우(음수)에는 제자리를
+  // 지나쳐 카드 밑이 드러나지 않게 오버슛을 막는다.
+  const resetDrag = useConstant(() => (vy = 0) => {
     Animated.spring(dragY, {
       toValue: 0,
       friction: 9,
       tension: 70,
+      velocity: vy * 1000,
+      overshootClamping: vy < 0,
       useNativeDriver: NATIVE_DRIVER,
     }).start();
   });
@@ -206,18 +238,29 @@ export function BottomSheet({
       .maxPointers(1)
       .activeOffsetY(6)
       .failOffsetY(-6)
-      // Keep RN Animated's existing entrance/exit animation. Recognition and
-      // cancellation of child button touches happen natively; updates use JS.
-      .runOnJS(true)
-      .onStart(() => dragY.stopAnimation())
-      .onUpdate((e) => dragY.setValue(Math.max(0, e.translationY)))
+      // 인식·이동·복귀 모두 UI 스레드(워클릿). 입장·퇴장은 RN Animated의 progress가 그대로
+      // 맡고, 끌기 오프셋만 바깥 래퍼 뷰의 transform으로 따로 얹는다. JS로 건너가는 건 닫기
+      // 결정 한 번뿐이다.
+      .onStart(() => {
+        // 복귀 스프링 도중 다시 잡으면 그 자리에서 이어받는다.
+        cancelAnimation(nativeDragY);
+      })
+      .onUpdate((e) => {
+        nativeDragY.value = Math.max(0, e.translationY);
+      })
       .onEnd((e, success) => {
         // RNGH reports px/s; the existing dismissal helper expects px/ms.
         if (success && e.translationY > 0 && shouldDismiss(e.translationY, e.velocityY / 1000)) {
-          onCloseRef.current?.();
-        } else {
-          resetDrag();
+          scheduleOnRN(closeFromGesture);
+          return;
         }
+        // 제자리(0)는 단단한 끝이다 — 넘어가면 카드 밑으로 화면 바닥이 드러나므로 오버슛을 막는다.
+        nativeDragY.value = withSpring(0, {
+          duration: NATIVE_SNAP_BACK_MS,
+          dampingRatio: 1,
+          velocity: e.velocityY,
+          overshootClamping: true,
+        });
       }),
   );
 
@@ -323,10 +366,10 @@ export function BottomSheet({
         if (shouldDismiss(g.dy, g.vy)) {
           onCloseRef.current?.();
         } else {
-          resetDrag();
+          resetDrag(g.vy);
         }
       },
-      onPanResponderTerminate: resetDrag,
+      onPanResponderTerminate: () => resetDrag(),
     }),
   );
 
@@ -373,7 +416,15 @@ export function BottomSheet({
       />
       {/* 웹 데스크톱: 딤은 창 전체, 카드만 앱 프레임 폭(중앙 컬럼)에 맞춘다. */}
       <ModalFrame>
-        {useNativeDrag ? <GestureDetector gesture={nativePan}>{card}</GestureDetector> : card}
+        {useNativeDrag ? (
+          <GestureDetector gesture={nativePan}>
+            <Reanimated.View style={nativeDragStyle} testID="bottom-sheet-native-drag">
+              {card}
+            </Reanimated.View>
+          </GestureDetector>
+        ) : (
+          card
+        )}
       </ModalFrame>
     </Animated.View>
   );

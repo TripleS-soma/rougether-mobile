@@ -3,7 +3,6 @@ import { Platform, type ScrollView } from 'react-native';
 
 import { useAndroidKeyboardHeight } from '@/hooks/use-android-keyboard-height';
 import { useAppFrame } from '@/hooks/use-app-frame';
-import { IntroScreen } from '@/components/screens/intro-screen';
 import { CharacterStep } from '@/components/screens/onboarding/character-step';
 
 import { GoalStep } from '@/components/screens/onboarding/goal-step';
@@ -55,12 +54,12 @@ export type OnboardingScreenProps = {
   /**
    * 설정 → '튜토리얼 다시 보기'로 들어왔는가 (#1023). 첫 실행과 다시 보기는
    * 앱 상태가 똑같아서(`app-root`가 `onboarded`만 false로 되돌린다) 화면이
-   * 스스로는 구분할 수 없어 명시적으로 받는다. 다시 보기만 소개 슬라이드부터
-   * 시작한다 — 첫 실행의 소개는 로그인 전으로 옮겼다 (#1282).
+   * 스스로는 구분할 수 없어 명시적으로 받는다. 다시 보기에만 목표 설문의 '이전'이
+   * 붙어 저장 없이 앱으로 돌아간다(#1700 — 소개 슬라이드는 없앴다).
    */
   replay?: boolean;
   /**
-   * 다시 보기에서 건너뛰기 (#1023) — 목표 설문으로 넘어가는 게 아니라 온보딩을
+   * 다시 보기에서 나가기 (#1023) — 목표 설문의 '이전'이 부른다. 저장 없이 온보딩을
    * 끝내고 앱으로 돌아간다. 이미 저장된 목표·닉네임은 건드리지 않는다.
    * `replay`가 아닐 때는 버튼 자체가 없으므로 호출되지 않는다.
    */
@@ -74,8 +73,9 @@ export type OnboardingScreenProps = {
  * character select → nickname. Theme tokens + type scale; emoji stand in for
  * the icon set and character sprites (TODO).
  *
- * 다시 보기(`replay`)만 소개 슬라이드가 앞에 붙는다 — 첫 실행의 소개는 로그인
- * 전으로 옮겼다 (#1282).
+ * 첫 실행과 다시 보기(`replay`) 모두 목표 설문부터 시작한다. 소개 슬라이드는
+ * 없앴다(#1700) — 사용법은 로그인 뒤 튜토리얼 미션이 직접 해 보게 한다. 다시 보기의
+ * '이전'은 저장 없이 앱으로 돌아간다(`onSkip`).
  */
 export function OnboardingScreen({
   onDone,
@@ -112,8 +112,6 @@ export function OnboardingScreen({
     goals && goals.length > 0
       ? goals
       : GOAL_IDS.map((id) => ({ id, label: tr(`member.onboarding.goals.${id}`) }));
-  // 첫 실행은 목표 설문부터 (#1282) — 소개는 로그인 전에 이미 봤다.
-  const [showGoalSurvey, setShowGoalSurvey] = useState(!replay);
   const [showCharacterSelect, setShowCharacterSelect] = useState(false);
   // 닉네임 단계 (#635) — 캐릭터 다음, 시작 직전. 신규 계정의 서버 닉네임이
   // 비어 화면 데모 기본값이 노출되던 문제의 근본 해결.
@@ -209,31 +207,19 @@ export function OnboardingScreen({
   }
 
   // --- Goal survey ---
-  if (showGoalSurvey) {
-    return (
-      <GoalStep
-        screenStyle={screenStyle}
-        goalOptions={goalOptions}
-        selectedGoals={selectedGoals}
-        onToggle={toggleGoal}
-        // MVP 고양이 단일 (#637) — 캐러셀을 건너뛰고 닉네임으로 직행.
-        onNext={() =>
-          characterSelectEnabled ? setShowCharacterSelect(true) : setShowNicknameStep(true)
-        }
-        // 첫 실행엔 돌아갈 소개가 없다 — 소개는 로그인 전에 끝났다 (#1282).
-        onPrevious={replay ? () => setShowGoalSurvey(false) : undefined}
-      />
-    );
-  }
-
-  // --- Intro slides (다시 보기 전용) --- 첫 실행의 소개는 로그인 전으로 옮겼다
-  // (#1282, src/app/login.tsx). 설정 → 튜토리얼 다시 보기로 들어온 사람만 여기서
-  // 소개를 다시 보고, 건너뛰기로 나가거나 목표 수정으로 이어진다.
   return (
-    <IntroScreen
-      doneLabel={tr('member.onboarding.pickGoals')}
-      onDone={() => setShowGoalSurvey(true)}
-      onSkip={replay ? onSkip : undefined}
+    <GoalStep
+      screenStyle={screenStyle}
+      goalOptions={goalOptions}
+      selectedGoals={selectedGoals}
+      onToggle={toggleGoal}
+      // MVP 고양이 단일 (#637) — 캐러셀을 건너뛰고 닉네임으로 직행.
+      onNext={() =>
+        characterSelectEnabled ? setShowCharacterSelect(true) : setShowNicknameStep(true)
+      }
+      // 첫 실행엔 돌아갈 곳이 없다. 다시 보기는 '이전'으로 저장 없이 앱으로 나간다
+      // (#1023 건너뛰기와 같은 출구, #1700).
+      onPrevious={replay ? onSkip : undefined}
     />
   );
 }

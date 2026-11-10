@@ -278,7 +278,12 @@ function CalendarBase({
   const placeCircle = (animate: boolean) => {
     const l = dayLayouts.current[value];
     if (!l) return;
-    const rowTop = rowTops.current[l.row];
+    // 접힌 주간 보기에선 남는 줄 위의 줄이 모두 높이 0이라, 남는 줄의 자리는 곧 첫 줄의 자리다.
+    // 접힘은 UI 스레드(Reanimated)에서 돌아 남는 줄의 마지막 onLayout이 오지 않는 일이 있었고,
+    // 그러면 원이 월 보기 때의 줄 자리(두세 줄 아래)에 남았다(2026-11-09 제보). 첫 줄의 y는
+    // 위에 아무것도 접히지 않으니 늘 정확하다.
+    const rowTop =
+      collapsed && foldSettled && l.row === keptWeek ? rowTops.current[0] : rowTops.current[l.row];
     // 줄이 아직 측정 전이면 원을 놓지 않는다 — 줄 onLayout이 뒤이어 다시 부른다.
     if (rowTop == null) return;
     const target = {
@@ -419,6 +424,7 @@ function CalendarBase({
           <View style={styles.grid} testID="calendar-grid">
             <Animated.View
               pointerEvents="none"
+              testID="calendar-selected-circle"
               style={[
                 styles.selCircle,
                 {
