@@ -278,7 +278,9 @@
         "title": "Christmas",
         "endsLabel": "Until Dec 25",
         "heroA11y": "Christmas furniture room preview"
-      }
+      },
+      "requestedMachineLoading": "Checking the event draw.",
+      "requestedMachineUnavailable": "The event draw is unavailable. Please try again."
     },
     "studio": {
       "title": "AI furniture studio",

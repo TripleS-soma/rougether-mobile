@@ -611,6 +611,9 @@ export function AppShell({
     setChristmasMachineId(machineId);
     setScreen('gacha');
   }, []);
+  useEffect(() => {
+    if (screen !== 'gacha') setChristmasMachineId(undefined);
+  }, [screen]);
   const christmasSurface = useChristmasSurface({
     home: screen === 'myRoom',
     ready: nativePromptsReady && !myRoomLoading && missions.loaded !== false,

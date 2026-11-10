@@ -713,7 +713,7 @@ describe('onboarding starter draw', () => {
   });
 });
 
-it('selects the requested actual seasonal machine and falls back safely for an absent ID', async () => {
+it('selects the requested seasonal machine, preserves manual selection and locks an absent request', async () => {
   const christmas = {
     ...machine,
     id: 812,
@@ -761,7 +761,95 @@ it('selects the requested actual seasonal machine and falls back safely for an a
       <GachaScreen gachas={machines} initialMachineId={99999} coinBalance={500} />
     </ToastProvider>,
   );
-  expect(absent.getByRole('tab', { name: '가구 뽑기' }).props.accessibilityState.selected).toBe(
-    true,
+  expect(absent.getByLabelText('1회 뽑기, 25 코인')).toBeDisabled();
+  expect(absent.getByText('이벤트 뽑기를 사용할 수 없어요. 다시 확인해주세요.')).toBeTruthy();
+});
+
+it('locks verification failure and missing IDs, retries honestly, and keeps back available', async () => {
+  const onRefreshMachines = jest.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+  const onDraw = jest.fn(async () => []);
+  const onBack = jest.fn();
+  const christmas = {
+    ...machine,
+    id: 812,
+    code: 'christmas_2026',
+    category: undefined,
+    costAmount: 47,
+  };
+  const ui = await render(
+    <ToastProvider>
+      <GachaScreen
+        gachas={machines}
+        initialMachineId={812}
+        onRefreshMachines={onRefreshMachines}
+        onDraw={onDraw}
+        onBack={onBack}
+        coinBalance={500}
+      />
+    </ToastProvider>,
   );
+  expect(await ui.findByText('이벤트 뽑기를 사용할 수 없어요. 다시 확인해주세요.')).toBeTruthy();
+  expect(ui.getByLabelText('1회 뽑기, 25 코인')).toBeDisabled();
+  await fireEvent.press(ui.getByLabelText('1회 뽑기, 25 코인'));
+  expect(onDraw).not.toHaveBeenCalled();
+  await fireEvent.press(ui.getByText('다시 시도'));
+  expect(onRefreshMachines).toHaveBeenCalledTimes(2);
+  expect(ui.getByLabelText('1회 뽑기, 25 코인')).toBeDisabled();
+  await fireEvent.press(ui.getByLabelText('뒤로 가기'));
+  expect(onBack).toHaveBeenCalledTimes(1);
+  await ui.rerender(
+    <ToastProvider>
+      <GachaScreen
+        gachas={[...machines, christmas]}
+        initialMachineId={812}
+        onRefreshMachines={onRefreshMachines}
+        onDraw={onDraw}
+        onBack={onBack}
+        coinBalance={500}
+      />
+    </ToastProvider>,
+  );
+  expect(ui.getByLabelText('1회 뽑기, 47 코인')).toBeEnabled();
+});
+
+it('honors an explicit ordinary tab while event verification is pending and never reselects it later', async () => {
+  const pending = deferred<boolean>();
+  const onRefreshMachines = jest.fn(() => pending.promise);
+  const onDraw = jest.fn(async () => []);
+  const christmas = {
+    ...machine,
+    id: 812,
+    code: 'christmas_2026',
+    category: undefined,
+    costAmount: 47,
+  };
+  const ui = await render(
+    <ToastProvider>
+      <GachaScreen
+        gachas={[...machines, christmas]}
+        initialMachineId={812}
+        onRefreshMachines={onRefreshMachines}
+        onDraw={onDraw}
+        coinBalance={500}
+      />
+    </ToastProvider>,
+  );
+  expect(ui.getByLabelText('1회 뽑기, 47 코인')).toBeDisabled();
+  await fireEvent.press(ui.getByRole('tab', { name: '벽지 뽑기' }));
+  expect(ui.getByLabelText('1회 뽑기, 25 코인')).toBeEnabled();
+  await act(() => pending.resolve(true));
+  await ui.rerender(
+    <ToastProvider>
+      <GachaScreen
+        gachas={[...machines, { ...christmas }]}
+        initialMachineId={812}
+        onRefreshMachines={onRefreshMachines}
+        onDraw={onDraw}
+        coinBalance={500}
+      />
+    </ToastProvider>,
+  );
+  expect(ui.getByRole('tab', { name: '벽지 뽑기' }).props.accessibilityState.selected).toBe(true);
+  await fireEvent.press(ui.getByLabelText('1회 뽑기, 25 코인'));
+  expect(onDraw).toHaveBeenCalledWith(101, 1);
 });
