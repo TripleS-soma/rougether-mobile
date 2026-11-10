@@ -13,6 +13,7 @@ import {
 } from '@/api';
 import { useWallet } from '@/hooks/use-wallet';
 import { queryKeys } from '@/lib/query-keys';
+import { todayIso, toKstDate } from '@/utils/datetime';
 
 const usable = (status: AttendanceStatus | null | undefined): status is AttendanceStatus =>
   !!status &&
@@ -52,6 +53,18 @@ export function useChristmasEvent({ enabled = true } = {}) {
     retry: false,
   });
   const status = usable(attendance.data) ? attendance.data : null;
+  const today = todayIso();
+  const updatedToday = (updatedAt: number) =>
+    updatedAt > 0 && toKstDate(new Date(updatedAt)) === today;
+  // A parent render after KST midnight must not treat yesterday's successful cache as today's check.
+  const checkedDateMatchesToday =
+    !status?.checkedInToday ||
+    (Array.isArray(status.checkInDates) && status.checkInDates.includes(today));
+  const freshForToday =
+    checkedDateMatchesToday &&
+    metadata.isSuccess &&
+    updatedToday(metadata.dataUpdatedAt) &&
+    (eventId == null || (attendance.isSuccess && updatedToday(attendance.dataUpdatedAt)));
   const lock = useRef(false);
   const { mutateAsync: checkInMutation, isPending: checkingIn } = useMutation({
     mutationFn: checkInAttendanceEvent,
@@ -155,6 +168,7 @@ export function useChristmasEvent({ enabled = true } = {}) {
     () => ({
       event,
       status,
+      freshForToday,
       loading: metadata.isPending || (eventId != null && attendance.isPending),
       fetching: metadata.isFetching || attendance.isFetching,
       error: metadata.isError || attendance.isError || (attendance.isSuccess && !status),
@@ -168,6 +182,7 @@ export function useChristmasEvent({ enabled = true } = {}) {
     [
       event,
       status,
+      freshForToday,
       metadata.isPending,
       metadata.isFetching,
       metadata.isError,

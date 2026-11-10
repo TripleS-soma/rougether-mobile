@@ -32,6 +32,7 @@ const state = {
   status,
   fetching: false,
   loaded: true,
+  freshForToday: true,
   loading: false,
   error: false,
   checkingIn: false,
@@ -145,7 +146,11 @@ it('clears an old account modal and ignores its delayed reward when the account 
     new Promise((resolve) => {
       finish = () =>
         resolve({
-          result: { newCheckIn: true, coinRewardAmount: 60, status: { checkedInToday: true } },
+          result: {
+            newCheckIn: true,
+            coinRewardAmount: 60,
+            status: { checkedInToday: true, checkInDates: ['2026-11-09'] },
+          },
           recovered: false,
         });
     }),
@@ -256,4 +261,59 @@ it('does not consume the day when an inactive event is opened and closed manuall
   await rerender(args);
   await waitFor(() => expect(props(result.current, 0).visible).toBe(true));
   expect(props(result.current, 1).visible).toBe(false);
+});
+
+it('does not consume the new day on a foreground midnight render before the next focus refresh', async () => {
+  const subscription = jest.spyOn(AppState, 'addEventListener');
+  const yesterday = {
+    ...state,
+    status: {
+      ...status,
+      availableToday: false,
+      checkedInToday: true,
+      checkInDates: ['2026-11-09'],
+    },
+  };
+  jest
+    .mocked(useChristmasEvent)
+    .mockReturnValue(yesterday as unknown as ReturnType<typeof useChristmasEvent>);
+  const { result, rerender } = await renderHook(
+    (input: typeof args) => useChristmasSurface(input),
+    { initialProps: args },
+  );
+  await waitFor(() => expect(props(result.current, 1).visible).toBe(true));
+  await act(async () => props(result.current, 1).onClose(false));
+  await act(async () => props(result.current, 1).onDismissed());
+  expect(result.current.active).toBe(false);
+
+  jest.mocked(todayIso).mockReturnValue('2026-11-10');
+  jest
+    .mocked(useChristmasEvent)
+    .mockReturnValue({ ...yesterday, freshForToday: false } as unknown as ReturnType<
+      typeof useChristmasEvent
+    >);
+  await rerender(args); // home stays true, no navigation or focus event has happened yet.
+  expect(result.current.active).toBe(false);
+  expect(state.refresh).not.toHaveBeenCalled();
+
+  const onAppState = subscription.mock.calls.find(([type]) => type === 'change')![1];
+  let finish!: () => void;
+  state.refresh.mockReturnValue(
+    new Promise((resolve) => {
+      finish = () => resolve(null);
+    }),
+  );
+  await act(() => onAppState('background'));
+  await act(() => onAppState('active'));
+  expect(state.refresh).toHaveBeenCalledTimes(1);
+  jest.mocked(useChristmasEvent).mockReturnValue({
+    ...state,
+    status: { ...status, checkedInToday: false },
+  } as unknown as ReturnType<typeof useChristmasEvent>);
+  await rerender(args);
+  expect(result.current.active).toBe(false); // still waiting for the explicit refresh to finish.
+  await act(async () => finish());
+  await waitFor(() => expect(props(result.current, 0).visible).toBe(true));
+  expect(props(result.current, 1).visible).toBe(false);
+  subscription.mockRestore();
 });
