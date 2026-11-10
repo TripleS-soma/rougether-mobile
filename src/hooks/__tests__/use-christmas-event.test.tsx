@@ -5,6 +5,7 @@ import { useChristmasEvent } from '@/hooks/use-christmas-event';
 import { createTestQueryClient, queryWrapper } from '@/test-utils/query-wrapper';
 import { jsonRes } from '@/test-utils/fetch';
 import { queryKeys } from '@/lib/query-keys';
+import * as datetime from '@/utils/datetime';
 
 jest.mock('@/api', () => ({ ...jest.requireActual('@/api'), getSessionUserId: jest.fn(() => 7) }));
 const EVENT = {
@@ -52,6 +53,7 @@ afterEach(async () => {
   clients.forEach((client) => client.clear());
   clients.length = 0;
   jest.mocked(getSessionUserId).mockReturnValue(7);
+  jest.restoreAllMocks();
 });
 
 it('loads the event and its explicit cumulative status without replacing progress with streak', async () => {
@@ -74,7 +76,13 @@ it('uses the server milestone amount and single-flights paid state changes', asy
   const pending = new Promise<void>((resolve) => {
     release = resolve;
   });
-  const next = { ...STATUS, progressDays: 5, availableToday: false, checkedInToday: true };
+  const next = {
+    ...STATUS,
+    progressDays: 5,
+    availableToday: false,
+    checkedInToday: true,
+    checkInDates: [datetime.todayIso()],
+  };
   global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
     if (init?.method === 'POST') {
       await pending;
@@ -122,6 +130,7 @@ it('reconciles a persisted response loss with GET, wallet and inventory without 
         : {
             ...STATUS,
             checkedInToday: checked,
+            checkInDates: checked ? [datetime.todayIso()] : [],
             availableToday: !checked,
             progressDays: checked ? 5 : 4,
           },
@@ -205,7 +214,12 @@ it.each(['success', 'failure'])(
           coinRewardAmount: 60,
           coinBalance: 160,
           rewardGrantedNow: false,
-          status: { ...STATUS, progressDays: 5, checkedInToday: true },
+          status: {
+            ...STATUS,
+            progressDays: 5,
+            checkedInToday: true,
+            checkInDates: [datetime.todayIso()],
+          },
         });
       }
       const currentUser = getSessionUserId();
@@ -312,3 +326,120 @@ it('stops an old-account refresh before requesting its attendance with a replace
   });
   await unmount();
 });
+
+it.each([
+  ['2026-11-09T14:59:59.999Z', '2026-11-09T14:59:59.999Z', false],
+  ['2026-11-09T15:00:00.000Z', '2026-11-09T14:59:59.999Z', false],
+  ['2026-11-09T14:59:59.999Z', '2026-11-09T15:00:00.000Z', false],
+  ['2026-11-09T15:00:00.000Z', '2026-11-09T15:00:00.000Z', true],
+] as const)(
+  'checks both query timestamps against the KST day (%s / %s)',
+  async (metadataAt, attendanceAt, expected) => {
+    jest.spyOn(datetime, 'todayIso').mockReturnValue('2026-11-10');
+    global.fetch = jest.fn() as unknown as typeof fetch;
+    const env = wrapper();
+    env.client.setQueryData(queryKeys.christmas(7), EVENT, { updatedAt: Date.parse(metadataAt) });
+    env.client.setQueryData(queryKeys.attendanceEvent(7, 30), STATUS, {
+      updatedAt: Date.parse(attendanceAt),
+    });
+    const { result, unmount } = await renderHook(() => useChristmasEvent({ enabled: false }), {
+      wrapper: env.wrapper,
+    });
+    expect(result.current.loaded).toBe(true);
+    expect(result.current.freshForToday).toBe(expected);
+    expect(global.fetch).not.toHaveBeenCalled();
+    await unmount();
+  },
+);
+
+it('recomputes freshness on a midnight parent render while preserving action references', async () => {
+  const day = jest.spyOn(datetime, 'todayIso').mockReturnValue('2026-11-09');
+  global.fetch = jest.fn() as unknown as typeof fetch;
+  const env = wrapper();
+  env.client.setQueryData(queryKeys.christmas(7), EVENT, {
+    updatedAt: Date.parse('2026-11-09T14:59:59.999Z'),
+  });
+  env.client.setQueryData(queryKeys.attendanceEvent(7, 30), STATUS, {
+    updatedAt: Date.parse('2026-11-09T14:59:59.999Z'),
+  });
+  const { result, rerender, unmount } = await renderHook(
+    () => useChristmasEvent({ enabled: false }),
+    { wrapper: env.wrapper },
+  );
+  expect(result.current.freshForToday).toBe(true);
+  const refresh = result.current.refresh;
+  const checkIn = result.current.checkIn;
+  day.mockReturnValue('2026-11-10');
+  await rerender(undefined);
+  expect(result.current.freshForToday).toBe(false);
+  expect(result.current.refresh).toBe(refresh);
+  expect(result.current.checkIn).toBe(checkIn);
+  await act(() => {
+    env.client.setQueryData(queryKeys.christmas(7), EVENT, {
+      updatedAt: Date.parse('2026-11-09T15:00:00.000Z'),
+    });
+    env.client.setQueryData(queryKeys.attendanceEvent(7, 30), STATUS, {
+      updatedAt: Date.parse('2026-11-09T15:00:00.000Z'),
+    });
+  });
+  await waitFor(() => expect(result.current.freshForToday).toBe(true));
+  expect(result.current.refresh).toBe(refresh);
+  expect(result.current.checkIn).toBe(checkIn);
+  expect(global.fetch).not.toHaveBeenCalled();
+  await unmount();
+});
+
+it.each([[['2026-11-10']], [undefined]] as const)(
+  'rejects an old or absent checked date despite a response timestamp after KST midnight (%s)',
+  async (checkedDates) => {
+    jest.spyOn(datetime, 'todayIso').mockReturnValue('2026-11-11');
+    global.fetch = jest.fn() as unknown as typeof fetch;
+    const env = wrapper();
+    const receivedToday = Date.parse('2026-11-10T15:00:00.010Z');
+    env.client.setQueryData(queryKeys.christmas(7), EVENT, { updatedAt: receivedToday });
+    env.client.setQueryData(
+      queryKeys.attendanceEvent(7, 30),
+      {
+        ...STATUS,
+        checkedInToday: true,
+        availableToday: false,
+        checkInDates: checkedDates,
+      },
+      { updatedAt: receivedToday },
+    );
+    const { result, unmount } = await renderHook(() => useChristmasEvent({ enabled: false }), {
+      wrapper: env.wrapper,
+    });
+    expect(result.current.loaded).toBe(true);
+    expect(result.current.freshForToday).toBe(false);
+    await act(() =>
+      env.client.setQueryData(
+        queryKeys.attendanceEvent(7, 30),
+        {
+          ...STATUS,
+          checkedInToday: true,
+          availableToday: false,
+          checkInDates: ['2026-11-11'],
+        },
+        { updatedAt: receivedToday + 1 },
+      ),
+    );
+    await waitFor(() => expect(result.current.freshForToday).toBe(true));
+    await act(() =>
+      env.client.setQueryData(
+        queryKeys.attendanceEvent(7, 30),
+        {
+          ...STATUS,
+          checkedInToday: false,
+          availableToday: true,
+          checkInDates: ['2026-11-10'],
+        },
+        { updatedAt: receivedToday + 2 },
+      ),
+    );
+    await waitFor(() => expect(result.current.status?.availableToday).toBe(true));
+    expect(result.current.freshForToday).toBe(true);
+    expect(global.fetch).not.toHaveBeenCalled();
+    await unmount();
+  },
+);
