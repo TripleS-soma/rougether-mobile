@@ -56,17 +56,16 @@ describe('AppRoot', () => {
     expect(Redirect).not.toHaveBeenCalled();
   });
 
-  // #1282 — 소개는 로그인 전(로그인 라우트)으로 옮겼다. 로그인 뒤 첫 실행은
-  // 곧장 목표 설문이다.
-  it('shows onboarding on first launch — goal survey first (#1282)', async () => {
+  // #1700 — 소개 슬라이드는 없앴다. 로그인 뒤 첫 실행은 곧장 목표 설문이다.
+  it('shows onboarding on first launch — goal survey first (#1700)', async () => {
     const { getByText, queryByText } = await renderApp();
     await waitFor(() => expect(getByText('관심 있는 목표를 골라주세요')).toBeTruthy());
     expect(queryByText('루게더에 오신 걸 환영해요')).toBeNull();
   });
 
   // #1023 — 첫 실행과 다시 보기는 둘 다 `onboarded === false`라 화면만으로는
-  // 구분이 안 된다. 루트가 `replay`를 넘겨야 소개와 건너뛰기가 생긴다.
-  it('첫 실행 온보딩에는 건너뛰기도 돌아갈 소개도 없다 (#1023, #1282)', async () => {
+  // 구분이 안 된다. 루트가 `replay`를 넘겨야 '이전'(저장 없이 앱으로)이 생긴다.
+  it('첫 실행 온보딩에는 이전도 건너뛰기도 없다 (#1023, #1700)', async () => {
     const { queryByText, getByText } = await renderApp();
     await waitFor(() => expect(getByText('관심 있는 목표를 골라주세요')).toBeTruthy());
     expect(queryByText('건너뛰기')).toBeNull();
@@ -81,7 +80,7 @@ describe('AppRoot', () => {
     expect(queryByText('오늘의 할 일')).toBeNull();
   });
 
-  it('튜토리얼 다시 보기로 들어오면 건너뛰기가 생기고, 누르면 앱으로 돌아온다 (#1023)', async () => {
+  it('튜토리얼 다시 보기로 들어오면 목표 설문부터 열리고, 이전을 누르면 앱으로 돌아온다 (#1023, #1700)', async () => {
     await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: ['exercise'] }));
     const { getByText, getByLabelText } = await renderApp();
     await waitFor(() => expect(getByText('오늘의 할 일')).toBeTruthy());
@@ -92,11 +91,11 @@ describe('AppRoot', () => {
     await waitFor(() => expect(getByText('튜토리얼 다시 보기')).toBeTruthy());
     await fireEvent.press(getByText('튜토리얼 다시 보기'));
 
-    // 온보딩이 다시 열리고, 이번엔 출구가 있다.
-    await waitFor(() => expect(getByText('루게더에 오신 걸 환영해요')).toBeTruthy());
-    await fireEvent.press(getByText('건너뛰기'));
+    // 온보딩이 목표 설문부터 다시 열리고, 이번엔 출구('이전')가 있다.
+    await waitFor(() => expect(getByText('관심 있는 목표를 골라주세요')).toBeTruthy());
+    await fireEvent.press(getByText('이전'));
 
-    // 목표 설문을 거치지 않고 바로 앱 — 저장된 선택은 그대로다.
+    // 저장 없이 바로 앱 — 저장된 선택은 그대로다.
     await waitFor(() => expect(getByText('오늘의 할 일')).toBeTruthy());
   });
 

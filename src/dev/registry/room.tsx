@@ -1,4 +1,5 @@
 import { StarterSpeakerPreview } from '@/dev/starter-speaker-preview';
+import { CharacterIdlePreview } from '@/dev/character-idle-preview';
 import { SpeakerPreview } from '@/dev/speaker-preview';
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -63,6 +64,11 @@ function MarketIssueSheetDemo() {
 }
 
 export const roomEntries: GalleryEntry[] = [
+  {
+    name: 'CharacterIdle',
+    description: '캐릭터 대기 동작 — 정지 vs 숨쉬기·탭 반응 (오른쪽 칸을 눌러 포즈 넘기기)',
+    render: () => <CharacterIdlePreview />,
+  },
   {
     name: 'StarterSpeakerPreview',
     description: '온보딩 스피커 뽑기와 직접 배치 (API 호출 없음)',

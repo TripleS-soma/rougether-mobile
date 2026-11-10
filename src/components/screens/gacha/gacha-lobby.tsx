@@ -69,36 +69,28 @@ export function GachaLobby({
   const seasonalSelected = selected.id === seasonalGacha?.machine.id;
   const locked = category === 'CHARACTER' && characterLockLevel != null;
   // 온보딩 첫 뽑기(#1325)는 스피커 확정 — 카테고리 탭을 숨기고 문구를 바꾼다.
-  const copy = starterDrawState
-    ? {
-        title: tr('roomShop.gacha.lobby.starter.title'),
-        detail: tr('roomShop.gacha.lobby.starter.detail'),
-      }
+  // 문구는 "무엇이 나오는가"만 (2026-11-09) — 감성 제목·소개 문구는 정보가 없어 뺐다(사용자 제보).
+  const copy: { title?: string; detail: string } = starterDrawState
+    ? starterDrawState === 'CLAIMED'
+      ? {
+          title: tr('roomShop.gacha.lobby.starter.claimedTitle'),
+          detail: tr('roomShop.gacha.lobby.starter.claimedDetail'),
+        }
+      : {
+          title: tr('roomShop.gacha.lobby.starter.title'),
+          detail: tr('roomShop.gacha.lobby.starter.detail'),
+        }
     : locked
       ? {
           title: tr('roomShop.gacha.lobby.characterLocked.title', { level: characterLockLevel }),
           detail: tr('roomShop.gacha.lobby.characterLocked.detail'),
         }
-      : {
-          title: tr(`roomShop.gacha.lobby.copy.${category}.title`),
-          detail: tr(`roomShop.gacha.lobby.copy.${category}.detail`),
-        };
+      : { detail: tr(`roomShop.gacha.lobby.copy.${category}.detail`) };
   return (
     <View style={styles.root}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.content, { paddingTop: topInset + Spacing.three }]}>
-        {!seasonalSelected ? (
-          <View style={styles.heading}>
-            <Text style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}>
-              {tr('roomShop.gacha.lobby.eyebrow')}
-            </Text>
-            <Text style={[Typography.h1, { color: t.text }]}>
-              {tr('roomShop.gacha.lobby.heading')}
-            </Text>
-          </View>
-        ) : null}
-
         {!starterDrawState ? (
           <View style={[styles.categories, { backgroundColor: t.surfaceMuted }]}>
             {GACHA_CATEGORIES.map((key) => {
@@ -173,21 +165,21 @@ export function GachaLobby({
                 style={styles.illustration}
                 accessibilityLabel={tr('roomShop.gacha.lobby.heroA11y')}
               />
-              <View style={[styles.heroTag, { backgroundColor: t.surface }]}>
-                <Text style={[Typography.supporting, emph('semibold'), { color: t.text }]}>
-                  {tr('roomShop.gacha.lobby.boxTag', {
-                    label: GACHA_CATEGORY_META[category].label,
-                  })}
-                </Text>
-              </View>
             </>
           )}
         </View>
 
         {!seasonalSelected ? (
           <View style={styles.description}>
-            <Text style={[Typography.h3, styles.center, { color: t.text }]}>{copy.title}</Text>
-            <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
+            {copy.title ? (
+              <Text style={[Typography.h3, styles.center, { color: t.text }]}>{copy.title}</Text>
+            ) : null}
+            <Text
+              style={[
+                copy.title ? Typography.supporting : Typography.body,
+                styles.center,
+                { color: copy.title ? t.textMuted : t.text },
+              ]}>
               {copy.detail}
             </Text>
           </View>
@@ -218,17 +210,8 @@ export function GachaLobby({
             </View>
             <View style={styles.rewardCopy}>
               <Text style={[Typography.label, { color: t.text }]}>
-                {tr(
-                  seasonalSelected
-                    ? 'roomShop.gacha.rewardsTitle'
-                    : 'roomShop.gacha.lobby.rewardsTitle',
-                )}
+                {tr('roomShop.gacha.rewardsTitle')}
               </Text>
-              {!seasonalSelected ? (
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  {tr('roomShop.gacha.lobby.rewardsHint')}
-                </Text>
-              ) : null}
             </View>
             <Icon name="forward" size={17} color={t.textMuted} />
           </ScalePressable>
@@ -346,7 +329,6 @@ export function GachaLobby({
 const styles = StyleSheet.create({
   root: { flex: 1, width: '100%', maxWidth: 520, alignSelf: 'center' },
   content: { paddingHorizontal: Spacing.four, paddingBottom: Spacing.four, gap: Spacing.three },
-  heading: { gap: Spacing.two },
   categories: {
     flexDirection: 'row',
     padding: Spacing.one,
@@ -380,14 +362,6 @@ const styles = StyleSheet.create({
   seasonalName: { flex: 1 },
   hero: { width: '100%', aspectRatio: 4 / 3, overflow: 'hidden', borderRadius: Radius.xl },
   illustration: { width: '100%', height: '100%' },
-  heroTag: {
-    position: 'absolute',
-    top: Spacing.three,
-    left: Spacing.three,
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.three,
-  },
   description: { gap: Spacing.two },
   placementBonus: {
     flexDirection: 'row',

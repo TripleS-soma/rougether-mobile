@@ -13,64 +13,29 @@
     },
     "characters": {
       "cat": {
-        "name": "Cat",
-        "description": "A quiet, warm routine buddy"
+        "name": "Cat"
       },
       "dog": {
-        "name": "Puppy",
-        "description": "A bright, lively routine buddy"
+        "name": "Puppy"
       },
       "tiger": {
-        "name": "Tiger",
-        "description": "A bold, brave routine buddy"
+        "name": "Tiger"
       },
       "panda": {
-        "name": "Panda",
-        "description": "A laid-back, gentle routine buddy"
+        "name": "Panda"
       },
       "bear": {
-        "name": "Bear",
-        "description": "A steady, cozy routine buddy"
+        "name": "Bear"
       },
       "sheep": {
-        "name": "Sheep",
-        "description": "A soft, mild routine buddy"
+        "name": "Sheep"
       },
       "horse": {
-        "name": "Pony",
-        "description": "A spirited, energetic routine buddy"
+        "name": "Pony"
       },
       "otter": {
-        "name": "Otter",
-        "description": "A playful, lovable routine buddy"
+        "name": "Otter"
       }
-    },
-    "intro": {
-      "slides": {
-        "my-room": {
-          "title": "Where daily routines\nbecome a cozy room",
-          "description": "Welcome to Rougether"
-        },
-        "routines": {
-          "title": "Finish today's routines\nwith a bear check",
-          "description": "Group by category, with reminders and repeats"
-        },
-        "decor": {
-          "title": "Decorate your room\nwith the rewards you earn",
-          "description": "Place furniture, wallpaper and floors wherever you like"
-        },
-        "house": {
-          "title": "Grow together\nin one house with friends",
-          "description": "Visit rooms · send cheers · level up the house with shared missions"
-        },
-        "calendar": {
-          "title": "Track on the calendar,\nearn from the gacha",
-          "description": "Look back on past completions and collect characters and furniture"
-        }
-      },
-      "skipA11y": "Skip the tutorial and leave",
-      "goToSlide": "Go to slide {{n}}",
-      "haveAccount": "I already have an account"
     },
     "login": {
       "notReady": "Server is getting ready",
@@ -172,8 +137,7 @@
       "goWith": "Go with {{name}}",
       "goalTitle": "Pick the goals you care about",
       "goalBody": "Your goals help us tailor routine suggestions and missions. You can pick up to 3.",
-      "goalRequired": "Pick at least one goal",
-      "pickGoals": "Pick goals"
+      "goalRequired": "Pick at least one goal"
     },
     "starterRoutine": {
       "lightStart": "Start light",

@@ -68,6 +68,7 @@ Claude(또는 작업자)가 대화·작업 중 아래에 해당한다고 **스�
 - [2026-09-16 · prebuild 생성물이 런타임 지문을 갈라 iOS 빌드 실패](2026-09-16-fingerprint-prebuild-artifact.md)
 - [2026-09-16 · 웹 바텀시트 양옆 검은 선 — RN Modal이 앱 프레임 밖에 붙는 문제](2026-09-16-web-modal-frame-border.md)
 - [2026-09-08 · 같은 방이 화면마다 다르게 보이던 문제 — 하나의 렌더 계약과 "자리 박스" 두 겹 구조](2026-09-08-room-render-contract.md)
+- [2026-08-19 · 테스트·빌드·업로드를 다 통과한 iOS 빌드가 켜자마자 꺼진 문제 — 입력이 아니라 산출물을 검사하기](2026-08-19-ios-launch-crash-prebuild-output.md)
 - [2026-08-13 · 방 꾸미기에서 방을 건드릴 때마다 카탈로그 전체가 다시 그려지던 문제 — memo 경계와 참조 안정성](2026-08-13-room-editor-catalogue-rerender.md)
 - [2026-08-12 · 방 꾸미기에서 엉뚱한 가구가 잡히던 문제 — 정사각 터치 박스의 투명 모서리](2026-08-12-room-editor-hitbox.md)
 - [2026-07-30 · 선택 툴바가 편집 대상을 가리던 문제 — 리렌더 없이 드래그에 반응하는 툴바](2026-07-30-room-editor-toolbar-gesture.md)

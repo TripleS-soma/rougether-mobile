@@ -10,6 +10,9 @@ module.exports = new Proxy(
     createSerializable: passthrough,
     serializableMappingCache: { get: () => undefined, set: () => {} },
     isWorkletFunction: () => false,
+    // 워클릿에서 RN 런타임으로 넘기는 호출 — jest에는 런타임이 하나라 곧바로 부른다.
+    // (passthrough면 함수만 돌려주고 실행이 안 돼, 제스처 끝의 콜백을 검증할 수 없다.)
+    scheduleOnRN: (fn, ...args) => fn(...args),
     // reanimated가 버전 호환성을 검사한다 — 설치 버전(0.7.4)을 흉내낸다.
     version: '0.7.4',
     jsVersion: '0.7.4',

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
+import { CharacterIdle } from '@/components/room/character-idle';
 import { PrimaryButton, TextButton } from '@/components/screens/onboarding/onboarding-buttons';
 import { onboardingStyles as styles } from '@/components/screens/onboarding/onboarding-styles';
 import type { CharacterId } from '@/constants/characters';
@@ -51,6 +52,10 @@ export function NicknameStep({
   const Typography = useTypography();
   const trimmed = nickname.trim();
   const canStart = trimmed.length > 0;
+  const placeholder = tr('member.onboarding.nicknamePlaceholder', { max: NICKNAME_MAX });
+  // 안드로이드는 가운데 정렬 입력칸에 플레이스홀더가 있으면 빈 칸의 커서를 플레이스홀더 끝(오른쪽)에
+  // 그린다. 네이티브 플레이스홀더를 끄고 같은 글자를 위에 겹쳐 그리면 빈 칸 커서가 가운데에 선다.
+  const overlayPlaceholder = Platform.OS === 'android';
   return (
     <View style={[styles.screen, screenStyle]}>
       {/* 이 단계만 ScrollView가 아니라 고정 레이아웃이라, 다른 입력 화면이
@@ -79,24 +84,39 @@ export function NicknameStep({
           style={styles.nicknameBody}
           onPress={Platform.OS === 'web' ? undefined : Keyboard.dismiss}
           accessible={false}>
-          <CharacterAvatar characterId={characterId} frames={characterFrames} size={120} />
-          <TextInput
-            value={nickname}
-            onChangeText={(v) => onChangeNickname(v.slice(0, NICKNAME_MAX))}
-            placeholder={tr('member.onboarding.nicknamePlaceholder', { max: NICKNAME_MAX })}
-            placeholderTextColor={t.textDisabled}
-            autoFocus
-            autoCorrect={false}
-            maxLength={NICKNAME_MAX}
-            accessibilityLabel={tr('member.onboarding.nicknameInputA11y')}
-            returnKeyType="done"
-            onSubmitEditing={Keyboard.dismiss}
-            style={[
-              styles.nicknameInput,
-              Typography.h3,
-              { backgroundColor: t.surface, color: t.text, borderColor: t.border },
-            ]}
-          />
+          <CharacterIdle>
+            <CharacterAvatar characterId={characterId} frames={characterFrames} size={120} />
+          </CharacterIdle>
+          <View style={styles.nicknameField}>
+            <TextInput
+              value={nickname}
+              onChangeText={(v) => onChangeNickname(v.slice(0, NICKNAME_MAX))}
+              placeholder={overlayPlaceholder ? undefined : placeholder}
+              placeholderTextColor={t.textDisabled}
+              autoFocus
+              autoCorrect={false}
+              maxLength={NICKNAME_MAX}
+              accessibilityLabel={tr('member.onboarding.nicknameInputA11y')}
+              accessibilityHint={overlayPlaceholder ? placeholder : undefined}
+              returnKeyType="done"
+              onSubmitEditing={Keyboard.dismiss}
+              style={[
+                styles.nicknameInput,
+                Typography.h3,
+                { backgroundColor: t.surface, color: t.text, borderColor: t.border },
+              ]}
+            />
+            {overlayPlaceholder && nickname.length === 0 ? (
+              <View pointerEvents="none" style={styles.nicknamePlaceholder}>
+                <Text
+                  testID="onboarding-nickname-placeholder"
+                  numberOfLines={1}
+                  style={[Typography.h3, { color: t.textDisabled }]}>
+                  {placeholder}
+                </Text>
+              </View>
+            ) : null}
+          </View>
         </Pressable>
         <View style={styles.actions}>
           <PrimaryButton
