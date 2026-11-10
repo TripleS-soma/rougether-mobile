@@ -94,6 +94,7 @@ export function useChristmasSurface({
       active ||
       christmas.fetching ||
       !christmas.loaded ||
+      !christmas.freshForToday ||
       christmas.error
     )
       return;
@@ -125,6 +126,7 @@ export function useChristmasSurface({
     active,
     christmas.fetching,
     christmas.loaded,
+    christmas.freshForToday,
     christmas.error,
     christmas.event,
     christmas.status,
