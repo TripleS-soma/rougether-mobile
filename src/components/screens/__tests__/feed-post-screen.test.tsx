@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { FeedPostScreen } from '@/components/screens/feed-post-screen';
 import {
@@ -8,6 +8,14 @@ import {
   DEMO_FEED_TEXT_POST,
   DEMO_FEED_TODAY,
 } from '@/mocks/fixtures';
+
+/** JS exit finishes first; UIKit then emits native Modal.onDismiss. */
+async function finishNativeSheetDismissal(onDismiss: () => void) {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  });
+  await act(async () => onDismiss());
+}
 
 const [OTHER_POST, MY_POST] = DEMO_FEED_POSTS;
 
@@ -343,11 +351,14 @@ describe('FeedPostScreen (#1409)', () => {
 
     it('글 신고: 메뉴 → 사유 → 신고하기가 글 id로', async () => {
       const handlers = moderation();
-      const { getByLabelText, findByLabelText } = await render(
+      const { getByLabelText, findByLabelText, getByTestId, queryByLabelText } = await render(
         <FeedPostScreen post={OTHER_POST} {...handlers} />,
       );
       await fireEvent.press(getByLabelText('게시물 더보기'));
+      const onMenuDismissed = getByTestId('bottom-sheet-modal').props.onDismiss;
       await fireEvent.press(await findByLabelText('신고하기'));
+      expect(queryByLabelText('스팸·광고')).toBeNull();
+      await finishNativeSheetDismissal(onMenuDismissed);
       await fireEvent.press(await findByLabelText('스팸·광고'));
       await fireEvent.press(getByLabelText('신고하기'));
       await waitFor(() =>
@@ -357,11 +368,14 @@ describe('FeedPostScreen (#1409)', () => {
 
     it('댓글 신고는 글 id·댓글 id로', async () => {
       const handlers = moderation();
-      const { getByLabelText, findByLabelText } = await render(
+      const { getByLabelText, findByLabelText, getByTestId, queryByLabelText } = await render(
         <FeedPostScreen post={OTHER_POST} comments={DEMO_FEED_COMMENTS} {...handlers} />,
       );
       await fireEvent.press(getByLabelText('댓글 더보기'));
+      const onMenuDismissed = getByTestId('bottom-sheet-modal').props.onDismiss;
       await fireEvent.press(await findByLabelText('신고하기'));
+      expect(queryByLabelText('저작권 침해')).toBeNull();
+      await finishNativeSheetDismissal(onMenuDismissed);
       await fireEvent.press(await findByLabelText('저작권 침해'));
       await fireEvent.press(getByLabelText('신고하기'));
       await waitFor(() =>

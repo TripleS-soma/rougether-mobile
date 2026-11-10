@@ -64,6 +64,10 @@ export type AttendanceCheckInResponse = {
 };
 
 export type AttendanceEventStatusResponse = {
+  mode?: 'STREAK' | 'CUMULATIVE';
+  progressDays?: number;
+  active?: boolean;
+  availableToday?: boolean;
   eventId?: number;
   code?: string;
   title?: string;

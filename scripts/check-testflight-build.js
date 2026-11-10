@@ -1,6 +1,8 @@
 #!/usr/bin/env node
+/* global __dirname */
 // A deliberately separate build-only lane. No submit, OTA, credential repair, or retry.
 const fs = require('node:fs');
+const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const { checkTrain } = require('./check-version-train');
 
@@ -22,9 +24,11 @@ function validateConfiguration(env, checkoutSha, app, eas) {
   requireCondition(env.BUILD_SUBMIT === 'false', 'Build-only mode requires submit=false.');
   requireCondition(
     SHA.test(env.EXPECTED_SOURCE_SHA || '') &&
-      env.EXPECTED_SOURCE_SHA === env.GITHUB_SHA &&
+      (!env.EXPECTED_TOOLING_SHA || SHA.test(env.EXPECTED_TOOLING_SHA)) &&
+      (env.EXPECTED_TOOLING_SHA || env.EXPECTED_SOURCE_SHA) === env.GITHUB_SHA &&
+      (!env.EXPECTED_TOOLING_SHA || env.TOOLING_CHECKOUT_SHA === env.EXPECTED_TOOLING_SHA) &&
       checkoutSha === env.EXPECTED_SOURCE_SHA,
-    'Expected source SHA must match both GITHUB_SHA and checkout HEAD.',
+    'Expected source SHA must match checkout HEAD and workflow tooling must match GITHUB_SHA.',
   );
   requireCondition(env.GITHUB_REPOSITORY === REPOSITORY, 'Unexpected GitHub repository.');
   const candidateVersion = env.EXPECTED_APP_VERSION || '1.5.0';
@@ -122,6 +126,29 @@ function validateHistory(builds, fingerprint) {
   }
 }
 
+function safeFailureDetail(error, env = process.env) {
+  let output = `${error.stdout || ''}\n${error.stderr || ''}`;
+  output = output.replace(/-----BEGIN[\s\S]*?-----END[^\n]*-----/g, '[KEY]');
+  for (const [name, value] of Object.entries(env)) {
+    if (/token|password|secret|private|api.key/i.test(name) && value && value.length >= 4) {
+      output = output.split(value).join('[SECRET]');
+    }
+  }
+  return output
+    .replace(/\x1b\[[0-9;]*m/g, '')
+    .replace(/https?:\/\/[^\s]+/g, '[URL]')
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[EMAIL]')
+    .replace(/(?:token|password|secret|api[_-]?key)\s*[:=]\s*[^\s,]+/gi, '[SECRET]')
+    .replace(/[A-Za-z0-9_+\/=-]{32,}/g, '[IDENTIFIER]')
+    .split('\n')
+    .filter((line) =>
+      /error|failed|invalid|missing|cannot|credentials|provisioning|quota|limit/i.test(line),
+    )
+    .slice(-5)
+    .map((line) => line.trim().slice(0, 240))
+    .join(' | ');
+}
+
 function command(file, args, timeout = 5 * 60 * 1000) {
   try {
     return execFileSync(file, args, {
@@ -130,10 +157,11 @@ function command(file, args, timeout = 5 * 60 * 1000) {
       maxBuffer: 16 * 1024 * 1024,
       timeout,
     }).trim();
-  } catch {
-    // Child stderr can contain URLs or environment values; never dump the Error object.
+  } catch (error) {
+    // Only bounded, redacted diagnostic lines; never dump the Error object.
+    const detail = safeFailureDetail(error);
     throw new Error(
-      `${file} ${args[0]} failed. No automatic retry; inspect service status separately.`,
+      `${file} ${args[0]} failed. No automatic retry; inspect service status separately. ${detail}`,
     );
   }
 }
@@ -272,7 +300,12 @@ function execute(env, app, eas, run = command, report = console.log, validateOnl
 if (require.main === module) {
   try {
     execute(
-      process.env,
+      {
+        ...process.env,
+        TOOLING_CHECKOUT_SHA: process.env.EXPECTED_TOOLING_SHA
+          ? command('git', ['-C', path.join(__dirname, '..'), 'rev-parse', 'HEAD'])
+          : undefined,
+      },
       JSON.parse(fs.readFileSync('app.json', 'utf8')),
       JSON.parse(fs.readFileSync('eas.json', 'utf8')),
       command,
@@ -287,6 +320,7 @@ if (require.main === module) {
 
 module.exports = {
   REQUIRED_CHECKS,
+  safeFailureDetail,
   validateConfiguration,
   validateChecks,
   nextBuildNumber,

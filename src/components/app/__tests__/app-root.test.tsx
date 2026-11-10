@@ -1,9 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fireEvent, waitFor } from '@testing-library/react-native';
+import { cleanup, fireEvent, waitFor } from '@testing-library/react-native';
 
+import { Redirect } from 'expo-router';
+import { clearSession } from '@/api/auth';
 import { AppRoot } from '@/components/app/app-root';
 import { LEGACY_ONBOARDING_KEY as KEY } from '@/lib/onboarding-store';
 import { renderWithProviders } from '@/test-utils/render';
+
+// This unit tree has no Router container. Keep the external redirect observable
+// and assert it never occurs during these authenticated onboarding journeys.
+jest.mock('expo-router', () => ({
+  ...jest.requireActual('expo-router'),
+  Redirect: jest.fn(() => null),
+}));
 
 // AppRoot gates on a session, then AppShell loads my-room data — mock both.
 // 추천 루틴 게이트는 건너뛰기가 없어(#1324) 첫 실행 케이스가 전부 `POST /routines`를 지난다 —
@@ -32,6 +41,7 @@ const renderApp = () => renderWithProviders(<AppRoot />);
 
 describe('AppRoot', () => {
   beforeEach(async () => {
+    await clearSession();
     // Seed an authed session so the auth gate lets the app render.
     await AsyncStorage.setItem('rougether.auth.accessToken', 'access');
     await AsyncStorage.setItem('rougether.auth.refreshToken', 'refresh');
@@ -39,8 +49,11 @@ describe('AppRoot', () => {
       emptyRes(url, init),
     ) as unknown as typeof fetch;
   });
-  afterEach(() => {
+  afterEach(async () => {
+    await cleanup();
+    await clearSession();
     global.fetch = realFetch;
+    expect(Redirect).not.toHaveBeenCalled();
   });
 
   // #1700 — 소개 슬라이드는 없앴다. 로그인 뒤 첫 실행은 곧장 목표 설문이다.

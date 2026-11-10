@@ -103,6 +103,7 @@ const IDLE: MissionState = { active: false, stepIndex: 0, completedIndex: null }
  */
 export function useOnboardingMissions(autoStart: boolean) {
   const [state, setState] = useState<MissionState>(IDLE);
+  const [loaded, setLoaded] = useState(false);
   // complete/skip은 memo 화면으로 흘러갈 수 있어 참조를 고정([] deps)하고,
   // 최신 상태는 ref로 본다.
   const stateRef = useRef(state);
@@ -125,7 +126,10 @@ export function useOnboardingMissions(autoStart: boolean) {
         saveProgress(0);
         track('onboarding_mission_start', { step: ONBOARDING_MISSION_STEPS[0].id });
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (mounted) setLoaded(true);
+      });
     return () => {
       mounted = false;
     };
@@ -179,6 +183,7 @@ export function useOnboardingMissions(autoStart: boolean) {
 
   return {
     /** 배너 표시 여부 — 체인이 진행 중일 때만. */
+    loaded,
     active: state.active,
     stepIndex: state.stepIndex,
     /** 현재 진행 중인 단계 — 비활성이면 null. */

@@ -43,7 +43,7 @@ beforeEach(() => {
 });
 
 it('uses the actual response machine and bundled Christmas presentation', async () => {
-  const { result } = await renderHook(() => useGachaSurface(props));
+  const { result } = await renderHook(() => useGachaSurface({ ...props, initialMachineId: 812 }));
   const screen = result.current.subScreen!;
   expect(screen.props.seasonalGacha).toMatchObject({
     machine: { id: 812, costAmount: 47 },
@@ -52,6 +52,8 @@ it('uses the actual response machine and bundled Christmas presentation', async 
   });
   expect(screen.props.seasonalGacha.machine).toBe(christmas);
   expect(screen.props.gachas).toEqual([floor, christmas]);
+  expect(screen.props.initialMachineId).toBe(812);
+  expect(screen.props.onRefreshMachines).toBe(jest.mocked(useGacha).mock.results[0].value.retry);
 });
 
 it('does not invent a seasonal tab when no live Christmas machine was returned', async () => {
@@ -68,10 +70,14 @@ it('does not invent a seasonal tab when no live Christmas machine was returned',
 });
 
 it('keeps the free starter flow separate from live seasonal and paid machines', async () => {
-  const { result } = await renderHook(() => useGachaSurface({ ...props, starterFlow: true }));
+  const { result } = await renderHook(() =>
+    useGachaSurface({ ...props, starterFlow: true, initialMachineId: 812 }),
+  );
   const screen = result.current.subScreen!;
   expect(screen.props.seasonalGacha).toBeUndefined();
   expect(screen.props.gachas).toHaveLength(1);
   expect(screen.props.gachas[0]).toMatchObject({ id: -1, costAmount: 0 });
   expect(screen.props.onLoadRewards).toBeUndefined();
+  expect(screen.props.initialMachineId).toBeUndefined();
+  expect(screen.props.onRefreshMachines).toBeUndefined();
 });

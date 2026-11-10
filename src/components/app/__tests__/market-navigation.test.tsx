@@ -1,4 +1,4 @@
-import { fireEvent, render, renderHook, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, renderHook, waitFor } from '@testing-library/react-native';
 import { __resetSheetSerializer } from '@/components/ui/bottom-sheet';
 
 import { fetchMyMarketOrders } from '@/api/market';
@@ -8,6 +8,14 @@ import { useMarketPages } from '@/components/app/use-market-pages';
 import { FurnitureStudioScreen } from '@/components/screens/furniture-studio-screen';
 import { fetchShopListings } from '@/api/market-shop';
 import { queryWrapper } from '@/test-utils/query-wrapper';
+
+/** JS exit finishes first; UIKit then emits native Modal.onDismiss. */
+async function finishNativeSheetDismissal(onDismiss: () => void) {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  });
+  await act(async () => onDismiss());
+}
 
 // 가구 거래소 (#1427) — 이 파일은 MARKET_ENABLED를 켠 상태를 본다. 꺼진 상태는 market-flag-off.test.tsx.
 jest.mock('@/constants/market', () => ({
@@ -105,7 +113,10 @@ describe('스튜디오 "판매 준비하기" (#1427)', () => {
     // 내 가구 탭 → 타일 → 상세 시트의 판매하기 (#1666). 판매 시트는 상세 시트가 닫힌 뒤 뜬다.
     await fireEvent.press(ui.getByRole('tab', { name: /^내 가구/ }));
     await fireEvent.press(ui.getAllByLabelText(/^내가 만든 가구 \d+/)[0]);
+    const onDetailDismissed = ui.getByTestId('bottom-sheet-modal').props.onDismiss;
     await fireEvent.press(ui.getByLabelText('판매하기'));
+    expect(ui.queryByText(/원본은 계속 보관하고/)).toBeNull();
+    await finishNativeSheetDismissal(onDetailDismissed);
     await waitFor(() => expect(ui.getByText(/원본은 계속 보관하고/)).toBeTruthy());
     await fireEvent.changeText(ui.getByLabelText('개당 가격 (코인)'), '30');
     await fireEvent.press(ui.getByLabelText('30코인에 판매하기'));

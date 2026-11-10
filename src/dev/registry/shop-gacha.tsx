@@ -1,3 +1,4 @@
+import { ChristmasEventPreview } from '@/dev/christmas-event-preview';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { GachaPhonePreview } from '@/dev/gacha-phone-preview';
@@ -33,6 +34,16 @@ function WalletHistorySheetDemo() {
 }
 
 export const shopGachaEntries: GalleryEntry[] = [
+  {
+    name: 'ChristmasAttendancePreview',
+    description: '누적 30회 선물 봉투 · 서버 미호출 fixture',
+    render: () => <ChristmasEventPreview />,
+  },
+  {
+    name: 'ChristmasPopupPreview',
+    description: '실제 앱 위 크리스마스 안내 · 서버 미호출 fixture',
+    render: () => <ChristmasEventPreview popup />,
+  },
   {
     name: 'WalletHistorySheet · 재화 내역',
     description: '지갑 필 탭 → 재화 증감 이력 시트 (#734) — 적립 +/사용 −, 직후 잔액, 더보기.',

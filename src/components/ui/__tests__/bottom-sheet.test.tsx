@@ -1,7 +1,9 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, renderHook, waitFor } from '@testing-library/react-native';
 import { Animated, PanResponder, StyleSheet, Text } from 'react-native';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 import { State } from 'react-native-gesture-handler';
+
+import { registerPriorityModal, useAppSheetPresent } from '@/lib/modal-presence';
 
 import {
   BottomSheet,
@@ -258,12 +260,15 @@ describe('BottomSheet', () => {
 
     it('퇴장 중인 시트가 있으면 다음 시트는 그 언마운트 뒤에 뜬다', async () => {
       const ui = await render(<Two a b={false} />);
+      const dismissMenu = ui.getByTestId('bottom-sheet-modal').props.onDismiss;
       expect(ui.getByText('메뉴 시트')).toBeTruthy();
       // 메뉴 액션: 메뉴 닫기 + 시간 시트 열기가 같은 렌더에 일어난다.
       await ui.rerender(<Two a={false} b />);
       expect(ui.queryByText('시간 시트')).toBeNull();
       expect(ui.getByText('메뉴 시트')).toBeTruthy();
       await waitFor(() => expect(ui.queryByText('메뉴 시트')).toBeNull());
+      expect(ui.queryByText('시간 시트')).toBeNull();
+      await act(async () => dismissMenu());
       await waitFor(() => expect(ui.getByText('시간 시트')).toBeTruthy());
     });
 
@@ -294,4 +299,41 @@ describe('BottomSheet', () => {
     expect(style.flexShrink).toBe(1);
     expect(style.minHeight).toBe(0);
   });
+});
+
+it('waits for an event modal to fully dismiss before presenting a newly requested sheet', async () => {
+  const release = registerPriorityModal();
+  const screen = await render(
+    <BottomSheet visible onClose={() => undefined}>
+      <Text>queued ordinary sheet</Text>
+    </BottomSheet>,
+  );
+  expect(screen.queryByText('queued ordinary sheet')).toBeNull();
+  await act(async () => release());
+  await waitFor(() => expect(screen.getByText('queued ordinary sheet')).toBeTruthy());
+  await screen.unmount();
+});
+
+it('keeps the iOS presence gate through native dismissal after the exit animation', async () => {
+  const presence = await renderHook(() => useAppSheetPresent());
+  const ui = await render(
+    <BottomSheet visible>
+      <Text>native dismissal gate</Text>
+    </BottomSheet>,
+  );
+  await waitFor(() => expect(presence.result.current).toBe(true));
+  const nativeDismissed = ui.getByTestId('bottom-sheet-modal').props.onDismiss;
+  await ui.rerender(
+    <BottomSheet visible={false}>
+      <Text>native dismissal gate</Text>
+    </BottomSheet>,
+  );
+  await waitFor(() => expect(ui.queryByText('native dismissal gate')).toBeNull());
+  expect(presence.result.current).toBe(true);
+  await act(async () => nativeDismissed());
+  await waitFor(() => expect(presence.result.current).toBe(false));
+  await act(async () => nativeDismissed());
+  expect(presence.result.current).toBe(false);
+  await ui.unmount();
+  await presence.unmount();
 });

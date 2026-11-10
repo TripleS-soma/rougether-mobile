@@ -7,5 +7,12 @@
  * @type {import('@expo/fingerprint').Config}
  */
 module.exports = {
-  extraSources: [{ type: 'dir', filePath: 'targets', reasons: ['appleTargets'] }],
+  extraSources: [
+    { type: 'dir', filePath: 'targets', reasons: ['appleTargets'] },
+    {
+      type: 'file',
+      filePath: 'plugins/fbsdk-http-download.rb',
+      reasons: ['fbsdkHttpDownload'],
+    },
+  ],
 };

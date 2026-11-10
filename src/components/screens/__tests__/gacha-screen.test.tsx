@@ -591,14 +591,21 @@ describe('GachaScreen', () => {
       .fn()
       .mockImplementationOnce(() => oldResponse.promise)
       .mockImplementationOnce(() => newResponse.promise);
-    const { getByLabelText, getByText, queryByText } = await render(
+    const { getByLabelText, getByText, queryByText, getByTestId, findByText } = await render(
       <GachaScreen gachas={machines} coinBalance={5600} onLoadRewards={onLoadRewards} />,
     );
     await act(() => {
       void pressHandler(getByLabelText('나올 수 있는 보상 보기'))();
     });
     expect(onLoadRewards).toHaveBeenCalledWith(103);
+    const onOldSheetDismissed = getByTestId('bottom-sheet-modal').props.onDismiss;
     await fireEvent.press(getByLabelText('시트 닫기'));
+    // Complete the first native modal lifetime before reopening the same sheet.
+    // Keep the first request pending; resolve the two requests in reverse order below.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    });
+    await act(async () => onOldSheetDismissed());
     await fireEvent.press(getByLabelText('벽지 뽑기'));
     await act(() => {
       void pressHandler(getByLabelText('나올 수 있는 보상 보기'))();
@@ -607,7 +614,7 @@ describe('GachaScreen', () => {
     await act(() =>
       newResponse.resolve([{ rewardType: 'ITEM', itemId: 70, name: '새 벽지', rarity: '일반' }]),
     );
-    expect(getByText('새 벽지')).toBeTruthy();
+    expect(await findByText('새 벽지')).toBeTruthy();
     await act(() =>
       oldResponse.resolve([{ rewardType: 'ITEM', itemId: 7, name: '늦은 소파', rarity: '일반' }]),
     );
@@ -704,4 +711,145 @@ describe('onboarding starter draw', () => {
     expect(screen.getByLabelText('받은 스피커 확인')).toBeTruthy();
     expect(screen.queryByLabelText('첫 가구 뽑기 (무료)')).toBeNull();
   });
+});
+
+it('selects the requested seasonal machine, preserves manual selection and locks an absent request', async () => {
+  const christmas = {
+    ...machine,
+    id: 812,
+    code: 'christmas_2026',
+    category: undefined,
+    costAmount: 47,
+  };
+  const seasonalGacha = {
+    machine: christmas,
+    title: '크리스마스',
+    endsLabel: '12.25까지',
+    hero: null,
+  };
+  const screen = await render(
+    <ToastProvider>
+      <GachaScreen
+        gachas={[...machines, christmas]}
+        initialMachineId={812}
+        seasonalGacha={seasonalGacha}
+        coinBalance={500}
+      />
+    </ToastProvider>,
+  );
+  expect(screen.getByRole('tab', { name: '크리스마스' }).props.accessibilityState.selected).toBe(
+    true,
+  );
+  expect(screen.getByLabelText('1회 뽑기, 47 코인')).toBeTruthy();
+  await fireEvent.press(screen.getByRole('tab', { name: '벽지 뽑기' }));
+  await screen.rerender(
+    <ToastProvider>
+      <GachaScreen
+        gachas={[...machines, { ...christmas }]}
+        initialMachineId={812}
+        seasonalGacha={seasonalGacha}
+        coinBalance={500}
+      />
+    </ToastProvider>,
+  );
+  expect(screen.getByRole('tab', { name: '벽지 뽑기' }).props.accessibilityState.selected).toBe(
+    true,
+  );
+  await screen.unmount();
+  const absent = await render(
+    <ToastProvider>
+      <GachaScreen gachas={machines} initialMachineId={99999} coinBalance={500} />
+    </ToastProvider>,
+  );
+  expect(absent.getByLabelText('1회 뽑기, 25 코인')).toBeDisabled();
+  expect(absent.getByText('이벤트 뽑기를 사용할 수 없어요. 다시 확인해주세요.')).toBeTruthy();
+});
+
+it('locks verification failure and missing IDs, retries honestly, and keeps back available', async () => {
+  const onRefreshMachines = jest.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+  const onDraw = jest.fn(async () => []);
+  const onBack = jest.fn();
+  const christmas = {
+    ...machine,
+    id: 812,
+    code: 'christmas_2026',
+    category: undefined,
+    costAmount: 47,
+  };
+  const ui = await render(
+    <ToastProvider>
+      <GachaScreen
+        gachas={machines}
+        initialMachineId={812}
+        onRefreshMachines={onRefreshMachines}
+        onDraw={onDraw}
+        onBack={onBack}
+        coinBalance={500}
+      />
+    </ToastProvider>,
+  );
+  expect(await ui.findByText('이벤트 뽑기를 사용할 수 없어요. 다시 확인해주세요.')).toBeTruthy();
+  expect(ui.getByLabelText('1회 뽑기, 25 코인')).toBeDisabled();
+  await fireEvent.press(ui.getByLabelText('1회 뽑기, 25 코인'));
+  expect(onDraw).not.toHaveBeenCalled();
+  await fireEvent.press(ui.getByText('다시 시도'));
+  expect(onRefreshMachines).toHaveBeenCalledTimes(2);
+  expect(ui.getByLabelText('1회 뽑기, 25 코인')).toBeDisabled();
+  await fireEvent.press(ui.getByLabelText('뒤로 가기'));
+  expect(onBack).toHaveBeenCalledTimes(1);
+  await ui.rerender(
+    <ToastProvider>
+      <GachaScreen
+        gachas={[...machines, christmas]}
+        initialMachineId={812}
+        onRefreshMachines={onRefreshMachines}
+        onDraw={onDraw}
+        onBack={onBack}
+        coinBalance={500}
+      />
+    </ToastProvider>,
+  );
+  expect(ui.getByLabelText('1회 뽑기, 47 코인')).toBeEnabled();
+});
+
+it('honors an explicit ordinary tab while event verification is pending and never reselects it later', async () => {
+  const pending = deferred<boolean>();
+  const onRefreshMachines = jest.fn(() => pending.promise);
+  const onDraw = jest.fn(async () => []);
+  const christmas = {
+    ...machine,
+    id: 812,
+    code: 'christmas_2026',
+    category: undefined,
+    costAmount: 47,
+  };
+  const ui = await render(
+    <ToastProvider>
+      <GachaScreen
+        gachas={[...machines, christmas]}
+        initialMachineId={812}
+        onRefreshMachines={onRefreshMachines}
+        onDraw={onDraw}
+        coinBalance={500}
+      />
+    </ToastProvider>,
+  );
+  expect(ui.getByLabelText('1회 뽑기, 47 코인')).toBeDisabled();
+  await fireEvent.press(ui.getByRole('tab', { name: '벽지 뽑기' }));
+  expect(ui.getByLabelText('1회 뽑기, 25 코인')).toBeEnabled();
+  await act(() => pending.resolve(true));
+  await ui.rerender(
+    <ToastProvider>
+      <GachaScreen
+        gachas={[...machines, { ...christmas }]}
+        initialMachineId={812}
+        onRefreshMachines={onRefreshMachines}
+        onDraw={onDraw}
+        coinBalance={500}
+      />
+    </ToastProvider>,
+  );
+  expect(ui.getByRole('tab', { name: '벽지 뽑기' }).props.accessibilityState.selected).toBe(true);
+  await fireEvent.press(ui.getByLabelText('1회 뽑기, 25 코인'));
+  expect(onDraw).toHaveBeenCalledWith(101, 1);
 });

@@ -46,6 +46,10 @@ type Phase = 'idle' | 'charging' | 'burst' | 'reveal';
 const BONUS_DRAW_COST_MULTIPLIER = 5;
 
 export type GachaScreenProps = {
+  /** Requested live machine; selection still resolves against the actual available catalogue. */
+  initialMachineId?: number;
+  /** Verify an explicitly requested machine against a fresh server catalogue. */
+  onRefreshMachines?: () => Promise<boolean>;
   starterDrawState?: 'PENDING' | 'CLAIMED';
   onBack?: () => void;
   /** Machines from the API (`GET /gacha`). */
@@ -130,6 +134,8 @@ function RewardGap() {
 }
 
 export function GachaScreen({
+  initialMachineId,
+  onRefreshMachines,
   starterDrawState,
   onBack,
   gachas = [],
@@ -161,7 +167,7 @@ export function GachaScreen({
   const headerInset = useHeaderContentInset();
   const column = useResponsiveColumn(520);
   const { show: toast } = useToast();
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(initialMachineId ?? null);
   const [error, setError] = useState('');
   const [phase, setPhase] = useState<Phase>('idle');
   // Capture the selected theme before the paid request. Catalogue refreshes must not change an in-flight reveal.
@@ -258,7 +264,57 @@ export function GachaScreen({
     () => (starterDrawState ? gachas.slice(0, 1) : getLobbyGachas(gachas)),
     [gachas, starterDrawState],
   );
+  const [manualSelectionFor, setManualSelectionFor] = useState<number | undefined>();
+  const [preparedRequest, setPreparedRequest] = useState<{
+    id?: number;
+    state: 'pending' | 'ready' | 'failed';
+  }>(() => ({
+    id: initialMachineId,
+    state: initialMachineId != null && onRefreshMachines ? 'pending' : 'ready',
+  }));
+  const prepareRun = useRef(0);
+  const prepareRequestedMachine = useCallback(async () => {
+    if (initialMachineId == null || manualSelectionFor === initialMachineId) return;
+    const run = ++prepareRun.current;
+    setPreparedRequest({ id: initialMachineId, state: 'pending' });
+    let ready = false;
+    try {
+      ready = onRefreshMachines ? await onRefreshMachines() : true;
+    } catch {
+      /* explicit retry */
+    }
+    if (prepareRun.current !== run) return;
+    setPreparedRequest({ id: initialMachineId, state: ready ? 'ready' : 'failed' });
+  }, [initialMachineId, manualSelectionFor, onRefreshMachines]);
+  useEffect(() => {
+    void prepareRequestedMachine();
+    return () => {
+      prepareRun.current += 1;
+    };
+  }, [prepareRequestedMachine]);
+  const requestedIntent = initialMachineId != null && manualSelectionFor !== initialMachineId;
+  const requestedMachine = requestedIntent
+    ? machines.find((machine) => machine.id === initialMachineId)
+    : undefined;
+  const requestedPreparing =
+    requestedIntent &&
+    (preparedRequest.id !== initialMachineId || preparedRequest.state === 'pending');
+  const requestedBlocked =
+    requestedIntent &&
+    (requestedPreparing || preparedRequest.state === 'failed' || !requestedMachine);
+  const consumedInitialSelection = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (
+      requestedIntent &&
+      !requestedBlocked &&
+      consumedInitialSelection.current !== initialMachineId
+    ) {
+      consumedInitialSelection.current = initialMachineId;
+      setSelectedId(initialMachineId!);
+    }
+  }, [initialMachineId, requestedIntent, requestedBlocked]);
   const box =
+    requestedMachine ??
     machines.find((b) => b.id === selectedId) ??
     machines.find((b) => getGachaCategory(b) === 'FURNITURE') ??
     machines[0];
@@ -273,7 +329,14 @@ export function GachaScreen({
 
   const characterLocked = !characterUnlocked && !!box && getGachaCategory(box) === 'CHARACTER';
   const pull = async (count: GachaDrawCount) => {
-    if (!box || drawBusy.current || (starterDrawState && count !== 1) || characterLocked) return;
+    if (
+      requestedBlocked ||
+      !box ||
+      drawBusy.current ||
+      (starterDrawState && count !== 1) ||
+      characterLocked
+    )
+      return;
     // The button stays tappable when unaffordable — the tap says why.
     if (!canAfford(count)) {
       // 뽑기 앞에서 코인이 모자라 돌아서는 지점 (#799) — 퍼널의 흔한 막힘.
@@ -373,7 +436,10 @@ export function GachaScreen({
         </View>
       ) : loadError ? (
         <View style={[styles.loadingBlock, { paddingTop: headerInset + Spacing.six }]}>
-          <RetryState message={tr('roomShop.gacha.listError')} onRetry={onRetry} />
+          <RetryState
+            message={tr('roomShop.gacha.listError')}
+            onRetry={requestedIntent ? prepareRequestedMachine : onRetry}
+          />
         </View>
       ) : box ? (
         <View style={[styles.screen, column]}>
@@ -382,6 +448,16 @@ export function GachaScreen({
             machines={machines}
             selected={box}
             onSelect={(selected) => {
+              if (initialMachineId != null) {
+                if (selected.id === initialMachineId && manualSelectionFor === initialMachineId) {
+                  setPreparedRequest({ id: initialMachineId, state: 'pending' });
+                }
+                setManualSelectionFor(
+                  selected.id === initialMachineId ? undefined : initialMachineId,
+                );
+                if (selected.id !== initialMachineId)
+                  consumedInitialSelection.current = initialMachineId;
+              }
               setSelectedId(selected.id);
               setError('');
               rewardsForRef.current = null;
@@ -393,6 +469,23 @@ export function GachaScreen({
             onRewards={onLoadRewards ? () => openRewards(box.id) : undefined}
             canAfford={canAfford}
             busy={phase !== 'idle'}
+            drawDisabled={requestedBlocked}
+            drawNotice={
+              requestedBlocked ? (
+                requestedPreparing ? (
+                  <Text
+                    accessibilityLiveRegion="polite"
+                    style={[Typography.supporting, { color: t.textMuted }]}>
+                    {tr('roomShop.gacha.requestedMachineLoading')}
+                  </Text>
+                ) : (
+                  <RetryState
+                    message={tr('roomShop.gacha.requestedMachineUnavailable')}
+                    onRetry={prepareRequestedMachine}
+                  />
+                )
+              ) : undefined
+            }
             error={error}
             topInset={headerInset}
             bottomInset={insets.bottom}

@@ -71,6 +71,8 @@ export function useInviteArrival({ offerPaste, check, redeem, onLater }: UseInvi
   const { show: toast } = useToast();
   const [arrival, setArrival] = useState<{ preview: InvitePreview; via: InviteVia } | null>(null);
   const [accepting, setAccepting] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [restored, setRestored] = useState(false);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteError, setPasteError] = useState<string | null>(null);
   const checkRef = useLatestRef(check);
@@ -90,34 +92,38 @@ export function useInviteArrival({ offerPaste, check, redeem, onLater }: UseInvi
         handlingRef.current = code;
         const via: InviteVia =
           pastedRef.current === code ? 'paste' : referredRef.current === code ? 'referrer' : 'link';
-        void checkRef.current(code).then((result) => {
-          if (result.kind === 'unavailable') {
-            // 네트워크·서버 일시 오류 — 코드를 지우지 않고 조용히 둔다. 기기 보관분이
-            // 다음 실행의 복원에서 다시 확인된다. 같은 코드가 다시 흘러오면 재시도.
-            // 붙여넣기·referrer 표시는 남긴다 — 재시도하는 건 여전히 같은 경로의 코드다.
-            handlingRef.current = null;
-            return;
-          }
-          if (result.kind === 'invalid' || result.preview.alreadyRedeemed) {
-            // 쓸 수 없는 코드는 이유를 알리고, 이미 받은 계정은 조용히 끝낸다.
-            if (result.kind === 'invalid') toast(result.message, 'error');
-            clearPendingFriendInviteCode();
-            handlingRef.current = null;
-            // 끝난 코드다 — 같은 문자열이 나중에 링크로 오면 via는 link여야 한다.
-            if (pastedRef.current === code) pastedRef.current = null;
-            if (referredRef.current === code) referredRef.current = null;
-            return;
-          }
-          track('invite_arrival_view', { via });
-          setArrival({ preview: result.preview, via });
-        });
+        setChecking(true);
+        void checkRef
+          .current(code)
+          .then((result) => {
+            if (result.kind === 'unavailable') {
+              // 네트워크·서버 일시 오류 — 코드를 지우지 않고 조용히 둔다. 기기 보관분이
+              // 다음 실행의 복원에서 다시 확인된다. 같은 코드가 다시 흘러오면 재시도.
+              // 붙여넣기·referrer 표시는 남긴다 — 재시도하는 건 여전히 같은 경로의 코드다.
+              handlingRef.current = null;
+              return;
+            }
+            if (result.kind === 'invalid' || result.preview.alreadyRedeemed) {
+              // 쓸 수 없는 코드는 이유를 알리고, 이미 받은 계정은 조용히 끝낸다.
+              if (result.kind === 'invalid') toast(result.message, 'error');
+              clearPendingFriendInviteCode();
+              handlingRef.current = null;
+              // 끝난 코드다 — 같은 문자열이 나중에 링크로 오면 via는 link여야 한다.
+              if (pastedRef.current === code) pastedRef.current = null;
+              if (referredRef.current === code) referredRef.current = null;
+              return;
+            }
+            track('invite_arrival_view', { via });
+            setArrival({ preview: result.preview, via });
+          })
+          .finally(() => setChecking(false));
       }),
     [checkRef, toast],
   );
 
   // 기기에 남은 코드 복원 — 구독 뒤에 해야 복원분이 곧장 흐른다.
   useEffect(() => {
-    void restorePendingInvites(referredRef);
+    void restorePendingInvites(referredRef).finally(() => setRestored(true));
   }, []);
 
   useEffect(() => {
@@ -198,5 +204,8 @@ export function useInviteArrival({ offerPaste, check, redeem, onLater }: UseInvi
     </>
   );
 
-  return { sheets };
+  return {
+    active: !restored || checking || pasteOpen || arrival != null || accepting,
+    sheets,
+  };
 }

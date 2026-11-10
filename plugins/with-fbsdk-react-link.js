@@ -25,10 +25,24 @@ function addFbsdkReactLink(contents) {
   }).contents;
 }
 
+function addFbsdkDownloadLoader(contents) {
+  return mergeContents({
+    tag: 'rougether-fbsdk-http-download',
+    src: contents,
+    anchor: /^require /,
+    offset: 0,
+    comment: '#',
+    newSrc: "require File.expand_path('../plugins/fbsdk-http-download', __dir__)",
+  }).contents;
+}
+
 module.exports = function withFbsdkReactLink(config) {
   return withPodfile(config, (config) => {
-    config.modResults.contents = addFbsdkReactLink(config.modResults.contents);
+    config.modResults.contents = addFbsdkDownloadLoader(
+      addFbsdkReactLink(config.modResults.contents),
+    );
     return config;
   });
 };
 module.exports.addFbsdkReactLink = addFbsdkReactLink;
+module.exports.addFbsdkDownloadLoader = addFbsdkDownloadLoader;
