@@ -1,13 +1,14 @@
 import { type ReactNode, memo, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View, type ViewProps } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type ViewProps } from 'react-native';
 import Reanimated, {
   Easing,
   interpolate,
   runOnJS,
+  type SharedValue,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
-  type SharedValue,
 } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 import { pressedStyle } from '@/components/ui/press-feedback';
@@ -23,9 +24,8 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { horizontalFlingGesture } from '@/utils/gesture';
-import { useAnimatedValue, useAnimatedValueXY, useLatestRef } from '@/hooks/use-stable-value';
+import { useLatestRef } from '@/hooks/use-stable-value';
 import { WEEKDAY_KEYS, weekdayLabelKey } from '@/constants/routines';
-import { NATIVE_DRIVER } from '@/utils/animation';
 import { useT } from '@/i18n';
 
 // 선택 원 지름 — 원 배치 계산과 스타일이 공유하는 단일 출처.
@@ -261,8 +261,19 @@ function CalendarBase({
   // 보고한 실측 위치를 쓴다 — aspectRatio 셀 높이가 기기마다 gridW/7과
   // 정확히 일치하지 않아 세로가 한 행씩 어긋났다(#452 후속). 다른 달로
   // 넘어가면 원을 숨긴다.
-  const selPos = useAnimatedValueXY({ x: -999, y: -999 });
-  const selOpacity = useAnimatedValue(0);
+  //
+  // 좌표·투명도는 Reanimated 공유 값이다 (2026-11-10). 예전엔 RN `Animated`(네이티브 드라이버)
+  // 였는데, 날짜를 누르면 ① 새 날짜의 월 보기 자리로 스프링이 출발하고 ② 접힘이 끝난 순간
+  // `setValue`로 주간 자리에 놓았다. `setValue`는 달리던 스프링을 멈추는데, RN은 네이티브
+  // 애니메이션이 끝나면(중단 포함) **멈춘 시점의 값**을 JS 노드에 되돌려 쓰고 뷰에 다시 반영한다
+  // (`Animation.js`의 완료 콜백). 그 늦은 반영이 방금 놓은 자리를 덮어, 원이 월 보기 자리
+  // (몇 줄 아래)에 남았다 — 릴리스 APK에서 "다른 날짜를 누르면 어긋나고, 이미 선택된 날짜를
+  // 누르면(스프링 없음) 정상"으로 재현. 공유 값은 대입이 곧 진행 중 애니메이션의 취소라 되돌려
+  // 쓰는 단계가 없다.
+  // jest의 useSharedValue는 렌더마다 새 객체 — useRef로 앵커.
+  const selX = useRef(useSharedValue(-999)).current;
+  const selY = useRef(useSharedValue(-999)).current;
+  const selOpacity = useRef(useSharedValue(0)).current;
   const selVisibleRef = useRef(false);
   // 마운트 뒤 첫 배치는 페이드 없이 — 화면이 다시 마운트될 때(주간 보기 → 달력 복귀) 원이
   // 0에서 서서히 나타나 깜빡임으로 보였다. 월 이동 복귀의 페이드는 그대로.
@@ -292,37 +303,24 @@ function CalendarBase({
     };
     const appearing = !selVisibleRef.current;
     if (appearing || !animate) {
-      selPos.setValue(target);
+      selX.value = target.x;
+      selY.value = target.y;
     } else {
       // 출렁임 없이 (2026-11-04) — friction 7·tension 90은 목표 칸을 25px 지나쳤다가
       // 350ms 동안 되돌아와 "원이 튄다"로 보였다(웹 rAF 실측). bounciness 0 = 임계 감쇠.
-      Animated.spring(selPos, {
-        toValue: target,
-        bounciness: 0,
-        speed: 18,
-        useNativeDriver: NATIVE_DRIVER,
-      }).start();
+      selX.value = withSpring(target.x, SEL_SPRING);
+      selY.value = withSpring(target.y, SEL_SPRING);
     }
     if (appearing) {
       selVisibleRef.current = true;
-      if (!placedOnceRef.current) selOpacity.setValue(1);
-      else
-        Animated.timing(selOpacity, {
-          toValue: 1,
-          duration: 140,
-          useNativeDriver: NATIVE_DRIVER,
-        }).start();
+      selOpacity.value = placedOnceRef.current ? withTiming(1, { duration: 140 }) : 1;
     }
     placedOnceRef.current = true;
   };
   useEffect(() => {
     if (!selectedInView) {
       selVisibleRef.current = false;
-      Animated.timing(selOpacity, {
-        toValue: 0,
-        duration: 120,
-        useNativeDriver: NATIVE_DRIVER,
-      }).start();
+      selOpacity.value = withTiming(0, { duration: 120 });
       return;
     }
     placeCircle(true);
@@ -335,6 +333,15 @@ function CalendarBase({
     if (foldSettled && selectedInView) placeCircle(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [foldSettled]);
+  // 진행률 달력은 칸이 직접 칠하고, 접힘·펼침이 움직이는 동안엔 칸 채움이 대신한다.
+  const selCircleHidden = !!progressByDate || !foldSettled;
+  const selCircleStyle = useAnimatedStyle(
+    () => ({
+      opacity: selCircleHidden ? 0 : selOpacity.value,
+      transform: [{ translateX: selX.value }, { translateY: selY.value }],
+    }),
+    [selCircleHidden],
+  );
   /** 떠 있는 원 대신 선택 칸 자체를 칠하는가 — 접힘·펼침이 움직이는 동안. 칸은 줄과 같이 움직인다. */
   const fillSelectedCell = !foldSettled && selectedInView && !progressByDate;
 
@@ -422,17 +429,10 @@ function CalendarBase({
       <View>
         <GestureDetector gesture={collapsed ? weekFling : monthFling}>
           <View style={styles.grid} testID="calendar-grid">
-            <Animated.View
+            <Reanimated.View
               pointerEvents="none"
               testID="calendar-selected-circle"
-              style={[
-                styles.selCircle,
-                {
-                  backgroundColor: t.primary,
-                  opacity: progressByDate || !foldSettled ? 0 : selOpacity,
-                  transform: selPos.getTranslateTransform(),
-                },
-              ]}
+              style={[styles.selCircle, { backgroundColor: t.primary }, selCircleStyle]}
             />
             <View style={styles.week}>
               {/* 키는 인덱스 — 영어 요일 글자(S·T)가 겹쳐 라벨을 키로 쓰면 중복 키 경고 (#893). */}
@@ -651,6 +651,12 @@ function CalendarBase({
     </View>
   );
 }
+/**
+ * 선택 원이 같은 주 안에서 요일을 옮길 때의 스프링 — 출렁임 없이(임계 감쇠). 예전 RN 스프링
+ * (bounciness 0·speed 18)의 실측 정착 시간(약 340ms)에 맞췄다.
+ */
+const SEL_SPRING = { duration: 340, dampingRatio: 1 } as const;
+
 /**
  * 접히는 주 줄 (#1327) — 선택 주가 아닌 줄의 높이·투명도를 `fold`(0 펼침 → 1 접힘)로.
  * 남기는 줄과 아직 줄 높이를 모를 때는 높이를 건드리지 않는다.
