@@ -420,6 +420,7 @@ function SocialButton({
   const t = useTokens();
   const tr = useT();
   const emph = useFontEmphasis();
+  const Typography = useTypography();
   return (
     <Pressable
       style={({ pressed }) => [
@@ -443,7 +444,7 @@ function SocialButton({
           textColor에서 파생 — 배경은 10% 틴트, 글자는 본문색 그대로. */}
       {recent ? (
         <View style={[styles.recentBadge, { backgroundColor: `${textColor}1A` }]}>
-          <Text style={[styles.recentBadgeText, emph('semibold'), { color: textColor }]}>
+          <Text style={[Typography.caption, emph('semibold'), { color: textColor }]}>
             {tr('member.login.recentBadge')}
           </Text>
         </View>
@@ -579,9 +580,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
     paddingVertical: 3,
     borderRadius: Radius.pill,
-  },
-  recentBadgeText: {
-    fontSize: 13,
   },
   footer: {
     flexDirection: 'row',

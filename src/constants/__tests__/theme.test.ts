@@ -63,7 +63,7 @@ describe('type scale', () => {
 
   it('defines the Astryx-style roles', () => {
     expect(roles).toEqual(
-      expect.arrayContaining(['display1', 'h1', 'body', 'label', 'supporting', 'code']),
+      expect.arrayContaining(['display1', 'h1', 'body', 'label', 'supporting', 'caption', 'code']),
     );
   });
 

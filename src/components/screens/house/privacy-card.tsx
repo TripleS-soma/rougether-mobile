@@ -37,7 +37,7 @@ export function PrivacyCard({
         pressed && pressedStyle('dim', t),
       ]}>
       <Text style={[Typography.label, { color: t.text }]}>{title}</Text>
-      <Text style={[styles.privacySub, emph('normal'), { color: t.textMuted }]}>{subtitle}</Text>
+      <Text style={[Typography.caption, emph('normal'), { color: t.textMuted }]}>{subtitle}</Text>
     </Pressable>
   );
 }
@@ -51,5 +51,4 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     gap: Spacing.half,
   },
-  privacySub: { fontSize: 13 },
 });

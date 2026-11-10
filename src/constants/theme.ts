@@ -709,7 +709,17 @@ export const FontWeight = {
 } as const;
 
 export type TypeRole =
-  'display1' | 'display2' | 'h1' | 'h2' | 'h3' | 'large' | 'body' | 'label' | 'supporting' | 'code';
+  | 'display1'
+  | 'display2'
+  | 'h1'
+  | 'h2'
+  | 'h3'
+  | 'large'
+  | 'body'
+  | 'label'
+  | 'supporting'
+  | 'caption'
+  | 'code';
 
 export type TypeStyle = {
   fontSize: number;
@@ -735,6 +745,13 @@ export const Typography: Record<TypeRole, TypeStyle> = {
   body: { fontSize: 18, lineHeight: 26, fontWeight: FontWeight.normal },
   label: { fontSize: 16, lineHeight: 22, fontWeight: FontWeight.semibold },
   supporting: { fontSize: 14, lineHeight: 18, fontWeight: FontWeight.normal },
+  /**
+   * 배지·메타·힌트 같은 가장 작은 본문 (2026-11-10). supporting(14) 아래 단계가 없어 화면
+   * 10곳이 각자 `fontSize: 13`을 적어 썼다 — Radius.xl(#1015)과 같은 "토큰이 없어서 생긴
+   * 드리프트"라 롤을 늘려 흡수한다. 12·11은 좌석 타일·가구 이름표처럼 칸 크기에 맞춰 고정한
+   * 값이라 롤로 올리지 않고 그 자리에 둔다.
+   */
+  caption: { fontSize: 13, lineHeight: 17, fontWeight: FontWeight.normal },
   code: { fontSize: 15, lineHeight: 20, fontWeight: FontWeight.medium },
 };
 

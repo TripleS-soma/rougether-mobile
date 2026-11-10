@@ -119,7 +119,8 @@ export function CharacterPickerSheet({
                     {c.selected ? (
                       <View style={[styles.badge, { backgroundColor: t.primary }]}>
                         <Icon name="check" size={10} color={t.onPrimary} />
-                        <Text style={[styles.badgeText, emph('semibold'), { color: t.onPrimary }]}>
+                        <Text
+                          style={[Typography.caption, emph('semibold'), { color: t.onPrimary }]}>
                           {tr('app.characterPicker.wearing')}
                         </Text>
                       </View>
@@ -199,8 +200,5 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.half,
-  },
-  badgeText: {
-    fontSize: 13,
   },
 });

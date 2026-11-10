@@ -104,7 +104,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
             <Text style={[Typography.supporting, { color: t.textMuted }]} numberOfLines={1}>
               {description.trim() || tr('house.create.descPreview')}
             </Text>
-            <Text style={[styles.meta, emph('normal'), { color: t.textMuted }]}>
+            <Text style={[Typography.caption, styles.meta, emph('normal'), { color: t.textMuted }]}>
               {tr('house.create.previewMeta', {
                 n: capacity,
                 visibility: isPrivate ? tr('house.create.private') : tr('house.create.public'),
@@ -281,7 +281,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
             ]}>
             {tr('house.create.inviteCode')}
           </Text>
-          <Text style={[styles.hint, emph('normal'), { color: t.textMuted }]}>
+          <Text style={[Typography.caption, styles.hint, emph('normal'), { color: t.textMuted }]}>
             {tr('house.create.inviteHint')}
           </Text>
         </View>
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.one,
   },
-  meta: { fontSize: 13, marginTop: Spacing.half },
+  meta: { marginTop: Spacing.half },
   sectionLabel: { marginLeft: Spacing.one },
   counter: { fontSize: 12 },
   themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  hint: { fontSize: 13, marginLeft: Spacing.one },
+  hint: { marginLeft: Spacing.one },
   submit: {
     marginTop: Spacing.two,
     paddingVertical: Spacing.three,

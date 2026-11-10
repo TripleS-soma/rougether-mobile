@@ -305,7 +305,15 @@ export function RevealCard({
           ) : null}
         </View>
         {badge ? (
-          <Text style={[styles.heroBadge, emph('bold'), { backgroundColor: color }]}>{badge}</Text>
+          <Text
+            style={[
+              Typography.caption,
+              styles.heroBadge,
+              emph('bold'),
+              { backgroundColor: color },
+            ]}>
+            {badge}
+          </Text>
         ) : null}
         <Text style={[Typography.h3, styles.center, { color: StaticWhite }]} numberOfLines={2}>
           {entry.displayName}
@@ -387,7 +395,6 @@ const styles = StyleSheet.create({
   },
   heroBadge: {
     color: StaticWhite,
-    fontSize: 13,
     overflow: 'hidden',
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.three,
