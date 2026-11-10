@@ -191,7 +191,7 @@ function RoutineRowBase({
             <View style={styles.badges}>
               <View style={styles.badge}>
                 <Icon name="bell" size={12} color={t.textMuted} />
-                <Text style={[styles.badgeText, emph('normal'), { color: t.textMuted }]}>
+                <Text style={[Typography.caption, emph('normal'), { color: t.textMuted }]}>
                   {formatTime(time)}
                 </Text>
               </View>
@@ -253,8 +253,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.half,
-  },
-  badgeText: {
-    fontSize: 13,
   },
 });

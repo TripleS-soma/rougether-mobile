@@ -502,8 +502,9 @@ export function HouseSearchScreen({
                         #{h.tag}
                       </Text>
                     </View>
+                    {/* flexShrink를 주지 않는다 — 주면 줄바꿈 대신 계속 줄어들며 잘린다. */}
                     <Text
-                      style={[styles.meta, emph('normal'), { color: t.textMuted }]}
+                      style={[Typography.caption, emph('normal'), { color: t.textMuted }]}
                       numberOfLines={1}>
                       {h.level != null ? `Lv.${h.level} · ` : ''}
                       {tr('house.search.membersOf', { members: h.members, capacity: h.capacity })}
@@ -904,8 +905,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
   },
   tagText: { fontSize: 12 },
-  // flexShrink를 주면 줄바꿈 대신 계속 줄어들며 잘린다 — 온전한 너비로 개행.
-  meta: { fontSize: 13 },
   joinBtn: {
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
