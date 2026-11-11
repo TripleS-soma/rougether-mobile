@@ -1,13 +1,16 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { ensureHouseChatRoom, fetchChatMessages, markChatRead, sendChatMessage } from '@/api/chat';
+import { uploadChatImage, cancelChatImage } from '@/api/chat-images';
 import { ApiError } from '@/api/http';
-import type { ChatMessageResponse, ChatRoomResponse } from '@/api/types';
+import type { ChatMessageResponse } from '@/api/chat-types';
+import type { ChatRoomResponse } from '@/api/types';
 import { useHouseChat } from '@/hooks/use-house-chat';
 import { createTestQueryClient, queryWrapper } from '@/test-utils/query-wrapper';
 
 jest.mock('@/api/auth', () => ({
   getSessionUserId: () => 1,
+  onSessionCleared: () => () => {},
   getAccessToken: () => 'token-1',
   refreshSession: jest.fn(async () => true),
 }));
@@ -16,6 +19,11 @@ jest.mock('@/api/chat', () => ({
   fetchChatMessages: jest.fn(),
   sendChatMessage: jest.fn(),
   markChatRead: jest.fn(),
+}));
+
+jest.mock('@/api/chat-images', () => ({
+  uploadChatImage: jest.fn(),
+  cancelChatImage: jest.fn(async () => {}),
 }));
 
 const mockEnsure = ensureHouseChatRoom as jest.Mock;
@@ -70,6 +78,9 @@ beforeEach(() => {
     return { items: [], hasNext: false, room: room(3) };
   });
   mockSend.mockReset();
+  (uploadChatImage as jest.Mock)
+    .mockReset()
+    .mockResolvedValue({ imageId: 91, width: 800, height: 600 });
   mockRead.mockReset().mockImplementation(async (_id: number, seq: number) => room(3, [{ userId: 1, lastReadSequence: seq }, { userId: 2, lastReadSequence: 3 }])); // prettier-ignore
 });
 afterAll(() => {
@@ -221,4 +232,93 @@ describe('useHouseChat (#1408)', () => {
     // 3번(발신자 2): 1번 사용자는 읽음, 3번 사용자는 안 읽음 → 1.
     await waitFor(() => expect(result.current.messages[2].unreadCount).toBe(1));
   });
+});
+
+const photo = { uri: 'file:///photo.jpg', name: 'photo.jpg', type: 'image/jpeg', fileSize: 1234 };
+describe('사진 전송', () => {
+  it('목록 다시 불러오기는 실패한 사진과 재시도 ID를 보존한다', async () => {
+    mockSend
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockImplementationOnce(async (_room, body) => ({ ...msg(4, 1), ...body }));
+    const { result } = await setup();
+    await act(async () => result.current.sendPhoto(photo));
+    await waitFor(() => expect(result.current.messages.at(-1)?.status).toBe('failed'));
+    const key = result.current.messages.at(-1)!.clientMessageId!;
+    await act(async () => result.current.retryLoad());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.messages.at(-1)?.clientMessageId).toBe(key);
+    await act(async () => result.current.retrySend(key));
+    await waitFor(() => expect(mockSend).toHaveBeenCalledTimes(2));
+    expect(uploadChatImage).toHaveBeenCalledTimes(1);
+    expect(mockSend.mock.calls[1]).toEqual(mockSend.mock.calls[0]);
+  });
+  it('텍스트 전송의 429는 사진 한도라고 안내하지 않는다', async () => {
+    mockSend.mockRejectedValueOnce(new ApiError(429, 'POST', '/chat/rooms/5/messages'));
+    const { result, onError } = await setup();
+    await act(async () => result.current.send('hello'));
+    await waitFor(() => expect(result.current.messages.at(-1)?.status).toBe('failed'));
+    expect(onError).not.toHaveBeenCalledWith('photoLimit');
+  });
+  it('업로드 뒤 사진 ID만 전송하고, 응답 유실 재시도에 동일 UUID와 사진 ID를 재사용한다', async () => {
+    mockSend
+      .mockRejectedValueOnce(new Error('response lost'))
+      .mockImplementationOnce(async (_room, body) => ({
+        ...msg(4, 1),
+        ...body,
+        image: { imageId: 91, width: 800, height: 600 },
+        messageType: 'IMAGE',
+      }));
+    const { result } = await setup();
+    await act(async () => result.current.sendPhoto(photo));
+    await waitFor(() => expect(result.current.messages.at(-1)?.status).toBe('failed'));
+    const key = result.current.messages.at(-1)!.clientMessageId!;
+    expect(mockSend).toHaveBeenCalledWith(ROOM_ID, { clientMessageId: key, imageId: 91 });
+    await act(async () => {
+      result.current.retrySend(key);
+      result.current.retrySend(key);
+    });
+    await waitFor(() => expect(result.current.messages.at(-1)?.status).toBe('sent'));
+    expect(uploadChatImage).toHaveBeenCalledTimes(1);
+    expect(mockSend).toHaveBeenCalledTimes(2);
+    expect(mockSend.mock.calls[0]).toEqual(mockSend.mock.calls[1]);
+    expect(result.current.messages.at(-1)?.image?.imageId).toBe(91);
+  });
+  it('업로드가 실패하면 전송하지 않고 실패한 업로드만 재시도한다', async () => {
+    (uploadChatImage as jest.Mock).mockRejectedValueOnce(new Error('offline'));
+    mockSend.mockResolvedValue({ ...msg(4, 1), image: { imageId: 91, width: 800, height: 600 } });
+    const { result } = await setup();
+    await act(async () => result.current.sendPhoto(photo));
+    await waitFor(() => expect(result.current.messages.at(-1)?.status).toBe('failed'));
+    expect(mockSend).not.toHaveBeenCalled();
+    await act(async () =>
+      result.current.retrySend(result.current.messages.at(-1)!.clientMessageId!),
+    );
+    await waitFor(() => expect(mockSend).toHaveBeenCalledTimes(1));
+    expect(uploadChatImage).toHaveBeenCalledTimes(2);
+  });
+  it('지원하지 않는 형식과 10MiB 초과 사진은 업로드하지 않는다', async () => {
+    const { result, onError } = await setup();
+    await act(async () => {
+      result.current.sendPhoto({ ...photo, type: 'image/gif' });
+      result.current.sendPhoto({ ...photo, fileSize: 10 * 1024 * 1024 + 1 });
+    });
+    expect(uploadChatImage).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledWith('photoInvalid');
+  });
+});
+
+it('업로드 중 채팅을 닫으면 늦게 받은 사진으로 메시지를 전송하지 않는다', async () => {
+  let resolve!: (value: unknown) => void;
+  (uploadChatImage as jest.Mock).mockImplementationOnce(
+    () =>
+      new Promise((done) => {
+        resolve = done;
+      }),
+  );
+  const { result, unmount } = await setup();
+  await act(async () => result.current.sendPhoto(photo));
+  await unmount();
+  await act(async () => resolve({ imageId: 91, width: 800, height: 600 }));
+  expect(mockSend).not.toHaveBeenCalled();
+  expect(cancelChatImage).toHaveBeenCalledWith(91);
 });

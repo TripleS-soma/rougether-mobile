@@ -14,6 +14,8 @@ import {
 import { AppTextInput as TextInput } from '@/components/ui/app-text-input';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { ChatImageResponse } from '@/api/chat-types';
+import { ChatPhoto } from '@/components/chat/chat-photo';
 import { Icon } from '@/components/ui/icon';
 import { pressedStyle } from '@/components/ui/press-feedback';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -34,6 +36,10 @@ export const CHAT_MAX_LENGTH = 2000;
 export type ChatMessageView = {
   /** 목록 키 — 서버 메시지는 순서, 보내는 중인 건 clientMessageId. */
   key: string;
+  messageId?: number;
+  messageType?: 'TEXT' | 'IMAGE';
+  image?: ChatImageResponse | null;
+  localImageUri?: string;
   /** 서버가 매긴 방별 순서 — 보내는 중·실패한 메시지에는 없다. */
   sequence?: number;
   clientMessageId?: string;
@@ -65,6 +71,9 @@ export type HouseChatScreenProps = {
   onLoadOlder?: () => void;
   /** 다듬은(trim) 본문으로 호출된다. 빈 본문은 부르지 않는다. */
   onSend?: (text: string) => void;
+  onPickPhoto?: () => void;
+  pickingPhoto?: boolean;
+  onReport?: (messageId: number) => void;
   /** 실패한 내 메시지 다시 보내기 — 같은 clientMessageId로. */
   onRetrySend?: (clientMessageId: string) => void;
   /** 실제로 화면에 보인 메시지 중 가장 큰 순서 — 읽음 처리에 쓴다. */
@@ -131,6 +140,9 @@ export function HouseChatScreen({
   loadingOlder = false,
   onLoadOlder,
   onSend,
+  onPickPhoto,
+  pickingPhoto = false,
+  onReport,
   onRetrySend,
   onVisible,
   muted = false,
@@ -189,6 +201,11 @@ export function HouseChatScreen({
           dayLabel={newDay ? chatDayLabel(day) : undefined}
           showName={showName}
           content={item.content}
+          messageId={item.messageId}
+          imageId={item.image?.imageId}
+          imageMissing={item.messageType === 'IMAGE' && item.image?.imageId == null}
+          localImageUri={item.localImageUri}
+          onReport={onReport}
           senderNickname={item.senderNickname}
           createdAt={item.createdAt}
           unreadCount={item.unreadCount}
@@ -198,7 +215,7 @@ export function HouseChatScreen({
         />
       );
     },
-    [data, myUserId, onRetrySend],
+    [data, myUserId, onRetrySend, onReport],
   );
 
   const body = loading ? (
@@ -269,6 +286,20 @@ export function HouseChatScreen({
             },
           ]}>
           <View style={[styles.inputInner, column]}>
+            {onPickPhoto ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={tr('house.chat.pickPhoto')}
+                disabled={pickingPhoto || loading || loadError}
+                onPress={onPickPhoto}
+                style={styles.sendBtn}>
+                {pickingPhoto ? (
+                  <ActivityIndicator color={t.primary} />
+                ) : (
+                  <Icon name="image" size={24} color={t.primaryText} />
+                )}
+              </Pressable>
+            ) : null}
             <TextInput
               value={draft}
               onChangeText={setDraft}
@@ -335,6 +366,11 @@ const INPUT_MAX_HEIGHT = 132;
 const SEND_SIZE = 44;
 
 type ChatRowProps = {
+  messageId?: number;
+  imageId?: number;
+  imageMissing?: boolean;
+  localImageUri?: string;
+  onReport?: (messageId: number) => void;
   mine: boolean;
   /** 이 메시지가 그날의 첫 메시지면 위에 그릴 날짜 구분선 문구. */
   dayLabel?: string;
@@ -349,6 +385,11 @@ type ChatRowProps = {
 };
 
 const ChatRow = memo(function ChatRow({
+  messageId,
+  imageId,
+  imageMissing,
+  localImageUri,
+  onReport,
   mine,
   dayLabel,
   showName,
@@ -412,16 +453,31 @@ const ChatRow = memo(function ChatRow({
             mine ? null : styles.bubbleOther,
             status === 'pending' ? styles.pending : null,
           ]}>
-          <LinkifiedText
-            style={[Typography.body, emph('normal'), { color: mine ? t.onPrimary : t.text }]}
-            // 내 말풍선(진한 바탕)은 글자색 그대로 밑줄만, 남의 말풍선은 강조색.
-            linkColor={mine ? undefined : t.primaryText}
-            selectable>
-            {content}
-          </LinkifiedText>
+          {imageId != null || localImageUri ? (
+            <ChatPhoto imageId={imageId} localUri={localImageUri} />
+          ) : (
+            <LinkifiedText
+              style={[Typography.body, emph('normal'), { color: mine ? t.onPrimary : t.text }]}
+              // 내 말풍선(진한 바탕)은 글자색 그대로 밑줄만, 남의 말풍선은 강조색.
+              linkColor={mine ? undefined : t.primaryText}
+              selectable>
+              {imageMissing && !content ? tr('house.chat.photoUnavailable') : content}
+            </LinkifiedText>
+          )}
         </View>
         {meta}
       </View>
+      {!mine && status === 'sent' && messageId != null && onReport ? (
+        <Pressable
+          onPress={() => onReport(messageId)}
+          accessibilityRole="button"
+          accessibilityLabel={tr('house.chat.reportMessage')}
+          hitSlop={Spacing.two}>
+          <Text style={[Typography.supporting, { color: t.textMuted }]}>
+            {tr('house.chat.reportMessage')}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
   if (!dayLabel) return row;
