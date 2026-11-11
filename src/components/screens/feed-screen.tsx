@@ -1,10 +1,10 @@
-import { memo, useCallback, useRef, useState } from 'react';
+import { memo, useCallback, useRef } from 'react';
 import {
   FlatList,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Pressable,
-  RefreshControl,
+  type ScrollViewProps,
   StyleSheet,
   Text,
   View,
@@ -20,7 +20,7 @@ import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon } from '@/components/ui/icon';
 import { Loading } from '@/components/ui/loading';
 import { pressedStyle } from '@/components/ui/press-feedback';
-import { PagerScrollView } from '@/components/ui/pager-scroll-view';
+import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Radius, Spacing } from '@/constants/theme';
@@ -181,7 +181,7 @@ const FeedPostRow = memo(function FeedPostRow({
 
 /**
  * 공개 피드 탭 (#1409) — 전체 공개 게시물 최신순. 순수·prop 기반: 데이터·좋아요·이동은
- * 셸(`use-feed-pages`)이 넘긴다. 하단 탭 페이저 안에 살아서 스크롤은 PagerScrollView로
+ * 셸(`use-feed-pages`)이 넘긴다. 하단 탭 페이저 안에 살아서 스크롤은 PawRefreshScroll(안에서 PagerScrollView 규약을 따른다)로
  * 페이저와 방향을 나눈다(iOS).
  */
 export function FeedScreen({
@@ -208,7 +208,6 @@ export function FeedScreen({
   const column = useResponsiveColumn();
   const headerInset = useHeaderContentInset();
   const navInset = useBottomNavInset();
-  const [refreshing, setRefreshing] = useState(false);
 
   // 서브화면(상세·작성)에 다녀오면 페이저가 다시 마운트된다 — 셸이 기억한 위치로 (#763).
   const listRef = useRef<FlatList<FeedPost>>(null);
@@ -237,15 +236,15 @@ export function FeedScreen({
     [board, onChangeBoard],
   );
 
-  const handleRefresh = useCallback(async () => {
-    if (!onRefresh) return;
-    setRefreshing(true);
-    try {
-      await onRefresh();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [onRefresh]);
+  // 당겨서 새로고침은 방·집·거래소와 같은 발바닥 당김 (2026-11-11) — 종전 시스템 RefreshControl은
+  // 인디케이터가 헤더 밑에 가려 당겨도 반응이 없는 것처럼 보였고, 다른 탭과 모양도 달랐다.
+  // 목록 스크롤 뷰 자체를 PawRefreshScroll로 바꿔 끼운다(onRefresh가 없으면 평범한 스크롤).
+  const renderScroll = useCallback(
+    (props: ScrollViewProps) => (
+      <PawRefreshScroll {...props} onRefresh={onRefresh} refreshTestID="feed-refresh" />
+    ),
+    [onRefresh],
+  );
 
   const lastIndex = posts.length - 1;
   const renderItem = useCallback(
@@ -271,7 +270,7 @@ export function FeedScreen({
         data={posts}
         keyExtractor={(p) => String(p.postId)}
         renderItem={renderItem}
-        renderScrollComponent={(props) => <PagerScrollView {...props} />}
+        renderScrollComponent={renderScroll}
         contentOffset={{ x: 0, y: initialY }}
         onContentSizeChange={handleContentSize}
         onScroll={handleScroll}
@@ -279,17 +278,6 @@ export function FeedScreen({
         showsVerticalScrollIndicator={false}
         onEndReached={hasNext ? onLoadMore : undefined}
         onEndReachedThreshold={0.6}
-        refreshControl={
-          onRefresh ? (
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => void handleRefresh()}
-              tintColor={t.primary}
-              colors={[t.primary]}
-              progressViewOffset={headerInset}
-            />
-          ) : undefined
-        }
         contentContainerStyle={[
           styles.body,
           column,
