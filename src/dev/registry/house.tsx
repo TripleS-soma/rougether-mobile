@@ -1,4 +1,6 @@
 import { HouseDioramaDemo } from '@/dev/house-diorama-demo';
+import { FeedAuthorHouseSheet } from '@/components/feed/feed-author-house-sheet';
+import type { FeedAuthorHouse } from '@/api/feed-houses';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
@@ -19,6 +21,42 @@ import { parseInviteText } from '@/lib/invite-code';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { RECOMMENDED_HOUSES } from '@/mocks/fixtures';
 import type { GalleryEntry } from '@/dev/registry/types';
+
+function FeedAuthorHouseDemo() {
+  const [open, setOpen] = useState(false);
+  const home: FeedAuthorHouse = {
+    houseId: 1,
+    name: '함께하는 비공개 집',
+    coverImageKey: null,
+    level: 1,
+    displayMode: 'DIORAMA',
+    isPublic: false,
+    requiresApproval: true,
+    currentMemberCount: 2,
+    maxMembers: 4,
+    isMember: false,
+    isFull: false,
+    myMembershipStatus: null,
+    myJoinRequestStatus: null,
+    canJoin: true,
+  };
+  return (
+    <View>
+      <ScalePressable accessibilityRole="button" onPress={() => setOpen(true)}>
+        <Text>작성자의 집 선택 열기</Text>
+      </ScalePressable>
+      <FeedAuthorHouseSheet
+        visible={open}
+        houses={[
+          home,
+          { ...home, houseId: 2, name: '바로 입주 가능한 집', requiresApproval: false },
+        ]}
+        onClose={() => setOpen(false)}
+        onJoin={() => setOpen(false)}
+      />
+    </View>
+  );
+}
 
 /** 친구 초대 확인 시트 데모 (#1007). */
 function InviteArrivalSheetDemo() {
@@ -116,6 +154,11 @@ function HouseCoverPickerDemo() {
 }
 
 export const houseEntries: GalleryEntry[] = [
+  {
+    name: 'FeedAuthorHouseSheet',
+    description: '게시물 작성자의 집 선택, 입주 신청과 바로 입주 설정 구분',
+    render: () => <FeedAuthorHouseDemo />,
+  },
   {
     name: 'HouseDioramaRenewal',
     description: '공동 공간 6종 · 실제 앱 에셋 · 가구 없음 · 별채 · 방 방문/자리 이동',

@@ -67,6 +67,7 @@ export const queryKeys = {
   /** 내 버그 제보 목록 (#496). */
   bugReports: (userId: number | null | undefined) => ['bug-reports', userId] as const,
   /** 진행 중인 출석 이벤트 (#851) — 없으면 null. */
+  loginGifts: (userId: number | null | undefined) => ['login-gifts', userId] as const,
   christmas: (userId: number | null | undefined) =>
     ['christmas', userId, 'christmas_2026'] as const,
   attendanceEvent: (userId: number | null | undefined, eventId: number | null | undefined) =>
@@ -134,6 +135,9 @@ export const queryKeys = {
    */
   feed: {
     all: (userId: number | null | undefined) => ['feed', userId] as const,
+    authorHousesAll: (userId: number | null | undefined) => ['feed', userId, 'houses'] as const,
+    authorHouses: (userId: number | null | undefined, postId: number | null) =>
+      ['feed', userId, 'houses', postId] as const,
     lists: (userId: number | null | undefined) => ['feed', userId, 'posts'] as const,
     list: (
       userId: number | null | undefined,

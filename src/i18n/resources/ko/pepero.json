@@ -1,0 +1,16 @@
+{
+  "pepero": {
+    "title": "빼빼로데이 접속 선물",
+    "heading": "111코인이 지급됐어요!",
+    "heroLabel": "111코인과 한정 가구 소원 관측기",
+    "coins": "111코인",
+    "furniture": "한정 가구 · 11:11 소원 관측기",
+    "received": "지급 완료",
+    "description": "오늘의 달콤한 선물로 방을 꾸며보세요.",
+    "goDecor": "꾸미러 바로 가기",
+    "hideToday": "오늘 다시 보지 않기",
+    "close": "닫기",
+    "saving": "저장 중",
+    "dismissError": "숨김 설정을 저장하지 못했어요. 다시 시도해주세요."
+  }
+}
