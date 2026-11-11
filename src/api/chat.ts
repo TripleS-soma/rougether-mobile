@@ -5,13 +5,10 @@
  * WebSocket이 방 상태(`ROOM_UPDATED`)만 알려준다 — 본문은 여기 목록 API로 가져온다.
  */
 import { apiGet, apiPost, apiPut } from './client';
+import { inChatSession } from '@/api/chat-session';
 import { buildQuery } from './http';
-import type {
-  ChatMessagePage,
-  ChatMessageResponse,
-  ChatRoomResponse,
-  ChatSendRequest,
-} from './types';
+import type { ChatMessagePage, ChatMessageResponse, ChatSendRequest } from '@/api/chat-types';
+import type { ChatRoomResponse, ReportReason } from './types';
 
 /** POST /houses/{houseId}/chat-room — 집 채팅방 생성 또는 기존 방 반환(멱등). */
 export function ensureHouseChatRoom(houseId: number) {
@@ -52,9 +49,12 @@ export function fetchChatMessages(roomId: number, query: ChatMessagesQuery = {})
  * `CHAT_CONTENT_BANNED` — 호출부가 안내로 접으므로 예상 상태로 둔다.
  */
 export function sendChatMessage(roomId: number, body: ChatSendRequest) {
-  return apiPost<ChatMessageResponse>(`/chat/rooms/${roomId}/messages`, body, {
-    expectedStatuses: [400, 409],
-  });
+  return inChatSession(() =>
+    apiPost<ChatMessageResponse>(`/chat/rooms/${roomId}/messages`, body, {
+      expectedStatuses: [400, 401, 409],
+      refreshOnUnauthorized: false,
+    }),
+  );
 }
 
 /** PUT /chat/rooms/{roomId}/read — 읽음 위치를 앞으로(더 작은 값은 서버가 무시). */
@@ -73,4 +73,20 @@ export function fetchChatNotification(roomId: number) {
 /** PUT /chat/rooms/{roomId}/notification `{ muted }` — 이 방 새 메시지 푸시를 끄고 켠다. */
 export function updateChatNotification(roomId: number, muted: boolean) {
   return apiPut<ChatNotificationState>(`/chat/rooms/${roomId}/notification`, { muted });
+}
+
+/** 현재 구성원의 메시지 신고. 본인 메시지는 서버에서 거부한다. */
+export function reportChatMessage(
+  roomId: number,
+  messageId: number,
+  reason: ReportReason,
+  detail?: string,
+) {
+  return inChatSession(() =>
+    apiPost(
+      `/chat/rooms/${roomId}/messages/${messageId}/reports`,
+      { reason, detail },
+      { refreshOnUnauthorized: false },
+    ),
+  );
 }

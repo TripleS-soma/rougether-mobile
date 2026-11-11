@@ -20,7 +20,6 @@ import { FeedMinigameRecordCard } from '@/components/feed/feed-minigame-record';
 import { FeedRoutineBadge, FeedRoutinePicker } from '@/components/feed/feed-routine';
 import { FeedPhoto, feedImageAspect } from '@/components/feed/feed-photo';
 import {
-  feedCanBeVerification,
   feedContentRequired,
   feedEditBlocker,
   feedHasMinigameRecord,
@@ -195,7 +194,6 @@ function EditPostDialog({
   const blocker = feedEditBlocker(post, draft);
   const canSave = blocker === null;
   const contentRequired = feedContentRequired(board, post.images.length);
-  const photoless = !feedCanBeVerification(post.images.length);
   // 기록 카드가 붙은 글은 자유게시판에 머문다(서버: 인증으로 옮기면 400 FEED_INPUT_INVALID).
   const hasRecord = feedHasMinigameRecord(post);
   const stayingVerification = post.boardType === 'VERIFICATION' && board === 'VERIFICATION';
@@ -203,11 +201,9 @@ function EditPostDialog({
     board === 'FREE'
       ? hasRecord
         ? tr('feed.post.editRecordStaysFree')
-        : photoless
-          ? tr('feed.post.editNeedPhoto')
-          : post.boardType === 'VERIFICATION'
-            ? tr('feed.post.editToFreeHint')
-            : null
+        : post.boardType === 'VERIFICATION'
+          ? tr('feed.post.editToFreeHint')
+          : null
       : null;
   return (
     <Modal
@@ -231,7 +227,7 @@ function EditPostDialog({
                 options={FEED_BOARD_TYPES}
                 value={board}
                 onChange={setBoard}
-                disabledOptions={photoless || hasRecord ? VERIFICATION_ONLY : undefined}
+                disabledOptions={hasRecord ? VERIFICATION_ONLY : undefined}
                 testID="feed-edit-board-tabs"
               />
               {boardHint ? (
@@ -295,7 +291,7 @@ function EditPostDialog({
               placeholderTextColor={t.textMuted}
               accessibilityLabel={tr('feed.compose.contentLabel')}
               style={[
-                Typography.body,
+                Typography.bodyCompact,
                 styles.editInput,
                 { backgroundColor: t.surfaceMuted, color: t.text },
               ]}
@@ -494,7 +490,7 @@ export function FeedPostScreen({
         {header}
         <View style={[styles.state, { paddingTop: headerInset + Spacing.six }]}>
           {notFound ? (
-            <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
+            <Text style={[Typography.bodyCompact, styles.center, { color: t.textMuted }]}>
               {tr('feed.post.notFound')}
             </Text>
           ) : loadError ? (
@@ -531,7 +527,7 @@ export function FeedPostScreen({
       {post.content ? (
         <LinkifiedText
           selectable
-          style={[Typography.body, { color: t.text }]}
+          style={[Typography.bodyCompact, { color: t.text }]}
           linkColor={t.primaryText}>
           {post.content}
         </LinkifiedText>
@@ -669,7 +665,7 @@ export function FeedPostScreen({
                 placeholderTextColor={t.textMuted}
                 accessibilityLabel={tr('feed.post.commentA11y')}
                 style={[
-                  Typography.body,
+                  Typography.bodyCompact,
                   styles.input,
                   { backgroundColor: t.surfaceMuted, color: t.text },
                 ]}
@@ -738,7 +734,7 @@ export function FeedPostScreen({
             <View style={[styles.menuIcon, { backgroundColor: t.surfaceMuted }]}>
               <Icon name="flag" size={18} color={t.text} />
             </View>
-            <Text style={[Typography.body, { color: t.text }]}>
+            <Text style={[Typography.bodyCompact, { color: t.text }]}>
               {tr('member.moderation.menu.report')}
             </Text>
           </Pressable>
@@ -756,7 +752,7 @@ export function FeedPostScreen({
             <View style={[styles.menuIcon, { backgroundColor: t.surfaceMuted }]}>
               <Icon name="block" size={18} color={t.danger} />
             </View>
-            <Text style={[Typography.body, { color: t.danger }]}>
+            <Text style={[Typography.bodyCompact, { color: t.danger }]}>
               {tr('member.moderation.menu.block')}
             </Text>
           </Pressable>

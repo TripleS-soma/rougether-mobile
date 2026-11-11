@@ -31,11 +31,9 @@ export function useChristmasSurface({
   const [homeRefreshPending, setHomeRefreshPending] = useState(false);
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
+      // 재조회 여부는 여기서 정하지 않는다 — 이 시점의 `freshForToday`는 마지막 렌더(앱이 뒤로 가기
+      // 전)의 값이라, 뒤에 있는 동안 자정이 지나도 "오늘 것"으로 보인다. 아래 복귀 이펙트가 맡는다.
       setAppActive(state === 'active');
-      if (state === 'active' && wanted.current) {
-        setHomeRefreshPending(true);
-        void latest.current.refresh().finally(() => setHomeRefreshPending(false));
-      }
     });
     return () => subscription.remove();
   }, []);
@@ -82,10 +80,8 @@ export function useChristmasSurface({
   }, []);
 
   const wasHome = useRef(home);
-  const returningHome = home && !wasHome.current;
   useEffect(() => {
     if (
-      returningHome ||
       homeRefreshPending ||
       !home ||
       !ready ||
@@ -118,7 +114,6 @@ export function useChristmasSurface({
     }
   }, [
     home,
-    returningHome,
     homeRefreshPending,
     ready,
     appActive,
@@ -134,15 +129,26 @@ export function useChristmasSurface({
     show,
   ]);
 
-  // Returning home and app-focus refetch keep KST-day state authoritative without a midnight takeover.
+  // 방 복귀·앱 복귀 재조회는 **오늘(KST) 받은 데이터가 없을 때만** 한다 (2026-11-11). 목적은 앱을 켜 둔
+  // 채 자정을 넘긴 캐시를 새 날짜 상태로 바꾸는 것 하나인데, 종전에는 방으로 돌아올 때마다 요청 2개와
+  // 셸 리렌더 여러 번을 복귀 슬라이드 한가운데에 만들었다. 자동 팝업은 하루 한 번(`flow`)이라 같은 날의
+  // 재조회 결과는 쓰이는 곳이 없다. 날짜가 바뀌면 `freshForToday`가 false가 되어 위 큐가 멈추고,
+  // 여기서 한 번 받아 오면 다시 열린다. 수동 진입(`open`)은 스스로 조회한다.
+  // 앱 복귀도 같은 이펙트에서 본다 — `appActive`가 바뀐 렌더의 `freshForToday`는 지금 날짜로 다시
+  // 계산된 값이라, 앱이 뒤에 있는 동안 자정을 넘긴 경우를 놓치지 않는다.
   const refresh = christmas.refresh;
+  const freshForToday = christmas.freshForToday;
+  const wasAppActive = useRef(appActive);
   useEffect(() => {
-    if (home && !wasHome.current && wanted.current) {
+    const returnedHome = home && !wasHome.current;
+    const cameForward = appActive && !wasAppActive.current;
+    wasHome.current = home;
+    wasAppActive.current = appActive;
+    if ((returnedHome || cameForward) && wanted.current && !freshForToday) {
       setHomeRefreshPending(true);
       void refresh().finally(() => setHomeRefreshPending(false));
     }
-    wasHome.current = home;
-  }, [home, refresh]);
+  }, [home, appActive, refresh, freshForToday]);
 
   const open = useCallback(() => {
     if (activeRef.current) return;

@@ -3,7 +3,7 @@
  * 훅(제출 가드)이 같은 판정을 쓰도록 한 곳에.
  *
  * - `FREE`: 사진 0–10장. 사진이 없으면 공백을 뺀 본문이 필수. 루틴 연결 없음.
- * - `VERIFICATION`: 사진 1–10장 필수, 본문 선택, **최근 7일 안에 완료한 루틴 하나 연결 필수**.
+ * - `VERIFICATION`: 사진 0–10장 선택, 본문 선택, **최근 7일 안에 완료한 루틴 하나 연결 필수**.
  * - 미니게임 기록 카드(서버 feat/feed-minigame-record)는 **자유게시판에만** — 기록 글은 수정에서도
  *   인증게시판으로 옮길 수 없다(서버 400 FEED_INPUT_INVALID).
  */
@@ -16,8 +16,7 @@ import type {
 } from '@/components/screens/feed/types';
 
 /** 지금 올릴 수 없는 이유 — null이면 올릴 수 있다. */
-export type FeedComposeBlocker =
-  'needPhoto' | 'needRoutine' | 'needContent' | 'waitUpload' | 'uploadFailed';
+export type FeedComposeBlocker = 'needRoutine' | 'needContent' | 'waitUpload' | 'uploadFailed';
 
 export function feedComposeBlocker(
   board: FeedBoardType,
@@ -25,10 +24,7 @@ export function feedComposeBlocker(
   content: string,
   routine: FeedRoutineCompletion | null,
 ): FeedComposeBlocker | null {
-  if (images.length === 0) {
-    if (board === 'VERIFICATION') return 'needPhoto';
-    return content.trim() ? null : 'needContent';
-  }
+  if (board === 'FREE' && images.length === 0 && !content.trim()) return 'needContent';
   if (board === 'VERIFICATION' && !routine) return 'needRoutine';
   if (images.some((img) => img.status === 'uploading')) return 'waitUpload';
   if (images.some((img) => img.status !== 'done' || img.imageId == null)) return 'uploadFailed';
@@ -40,19 +36,13 @@ export function feedContentRequired(board: FeedBoardType, imageCount: number): b
   return board === 'FREE' && imageCount === 0;
 }
 
-/** 수정에서 인증게시판으로 옮길 수 있는가 — 사진은 수정할 수 없으니 이미 사진이 있는 글만. */
-export function feedCanBeVerification(imageCount: number): boolean {
-  return imageCount > 0;
-}
-
 /** 미니게임 기록 카드가 붙은 글인가 — 이런 글은 자유게시판에 머문다. */
 export function feedHasMinigameRecord(post: Pick<FeedPost, 'minigameRecord'>): boolean {
   return post.minigameRecord != null;
 }
 
 /** 수정 창에서 저장할 수 없는 이유 — null이면 저장할 수 있다. */
-export type FeedEditBlocker =
-  'needPhotoForVerification' | 'recordStaysFree' | 'needRoutine' | 'needContent';
+export type FeedEditBlocker = 'recordStaysFree' | 'needRoutine' | 'needContent';
 
 /** 수정 창의 초안 — 게시판·연결 루틴·본문. */
 export type FeedEditDraft = {
@@ -64,14 +54,13 @@ export type FeedEditDraft = {
 type EditablePost = Pick<FeedPost, 'boardType' | 'routine' | 'images' | 'minigameRecord'>;
 
 /**
- * 수정 저장 조건 (서버 #430) — 자유 → 인증은 사진이 있는 글 + 루틴 선택이 필요하다. 인증으로
+ * 수정 저장 조건 (서버 #430) — 자유 → 인증은 사진 유무와 관계없이 루틴 선택이 필요하다. 인증으로
  * 남는 글은 루틴을 바꾸지 않아도 된다(생략 = 기존 연결 유지, 연결 없는 옛 글도 그대로).
  */
 export function feedEditBlocker(post: EditablePost, draft: FeedEditDraft): FeedEditBlocker | null {
   const imageCount = post.images.length;
   if (draft.board === 'VERIFICATION' && post.boardType !== 'VERIFICATION') {
     if (feedHasMinigameRecord(post)) return 'recordStaysFree';
-    if (!feedCanBeVerification(imageCount)) return 'needPhotoForVerification';
     if (!draft.routine) return 'needRoutine';
   }
   if (feedContentRequired(draft.board, imageCount) && !draft.content.trim()) return 'needContent';

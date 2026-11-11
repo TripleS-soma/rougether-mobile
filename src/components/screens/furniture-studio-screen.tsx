@@ -19,6 +19,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { FURNITURE_STUDIO_EXAMPLES } from '@/resources/furniture-studio-examples';
 import { assetSource } from '@/resources/asset';
 import { useT } from '@/i18n';
 
@@ -172,29 +173,42 @@ export function FurnitureStudioScreen({
       {tab === 'make' ? (
         <ScrollView contentContainerStyle={[styles.body, column]} testID="studio-make">
           <View style={[styles.hero, { backgroundColor: t.surfaceMuted }]}>
-            <Icon name="sparkles" size={36} color={t.primaryText} />
-            <Text style={[Typography.h2, { color: t.text }]}>
-              {tr('roomShop.studio.heroTitle')}
+            <Text style={[Typography.label, { color: t.text }]}>
+              {tr('roomShop.studio.examplesTitle')}
             </Text>
-            <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-              {tr('roomShop.studio.heroBody')}
-            </Text>
-            <View style={[styles.balance, { backgroundColor: t.surface }]}>
-              <Icon name="ticket" size={18} color={t.primaryText} />
-              <Text style={[Typography.label, { color: t.text }]}>
-                {balance
-                  ? tr('roomShop.studio.credits', { n: balance.available })
-                  : tr('roomShop.studio.creditsChecking')}
-                {balance && balance.reserved > 0
-                  ? tr('roomShop.studio.creditsReserved', { n: balance.reserved })
-                  : ''}
-              </Text>
+            <View style={styles.examples}>
+              {FURNITURE_STUDIO_EXAMPLES.map((example) => (
+                <View key={example.key} style={[styles.example, { backgroundColor: t.surface }]}>
+                  <Image
+                    source={assetSource(example.key)}
+                    contentFit="contain"
+                    style={styles.exampleImage}
+                    accessibilityLabel={tr(example.labelKey)}
+                  />
+                  <Text style={[Typography.caption, { color: t.textMuted }]}>
+                    {tr(example.labelKey)}
+                  </Text>
+                </View>
+              ))}
             </View>
-            {coinBalance != null ? (
-              <Text style={[Typography.label, { color: t.text }]}>
-                {tr('roomShop.studio.coins', { n: coinBalance })}
-              </Text>
-            ) : null}
+            <View style={styles.balances}>
+              <View style={[styles.balance, { backgroundColor: t.surface }]}>
+                <Icon name="ticket" size={18} color={t.primaryText} />
+                <Text style={[Typography.label, { color: t.text }]}>
+                  {balance
+                    ? tr('roomShop.studio.credits', { n: balance.available })
+                    : tr('roomShop.studio.creditsChecking')}
+                  {balance && balance.reserved > 0
+                    ? tr('roomShop.studio.creditsReserved', { n: balance.reserved })
+                    : ''}
+                </Text>
+              </View>
+              {coinBalance != null ? (
+                <Text style={[Typography.label, { color: t.text }]}>
+                  {tr('roomShop.studio.coins', { n: coinBalance })}
+                </Text>
+              ) : null}
+            </View>
             <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
               {tr('roomShop.studio.paymentHint', { n: FURNITURE_GENERATION_COIN_COST })}
             </Text>
@@ -515,11 +529,28 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.six,
   },
   hero: {
-    padding: Spacing.four,
-    borderRadius: Radius.xl,
+    padding: Spacing.three,
+    borderRadius: Radius.lg,
     borderCurve: 'continuous',
     gap: Spacing.three,
     alignItems: 'center',
+  },
+  examples: { flexDirection: 'row', gap: Spacing.two, width: '100%' },
+  example: {
+    flex: 1,
+    minWidth: 0,
+    padding: Spacing.two,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  exampleImage: { width: '100%', aspectRatio: 1 },
+  balances: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
   },
   center: { textAlign: 'center' },
   balance: {

@@ -63,7 +63,7 @@ function CommentRow({
         ) : null}
         <LinkifiedText
           selectable
-          style={[Typography.body, { color: t.text }]}
+          style={[Typography.bodyCompact, { color: t.text }]}
           linkColor={t.primaryText}>
           {comment.content}
         </LinkifiedText>

@@ -291,7 +291,7 @@
       "choosePhoto": "Choose a furniture photo",
       "sending": "Sending photo",
       "submit": "Make it with 1 credit",
-      "photoHint": "A JPG or PNG showing one clear subject · up to 10MB\nIf several subjects are visible, crop the photo to keep only the one you want.\nThe photo is used to create AI furniture. The credit or coins used are returned if generation fails.",
+      "photoHint": "One clear subject · JPG/PNG · Up to 10MB",
       "attendanceTitle": "Check in for 7 days, make your own furniture",
       "attendanceBody": "Check in 7 days in a row to earn 1 credit.",
       "attendanceCta": "View attendance event",
@@ -340,7 +340,7 @@
         "existingFurniture": "Your previously finished furniture is still in your inventory."
       },
       "coins": "Coins: {{n}}",
-      "paymentHint": "Credits are used first. Without a credit, you can create furniture for {{n}} coins.",
+      "paymentHint": "Use a credit or {{n}} coins",
       "submitCoins": "Create for {{n}} coins",
       "tabMake": "Create",
       "tabMine": "My furniture {{n}}",
@@ -356,7 +356,13 @@
       "goMake": "Make one",
       "sheetA11y": "My furniture details",
       "close": "Close",
-      "retryGoMake": "Make it again"
+      "retryGoMake": "Make it again",
+      "examplesTitle": "Create furniture like this",
+      "example": {
+        "guitar": "Guitar",
+        "cup": "Teacup",
+        "bear": "Bear ornament"
+      }
     },
     "minigame": {
       "runner": {

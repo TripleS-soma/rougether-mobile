@@ -927,10 +927,13 @@ export const HouseScreen = memo(function HouseScreen({
         ) : null}
         <CoachTarget id="house-search">
           <RailButton
-            icon={<Icon name="search" size={20} color={t.text} />}
-            label={tr('house.screen.railSearch')}
+            // "집 추가" (2026-11-11 제보) — 종전 라벨 "집 탐색"·돋보기는 구경용으로 읽혀, 이미 집이 있는
+            // 사용자가 집을 더 들일 수 있다는 걸 몰랐다("한 곳만 들어갈 수 있다"). 목적지는 그대로
+            // 집 탐색 화면이다(둘러보기·초대코드·새 집 만들기). 계측 이름 'search'도 그대로 둔다.
+            icon={<Icon name="add" size={20} color={t.text} />}
+            label={tr('house.screen.railAdd')}
             onPress={tapHouseAction('search', onOpenSearch)}
-            accessibilityLabel={tr('house.screen.railSearch')}
+            accessibilityLabel={tr('house.screen.railAdd')}
             t={t}
             Typography={Typography}
           />

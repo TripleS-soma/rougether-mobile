@@ -35,7 +35,7 @@ import { useT } from '@/i18n';
 
 const NO_IMAGES: FeedDraftImage[] = [];
 const VERIFICATION_ONLY: readonly FeedBoardType[] = ['VERIFICATION'];
-const THUMB_SIZE = 96;
+const THUMB_SIZE = 72;
 
 export type FeedComposeScreenProps = {
   /** 올릴 게시판 (서버 #428) — 기본 자유(`FEED_DEFAULT_BOARD`). */
@@ -69,7 +69,7 @@ export type FeedComposeScreenProps = {
 /**
  * 피드 게시물 작성 (#1409) — 위에서 게시판(자유/인증, 서버 #428)을 고르고, 사진(고르는 즉시
  * 올리며 장마다 진행 상태)과 본문 2,000자. 자유는 사진 0–10장이되 사진이 없으면 본문 필수,
- * 인증은 사진 1–10장 + 최근 7일 안에 완료한 루틴 하나(서버 #430) 필수. 고른 사진이 전부
+ * 인증은 사진 선택 + 최근 7일 안에 완료한 루틴 하나 필수. 고른 사진이 전부
  * 올라가야 [올리기]가 켜진다. 순서 바꾸기는 없다.
  */
 export function FeedComposeScreen({
@@ -102,7 +102,7 @@ export function FeedComposeScreen({
   const canSubmit = blocker === null && !submitting && !!onSubmit;
   const canAdd = images.length < FEED_MAX_IMAGES && !submitting;
   // 실패한 장은 썸네일의 [다시]가 안내한다 — 아래 문구는 나머지 사유만.
-  const hint = blocker && blocker !== 'uploadFailed' ? tr(`feed.compose.${blocker}`) : null;
+  const hint = blocker === 'waitUpload' ? tr('feed.compose.waitUpload') : null;
   const optional = board === 'VERIFICATION' || images.length > 0;
 
   return (
@@ -149,11 +149,6 @@ export function FeedComposeScreen({
               disabledOptions={record ? VERIFICATION_ONLY : undefined}
               testID="feed-compose-board"
             />
-            <Text style={[Typography.supporting, styles.boardHint, { color: t.textMuted }]}>
-              {board === 'FREE'
-                ? tr('feed.compose.boardHintFree')
-                : tr('feed.compose.boardHintVerification')}
-            </Text>
           </View>
           {record ? (
             <View style={styles.boardRow}>
@@ -168,99 +163,6 @@ export function FeedComposeScreen({
               </Text>
             </View>
           ) : null}
-          {board === 'VERIFICATION' ? (
-            <FeedRoutinePicker
-              picker={routinePicker}
-              value={routine}
-              onChange={onChangeRoutine}
-              disabled={submitting}
-              today={today}
-            />
-          ) : null}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.thumbs}>
-              {canAdd ? (
-                <Pressable
-                  onPress={onPickImages}
-                  accessibilityRole="button"
-                  accessibilityLabel={tr('feed.compose.addPhotoA11y', {
-                    count: images.length,
-                    max: FEED_MAX_IMAGES,
-                  })}
-                  style={({ pressed }) => [
-                    styles.thumb,
-                    styles.addTile,
-                    { backgroundColor: t.surfaceMuted },
-                    pressed && pressedStyle('dim', t),
-                  ]}>
-                  <Icon name="camera" size={26} color={t.icon} />
-                  <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                    {tr('feed.compose.counter', { count: images.length, max: FEED_MAX_IMAGES })}
-                  </Text>
-                </Pressable>
-              ) : null}
-              {images.map((img, i) => (
-                <View key={img.key} style={styles.thumb} testID={`feed-draft-${img.key}`}>
-                  {img.uri ? (
-                    <Image
-                      source={{ uri: img.uri }}
-                      style={[StyleSheet.absoluteFill, styles.thumbImage]}
-                      contentFit="cover"
-                    />
-                  ) : (
-                    <View
-                      style={[
-                        StyleSheet.absoluteFill,
-                        styles.thumbImage,
-                        { backgroundColor: t.surfaceMuted },
-                      ]}
-                    />
-                  )}
-                  {img.status === 'uploading' ? (
-                    <View
-                      style={[styles.thumbState, { backgroundColor: Overlay.dim }]}
-                      accessibilityLabel={tr('feed.compose.uploading')}>
-                      <Loading size="small" delayMs={0} />
-                    </View>
-                  ) : img.status === 'failed' ? (
-                    <Pressable
-                      onPress={() => onRetryImage?.(img.key)}
-                      accessibilityRole="button"
-                      accessibilityLabel={tr('feed.compose.retryUploadA11y', { index: i + 1 })}
-                      accessibilityHint={img.error}
-                      style={({ pressed }) => [
-                        styles.thumbState,
-                        { backgroundColor: Overlay.strong },
-                        pressed && pressedStyle('dim', t),
-                      ]}>
-                      <Icon name="refresh" size={22} color={t.onPrimary} />
-                      <Text style={[Typography.supporting, { color: t.onPrimary }]}>
-                        {tr('feed.compose.uploadFailed')}
-                      </Text>
-                    </Pressable>
-                  ) : null}
-                  {!submitting ? (
-                    <Pressable
-                      onPress={() => onRemoveImage?.(img.key)}
-                      accessibilityRole="button"
-                      accessibilityLabel={tr('feed.compose.removePhotoA11y', { index: i + 1 })}
-                      hitSlop={Spacing.two}
-                      style={({ pressed }) => [
-                        styles.remove,
-                        { backgroundColor: Overlay.strong },
-                        pressed && pressedStyle('dim', t),
-                      ]}>
-                      <Icon name="close" size={14} color={t.onPrimary} />
-                    </Pressable>
-                  ) : null}
-                </View>
-              ))}
-            </View>
-          </ScrollView>
-          {hint ? (
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>{hint}</Text>
-          ) : null}
-
           <TextInput
             value={content}
             onChangeText={(v) => onChangeContent?.(v.slice(0, FEED_MAX_CONTENT))}
@@ -274,15 +176,127 @@ export function FeedComposeScreen({
             }
             placeholderTextColor={t.textMuted}
             accessibilityLabel={tr('feed.compose.contentLabel')}
-            style={[
-              Typography.body,
-              styles.content,
-              { backgroundColor: t.surfaceMuted, color: t.text },
-            ]}
+            style={[Typography.bodyCompact, styles.content, { color: t.text }]}
           />
-          <Text style={[Typography.supporting, styles.counter, { color: t.textMuted }]}>
-            {tr('feed.compose.counter', { count: content.length, max: FEED_MAX_CONTENT })}
-          </Text>
+          <View style={[styles.composerTools, { borderColor: t.border }]}>
+            {canAdd && images.length === 0 ? (
+              <Pressable
+                onPress={onPickImages}
+                accessibilityRole="button"
+                accessibilityLabel={tr('feed.compose.addPhotoA11y', {
+                  count: images.length,
+                  max: FEED_MAX_IMAGES,
+                })}
+                style={({ pressed }) => [styles.photoAction, pressed && pressedStyle('dim', t)]}>
+                <Icon name="image" size={22} color={t.primaryText} />
+                <Text style={[Typography.labelCompact, { color: t.primaryText }]}>
+                  {tr('feed.compose.addPhoto')}
+                </Text>
+              </Pressable>
+            ) : (
+              <View />
+            )}
+            <Text style={[Typography.caption, { color: t.textMuted }]}>
+              {tr('feed.compose.counter', { count: content.length, max: FEED_MAX_CONTENT })}
+            </Text>
+          </View>
+          {images.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.thumbs}>
+                {canAdd ? (
+                  <Pressable
+                    onPress={onPickImages}
+                    accessibilityRole="button"
+                    accessibilityLabel={tr('feed.compose.addPhotoA11y', {
+                      count: images.length,
+                      max: FEED_MAX_IMAGES,
+                    })}
+                    style={({ pressed }) => [
+                      styles.thumb,
+                      styles.addTile,
+                      { backgroundColor: t.surfaceMuted },
+                      pressed && pressedStyle('dim', t),
+                    ]}>
+                    <Icon name="camera" size={26} color={t.icon} />
+                    <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                      {tr('feed.compose.counter', { count: images.length, max: FEED_MAX_IMAGES })}
+                    </Text>
+                  </Pressable>
+                ) : null}
+                {images.map((img, i) => (
+                  <View key={img.key} style={styles.thumb} testID={`feed-draft-${img.key}`}>
+                    {img.uri ? (
+                      <Image
+                        source={{ uri: img.uri }}
+                        style={[StyleSheet.absoluteFill, styles.thumbImage]}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <View
+                        style={[
+                          StyleSheet.absoluteFill,
+                          styles.thumbImage,
+                          { backgroundColor: t.surfaceMuted },
+                        ]}
+                      />
+                    )}
+                    {img.status === 'uploading' ? (
+                      <View
+                        style={[styles.thumbState, { backgroundColor: Overlay.dim }]}
+                        accessibilityLabel={tr('feed.compose.uploading')}>
+                        <Loading size="small" delayMs={0} />
+                      </View>
+                    ) : img.status === 'failed' ? (
+                      <Pressable
+                        onPress={() => onRetryImage?.(img.key)}
+                        accessibilityRole="button"
+                        accessibilityLabel={tr('feed.compose.retryUploadA11y', { index: i + 1 })}
+                        accessibilityHint={img.error}
+                        style={({ pressed }) => [
+                          styles.thumbState,
+                          { backgroundColor: Overlay.strong },
+                          pressed && pressedStyle('dim', t),
+                        ]}>
+                        <Icon name="refresh" size={22} color={t.onPrimary} />
+                        <Text style={[Typography.supporting, { color: t.onPrimary }]}>
+                          {tr('feed.compose.uploadFailed')}
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                    {!submitting ? (
+                      <Pressable
+                        onPress={() => onRemoveImage?.(img.key)}
+                        accessibilityRole="button"
+                        accessibilityLabel={tr('feed.compose.removePhotoA11y', { index: i + 1 })}
+                        hitSlop={Spacing.two}
+                        style={({ pressed }) => [
+                          styles.remove,
+                          { backgroundColor: Overlay.strong },
+                          pressed && pressedStyle('dim', t),
+                        ]}>
+                        <Icon name="close" size={14} color={t.onPrimary} />
+                      </Pressable>
+                    ) : null}
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          ) : null}
+          {hint ? (
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>{hint}</Text>
+          ) : null}
+
+          {board === 'VERIFICATION' ? (
+            <View style={styles.routineSection}>
+              <FeedRoutinePicker
+                picker={routinePicker}
+                value={routine}
+                onChange={onChangeRoutine}
+                disabled={submitting}
+                today={today}
+              />
+            </View>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -303,9 +317,7 @@ const styles = StyleSheet.create({
   boardRow: {
     gap: Spacing.one,
   },
-  boardHint: {
-    textAlign: 'center',
-  },
+  routineSection: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: Spacing.three },
   submit: {
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.one,
@@ -350,13 +362,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   content: {
-    minHeight: 160,
-    borderRadius: Radius.lg,
-    borderCurve: 'continuous',
-    padding: Spacing.three,
+    minHeight: 180,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: 0,
     textAlignVertical: 'top',
   },
-  counter: {
-    alignSelf: 'flex-end',
+  composerTools: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingBottom: Spacing.two,
   },
+  photoAction: { flexDirection: 'row', alignItems: 'center', minHeight: 44, gap: Spacing.two },
 });

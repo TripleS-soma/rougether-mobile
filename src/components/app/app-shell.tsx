@@ -8,12 +8,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 
-import { NAV_ORDER, SCREEN_FOR_TAB, type Screen } from '@/components/app/navigation';
+import { livesInPager, NAV_ORDER, SCREEN_FOR_TAB, type Screen } from '@/components/app/navigation';
 import { PhoneColumn } from '@/components/app/app-frame';
 import { TabPager } from '@/components/app/tab-pager';
 import { useAppNavigation } from '@/components/app/use-app-navigation';
 import { requestReviewAtGoodMoment, useStoreReview } from '@/hooks/use-store-review';
-import { useScreenTransition } from '@/components/app/use-screen-transition';
+import { usePagerTab, useScreenTransition } from '@/components/app/use-screen-transition';
 import { useFriendVisit } from '@/components/app/use-friend-visit';
 import { hasNoHouses, useHousePages } from '@/components/app/use-house-pages';
 import { useFeedPages } from '@/components/app/use-feed-pages';
@@ -676,59 +676,57 @@ export function AppShell({
     setScreen((s) => (s === 'house' ? 'houseSearch' : s));
   }, [noHouses]);
 
-  // 현재 화면 트리 — 슬라이드 전환(#1094)이 직전 렌더의 노드를 떠나는 층으로 들고 있는다.
+  // 탭 층 — 하단 탭 서피스는 수평 페이저에 상주한다 (#563). 스와이프 중 이웃 화면이 손가락을 따라
+  // 끝까지 보이고, 비활성 페이지는 페이저가 드래그/정착 중에만 그린다.
+  // 서브화면에 가 있는 동안에도 언마운트하지 않는다 (2026-11-11 실기기 영상) — 전환 훅이 밑에 숨겨
+  // 두었다가 그대로 다시 민다. 예전엔 서브화면에 들어갈 때마다 다섯 탭을 통째로 내렸다 올려, 방으로
+  // 돌아오는 슬라이드가 약 240ms 멈췄다. 주간 보기(#1327)를 페이저의 달력 페이지가 제자리에서
+  // 접히게 한 것(2026-11-04)과 같은 이유다. 서브화면 동안 페이저는 마지막 탭에 서서 쉰다.
+  const pagerTab = usePagerTab(screen);
+  const tabsNode = (
+    <TabPager
+      index={NAV_ORDER.indexOf(pagerTab)}
+      onIndexChange={handlePageChange}
+      lock={pagerLock}
+      suspended={!livesInPager(screen)}>
+      {/* 달력은 나의 방과 같은 데이터·콜백을 쓰는 두 번째 인스턴스 (#1138) — 방
+          캔버스는 view='room'일 때만 그려지므로 비용은 목록 하나 분이다. */}
+      <MyRoomScreen
+        {...myRoomPages.tabProps}
+        view="room"
+        onOpenMarket={marketPages.openMarket}
+        onSpeakerPress={toggleSpeaker}
+        onSpeakerLongPress={openSpeaker}
+        speakerPlaying={speaker.playing}
+        {...tabScroll.myRoom}
+        onOpenFurnitureStudio={openFurnitureStudio}
+        onOpenMinigames={minigames.openMinigames}
+      />
+      {screen === 'calendarWeek' ? (
+        <MyRoomScreen
+          {...myRoomPages.calendarWeekProps}
+          view="calendar"
+          backInterceptorRef={weekBackRef}
+          {...tabScroll.calendar}
+        />
+      ) : (
+        <MyRoomScreen {...myRoomPages.calendarTabProps} view="calendar" {...tabScroll.calendar} />
+      )}
+      {/* 집은 2단(#1230) 프레임 안에서도 폰 컬럼 — 캔버스가 1200px로 늘지 않게.
+          내 정보는 스스로 콘텐츠 폭을 제한하므로(useResponsiveColumn) 감싸지 않는다 —
+          감싸면 배경(블롭)까지 480px에 갇혀 설정 화면과 달리 양옆이 회색으로 남았다. */}
+      <PhoneColumn>
+        <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
+      </PhoneColumn>
+      {/* 피드 (#1409) — 집과 내 정보 사이. 꺼져 있으면 페이지 자체가 없다(NAV_ORDER와 같이). */}
+      {FEED_ENABLED ? <FeedScreen {...feedPages.tabProps} {...tabScroll.feed} /> : null}
+      <MyPageScreen {...settingsSurface.myPageProps} {...tabScroll.myPage} />
+    </TabPager>
+  );
+
+  // 현재 서브화면 트리 — 슬라이드 전환(#1094)이 직전 렌더의 노드를 떠나는 층으로 들고 있는다.
   const screenNode = (
     <>
-      {/* 하단 탭 3서피스는 수평 페이저에 상주한다 (#563) — 스와이프 중
-        이웃 화면이 손가락을 따라 끝까지 보인다. 비활성 페이지는 페이저가
-        드래그/정착 중에만 그린다. 서브화면들은 기존처럼 단독 렌더. */}
-      {/* 주간 보기(#1327)도 페이저의 달력 페이지가 제자리에서 접힌다 (2026-11-04 실기기 영상) —
-          예전엔 별도 MyRoomScreen을 마운트하고 페이저(다섯 탭)를 언마운트해, 날짜 탭 뒤 약 300ms
-          화면이 얼었다가 접힘이 몰아쳤고, 돌아올 땐 페이저 재마운트로 깜빡였다. */}
-      {activeTab || screen === 'calendarWeek' ? (
-        <TabPager
-          index={NAV_ORDER.indexOf(activeTab ?? 'calendar')}
-          onIndexChange={handlePageChange}
-          lock={pagerLock}>
-          {/* 달력은 나의 방과 같은 데이터·콜백을 쓰는 두 번째 인스턴스 (#1138) — 방
-              캔버스는 view='room'일 때만 그려지므로 비용은 목록 하나 분이다. */}
-          <MyRoomScreen
-            {...myRoomPages.tabProps}
-            view="room"
-            onOpenMarket={marketPages.openMarket}
-            onSpeakerPress={toggleSpeaker}
-            onSpeakerLongPress={openSpeaker}
-            speakerPlaying={speaker.playing}
-            {...tabScroll.myRoom}
-            onOpenFurnitureStudio={openFurnitureStudio}
-            onOpenMinigames={minigames.openMinigames}
-          />
-          {screen === 'calendarWeek' ? (
-            <MyRoomScreen
-              {...myRoomPages.calendarWeekProps}
-              view="calendar"
-              backInterceptorRef={weekBackRef}
-              {...tabScroll.calendar}
-            />
-          ) : (
-            <MyRoomScreen
-              {...myRoomPages.calendarTabProps}
-              view="calendar"
-              {...tabScroll.calendar}
-            />
-          )}
-          {/* 집은 2단(#1230) 프레임 안에서도 폰 컬럼 — 캔버스가 1200px로 늘지 않게.
-              내 정보는 스스로 콘텐츠 폭을 제한하므로(useResponsiveColumn) 감싸지 않는다 —
-              감싸면 배경(블롭)까지 480px에 갇혀 설정 화면과 달리 양옆이 회색으로 남았다. */}
-          <PhoneColumn>
-            <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
-          </PhoneColumn>
-          {/* 피드 (#1409) — 집과 내 정보 사이. 꺼져 있으면 페이지 자체가 없다(NAV_ORDER와 같이). */}
-          {FEED_ENABLED ? <FeedScreen {...feedPages.tabProps} {...tabScroll.feed} /> : null}
-          <MyPageScreen {...settingsSurface.myPageProps} {...tabScroll.myPage} />
-        </TabPager>
-      ) : null}
-
       {minigames.subScreen}
       {screen === 'furnitureStudio' ? (
         <FurnitureStudio
@@ -821,7 +819,7 @@ export function AppShell({
       {settingsSurface.subScreen}
     </>
   );
-  const layers = useScreenTransition({ screen, addReturnScreen, node: screenNode });
+  const layers = useScreenTransition({ screen, addReturnScreen, tabsNode, node: screenNode });
 
   // 셸 자식에 넘기는 콜백은 참조를 고정한다 — 인라인이면 셸이 렌더될 때마다
   // 하단 바·미션 시트가 같이 다시 그려진다(성능 장부 R9).
@@ -856,12 +854,16 @@ export function AppShell({
         value={screen === 'minigameRunner' ? minigames.activeSessionId : null}>
         <GestureDetector gesture={edgeBackPan}>
           <View style={styles.content}>
-            {/* 두 층 슬라이드 (#1094) — 전환 중 300ms만 두 화면이 함께 산다. */}
+            {/* 층 슬라이드 (#1094) — 탭 층은 상주하고, 서브화면은 전환 중 300ms만 두 층이 함께 산다. */}
             {layers.map((layer) => (
               <Animated.View
                 key={layer.key}
+                testID={`screen-layer-${layer.key}`}
                 pointerEvents={layer.pointerEvents}
-                style={[styles.layer, layer.style]}>
+                // 밑에 쉬는 탭 층은 스크린 리더에도 없는 화면이다.
+                accessibilityElementsHidden={layer.hidden}
+                importantForAccessibility={layer.hidden ? 'no-hide-descendants' : 'auto'}
+                style={[styles.layer, layer.style, layer.hidden ? styles.hiddenLayer : null]}>
                 {layer.node}
               </Animated.View>
             ))}
@@ -942,5 +944,10 @@ const styles = StyleSheet.create({
   },
   layer: {
     ...StyleSheet.absoluteFillObject,
+  },
+  // display:none이 아니라 투명 — 레이아웃을 그대로 둬야 돌아올 때 다시 재지 않고(폭 0 → 실제 폭으로
+  // 페이저가 한 프레임 깨진다) 그 자리에서 밀려 들어온다. 투명한 뷰는 그려지지 않는다.
+  hiddenLayer: {
+    opacity: 0,
   },
 });

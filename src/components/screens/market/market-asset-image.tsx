@@ -27,6 +27,7 @@ export function MarketAssetImage({
   const tr = useT();
   return (
     <View
+      testID="market-asset-frame"
       style={[styles.frame, { width: size, height: size, backgroundColor: t.surfaceMuted }, style]}>
       {isCdnKey(assetKey) ? (
         <Image

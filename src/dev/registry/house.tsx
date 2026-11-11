@@ -269,10 +269,21 @@ export const houseEntries: GalleryEntry[] = [
             { key: 's1', sequence: 1, senderUserId: 2, senderNickname: '이웃', content: '오늘 루틴 다들 했어요?', createdAt: '2026-09-21T12:58:00Z', unreadCount: 0, status: 'sent' }, // prettier-ignore
             { key: 's2', sequence: 2, senderUserId: 2, senderNickname: '이웃', content: '저는 아침 스트레칭 완료!', createdAt: '2026-09-21T12:59:00Z', unreadCount: 0, status: 'sent' }, // prettier-ignore
             { key: 's3', sequence: 3, senderUserId: 1, senderNickname: '나', content: '저도 방금 끝냈어요 🙌', createdAt: '2026-09-21T13:00:00Z', unreadCount: 2, status: 'sent' }, // prettier-ignore
+            {
+              key: 'photo',
+              senderUserId: 1,
+              content: '',
+              localImageUri:
+                'data:image/svg+xml;utf8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22320%22%3E%3Crect fill=%22%23e8eedf%22 width=%22320%22 height=%22320%22/%3E%3Cpath fill=%22%2392ac75%22 d=%22M0 280L100 140L170 220L240 110L320 280Z%22/%3E%3Ccircle fill=%22%23edc66e%22 cx=%2270%22 cy=%2270%22 r=%2230%22/%3E%3C/svg%3E',
+              unreadCount: 2,
+              status: 'sent',
+            },
             { key: 'cA', clientMessageId: 'A', senderUserId: 1, content: '내일도 같이 해요', unreadCount: 0, status: 'pending' }, // prettier-ignore
             { key: 'cB', clientMessageId: 'B', senderUserId: 1, content: '전송 실패 예시', unreadCount: 0, status: 'failed' }, // prettier-ignore
           ]}
           onSend={() => {}}
+          onPickPhoto={() => {}}
+          onReport={() => {}}
           onRetrySend={() => {}}
           onVisible={() => {}}
           onBack={() => {}}

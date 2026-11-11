@@ -1,4 +1,5 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
 import type { MarketListing } from '@/api/market-shop';
 import {
@@ -37,6 +38,23 @@ describe('고정가 거래소', () => {
     expect(ui.getByText(/30코인으로 구매해 가구함에 보관해요/)).toBeTruthy();
     await fireEvent.press(ui.getByLabelText('구매하기'));
     await waitFor(() => expect(buy).toHaveBeenCalledWith(30));
+  });
+
+  it('상세 그림은 화면 폭에 맞춘다 — 고정 512px이라 폰에서 오른쪽이 잘렸다 (2026-11-11 제보)', async () => {
+    const ui = await render(
+      <FixedPriceListingScreen
+        listing={{ ...item, assetKey: 'items/photo-furniture/furniture/a.webp' }}
+        coinBalance={100}
+      />,
+    );
+    expect(ui.getByLabelText('고양이 소파 이미지')).toBeTruthy();
+    // 그림을 감싼 틀이 폭을 정한다.
+    const frame = ui.getByTestId('market-asset-frame');
+    const style = StyleSheet.flatten(frame.props.style as StyleProp<ViewStyle>);
+    expect(style.width).toBe('100%');
+    expect(style.height).toBeUndefined();
+    expect(style.aspectRatio).toBe(1);
+    expect(style.maxWidth).toBeLessThanOrEqual(400);
   });
 
   it('제작자는 원본 보관 안내와 가격 변경, 판매 중지 기능만 본다', async () => {
