@@ -17,6 +17,7 @@ import { fetchWeeklyReport, fetchWeeklyReports, getSessionUserId } from '@/api';
 import type { WeeklyReportSummaryItem } from '@/api/types';
 import { queryKeys } from '@/lib/query-keys';
 import { loadLastReadReportId, saveLastReadReportId } from '@/lib/weekly-report-read';
+import { loadDismissedReportWeek, saveDismissedReportWeek } from '@/lib/weekly-report-reminder';
 
 /** 서버 정렬을 믿지 않고 주 시작일 최신순으로 직접 고른다. */
 function newestOf(items: WeeklyReportSummaryItem[]): WeeklyReportSummaryItem | null {
@@ -31,6 +32,21 @@ export function useWeeklyReport(enabled = true) {
   // 마지막으로 열어본 회고 id — 새 회고가 왔는지(탭 점) 판단한다. undefined는
   // "아직 저장소를 안 읽음"이라 그동안은 점을 찍지 않는다(깜빡임 방지).
   const [lastReadId, setLastReadId] = useState<number | null | undefined>(undefined);
+  const [dismissedReminder, setDismissedReminder] = useState<{
+    userId: number | undefined;
+    week: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let active = true;
+    void loadDismissedReportWeek(userId).then((week) => {
+      if (active) setDismissedReminder({ userId, week });
+    });
+    return () => {
+      active = false;
+    };
+  }, [enabled, userId]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -101,8 +117,41 @@ export function useWeeklyReport(enabled = true) {
   const unread =
     lastReadId !== undefined && latest?.reportId != null && lastReadId !== latest.reportId;
 
+  const reminderWeek = latest?.weekStartDate ?? String(latest?.reportId ?? '');
+  const shouldAnnounce =
+    enabled &&
+    unread &&
+    dismissedReminder != null &&
+    dismissedReminder.userId === userId &&
+    dismissedReminder.week !== reminderWeek;
+  const dismissReminder = useCallback(() => {
+    if (latest?.reportId == null) return;
+    setDismissedReminder({ userId, week: reminderWeek });
+    void saveDismissedReportWeek(userId, reminderWeek);
+  }, [latest?.reportId, reminderWeek, userId]);
+
   return useMemo(
-    () => ({ latest, detail, loading, loaded, unread, loadDetail, markRead }),
-    [latest, detail, loading, loaded, unread, loadDetail, markRead],
+    () => ({
+      latest,
+      detail,
+      loading,
+      loaded,
+      unread,
+      shouldAnnounce,
+      dismissReminder,
+      loadDetail,
+      markRead,
+    }),
+    [
+      latest,
+      detail,
+      loading,
+      loaded,
+      unread,
+      shouldAnnounce,
+      dismissReminder,
+      loadDetail,
+      markRead,
+    ],
   );
 }

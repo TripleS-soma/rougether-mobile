@@ -354,7 +354,8 @@
       "fallback": "We couldn't write a review this week, so here are just the stats.",
       "weekdayA11y": "{{weekday}}, {{done}} of {{total}} done",
       "weekdayNoneA11y": "{{weekday}}, nothing scheduled",
-      "routineA11y": "{{title}}, {{done}} of {{total}} done"
+      "routineA11y": "{{title}}, {{done}} of {{total}} done",
+      "hideThisWeek": "Don't show again this week"
     },
     "recommendation": {
       "stale": "This suggestion is no longer valid",
