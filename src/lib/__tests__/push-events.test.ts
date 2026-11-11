@@ -5,6 +5,8 @@
 import * as Notifications from 'expo-notifications';
 
 import {
+  chatPushGroupKey,
+  dismissChatPushes,
   initPushDisplay,
   onNotificationReceived,
   onNotificationTap,
@@ -251,5 +253,85 @@ describe('iOS FCM 푸시 (#1582)', () => {
     unsub();
     sub.mockRestore();
     spy.mockRestore();
+  });
+});
+
+describe('집 채팅 알림 한 번에 지우기 (#1746)', () => {
+  const presented = (
+    identifier: string,
+    data?: Record<string, unknown>,
+    payload?: Record<string, unknown>,
+  ) => ({
+    date: 0,
+    request: {
+      identifier,
+      content: { title: '우리 집', body: '이웃: 안녕', data: data ?? {} },
+      trigger: payload ? { type: 'push', payload } : null,
+    },
+  });
+
+  async function dismissedFor(houseId: number, tray: unknown[]): Promise<string[]> {
+    const list = jest
+      .spyOn(Notifications, 'getPresentedNotificationsAsync')
+      .mockResolvedValue(tray as never);
+    const dismiss = jest.spyOn(Notifications, 'dismissNotificationAsync').mockResolvedValue();
+    await dismissChatPushes(houseId);
+    const ids = dismiss.mock.calls.map(([id]) => id);
+    list.mockRestore();
+    dismiss.mockRestore();
+    return ids;
+  }
+
+  it('묶음 키는 서버와 같은 형식이다', () => {
+    expect(chatPushGroupKey(20)).toBe('chat-house-20');
+  });
+
+  it('그 집의 채팅 알림만 모두 지우고, 다른 집·다른 종류는 남긴다', async () => {
+    const ids = await dismissedFor(20, [
+      presented('a', { type: 'CHAT_MESSAGE', houseId: '20', roomId: '5' }),
+      presented('b', { type: 'CHAT_MESSAGE', houseId: '20', roomId: '5' }),
+      presented('c', { type: 'CHAT_MESSAGE', houseId: '21', roomId: '6' }),
+      presented('d', { type: 'FRIEND_CHEER', houseId: '20' }),
+    ]);
+    expect(ids).toEqual(['a', 'b']);
+  });
+
+  it('iOS는 data가 비어 있어도 푸시 트리거 payload로 알아본다 (#1582)', async () => {
+    const ids = await dismissedFor(20, [
+      presented('ios-1', {}, { type: 'CHAT_MESSAGE', houseId: '20', roomId: '5' }),
+      presented('ios-2', {}, { type: 'CHAT_MESSAGE', houseId: '3', roomId: '9' }),
+    ]);
+    expect(ids).toEqual(['ios-1']);
+  });
+
+  it('Android에서 FCM이 직접 띄운 알림은 tag로 알아본다 — 앞자리만 같은 집은 건드리지 않는다', async () => {
+    const mine = 'expo-notifications://foreign_notifications?tag=chat-house-20&id=0';
+    const other = 'expo-notifications://foreign_notifications?tag=chat-house-200&id=0';
+    const untagged = 'expo-notifications://foreign_notifications?id=7';
+    const ids = await dismissedFor(20, [presented(mine), presented(other), presented(untagged)]);
+    expect(ids).toEqual([mine]);
+  });
+
+  it('목록을 못 읽거나 하나가 실패해도 던지지 않는다', async () => {
+    const list = jest
+      .spyOn(Notifications, 'getPresentedNotificationsAsync')
+      .mockRejectedValue(new Error('no permission'));
+    await expect(dismissChatPushes(20)).resolves.toBeUndefined();
+    list.mockRestore();
+
+    const tray = jest
+      .spyOn(Notifications, 'getPresentedNotificationsAsync')
+      .mockResolvedValue([
+        presented('a', { type: 'CHAT_MESSAGE', houseId: '20' }),
+        presented('b', { type: 'CHAT_MESSAGE', houseId: '20' }),
+      ] as never);
+    const dismiss = jest
+      .spyOn(Notifications, 'dismissNotificationAsync')
+      .mockRejectedValueOnce(new Error('gone'))
+      .mockResolvedValue();
+    await expect(dismissChatPushes(20)).resolves.toBeUndefined();
+    expect(dismiss).toHaveBeenCalledTimes(2);
+    tray.mockRestore();
+    dismiss.mockRestore();
   });
 });

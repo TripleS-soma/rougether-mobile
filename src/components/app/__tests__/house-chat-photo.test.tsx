@@ -2,6 +2,7 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 
 import { HouseChatPage } from '@/components/app/house-chat-page';
 import { pickChatPhoto } from '@/lib/pick-chat-photo';
+import { dismissChatPushes } from '@/lib/push-events';
 import { queryWrapper } from '@/test-utils/query-wrapper';
 
 const mockSendPhoto = jest.fn();
@@ -10,7 +11,10 @@ jest.mock('@/hooks/use-house-chat', () => ({
 }));
 jest.mock('@/hooks/use-chat-mute', () => ({ useChatMute: () => ({ loaded: false }) }));
 jest.mock('@/lib/pick-chat-photo', () => ({ pickChatPhoto: jest.fn() }));
-jest.mock('@/lib/push-events', () => ({ setForegroundPushFilter: jest.fn() }));
+jest.mock('@/lib/push-events', () => ({
+  setForegroundPushFilter: jest.fn(),
+  dismissChatPushes: jest.fn(async () => {}),
+}));
 
 const selected = {
   uri: 'file:///chosen.jpg',
@@ -70,4 +74,9 @@ it('앨범을 연 상태에서 집이 바뀌면 이전 집의 선택 결과를 �
   await act(async () => finish(selected));
   expect(ui.queryByRole('button', { name: '사진 보내기' })).toBeNull();
   expect(mockSendPhoto).not.toHaveBeenCalled();
+});
+
+it('채팅을 열면 그 집의 채팅 알림을 트레이에서 지운다 (#1746)', async () => {
+  await render(<HouseChatPage houseId={20} onBack={jest.fn()} />, { wrapper: queryWrapper() });
+  expect(dismissChatPushes).toHaveBeenCalledWith(20);
 });
