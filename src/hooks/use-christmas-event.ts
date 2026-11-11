@@ -163,6 +163,7 @@ export function useChristmasEvent({ enabled = true } = {}) {
     refreshWallet,
   ]);
 
+  const attemptedCharacter = useRef(new Set<string>());
   const claimCharacter = useCallback(async (): Promise<{
     result: AttendanceCharacterRewardResult | null;
     recovered: boolean;
@@ -178,6 +179,7 @@ export function useChristmasEvent({ enabled = true } = {}) {
     lock.current = true;
     setActionBusy(true);
     try {
+      attemptedCharacter.current.add(`${userId}:${eventId}`);
       const result = await claimCharacterMutation(eventId);
       if (getSessionUserId() !== userId) return { result: null, recovered: false };
       if (usable(result.status))
@@ -225,7 +227,6 @@ export function useChristmasEvent({ enabled = true } = {}) {
     toast,
   ]);
 
-  const attemptedCharacter = useRef(new Set<string>());
   useEffect(() => {
     if (
       !enabled ||
@@ -242,7 +243,6 @@ export function useChristmasEvent({ enabled = true } = {}) {
       return;
     const key = `${userId}:${eventId}`;
     if (attemptedCharacter.current.has(key)) return;
-    attemptedCharacter.current.add(key);
     // 이미 3일을 받은 계정은 별도 수령만 요청함. 오늘 출석은 대신하지 않음.
     void claimCharacter();
   }, [

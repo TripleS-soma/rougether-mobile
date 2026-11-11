@@ -15,6 +15,7 @@ import { useT } from '@/i18n';
 import { NATIVE_DRIVER } from '@/utils/animation';
 
 export const CHRISTMAS_REWARD_SETTLE_MS = 1100;
+export const CHRISTMAS_CHARACTER_REWARD_SETTLE_MS = 2600;
 
 function GiftEnvelope({ day, claimed, next }: { day: number; claimed: boolean; next: boolean }) {
   const t = useTokens();
@@ -135,7 +136,11 @@ export function ChristmasAttendanceModal({
     // Idempotent recovery closes without pretending to award coins again.
     const timer = setTimeout(
       () => onCloseRef.current(),
-      result.newCheckIn ? (result.characterGrantedNow ? 2600 : CHRISTMAS_REWARD_SETTLE_MS) : 0,
+      result.newCheckIn
+        ? result.characterGrantedNow
+          ? CHRISTMAS_CHARACTER_REWARD_SETTLE_MS
+          : CHRISTMAS_REWARD_SETTLE_MS
+        : 0,
     );
     return () => {
       clearTimeout(timer);

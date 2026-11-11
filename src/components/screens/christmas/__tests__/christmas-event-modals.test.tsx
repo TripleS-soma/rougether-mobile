@@ -4,6 +4,7 @@ import type { AttendanceCheckInResult, AttendanceStatus } from '@/api/events';
 import {
   ChristmasAttendanceModal,
   CHRISTMAS_REWARD_SETTLE_MS,
+  CHRISTMAS_CHARACTER_REWARD_SETTLE_MS,
 } from '@/components/screens/christmas/christmas-attendance-modal';
 import { ChristmasEventPopup } from '@/components/screens/christmas/christmas-event-popup';
 
@@ -209,6 +210,8 @@ it('shows the day-3 fox, supports a missed character claim and keeps the earned 
   expect(screen.getByText('받았어요')).toBeTruthy();
   await act(() => jest.advanceTimersByTime(CHRISTMAS_REWARD_SETTLE_MS));
   expect(attendanceProps.onClose).not.toHaveBeenCalled();
-  await act(() => jest.advanceTimersByTime(1500));
+  await act(() =>
+    jest.advanceTimersByTime(CHRISTMAS_CHARACTER_REWARD_SETTLE_MS - CHRISTMAS_REWARD_SETTLE_MS),
+  );
   expect(attendanceProps.onClose).toHaveBeenCalledTimes(1);
 });
