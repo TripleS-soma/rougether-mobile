@@ -14,6 +14,7 @@ on:
         required: true
 jobs:
   restore:
+    if: inputs.expected_runtime == 'pre-incident-artifacts'
     runs-on: ubuntu-latest
     concurrency:
       group: hotfix-ota
@@ -51,3 +52,26 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: eas update:republish --group af881655-11e1-47b7-b4d2-72caf8fa8609 --destination-branch production --platform android --message 'Emergency restore pre-Pepero Android artifact' --json --non-interactive
+  inspect:
+    if: inputs.expected_runtime == 'read-only-endpoint-inspection'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: '23.2.0'
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Inspect only public API and asset endpoints
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          cat > /tmp/print-public-endpoints.cjs <<'JS'
+          console.log(JSON.stringify({apiBase: process.env.EXPO_PUBLIC_API_URL, assetBase: process.env.EXPO_PUBLIC_ASSET_URL}));
+          JS
+          eas env:exec production 'node /tmp/print-public-endpoints.cjs' --non-interactive
+          eas env:exec preview 'node /tmp/print-public-endpoints.cjs' --non-interactive
