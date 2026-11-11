@@ -13,6 +13,7 @@ import { fetchFeedImage } from '@/api/feed';
 import type { ReportReason } from '@/api/types';
 import { type Screen } from '@/components/app/navigation';
 import { feedRecordDraftText } from '@/components/feed/feed-minigame-record';
+import { FeedAuthorHouseSheet } from '@/components/feed/feed-author-house-sheet';
 import { FeedComposeScreen } from '@/components/screens/feed-compose-screen';
 import { FeedPostScreen } from '@/components/screens/feed-post-screen';
 import type {
@@ -25,6 +26,7 @@ import type { FeedScreenProps } from '@/components/screens/feed-screen';
 import { useToast } from '@/components/ui/toast';
 import { FEED_ENABLED, FEED_MAX_IMAGES } from '@/constants/feed';
 import { useFeed } from '@/hooks/use-feed';
+import { useFeedAuthorHouses } from '@/hooks/use-feed-author-houses';
 import { useFeedCompose } from '@/hooks/use-feed-compose';
 import { useFeedPost, useFeedReplies } from '@/hooks/use-feed-post';
 import { useModeration } from '@/hooks/use-moderation';
@@ -54,7 +56,9 @@ function FeedRepliesQuery({
 export function useFeedPages({
   nav,
   openGame,
+  onOpenHouse,
 }: {
+  onOpenHouse?: (houseId: number) => void;
   /** 기록 카드의 [나도 도전하기] — 미니게임 서피스의 게임 열기(`useMinigameSurface().openGame`). */
   openGame?: (gameCode: string) => void;
   nav: {
@@ -92,6 +96,45 @@ export function useFeedPages({
     [setScreen],
   );
   const detail = useFeedPost(FEED_ENABLED ? postId : null, { onError: showError });
+  const [housePickerOpen, setHousePickerOpen] = useState(false);
+  const authorHouses = useFeedAuthorHouses(
+    postId,
+    FEED_ENABLED && screen === 'feedPost' && housePickerOpen,
+    showError,
+  );
+  useEffect(() => {
+    if (screen !== 'feedPost') setHousePickerOpen(false);
+  }, [screen]);
+  const openAuthorHouses = useCallback(() => setHousePickerOpen(true), []);
+  const closeAuthorHouses = useCallback(() => setHousePickerOpen(false), []);
+  const houseContextRef = useLatestRef({ screen, postId, onOpenHouse });
+  const openSelectedHouse = useCallback(
+    (houseId: number) => {
+      setHousePickerOpen(false);
+      houseContextRef.current.onOpenHouse?.(houseId);
+    },
+    [houseContextRef],
+  );
+  const joinAuthorHouse = authorHouses.join;
+  const handleJoinAuthorHouse = useCallback(
+    async (houseId: number) => {
+      const origin = postId;
+      const result = await joinAuthorHouse(houseId);
+      if (
+        !result ||
+        houseContextRef.current.screen !== 'feedPost' ||
+        houseContextRef.current.postId !== origin
+      )
+        return;
+      setHousePickerOpen(false);
+      if (result === 'PENDING') toast(i18n.t('feed.house.requested'), 'success');
+      else {
+        toast(i18n.t('feed.house.joined'), 'success');
+        houseContextRef.current.onOpenHouse?.(houseId);
+      }
+    },
+    [houseContextRef, joinAuthorHouse, postId, toast],
+  );
 
   // 알림에서 연 글이 이미 지워졌으면 안내 후 피드로 (spec: 삭제 안내 후 피드로 돌아간다).
   useEffect(() => {
@@ -239,34 +282,48 @@ export function useFeedPages({
   // notification-destination 표를 거쳐 openPost로 잇는다 (#1409).
   const subScreen =
     screen === 'feedPost' ? (
-      <FeedPostScreen
-        key={postId}
-        renderReplies={renderReplies}
-        commentsRefreshing={detail.commentsRefreshing}
-        post={detail.post}
-        loading={detail.loading}
-        loadError={detail.error}
-        notFound={detail.notFound}
-        onRetry={detail.retry}
-        comments={detail.comments}
-        commentsLoading={detail.commentsLoading}
-        commentsError={detail.commentsError}
-        hasMoreComments={detail.hasMoreComments}
-        onLoadMoreComments={detail.loadMoreComments}
-        onAddComment={detail.addComment}
-        onDeleteComment={handleDeleteComment}
-        onToggleLike={handleToggleLike}
-        onDeletePost={(id) => void handleDeletePost(id)}
-        onEditPost={detail.editPost}
-        onEditOpenChange={setEditOpen}
-        routinePicker={routinePicker}
-        onReportPost={handleReportPost}
-        onReportComment={handleReportComment}
-        onBlockUser={(userId, via) => void handleBlockUser(userId, via)}
-        onChallenge={openGame}
-        onBack={goBack}
-        loadImage={fetchFeedImage}
-      />
+      <>
+        <FeedPostScreen
+          key={postId}
+          onOpenAuthorHouses={openAuthorHouses}
+          renderReplies={renderReplies}
+          commentsRefreshing={detail.commentsRefreshing}
+          post={detail.post}
+          loading={detail.loading}
+          loadError={detail.error}
+          notFound={detail.notFound}
+          onRetry={detail.retry}
+          comments={detail.comments}
+          commentsLoading={detail.commentsLoading}
+          commentsError={detail.commentsError}
+          hasMoreComments={detail.hasMoreComments}
+          onLoadMoreComments={detail.loadMoreComments}
+          onAddComment={detail.addComment}
+          onDeleteComment={handleDeleteComment}
+          onToggleLike={handleToggleLike}
+          onDeletePost={(id) => void handleDeletePost(id)}
+          onEditPost={detail.editPost}
+          onEditOpenChange={setEditOpen}
+          routinePicker={routinePicker}
+          onReportPost={handleReportPost}
+          onReportComment={handleReportComment}
+          onBlockUser={(userId, via) => void handleBlockUser(userId, via)}
+          onChallenge={openGame}
+          onBack={goBack}
+          loadImage={fetchFeedImage}
+        />
+        <FeedAuthorHouseSheet
+          visible={housePickerOpen}
+          houses={authorHouses.houses}
+          loading={authorHouses.loading}
+          error={authorHouses.error}
+          joiningId={authorHouses.joiningId}
+          onRetry={authorHouses.refresh}
+          onClose={closeAuthorHouses}
+          onJoin={(houseId) => void handleJoinAuthorHouse(houseId)}
+          onOpenHouse={openSelectedHouse}
+        />
+      </>
     ) : screen === 'feedCompose' ? (
       <FeedComposeScreen
         board={compose.board}

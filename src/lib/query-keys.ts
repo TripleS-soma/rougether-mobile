@@ -134,6 +134,9 @@ export const queryKeys = {
    */
   feed: {
     all: (userId: number | null | undefined) => ['feed', userId] as const,
+    authorHousesAll: (userId: number | null | undefined) => ['feed', userId, 'houses'] as const,
+    authorHouses: (userId: number | null | undefined, postId: number | null) =>
+      ['feed', userId, 'houses', postId] as const,
     lists: (userId: number | null | undefined) => ['feed', userId, 'posts'] as const,
     list: (
       userId: number | null | undefined,

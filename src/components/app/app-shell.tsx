@@ -254,6 +254,21 @@ export function AppShell({
   // 이 use-house-pages보다 먼저 서서 소비하므로 훅으로 못 내린다.
   const [houseIndex, setHouseIndex] = useState(0);
   const currentHouse = houses[houseIndex] ?? houses[0];
+  const [pendingFeedHouseId, setPendingFeedHouseId] = useState<number | null>(null);
+  const openFeedHouse = useCallback(
+    (houseId: number) => {
+      setPendingFeedHouseId(houseId);
+      setScreen('house');
+    },
+    [setScreen],
+  );
+  useEffect(() => {
+    if (pendingFeedHouseId == null) return;
+    const index = houses.findIndex((house) => house.houseId === pendingFeedHouseId);
+    if (index < 0) return;
+    setHouseIndex(index);
+    setPendingFeedHouseId(null);
+  }, [houses, pendingFeedHouseId]);
 
   // Shop catalogue + purchase (diamond via API; wallet synced from the purchase
   // response). Server-side room placement isn't wired yet, so arrangement is
@@ -573,6 +588,7 @@ export function AppShell({
   const feedPages = useFeedPages({
     nav: { screen, setScreen, goBack },
     openGame: minigames.openGame,
+    onOpenHouse: openFeedHouse,
   });
   const feedShareRecord = feedPages.shareRecord;
   useEffect(() => {
