@@ -59,6 +59,8 @@ const ICON_LABELS = {
   refresh: '새로고침',
   chat: '집 채팅',
   send: '보내기',
+  'house-feed': '집 피드',
+  globe: '전체 공개',
   tap: '탭 조작',
   finish: '결승',
   home: '집 없음·홈',

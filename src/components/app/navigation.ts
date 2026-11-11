@@ -47,6 +47,11 @@ export type Screen =
   | 'feed'
   | 'feedPost'
   | 'feedCompose'
+  // 집 피드 — 집 화면 레일에서 여는 서브화면 3종. 공개 피드와 화면 키를 나눠 뒤로가기가
+  // 집 → 집 피드 → 상세·작성으로 되돌아간다. FEED_ENABLED일 때만 도달한다.
+  | 'houseFeed'
+  | 'houseFeedPost'
+  | 'houseFeedCompose'
   // 가구 거래소 (#1427) — MARKET_ENABLED일 때만 도달한다(꾸미기의 거래소 탭·스튜디오 발행).
   | 'market'
   | 'marketAsset'
@@ -99,6 +104,10 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   feed: 'feed',
   feedPost: null,
   feedCompose: null,
+  // 집 피드 — 전부 하단 탭 없는 서브화면.
+  houseFeed: null,
+  houseFeedPost: null,
+  houseFeedCompose: null,
   // 거래소 상세·내 주문 (#1427) — 꾸미기에서 미는 서브화면. 하단 탭 없음.
   market: null,
   marketAsset: null,
@@ -171,6 +180,9 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   feed: 'myRoom',
   feedPost: 'feed',
   feedCompose: 'feed',
+  houseFeed: 'house',
+  houseFeedPost: 'houseFeed',
+  houseFeedCompose: 'houseFeed',
   // 거래소는 꾸미기(상점)의 탭 — 상세·내 주문 모두 꾸미기로 돌아간다 (#1427).
   // 거래소는 전체 메뉴(≡)에서 여는 독립 화면 (#1502) — 상세·내 주문은 거래소로 돌아간다.
   market: 'myRoom',
@@ -216,6 +228,8 @@ export const FULL_SWIPE_BACK_EXCLUDED: ReadonlySet<Screen> = new Set<Screen>([
   'calendarWeek',
   // feedPost: 사진 여러 장을 좌우로 넘긴다 (#1409).
   'feedPost',
+  // houseFeedPost: 같은 상세 화면 — 사진을 좌우로 넘긴다.
+  'houseFeedPost',
 ]);
 /**
  * 페이저(상주 탭 층)가 그리는 화면인지 — 하단 탭 화면과 주간 보기(#1327). 주간 보기는 달력 탭과

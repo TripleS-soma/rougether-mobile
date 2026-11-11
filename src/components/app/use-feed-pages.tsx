@@ -17,10 +17,12 @@ import { FeedAuthorHouseSheet } from '@/components/feed/feed-author-house-sheet'
 import { FeedComposeScreen } from '@/components/screens/feed-compose-screen';
 import { FeedPostScreen } from '@/components/screens/feed-post-screen';
 import type {
+  FeedComposeScope,
   FeedRepliesRenderer,
   FeedRepliesState,
   FeedBoardFilter,
   FeedMinigameRecordDraft,
+  FeedScopeHouse,
 } from '@/components/screens/feed/types';
 import type { FeedScreenProps } from '@/components/screens/feed-screen';
 import { useToast } from '@/components/ui/toast';
@@ -53,12 +55,20 @@ function FeedRepliesQuery({
  * 피드 탭과 상세·작성 화면의 데이터와 콜백을 연결한다 (#1409).
  * 셸은 tabProps와 subScreen만 렌더한다. FEED_ENABLED가 꺼져 있으면 요청하지 않는다.
  */
+const NO_HOUSES: readonly { houseId?: number; name: string }[] = [];
+
 export function useFeedPages({
   nav,
   openGame,
   onOpenHouse,
+  houses = NO_HOUSES,
 }: {
   onOpenHouse?: (houseId: number) => void;
+  /**
+   * 내 집 목록 (집 피드) — 작성 화면의 "올릴 곳" 선택지. 집이 없으면 선택 자체를 보이지 않고
+   * 종전대로 전체 공개로만 올린다.
+   */
+  houses?: readonly { houseId?: number; name: string }[];
   /** 기록 카드의 [나도 도전하기] — 미니게임 서피스의 게임 열기(`useMinigameSurface().openGame`). */
   openGame?: (gameCode: string) => void;
   nav: {
@@ -144,6 +154,17 @@ export function useFeedPages({
   }, [screen, detail.notFound, toast, setScreen]);
 
   const compose = useFeedCompose({ onError: showError });
+  // 올릴 곳 (집 피드) — 기본 전체 공개, 내 집 중 하나를 고르면 그 집 구성원만 보는 집 글.
+  // 기록 카드(자랑하기) 글은 공개 피드 전용이라 선택을 보이지 않는다.
+  const scopeHouses = useMemo<FeedScopeHouse[]>(
+    () => houses.flatMap((h) => (h.houseId != null ? [{ houseId: h.houseId, name: h.name }] : [])),
+    [houses],
+  );
+  const scopeHousesRef = useLatestRef(scopeHouses);
+  const composeScope: FeedComposeScope | undefined =
+    scopeHouses.length > 0 && !compose.record
+      ? { houseId: compose.houseId, houses: scopeHouses, onChange: compose.setHouseId }
+      : undefined;
   // 자유·인증 게시판을 보다가 쓰면 그 게시판으로 시작한다(전체·내 글이면 기본 자유).
   const boardRef = useLatestRef(board);
   const setComposeBoard = compose.setBoard;
@@ -198,9 +219,21 @@ export function useFeedPages({
   const handleSubmit = useCallback(async () => {
     const post = await submit();
     if (!post) return;
-    toast(i18n.t('feed.toast.posted'), 'success');
+    // 집에 올린 글은 돌아갈 공개 피드에 보이지 않는다 — 어디에 올라갔는지 말해 준다.
+    const house =
+      post.houseId != null
+        ? scopeHousesRef.current.find((h) => h.houseId === post.houseId)
+        : undefined;
+    toast(
+      post.houseId != null
+        ? i18n.t('feed.toast.postedToHouse', {
+            name: house?.name ?? i18n.t('feed.scope.unknownHouse'),
+          })
+        : i18n.t('feed.toast.posted'),
+      'success',
+    );
     setScreen('feed');
-  }, [submit, toast, setScreen]);
+  }, [submit, toast, setScreen, scopeHousesRef]);
 
   const deletePost = detail.deletePost;
   const handleDeletePost = useCallback(
@@ -285,7 +318,8 @@ export function useFeedPages({
       <>
         <FeedPostScreen
           key={postId}
-          onOpenAuthorHouses={openAuthorHouses}
+          // 집 글에는 입주 신청 경로가 없다(서버 404) — 댓글 알림으로 집 글을 열어도 숨긴다.
+          onOpenAuthorHouses={detail.post?.houseId != null ? undefined : openAuthorHouses}
           renderReplies={renderReplies}
           commentsRefreshing={detail.commentsRefreshing}
           post={detail.post}
@@ -341,6 +375,7 @@ export function useFeedPages({
         submitting={compose.submitting}
         record={compose.record}
         onRemoveRecord={compose.removeRecord}
+        scope={composeScope}
         onBack={goBack}
       />
     ) : null;

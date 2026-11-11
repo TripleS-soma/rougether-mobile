@@ -3,15 +3,17 @@ import type { QueryClient } from '@tanstack/react-query';
 import { ApiError } from '@/api/http';
 import type { FeedComment, FeedPost } from '@/components/screens/feed/types';
 import {
-  type FeedCommentPages,
-  type FeedPostPages,
   feedErrorMessage,
   findFeedPost,
   isFeedPostGone,
+  isHouseFeedClosed,
   newFeedClientId,
   patchFeedPost,
   removeFeedAuthor,
   removeFeedPost,
+  type FeedCommentPages,
+  type FeedPostPages,
+  clearHouseFeedCache,
 } from '@/hooks/feed-cache';
 import { queryKeys } from '@/lib/query-keys';
 import { createTestQueryClient } from '@/test-utils/query-wrapper';
@@ -276,8 +278,22 @@ describe('isFeedPostGone · feedErrorMessage', () => {
     );
     const generic = '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.';
     expect(feedErrorMessage(apiErr('FEED_NO_SUCH_CODE_EVER'))).toBe(generic);
-    expect(feedErrorMessage(apiErr('HOUSE_NOT_FOUND'))).toBe(generic);
+    expect(feedErrorMessage(apiErr('HOUSE_NOT_OWNER'))).toBe(generic);
     expect(feedErrorMessage(new TypeError('Network request failed'))).toBe(generic);
+  });
+
+  // 집 피드 — houseId를 직접 지정한 등록·목록만 집 쪽 코드를 돌려준다.
+  it('집 피드의 집 쪽 코드는 전용 문구로 안내하고, 닫힌 집으로 본다', () => {
+    expect(feedErrorMessage(apiErr('HOUSE_NOT_MEMBER', 403))).toBe(
+      '이 집의 구성원만 글을 올리고 볼 수 있어요.',
+    );
+    expect(feedErrorMessage(apiErr('HOUSE_NOT_FOUND'))).toBe(
+      '집을 찾을 수 없어요. 집 목록을 다시 확인해 주세요.',
+    );
+    expect(isHouseFeedClosed(apiErr('HOUSE_NOT_MEMBER', 403))).toBe(true);
+    expect(isHouseFeedClosed(apiErr('HOUSE_NOT_FOUND'))).toBe(true);
+    expect(isHouseFeedClosed(apiErr('FEED_POST_NOT_FOUND'))).toBe(false);
+    expect(isHouseFeedClosed(new Error('network'))).toBe(false);
   });
 });
 
@@ -294,6 +310,53 @@ describe('newFeedClientId', () => {
     } finally {
       if (original) Object.defineProperty(globalThis, 'crypto', original);
       else delete (globalThis as { crypto?: unknown }).crypto;
+    }
+  });
+});
+
+describe('clearHouseFeedCache (집을 나갈 때)', () => {
+  it('그 집의 목록·글 상세·댓글·알림 설정만 버리고, 다른 집·공개 글·다른 계정은 그대로', () => {
+    const house3 = queryKeys.feed.houseList(ME, 3, 'ALL');
+    const house3Free = queryKeys.feed.houseList(ME, 3, 'FREE');
+    const house8 = queryKeys.feed.houseList(ME, 8, 'ALL');
+    qc.setQueryData<FeedPostPages>(house3, pages([post(30, 100, { houseId: 3 })]));
+    qc.setQueryData<FeedPostPages>(house3Free, pages([post(30, 100, { houseId: 3 })]));
+    qc.setQueryData<FeedPostPages>(house8, pages([post(80, 100, { houseId: 8 })]));
+    qc.setQueryData<FeedPostPages>(ALL_KEY, pages([post(1)]));
+    qc.setQueryData<FeedPost>(queryKeys.feed.post(ME, 30), post(30, 100, { houseId: 3 }));
+    // 푸시로 바로 열어 목록에는 없는 그 집 글.
+    qc.setQueryData<FeedPost>(queryKeys.feed.post(ME, 31), post(31, 100, { houseId: 3 }));
+    qc.setQueryData<FeedPost>(queryKeys.feed.post(ME, 80), post(80, 100, { houseId: 8 }));
+    qc.setQueryData<FeedPost>(queryKeys.feed.post(ME, 1), post(1));
+    qc.setQueryData(queryKeys.feed.comments(ME, 30), pages([comment(1, 30, 100)]));
+    qc.setQueryData(queryKeys.feed.comments(ME, 1), pages([comment(2, 1, 100)]));
+    qc.setQueryData(queryKeys.houseFeedNotification(ME, 3), { houseId: 3 });
+    qc.setQueryData(queryKeys.houseFeedNotification(ME, 8), { houseId: 8 });
+    const otherAccount = queryKeys.feed.houseList(OTHER_ACCOUNT, 3, 'ALL');
+    qc.setQueryData<FeedPostPages>(otherAccount, pages([post(30, 100, { houseId: 3 })]));
+
+    clearHouseFeedCache(qc, ME, 3);
+
+    for (const key of [
+      house3,
+      house3Free,
+      queryKeys.feed.post(ME, 30),
+      queryKeys.feed.post(ME, 31),
+      queryKeys.feed.comments(ME, 30),
+      queryKeys.houseFeedNotification(ME, 3),
+    ]) {
+      expect(qc.getQueryData(key)).toBeUndefined();
+    }
+    for (const key of [
+      house8,
+      ALL_KEY,
+      queryKeys.feed.post(ME, 80),
+      queryKeys.feed.post(ME, 1),
+      queryKeys.feed.comments(ME, 1),
+      queryKeys.houseFeedNotification(ME, 8),
+      otherAccount,
+    ]) {
+      expect(qc.getQueryData(key)).toBeDefined();
     }
   });
 });

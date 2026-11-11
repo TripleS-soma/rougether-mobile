@@ -74,6 +74,9 @@ const ICONS = {
   // 집 채팅 (#1408)
   chat: 'chatbubbles-outline',
   send: 'send',
+  // 집 피드 — 레일 버튼, 작성 화면의 올릴 곳(전체 공개)
+  'house-feed': 'reader-outline',
+  globe: 'globe-outline',
   // 미니게임 규칙 표식 (#1613)
   tap: 'hand-left-outline',
   finish: 'flag',

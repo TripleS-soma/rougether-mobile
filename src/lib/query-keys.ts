@@ -66,6 +66,9 @@ export const queryKeys = {
   /** 내 채팅방 푸시 음소거 (서버 #435) — 사용자별 값. */
   chatMute: (userId: number | null | undefined, roomId: number | null | undefined) =>
     ['chat-mute', userId, roomId] as const,
+  /** 집별 새 글 푸시 설정 (집 피드, GET /houses/{houseId}/feed/notification) — 사용자별 값. */
+  houseFeedNotification: (userId: number | null | undefined, houseId: number | null | undefined) =>
+    ['house-feed-notification', userId, houseId] as const,
   /** 내 버그 제보 목록 (#496). */
   bugReports: (userId: number | null | undefined) => ['bug-reports', userId] as const,
   /** 진행 중인 출석 이벤트 (#851) — 없으면 null. */
@@ -146,6 +149,20 @@ export const queryKeys = {
       authorId: number | null,
       board: 'ALL' | FeedBoardType = 'ALL',
     ) => ['feed', userId, 'posts', authorId, board] as const,
+    /** 한 집의 피드 목록 전부(게시판 무관) — 그 집을 나갈 때 한꺼번에 비운다. */
+    houseLists: (userId: number | null | undefined, houseId: number) =>
+      ['feed', userId, 'posts', 'house', houseId] as const,
+    /** 모든 게시물 상세 — 나간 집의 글 상세를 찾아 지울 때. */
+    posts: (userId: number | null | undefined) => ['feed', userId, 'post'] as const,
+    /**
+     * 집 피드 목록 — 집·게시판별. 공개 목록(`list`)과 키가 달라 캐시가 섞이지 않고, 같은
+     * `lists` 접두라 좋아요·수정·삭제 패치와 등록 뒤 무효화는 함께 받는다.
+     */
+    houseList: (
+      userId: number | null | undefined,
+      houseId: number,
+      board: 'ALL' | FeedBoardType = 'ALL',
+    ) => ['feed', userId, 'posts', 'house', houseId, board] as const,
     post: (userId: number | null | undefined, postId: number | null) =>
       ['feed', userId, 'post', postId] as const,
     comments: (userId: number | null | undefined, postId: number | null) =>

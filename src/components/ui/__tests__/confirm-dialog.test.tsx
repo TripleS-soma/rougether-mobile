@@ -1,4 +1,5 @@
 import { fireEvent, render } from '@testing-library/react-native';
+import { Text } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
@@ -59,4 +60,30 @@ describe('ConfirmDialog', () => {
     await fireEvent.press(getByLabelText('삭제 불가 확인'));
     expect(onConfirm).toHaveBeenCalled();
   });
+});
+
+it('본문과 버튼 사이에 추가 내용(선택지 한 줄)을 그린다', async () => {
+  const { getByText, queryByText, rerender } = await render(
+    <ConfirmDialog
+      visible
+      title="집에서 나갈까요?"
+      body="본문"
+      confirmLabel="나가기"
+      onConfirm={jest.fn()}
+      onCancel={jest.fn()}>
+      <Text>내 글도 지우기</Text>
+    </ConfirmDialog>,
+  );
+  expect(getByText('내 글도 지우기')).toBeTruthy();
+  await rerender(
+    <ConfirmDialog
+      visible
+      title="집에서 나갈까요?"
+      body="본문"
+      confirmLabel="나가기"
+      onConfirm={jest.fn()}
+      onCancel={jest.fn()}
+    />,
+  );
+  expect(queryByText('내 글도 지우기')).toBeNull();
 });
