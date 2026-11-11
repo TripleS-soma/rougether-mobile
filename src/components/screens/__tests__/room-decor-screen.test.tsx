@@ -59,10 +59,11 @@ const lastApply = (fn: jest.Mock) =>
 describe('RoomDecorScreen (#327 — 자유 배치)', () => {
   it('keeps the character centered when resizing, supports undo, and saves its scale', async () => {
     const onApply = jest.fn();
-    const { getByTestId, getByLabelText, getByText } = await render(
+    const { getByTestId, getByLabelText, getByText, getByRole } = await render(
       <RoomDecorScreen initialItems={[]} initialCharacterScale={1} onApply={onApply} />,
     );
-    await fireEvent.press(getByTestId('decor-character'));
+    expect(getByTestId('decor-character').parent?.props.pointerEvents).toBe('none');
+    await fireEvent.press(getByRole('button', { name: '캐릭터 크기' }));
     await waitFor(() => expect(getByTestId('character-size-slider')).toBeTruthy());
     await fireEvent(getByTestId('character-size-slider'), 'accessibilityAction', {
       nativeEvent: { actionName: 'decrement' },
@@ -74,7 +75,7 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
     expect(left + width / 2).toBeCloseTo(50);
     await fireEvent.press(getByText('확인'));
     await fireEvent.press(getByLabelText('실행 취소'));
-    await fireEvent.press(getByTestId('decor-character'));
+    await fireEvent.press(getByRole('button', { name: '캐릭터 크기' }));
     await waitFor(() =>
       expect(getByTestId('character-size-slider').props.accessibilityValue.now).toBe(100),
     );
