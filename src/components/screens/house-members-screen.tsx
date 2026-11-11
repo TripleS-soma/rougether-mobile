@@ -2,7 +2,8 @@ import { usesClassicCoverFallback } from '@/resources/house-frame';
 import { houseDisplayMode, type HouseDisplayMode } from '@/resources/house-display-mode';
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppTextInput as TextInput } from '@/components/ui/app-text-input';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
