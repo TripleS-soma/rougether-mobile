@@ -1,6 +1,7 @@
+import { useT } from '@/i18n';
 import { Redirect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Button, StyleSheet, Text, View } from 'react-native';
 
 import {
   fetchCharacters,
@@ -66,6 +67,8 @@ function sameGoalSet(local: string[], remote: string[]): boolean {
  */
 export function AppRoot() {
   const { status } = useAuth();
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
   // 이 세션에서 온보딩을 갓 마쳤는지 — 미션 체인 자동 시작 신호 (#571).
   const [justOnboarded, setJustOnboarded] = useState(false);
@@ -89,6 +92,7 @@ export function AppRoot() {
 
   useEffect(() => {
     if (status !== 'authed') return;
+    setLoadFailed(false);
     let active = true;
     void (async () => {
       // Local cache + server state + masters in one round; the server may be
@@ -152,12 +156,17 @@ export function AppRoot() {
       else if (local) setCharacterId(local.characterId);
       if (remoteGoalIds.length > 0) setSelectedGoalIds(remoteGoalIds);
       else if (local) setSelectedGoalIds(local.goals);
+      if (remote == null && local == null) {
+        setOnboarded(null);
+        setLoadFailed(true);
+        return;
+      }
       setOnboarded(remote?.completed === true || local != null);
     })();
     return () => {
       active = false;
     };
-  }, [status, userId]);
+  }, [status, userId, retryCount]);
 
   const finishHouseStep = useCallback(async () => {
     if (getSessionUserId() !== userId) return;
@@ -198,7 +207,7 @@ export function AppRoot() {
   // 스플래시에 알린다 (#847) — 오버레이가 시간이 아니라 이 신호를 기다린다.
   const booting =
     status === 'loading' || (status === 'authed' && (onboarded === null || startTab === null));
-  if (!booting) markAppReady();
+  if (!booting || (loadFailed && loadedUserId === userId)) markAppReady();
 
   // 평소엔 스플래시 오버레이가 이 구간을 덮는다. 상한(4초)을 넘겨 오버레이가
   // 먼저 걷힌 경우에만 이 로딩 표시가 드러난다 — 빈 화면 대신.
@@ -206,6 +215,16 @@ export function AppRoot() {
 
   // Not signed in → send to the login route.
   if (status === 'guest') return <Redirect href="/login" />;
+
+  if (loadFailed && loadedUserId === userId)
+    return (
+      <BootFallback
+        onRetry={() => {
+          setLoadFailed(false);
+          setRetryCount((n) => n + 1);
+        }}
+      />
+    );
 
   if (onboarded === null || loadedUserId !== userId || startTab === null) return <BootFallback />;
 
@@ -299,7 +318,8 @@ export function AppRoot() {
  * 화면이 드러났다. 스플래시와 같은 배경색이라 오버레이가 정상적으로 덮는
  * 동안에는 보이지 않고, 상한을 넘겨 걷힌 경우에만 로딩 표시로 나타난다.
  */
-function BootFallback() {
+function BootFallback({ onRetry }: { onRetry?: () => void }) {
+  const tr = useT();
   const scheme = useResolvedScheme();
   const t = useTokens();
   return (
@@ -308,7 +328,14 @@ function BootFallback() {
         bootStyles.fill,
         { backgroundColor: scheme === 'dark' ? SplashBackgroundDark : SplashBackground },
       ]}>
-      <ActivityIndicator color={t.primary} />
+      {onRetry ? (
+        <>
+          <Text style={{ color: t.text }}>{tr('common.startupConnectionError')}</Text>
+          <Button title={tr('common.retry')} onPress={onRetry} />
+        </>
+      ) : (
+        <ActivityIndicator color={t.primary} />
+      )}
     </View>
   );
 }
