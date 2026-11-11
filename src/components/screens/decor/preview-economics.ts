@@ -42,7 +42,7 @@ export type SurfaceCatalogs = {
 };
 
 /** 저장 단위 — 가구 배치 + 표면류 3종 (null 표면 = 비움). */
-export type LayoutValues = SurfaceSelection & { items: PlacedFurniture[] };
+export type LayoutValues = SurfaceSelection & { items: PlacedFurniture[]; characterScale?: number };
 
 /**
  * 미보유 표면류 프리뷰. 진입 시점 값(서버 저장/시드)은 미보유여도 프리뷰가
@@ -103,6 +103,7 @@ export function stripPreviews(
   initial: SurfaceSelection,
 ): LayoutValues {
   return {
+    ...values,
     items: values.items.filter((pl) => owned.has(pl.furnitureId)),
     wallpaperId: owned.has(values.wallpaperId) ? values.wallpaperId : initial.wallpaperId,
     floorId: values.floorId && owned.has(values.floorId) ? values.floorId : initial.floorId,

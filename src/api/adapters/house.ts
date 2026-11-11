@@ -275,6 +275,7 @@ function toPreviewRoom(
     floorId: surfaces.floorId,
     backgroundId: surfaces.backgroundId,
     characterId: characterIdFromCode(room.character?.code),
+    characterScale: room.characterScale,
   };
 }
 

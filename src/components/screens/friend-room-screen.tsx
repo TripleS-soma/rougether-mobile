@@ -137,6 +137,7 @@ export function FriendRoomScreen({
   onCleanCobweb,
   characterId = DEFAULT_CHARACTER_ID,
   characterFrames,
+  characterScale,
   wallpaperId,
   floorId,
   backgroundId,
@@ -177,6 +178,7 @@ export function FriendRoomScreen({
   const roomScene: RoomSceneProps = {
     characterId,
     characterFrames,
+    characterScale,
     cobweb,
     // 청소 콜백 (#831) — 번들에서 빠져 있어 친구 방 거미줄이 눌리지 않았다 (#1116).
     onCleanCobweb,
