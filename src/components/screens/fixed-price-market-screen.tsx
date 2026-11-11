@@ -189,7 +189,13 @@ export function FixedPriceListingScreen(p: FixedPriceListingScreenProps) {
         ) : null}
         {item ? (
           <>
-            <MarketAssetImage assetKey={item.assetKey} name={item.name} size={Spacing.six * 8} />
+            {/* 화면 폭에 맞춘다 — 예전엔 512px 고정이라 폰(폭 360~430)에서 오른쪽이 잘렸다. */}
+            <MarketAssetImage
+              assetKey={item.assetKey}
+              name={item.name}
+              size={HERO_MAX}
+              style={styles.hero}
+            />
             <Text style={[Typography.h2, { color: t.text }]}>{item.name}</Text>
             <Text style={[Typography.body, { color: t.textMuted }]}>
               {tr('market.creator', { name: item.creatorNickname ?? tr('market.creatorUnknown') })}
@@ -313,7 +319,18 @@ export function FixedPriceListingScreen(p: FixedPriceListingScreenProps) {
   );
 }
 
+/** 상세 그림의 최대 한 변 — 넓은 화면(태블릿·웹)에서 끝없이 커지지 않게. */
+const HERO_MAX = Spacing.six * 6;
+
 const styles = StyleSheet.create({
+  // 폭은 컬럼에 맞추고 정사각형을 유지한다. size(고정 px)가 준 높이는 지운다.
+  hero: {
+    width: '100%',
+    maxWidth: HERO_MAX,
+    height: undefined,
+    aspectRatio: 1,
+    alignSelf: 'center',
+  },
   screen: { flex: 1 },
   body: { paddingHorizontal: Spacing.four, paddingBottom: Spacing.six, gap: Spacing.three },
   actions: { flexDirection: 'row', gap: Spacing.two },

@@ -55,6 +55,11 @@ export type TabPagerProps = {
    * 드래그처럼 페이지 안 제스처가 전권을 가져야 하는 상태 (#563).
    */
   lock?: SharedValue<boolean>;
+  /**
+   * 페이저가 서브화면 밑에 숨어 쉬는 중 (2026-11-11) — 마운트는 유지하되 어느 페이지도 "보이는
+   * 페이지"가 아니다. 반복 연출(`usePageActive`)이 멈춘다.
+   */
+  suspended?: boolean;
   children: ReactNode[];
 };
 
@@ -69,7 +74,13 @@ export type TabPagerProps = {
  * 손가락 위치에 따라 "달력으로"와 "집으로"로 갈려서, 가로 스와이프의 뜻을
  * 하단 탭 이동 하나로 통일했다. 달력 월 이동도 monthSwipe=false로 꺼져 있다.
  */
-export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps) {
+export function TabPager({
+  index,
+  onIndexChange,
+  lock,
+  suspended = false,
+  children,
+}: TabPagerProps) {
   const arbitrateScroll = Platform.OS === 'ios';
   // 조건부 페이지(피드 #1409 — FEED_ENABLED)는 null로 들어온다 — 빈 자리를 페이지로 세지 않는다.
   const pages = children.filter((child) => child != null && child !== false);
@@ -285,6 +296,7 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
                 index={i}
                 width={width}
                 active={i === index}
+                playing={i === index && !suspended}
                 revealLo={revealLo}
                 revealHi={revealHi}>
                 {child}
@@ -301,13 +313,17 @@ function Page({
   index,
   width,
   active,
+  playing,
   revealLo,
   revealHi,
   children,
 }: {
   index: number;
   width: number;
+  /** 페이저가 서 있는 페이지 — 자리를 차지한다(display). */
   active: boolean;
+  /** 지금 실제로 화면에 보이는 페이지 — 반복 연출이 돈다. 페이저가 쉬는 동안엔 어느 페이지도 아니다. */
+  playing: boolean;
   revealLo: SharedValue<number>;
   revealHi: SharedValue<number>;
   children: ReactNode;
@@ -322,7 +338,7 @@ function Page({
   }));
   return (
     <Animated.View style={[styles.page, { left: index * width, width: width || undefined }, style]}>
-      <PageActiveContext.Provider value={active}>{children}</PageActiveContext.Provider>
+      <PageActiveContext.Provider value={playing}>{children}</PageActiveContext.Provider>
     </Animated.View>
   );
 }
