@@ -1,6 +1,9 @@
 import { createInstance } from 'i18next';
 import { initReactI18next, useTranslation } from 'react-i18next';
 
+import enPepero from '@/i18n/resources/en/pepero.json';
+import koPepero from '@/i18n/resources/ko/pepero.json';
+
 import enChristmas from '@/i18n/resources/en/christmas.json';
 import koChristmas from '@/i18n/resources/ko/christmas.json';
 
@@ -59,6 +62,7 @@ export function isAppLanguage(value: unknown): value is AppLanguage {
  */
 export const koResources = {
   ...koChristmas,
+  ...koPepero,
   ...koCommon,
   ...koSettings,
   ...koMember,
@@ -73,6 +77,7 @@ export const koResources = {
 };
 export const enResources = {
   ...enChristmas,
+  ...enPepero,
   ...enCommon,
   ...enSettings,
   ...enMember,

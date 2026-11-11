@@ -21,6 +21,7 @@ const emptyRes = (url: string, init?: RequestInit) => ({
   ok: true,
   status: 200,
   text: async () => {
+    if (url.endsWith('/events/login-gifts')) return JSON.stringify({ gifts: [] });
     if (url.endsWith('/routines') && init?.method === 'POST') {
       const body = JSON.parse(String(init.body ?? '{}')) as { title?: string };
       return JSON.stringify({
@@ -57,6 +58,28 @@ describe('AppRoot', () => {
   });
 
   // #1700 — 소개 슬라이드는 없앴다. 로그인 뒤 첫 실행은 곧장 목표 설문이다.
+  it('does not open onboarding on a failed read without a cache and retries safely', async () => {
+    let failed = true;
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/onboarding')) {
+        if (failed) throw new TypeError('Network request failed');
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify({ completed: true, goals: [] }),
+        };
+      }
+      return emptyRes(url, init);
+    }) as unknown as typeof fetch;
+    const { getByText, queryByText } = await renderApp();
+    await waitFor(() => expect(getByText('다시 시도')).toBeTruthy());
+    expect(queryByText('관심 있는 목표를 골라주세요')).toBeNull();
+    failed = false;
+    fireEvent.press(getByText('다시 시도'));
+    await waitFor(() => expect(getByText('내 정보')).toBeTruthy());
+    expect(queryByText('관심 있는 목표를 골라주세요')).toBeNull();
+  });
+
   it('shows onboarding on first launch — goal survey first (#1700)', async () => {
     const { getByText, queryByText } = await renderApp();
     await waitFor(() => expect(getByText('관심 있는 목표를 골라주세요')).toBeTruthy());

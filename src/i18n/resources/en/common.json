@@ -3,7 +3,9 @@
     "back": "Back",
     "apply": "Apply",
     "cancel": "Cancel",
-    "confirm": "OK"
+    "confirm": "OK",
+    "startupConnectionError": "Check your connection and try again.",
+    "retry": "Try again"
   },
   "nav": {
     "myRoom": "My Room",

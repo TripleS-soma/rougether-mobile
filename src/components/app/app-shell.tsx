@@ -66,6 +66,7 @@ import { useTabScroll } from '@/components/app/use-tab-scroll';
 import { MinigameActiveContext, useMinigameSurface } from '@/components/app/use-minigame-surface';
 import { notificationDestination } from '@/components/app/notification-destination';
 import type { NotificationEntry } from '@/components/screens/notification-list-screen';
+import { usePeperoGiftSurface } from '@/components/app/use-pepero-gift-surface';
 import { useChristmasSurface } from '@/components/app/use-christmas-surface';
 import { useAppSheetPresent } from '@/lib/modal-presence';
 import { requestAdTrackingOnce } from '@/lib/ad-tracking';
@@ -114,7 +115,11 @@ export function AppShell({
   characterFrames = NO_CHARACTER_FRAMES,
 }: AppShellProps) {
   const christmasActiveRef = useRef(false);
-  const isChristmasBlocking = useCallback(() => christmasActiveRef.current, []);
+  const peperoBlockingRef = useRef(false);
+  const isChristmasBlocking = useCallback(
+    () => christmasActiveRef.current || peperoBlockingRef.current,
+    [],
+  );
   const openChristmasRef = useRef<() => void>(() => undefined);
   const openChristmas = useCallback(() => openChristmasRef.current(), []);
   const [christmasMachineId, setChristmasMachineId] = useState<number | undefined>();
@@ -503,7 +508,8 @@ export function AppShell({
     suppressed:
       (screen !== 'myRoom' && screen !== 'calendar') ||
       attendancePending ||
-      christmasActiveRef.current,
+      christmasActiveRef.current ||
+      peperoBlockingRef.current,
   });
 
   // 화면 전환 추적 (#437) — 셸의 screen 상태가 곧 내비게이션 단위.
@@ -626,10 +632,27 @@ export function AppShell({
   useEffect(() => {
     if (screen !== 'gacha') setChristmasMachineId(undefined);
   }, [screen]);
+  const goGiftDecor = useCallback(() => setScreen('decor'), []);
+  const peperoSurface = usePeperoGiftSurface({
+    home: screen === 'myRoom',
+    ready: nativePromptsReady && !myRoomLoading && missions.loaded !== false,
+    blocked:
+      appSheetPresent ||
+      !!coachStep ||
+      marketTour.visible ||
+      missions.step != null ||
+      missions.completedIndex != null ||
+      settingsSurface.inviteActive ||
+      speakerOpen ||
+      christmasActiveRef.current,
+    onGoDecor: goGiftDecor,
+  });
+  peperoBlockingRef.current = peperoSurface.blocking;
   const christmasSurface = useChristmasSurface({
     home: screen === 'myRoom',
     ready: nativePromptsReady && !myRoomLoading && missions.loaded !== false,
     blocked:
+      peperoSurface.blocking ||
       appSheetPresent ||
       !!coachStep ||
       marketTour.visible ||
@@ -870,6 +893,7 @@ export function AppShell({
 
       {/* 출석·재화 내역 시트 (#851·#1089) — use-attendance-surface가 그린다. */}
       {attendanceSheets}
+      {peperoSurface.overlay}
       {christmasSurface.overlays}
 
       {/* 친구 초대 확인·붙여넣기 시트 (#1007) — use-settings-surface가 그린다. */}
