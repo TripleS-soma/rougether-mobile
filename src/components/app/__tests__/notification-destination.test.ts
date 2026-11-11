@@ -1,5 +1,11 @@
 import { notificationDestination } from '@/components/app/notification-destination';
 
+// 집 피드 목적지는 피드가 켜진 설치본에서만 열린다.
+jest.mock('@/constants/feed', () => ({
+  ...jest.requireActual('@/constants/feed'),
+  FEED_ENABLED: true,
+}));
+
 describe('notificationDestination (2026-10-08)', () => {
   it.each([
     ['ROUTINE_REMINDER', { kind: 'screen', screen: 'myRoom' }],
@@ -38,6 +44,20 @@ describe('notificationDestination (2026-10-08)', () => {
     expect(notificationDestination('CHAT_MESSAGE', undefined, 3)).toEqual({
       kind: 'houseChat',
       houseId: 3,
+    });
+  });
+
+  // 집 피드 새 글 (푸시 전용) — data의 houseId·postId로 그 집의 글 상세.
+  it('집 피드 새 글 푸시는 그 집의 글 상세로, 글 id가 없으면 그 집 피드로', () => {
+    expect(notificationDestination('HOUSE_FEED_POST', 42, 3)).toEqual({
+      kind: 'houseFeedPost',
+      houseId: 3,
+      postId: 42,
+    });
+    expect(notificationDestination('HOUSE_FEED_POST', undefined, 3)).toEqual({
+      kind: 'houseFeedPost',
+      houseId: 3,
+      postId: undefined,
     });
   });
 
