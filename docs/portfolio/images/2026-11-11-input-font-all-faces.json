@@ -1,0 +1,184 @@
+[
+  {
+    "corrected": {
+      "outlined": 3,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "resolved": "Pretendard-Regular",
+    "original": {
+      "outlined": 1,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "family": "NanumSquareRoundR"
+  },
+  {
+    "corrected": {
+      "outlined": 3,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "resolved": "Pretendard-SemiBold",
+    "original": {
+      "outlined": 1,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "family": "NanumSquareRoundB"
+  },
+  {
+    "corrected": {
+      "outlined": 3,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "resolved": "Pretendard-Bold",
+    "original": {
+      "outlined": 1,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "family": "NanumSquareRoundEB"
+  },
+  {
+    "corrected": {
+      "outlined": 3,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "resolved": "Pretendard-Regular",
+    "original": {
+      "outlined": 1,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "family": "SUIT-Regular"
+  },
+  {
+    "corrected": {
+      "outlined": 3,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "resolved": "Pretendard-Medium",
+    "original": {
+      "outlined": 1,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "family": "SUIT-Medium"
+  },
+  {
+    "corrected": {
+      "outlined": 3,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "resolved": "Pretendard-SemiBold",
+    "original": {
+      "outlined": 1,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "family": "SUIT-SemiBold"
+  },
+  {
+    "corrected": {
+      "outlined": 3,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "resolved": "Pretendard-Bold",
+    "original": {
+      "outlined": 1,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "family": "SUIT-Bold"
+  },
+  {
+    "corrected": {
+      "outlined": 3,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "resolved": "Pretendard-Regular",
+    "original": {
+      "outlined": 3,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "family": "Jua-Regular"
+  },
+  {
+    "corrected": {
+      "outlined": 3,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "resolved": "Pretendard-Regular",
+    "original": {
+      "outlined": 3,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "family": "Pretendard-Regular"
+  },
+  {
+    "corrected": {
+      "outlined": 3,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "resolved": "Pretendard-Medium",
+    "original": {
+      "outlined": 3,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "family": "Pretendard-Medium"
+  },
+  {
+    "corrected": {
+      "outlined": 3,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "resolved": "Pretendard-SemiBold",
+    "original": {
+      "outlined": 3,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "family": "Pretendard-SemiBold"
+  },
+  {
+    "corrected": {
+      "outlined": 3,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "resolved": "Pretendard-Bold",
+    "original": {
+      "outlined": 3,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "family": "Pretendard-Bold"
+  },
+  {
+    "corrected": {
+      "outlined": 3,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "resolved": "system",
+    "original": {
+      "outlined": 3,
+      "notdef": 0,
+      "glyphs": 3
+    },
+    "family": "system"
+  }
+]
