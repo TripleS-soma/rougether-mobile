@@ -37,6 +37,7 @@ export type ChatMessageView = {
   /** 목록 키 — 서버 메시지는 순서, 보내는 중인 건 clientMessageId. */
   key: string;
   messageId?: number;
+  messageType?: 'TEXT' | 'IMAGE';
   image?: ChatImageResponse | null;
   localImageUri?: string;
   /** 서버가 매긴 방별 순서 — 보내는 중·실패한 메시지에는 없다. */
@@ -202,6 +203,7 @@ export function HouseChatScreen({
           content={item.content}
           messageId={item.messageId}
           imageId={item.image?.imageId}
+          imageMissing={item.messageType === 'IMAGE' && item.image?.imageId == null}
           localImageUri={item.localImageUri}
           onReport={onReport}
           senderNickname={item.senderNickname}
@@ -366,6 +368,7 @@ const SEND_SIZE = 44;
 type ChatRowProps = {
   messageId?: number;
   imageId?: number;
+  imageMissing?: boolean;
   localImageUri?: string;
   onReport?: (messageId: number) => void;
   mine: boolean;
@@ -384,6 +387,7 @@ type ChatRowProps = {
 const ChatRow = memo(function ChatRow({
   messageId,
   imageId,
+  imageMissing,
   localImageUri,
   onReport,
   mine,
@@ -457,7 +461,7 @@ const ChatRow = memo(function ChatRow({
               // 내 말풍선(진한 바탕)은 글자색 그대로 밑줄만, 남의 말풍선은 강조색.
               linkColor={mine ? undefined : t.primaryText}
               selectable>
-              {content}
+              {imageMissing && !content ? tr('house.chat.photoUnavailable') : content}
             </LinkifiedText>
           )}
         </View>

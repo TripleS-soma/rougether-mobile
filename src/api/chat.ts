@@ -8,7 +8,7 @@ import { apiGet, apiPost, apiPut } from './client';
 import { inChatSession } from '@/api/chat-session';
 import { buildQuery } from './http';
 import type { ChatMessagePage, ChatMessageResponse, ChatSendRequest } from '@/api/chat-types';
-import type { ChatRoomResponse } from './types';
+import type { ChatRoomResponse, ReportReason } from './types';
 
 /** POST /houses/{houseId}/chat-room — 집 채팅방 생성 또는 기존 방 반환(멱등). */
 export function ensureHouseChatRoom(houseId: number) {
@@ -79,7 +79,7 @@ export function updateChatNotification(roomId: number, muted: boolean) {
 export function reportChatMessage(
   roomId: number,
   messageId: number,
-  reason: import('./types').ReportReason,
+  reason: ReportReason,
   detail?: string,
 ) {
   return inChatSession(() =>

@@ -16,6 +16,8 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
 
+const CHAT_PHOTO_SIZE = 184;
+
 /** 사진은 화면이 떠나거나 백그라운드로 가면 버리고, 복귀 시 권한을 다시 확인한다. */
 export function ChatPhoto({ imageId, localUri }: { imageId?: number; localUri?: string }) {
   const t = useTokens();
@@ -114,8 +116,8 @@ export function ChatPhoto({ imageId, localUri }: { imageId?: number; localUri?: 
 
 const styles = StyleSheet.create({
   photo: {
-    width: 184,
-    height: 184,
+    width: CHAT_PHOTO_SIZE,
+    height: CHAT_PHOTO_SIZE,
     borderRadius: Radius.md,
     overflow: 'hidden',
     alignItems: 'center',

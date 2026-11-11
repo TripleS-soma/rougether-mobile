@@ -142,6 +142,7 @@ export function useHouseChat({
   const wanted = useRef(0);
   const recovering = useRef(false);
   const generation = useRef(0);
+  const streamRoom = useRef<number | undefined>(undefined);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -252,25 +253,29 @@ export function useHouseChat({
   // 첫 목록 — 최신 50개(DESC로 온다). 방이 바뀌면 스트림 상태를 전부 초기화한다.
   useEffect(() => {
     if (roomId == null) return;
-    const gen = ++generation.current;
-    bySeq.current = new Map();
-    setConfirmed([]);
-    setOutbox([]);
+    if (streamRoom.current !== roomId) {
+      streamRoom.current = roomId;
+      generation.current += 1;
+      bySeq.current = new Map();
+      setConfirmed([]);
+      setOutbox([]);
+      setReaders([]);
+      cursor.current = 0;
+      loaded.current = false;
+      wanted.current = 0;
+      recovering.current = false;
+      readSent.current = 0;
+      readPending.current = 0;
+    }
+    const gen = generation.current;
     setInitialLoading(true);
-    setReaders([]);
-    cursor.current = 0;
-    loaded.current = false;
-    wanted.current = 0;
-    recovering.current = false;
-    readSent.current = 0;
-    readPending.current = 0;
     let cancelled = false;
     fetchChatMessages(roomId)
       .then((res) => {
         if (cancelled || gen !== generation.current) return;
         const items = [...(res.items ?? [])].reverse();
         // 최신 페이지는 연속 구간이다 — 커서는 그 끝에서 시작한다.
-        cursor.current = items.reduce((max, m) => Math.max(max, m.sequence ?? 0), 0);
+        cursor.current = items.reduce((max, m) => Math.max(max, m.sequence ?? 0), cursor.current);
         merge(items);
         setConfirmed(
           [...bySeq.current.values()].sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0)),
@@ -374,7 +379,6 @@ export function useHouseChat({
             return;
           }
           // POST 응답 유실 뒤에는 업로드를 반복하지 않고 같은 사진과 UUID를 다시 보낸다.
-          item.imageId = imageId;
           setOutbox((prev) =>
             prev.map((o) => (o.clientMessageId === clientMessageId ? { ...o, imageId } : o)),
           );
@@ -396,7 +400,7 @@ export function useHouseChat({
           onErrorRef.current?.('photoUnavailable');
           return;
         }
-        if (err instanceof ApiError && err.status === 429) {
+        if (err instanceof ApiError && err.status === 429 && (item.file || item.imageId != null)) {
           onErrorRef.current?.('photoLimit');
         }
         if (err instanceof ApiError && (err.code === 'CHAT_IMAGE_INVALID' || err.status === 413)) {
@@ -534,6 +538,7 @@ export function useHouseChat({
       key: `s${m.sequence}`,
       messageId: m.messageId,
       image: m.image,
+      messageType: m.messageType,
       sequence: m.sequence,
       clientMessageId: m.clientMessageId,
       senderUserId: m.senderUserId,
