@@ -82,6 +82,12 @@ export type HouseChatScreenProps = {
   muted?: boolean;
   /** 헤더 종 버튼 — 없으면 버튼을 그리지 않는다(음소거 상태를 아직 모름 등). */
   onToggleMute?: () => void;
+  /**
+   * 헤더 종 버튼으로 "이 집 알림" 시트를 연다 (집 피드) — 채팅·자유글·인증글 알림을 한곳에서
+   * 끄고 켠다. 주면 종은 스위치가 아니라 시트를 여는 버튼이 되고 `onToggleMute`는 쓰지 않는다.
+   * 이때 `muted`는 "이 집 알림이 전부 꺼짐"을 뜻한다(종 아이콘 모양).
+   */
+  onOpenNotifications?: () => void;
   onBack?: () => void;
 };
 
@@ -147,6 +153,7 @@ export function HouseChatScreen({
   onVisible,
   muted = false,
   onToggleMute,
+  onOpenNotifications,
   onBack,
 }: HouseChatScreenProps) {
   const t = useTokens();
@@ -335,7 +342,25 @@ export function HouseChatScreen({
         title={houseName ?? tr('house.chat.title')}
         onBack={onBack}
         right={
-          onToggleMute ? (
+          onOpenNotifications ? (
+            <Pressable
+              onPress={onOpenNotifications}
+              accessibilityRole="button"
+              accessibilityLabel={tr('house.notification.openA11y')}
+              hitSlop={Spacing.two}
+              testID="house-chat-notifications"
+              style={({ pressed }) => [
+                styles.muteBtn,
+                { backgroundColor: t.surface },
+                pressed && pressedStyle('card', t),
+              ]}>
+              <Icon
+                name={muted ? 'bell-off' : 'bell'}
+                size={20}
+                color={muted ? t.textMuted : t.text}
+              />
+            </Pressable>
+          ) : onToggleMute ? (
             <Pressable
               onPress={onToggleMute}
               accessibilityRole="switch"

@@ -222,3 +222,24 @@ it('사진 선택 버튼을 누르면 선택 콜백을 부른다', async () => {
   await fireEvent.press(screen.getByLabelText('사진 선택'));
   expect(pick).toHaveBeenCalledTimes(1);
 });
+
+describe('HouseChatScreen — 이 집 알림 시트 (집 피드)', () => {
+  it('onOpenNotifications가 있으면 종은 스위치가 아니라 시트를 여는 버튼', async () => {
+    const onOpenNotifications = jest.fn();
+    const onToggleMute = jest.fn();
+    const screen = await render(
+      <HouseChatScreen
+        messages={[]}
+        myUserId={1}
+        onOpenNotifications={onOpenNotifications}
+        onToggleMute={onToggleMute}
+      />,
+    );
+    expect(screen.queryByLabelText('이 채팅방 알림')).toBeNull();
+    const bell = screen.getByLabelText('이 집 알림 설정');
+    expect(bell.props.accessibilityRole).toBe('button');
+    await fireEvent.press(bell);
+    expect(onOpenNotifications).toHaveBeenCalledTimes(1);
+    expect(onToggleMute).not.toHaveBeenCalled();
+  });
+});

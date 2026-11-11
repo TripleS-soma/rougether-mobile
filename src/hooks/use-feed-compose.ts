@@ -19,6 +19,11 @@
  * 본문 초안과 카드를 채운다. 카드는 **자유게시판일 때만** `minigameRecord: { runId }`로 싣고,
  * 서버가 400 FEED_MINIGAME_RECORD_INVALID로 거부하면 카드를 빼고 안내한다 — 사용자는 글만 다시
  * 올리면 된다. 카드도 내용 서명에 넣는다.
+ *
+ * 올릴 곳(집 피드): `houseId`를 실으면 그 집 구성원만 보는 집 글이 된다. `lockedHouseId`를 주면
+ * (집 피드에서 연 작성) 늘 그 집으로 고정하고, 아니면 `setHouseId`로 고른다(기본 null = 전체 공개,
+ * 초안을 버리거나 올리고 나면 다시 전체 공개). 기록 카드가 붙은 글은 공개 피드 전용이라 집을
+ * 싣지 않는다. 올릴 곳이 다르면 같은 id도 다른 글이므로 서명에 넣는다.
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -59,7 +64,14 @@ export function feedImageRejection(file: PickedLibraryImageWithSize): string | n
   return null;
 }
 
-export function useFeedCompose({ onError }: { onError?: (message: string) => void } = {}) {
+export function useFeedCompose({
+  onError,
+  lockedHouseId = null,
+}: {
+  onError?: (message: string) => void;
+  /** 집 피드에서 연 작성 — 올릴 곳을 이 집으로 고정한다. */
+  lockedHouseId?: number | null;
+} = {}) {
   const qc = useQueryClient();
   const userId = getSessionUserId();
   const onErrorRef = useLatestRef(onError);
@@ -68,6 +80,9 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
   const [board, setBoard] = useState<FeedBoardType>(FEED_DEFAULT_BOARD);
   const [routine, setRoutine] = useState<FeedRoutineCompletion | null>(null);
   const [record, setRecord] = useState<FeedMinigameRecordDraft | null>(null);
+  const [pickedHouseId, setHouseId] = useState<number | null>(null);
+  // 기록 카드가 붙은 글은 공개 피드 전용 — 고른 집이 있어도 싣지 않는다.
+  const houseId = lockedHouseId ?? (record ? null : pickedHouseId);
   const [submitting, setSubmitting] = useState(false);
 
   const { mutateAsync: uploadAsync } = useMutation({ mutationFn: uploadFeedImage });
@@ -165,6 +180,7 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
     setBoard(FEED_DEFAULT_BOARD);
     setRoutine(null);
     setRecord(null);
+    setHouseId(null);
   }, [imagesRef]);
 
   /**
@@ -199,12 +215,14 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
     const routineCompletion = board === 'VERIFICATION' && routine ? routine : undefined;
     // 기록 카드는 자유게시판에만 — 루틴 연결과 함께 보낼 수 없다.
     const minigameRecord = board === 'FREE' && record ? { runId: record.runId } : undefined;
+    // 공개 글의 서명은 종전 그대로 두고, 집 글일 때만 집 id를 덧붙인다.
     const signature = JSON.stringify([
       board,
       text,
       imageIds,
       routineCompletion ?? null,
       minigameRecord?.runId ?? null,
+      ...(houseId != null ? [houseId] : []),
     ]);
     if (attempt.current?.signature !== signature) {
       attempt.current = { id: newFeedClientId(), signature };
@@ -219,6 +237,7 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
         imageIds,
         ...(routineCompletion ? { routineCompletion } : {}),
         ...(minigameRecord ? { minigameRecord } : {}),
+        ...(houseId != null ? { houseId } : {}),
       });
       track('feed_post_create', {
         image_count: imageIds.length,
@@ -233,6 +252,7 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
       setBoard(FEED_DEFAULT_BOARD);
       setRoutine(null);
       setRecord(null);
+      setHouseId(null);
       // `lists` 접두 — 통합 피드와 게시판별 목록을 한꺼번에.
       await qc.invalidateQueries({ queryKey: queryKeys.feed.lists(userId) });
       return post;
@@ -253,7 +273,7 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
       submittingRef.current = false;
       setSubmitting(false);
     }
-  }, [board, content, routine, record, createAsync, imagesRef, onErrorRef, qc, userId]);
+  }, [board, content, routine, record, houseId, createAsync, imagesRef, onErrorRef, qc, userId]);
 
   const uploading = images.some((img) => img.status === 'uploading');
   const canSubmit = !submitting && feedComposeBlocker(board, images, content, routine) === null;
@@ -265,12 +285,14 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
       board,
       routine,
       record,
+      houseId,
       submitting,
       uploading,
       canSubmit,
       setContent,
       setBoard,
       setRoutine,
+      setHouseId,
       startRecordPost,
       removeRecord,
       addImages,
@@ -285,12 +307,14 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
       board,
       routine,
       record,
+      houseId,
       submitting,
       uploading,
       canSubmit,
       setContent,
       setBoard,
       setRoutine,
+      setHouseId,
       startRecordPost,
       removeRecord,
       addImages,
