@@ -43,6 +43,7 @@ Claude(또는 작업자)가 대화·작업 중 아래에 해당한다고 **스�
 
 ## 목록
 
+- [2026-11-11 · 멈춰 둔 캐릭터가 Android에서만 다시 움직인 문제 — 한 번의 stop()과 다시 보일 때마다 재생하는 드로어블](2026-11-11-android-animated-webp-autoplay.md)
 - [2026-11-10, 공식 SDK 다운로드 장애와 네이티브 지문 추적 누락](2026-11-10-ios-sdk-download-fingerprint.md)
 - [2026-11-09, 이벤트 모달의 닫힘 완료와 계정 전환 경계를 분리한 사례](2026-11-09-event-modal-dismissal-session-boundary.md)
 

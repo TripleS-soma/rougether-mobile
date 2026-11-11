@@ -248,14 +248,14 @@ flowchart TD
 - 실기기 녹화로 "새 화면 마운트가 300ms 동안 JS를 막는다"는 원인을 확정하고, 새 화면 대신 **같은 컴포넌트의 모드 전환**으로 바꿨습니다. 접힘은 UI 스레드로, 위치는 늦게 오는 레이아웃 이벤트 대신 기하로 계산합니다. 탭 → 접힘 시작 약 400ms → 160ms. → [사례 기록](docs/portfolio/2026-11-04-calendar-week-circle-jank.md)
 
 <details>
-<summary><b>📚 전체 사례 기록 (26건)</b></summary>
+<summary><b>📚 전체 사례 기록 (29건)</b></summary>
 
 작업 중 만난 기술적 챌린지와 트러블슈팅을 "무엇이 어려웠고, 어떻게 원인을 좁혔고, 무엇을 배웠나" 형식으로 남깁니다. 수치는 실측값만 적습니다. → [`docs/portfolio/`](docs/portfolio)
 
 - 릴리스·인프라: [시작 크래시와 산출물 검사](docs/portfolio/2026-08-19-ios-launch-crash-prebuild-output.md) · [EAS 채널 재배선](docs/portfolio/2026-09-16-ota-channel-remap.md) · [prebuild 생성물이 런타임 지문을 가른 빌드 실패](docs/portfolio/2026-09-16-fingerprint-prebuild-artifact.md) · [OTA 레인 이탈 설치본용 버전 게이트](docs/portfolio/2026-10-25-ota-stranded-install-version-gate.md) · [Meta SDK와 iOS Release 링크 실패](docs/portfolio/2026-11-04-fbsdk-prebuilt-rn-link-failure.md)
 - 방 꾸미기: [문서 모델](docs/portfolio/2026-07-21-room-editor-document-model.md) · [툴바 제스처](docs/portfolio/2026-07-30-room-editor-toolbar-gesture.md) · [터치 박스](docs/portfolio/2026-08-12-room-editor-hitbox.md) · [카탈로그 재렌더](docs/portfolio/2026-08-13-room-editor-catalogue-rerender.md) · [렌더 계약](docs/portfolio/2026-09-08-room-render-contract.md) · [실행 취소·다시 실행](docs/portfolio/2026-11-05-room-editor-undo-redo.md) · [공유 집 디오라마](docs/portfolio/2026-11-04-shared-house-diorama.md)
 - 인증·딥링크·푸시: [refresh 토큰 회전](docs/portfolio/2026-09-16-forced-logout-refresh-rotation.md) · [웜 스타트 딥링크](docs/portfolio/2026-10-12-deeplink-warm-start-duplicate-shell.md) · [iOS FCM data 누락](docs/portfolio/2026-10-28-ios-fcm-push-data-empty.md) · [웹 구글 로그인 iframe](docs/portfolio/2026-10-13-web-google-login-gis-iframe.md)
-- UI·플랫폼: [달력 원 튐](docs/portfolio/2026-11-04-calendar-week-circle-jank.md) · [Android Yoga flex 잘림](docs/portfolio/2026-10-10-android-yoga-flex-footer-clip.md) · [RN Web 접근성 상태](docs/portfolio/2026-09-17-rn-web-aria-state-mapping.md) · [웹 모달 테두리](docs/portfolio/2026-09-16-web-modal-frame-border.md) · [코치마크 좌표](docs/portfolio/2026-09-16-coach-mark-coordinates-tutorial-resume.md)
+- UI·플랫폼: [달력 원 튐](docs/portfolio/2026-11-04-calendar-week-circle-jank.md) · [Android 움짤 재생](docs/portfolio/2026-11-11-android-animated-webp-autoplay.md) · [Android Yoga flex 잘림](docs/portfolio/2026-10-10-android-yoga-flex-footer-clip.md) · [RN Web 접근성 상태](docs/portfolio/2026-09-17-rn-web-aria-state-mapping.md) · [웹 모달 테두리](docs/portfolio/2026-09-16-web-modal-frame-border.md) · [코치마크 좌표](docs/portfolio/2026-09-16-coach-mark-coordinates-tutorial-resume.md)
 - 품질·관측: [Storybook 테스트 파이프라인](docs/portfolio/2026-09-16-storybook-test-pipeline.md) · [병렬 i18n 전환](docs/portfolio/2026-09-16-parallel-i18n-migration.md) · [트레이스 헤더와 CORS](docs/portfolio/2026-09-16-observability-trace-headers-cors.md)
 - 거래소: [구매 대기 상태](docs/portfolio/2026-10-28-market-pending-state.md) · [고정가 판매 전환](docs/portfolio/2026-11-05-fixed-price-market-transition.md)
 

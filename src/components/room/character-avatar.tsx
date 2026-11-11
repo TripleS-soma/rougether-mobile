@@ -62,16 +62,22 @@ const SPRITES: Partial<Record<CharacterId, number[]>> = {
  * 서버 포즈 프레임(움직이는 webp)을 재생할지 (2026-11-09). **끈다** — 몸 전체가 계속 출렁여
  * "떠다니는" 느낌이었다(사용자 제보). 첫 장면에 멈춘 그림 위에 `CharacterIdle`(숨쉬기·탭 반응)을
  * 얹는다. 그림 출처(admin 등록 포즈)는 그대로라 아트가 바뀌어도 앱 수정이 필요 없다.
- * iOS·Android만 — expo-image의 autoplay는 웹에서 무시된다.
+ * autoplay로 멈추는 건 iOS뿐이다 — 웹·Android는 아래 `preferBundledStill` 참고.
  */
 export const CHARACTER_ART_AUTOPLAY = false;
 
 /**
- * 웹은 움직이는 webp를 멈출 방법이 없다(브라우저가 autoplay를 무시). 재생을 끈 상태에서 웹이면
- * 번들 정적 포즈가 있는 캐릭터는 그것을 그린다 — 서버 포즈 대신이지만 같은 캐릭터·같은 포즈 순서다.
+ * 재생을 끈 상태에서 **iOS가 아니면** 번들 정적 포즈를 그린다(번들 포즈가 있는 캐릭터) — 서버 포즈
+ * 대신이지만 같은 캐릭터·같은 포즈 순서다.
+ *
+ * - 웹: 브라우저가 autoplay를 무시해 움직이는 webp를 멈출 방법이 없다.
+ * - Android (2026-11-11 제보): expo-image는 그림이 준비된 순간 한 번 `stop()`할 뿐인데, 움직이는
+ *   webp를 그리는 라이브러리(penfeizhou `FrameAnimationDrawable`)는 뷰가 **다시 보이게 될 때마다**
+ *   자체 autoPlay 플래그로 재생을 다시 시작한다(`setVisible`). 탭을 오가거나 앱이 앞으로 오면
+ *   멈춰 둔 그림이 다시 움직였다. 네이티브를 고치지 않고는 막을 수 없어 움직이는 파일을 아예 안 쓴다.
  */
 function preferBundledStill(characterId: CharacterId): boolean {
-  return !CHARACTER_ART_AUTOPLAY && Platform.OS === 'web' && !!SPRITES[characterId];
+  return !CHARACTER_ART_AUTOPLAY && Platform.OS !== 'ios' && !!SPRITES[characterId];
 }
 
 /** Number of poses available per character. */
