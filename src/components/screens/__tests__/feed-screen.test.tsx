@@ -1,5 +1,7 @@
 import { fireEvent, render, within } from '@testing-library/react-native';
 import { Text } from 'react-native';
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { FeedScreen } from '@/components/screens/feed-screen';
 import { DEMO_FEED_POSTS, DEMO_FEED_TEXT_POST } from '@/mocks/fixtures';
@@ -210,5 +212,48 @@ describe('FeedScreen — 집 피드로 그릴 때', () => {
     expect(ui.getByText('아직 인증글이 없어요.')).toBeTruthy();
     await ui.rerender(<FeedScreen posts={[]} board="FREE" emptyMessages={emptyMessages} />);
     expect(ui.getByText(/아직 자유게시판 글이 없어요/)).toBeTruthy();
+  });
+});
+
+describe('FeedScreen 당겨서 새로고침 — 다른 탭과 같은 발바닥 당김 (2026-11-11)', () => {
+  /** 맨 위에서 translationY만큼 당겼다 놓는 팬 시퀀스. */
+  const pullAndRelease = (translationY: number) =>
+    fireGestureHandler(getByGestureTestId('feed-refresh-pan'), [
+      { state: State.BEGAN },
+      { state: State.ACTIVE, translationY: 0 },
+      { state: State.ACTIVE, translationY: 0 },
+      { state: State.ACTIVE, translationY },
+      { state: State.END, translationY },
+    ]);
+
+  it('목록을 임계 넘게 당겼다 놓으면 onRefresh를 부르고, 목록은 그대로 그려진다', async () => {
+    const onRefresh = jest.fn(() => Promise.resolve());
+    const { getByTestId, getByText } = await render(
+      <FeedScreen posts={DEMO_FEED_POSTS} now={NOW} onRefresh={onRefresh} />,
+    );
+    expect(getByTestId('feed-refresh-paw')).toBeTruthy();
+    expect(getByText('루틴친구')).toBeTruthy();
+    pullAndRelease(140);
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('살짝 당긴 것은 새로고침하지 않는다', async () => {
+    const onRefresh = jest.fn(() => Promise.resolve());
+    await render(<FeedScreen posts={DEMO_FEED_POSTS} onRefresh={onRefresh} />);
+    pullAndRelease(80);
+    expect(onRefresh).not.toHaveBeenCalled();
+  });
+
+  it('글이 없는 빈 목록에서도 당겨서 새로고침할 수 있다', async () => {
+    const onRefresh = jest.fn(() => Promise.resolve());
+    await render(<FeedScreen posts={[]} onRefresh={onRefresh} />);
+    pullAndRelease(140);
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('onRefresh가 없으면 당김 없이 평범한 목록이다', async () => {
+    const { queryByTestId, getByText } = await render(<FeedScreen posts={DEMO_FEED_POSTS} />);
+    expect(queryByTestId('feed-refresh-paw')).toBeNull();
+    expect(getByText('루틴친구')).toBeTruthy();
   });
 });

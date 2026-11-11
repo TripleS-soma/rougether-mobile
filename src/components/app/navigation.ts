@@ -33,6 +33,8 @@ export type Screen =
   | 'profileEdit'
   | 'notificationList'
   | 'calendarImport'
+  | 'suggestions'
+  | 'updates'
   | 'bugReport'
   | 'notifications'
   | 'sound'
@@ -89,6 +91,8 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   profileEdit: null,
   notificationList: null,
   calendarImport: null,
+  suggestions: null,
+  updates: null,
   bugReport: null,
   notifications: null,
   sound: null,
@@ -163,6 +167,8 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   profileEdit: 'myPage',
   notificationList: 'myRoom',
   calendarImport: 'myPage',
+  suggestions: 'myPage',
+  updates: 'myPage',
   bugReport: 'myPage',
   notifications: 'settings',
   sound: 'settings',
