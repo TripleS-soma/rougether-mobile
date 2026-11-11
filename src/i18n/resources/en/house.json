@@ -510,6 +510,7 @@
       "retryPhoto": "Reload photo",
       "photoFailed": "Could not load photo. Tap to try again.",
       "closePhoto": "Close",
+      "sharePhotoToFeed": "Post to feed",
       "previewPhoto": "Send photo",
       "cancelPhoto": "Cancel",
       "sendPhoto": "Send photo",

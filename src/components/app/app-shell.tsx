@@ -138,6 +138,10 @@ export function AppShell({
     (record: FeedMinigameRecordDraft) => shareRecordRef.current?.(record),
     [],
   );
+  // 채팅 사진의 [피드에 올리기] → 피드 작성 (2026-11-11). 같은 이유로 ref로 잇는다 — 집 배선
+  // (useHousePages)이 피드 배선보다 먼저 선다.
+  const sharePhotoRef = useRef<((uri: string) => void) | null>(null);
+  const shareChatPhoto = useCallback((uri: string) => sharePhotoRef.current?.(uri), []);
   const minigames = useMinigameSurface({
     screen,
     setScreen,
@@ -586,6 +590,7 @@ export function AppShell({
     wornCharacterId,
     onPagerLockChange: handleHousePagerLock,
     roomPreviewStore: memberRoomPreviews,
+    onShareChatPhoto: FEED_ENABLED ? shareChatPhoto : undefined,
   });
 
   // 피드 페이지 배선 (#1409) — 피드 탭과 서브화면 2종(상세·작성). FEED_ENABLED가 꺼져
@@ -599,6 +604,10 @@ export function AppShell({
   useEffect(() => {
     shareRecordRef.current = feedShareRecord;
   }, [feedShareRecord]);
+  const feedSharePhoto = feedPages.sharePhoto;
+  useEffect(() => {
+    sharePhotoRef.current = feedSharePhoto;
+  }, [feedSharePhoto]);
 
   // 가구 거래소 배선 (#1427) — 목록(전체 메뉴에서 여는 독립 화면, #1502)·상세·내 주문 서브화면,
   // 스튜디오 발행. MARKET_ENABLED가 꺼져 있으면 요청도 화면도 없다.

@@ -1,6 +1,7 @@
 import { HouseDioramaDemo } from '@/dev/house-diorama-demo';
 import { FeedAuthorHouseSheet } from '@/components/feed/feed-author-house-sheet';
 import type { FeedAuthorHouse } from '@/api/feed-houses';
+import { Asset } from 'expo-asset';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
@@ -11,6 +12,8 @@ import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { HouseScreen, type House } from '@/components/screens/house-screen';
 import { HouseMissionsScreen } from '@/components/screens/house-missions-screen';
 import { HouseChatScreen } from '@/components/screens/house-chat-screen';
+import { ChatPhotoViewer } from '@/components/chat/chat-photo-viewer';
+import samplePhoto from '@/assets/images/splash-light.png';
 import { HouseMembersScreen } from '@/components/screens/house-members-screen';
 import { manageableMembers } from '@/components/screens/house/members';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
@@ -21,6 +24,26 @@ import { parseInviteText } from '@/lib/invite-code';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { RECOMMENDED_HOUSES } from '@/mocks/fixtures';
 import type { GalleryEntry } from '@/dev/registry/types';
+
+function ChatPhotoViewerDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <View>
+      <ScalePressable onPress={() => setOpen(true)} accessibilityRole="button">
+        <Text>사진 크게 보기 열기</Text>
+      </ScalePressable>
+      <ChatPhotoViewer
+        visible={open}
+        // 번들 그림의 주소 — 웹에는 Image.resolveAssetSource가 없다.
+        uri={Asset.fromModule(samplePhoto).uri}
+        senderName="김다현"
+        sentLabel="11월 11일 수요일 오후 8:30"
+        onShareToFeed={() => setOpen(false)}
+        onClose={() => setOpen(false)}
+      />
+    </View>
+  );
+}
 
 function FeedAuthorHouseDemo() {
   const [open, setOpen] = useState(false);
@@ -154,6 +177,11 @@ function HouseCoverPickerDemo() {
 }
 
 export const houseEntries: GalleryEntry[] = [
+  {
+    name: 'ChatPhotoViewer',
+    description: '채팅 사진 크게 보기 — 검정 바탕 · 뒤로가기 · 보낸 사람과 시각 · 피드에 올리기',
+    render: () => <ChatPhotoViewerDemo />,
+  },
   {
     name: 'FeedAuthorHouseSheet',
     description: '게시물 작성자의 집 선택, 입주 신청과 바로 입주 설정 구분',

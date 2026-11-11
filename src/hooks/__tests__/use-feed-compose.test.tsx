@@ -163,6 +163,24 @@ describe('useFeedCompose (#1409)', () => {
     expect(result.current.content).toBe('');
   });
 
+  // 2026-11-11 — 채팅 사진 크게 보기의 [피드에 올리기].
+  it('사진 한 장으로 글을 시작하면 지난 초안을 비우고 그 사진만 올린다 — 게시는 하지 않는다', async () => {
+    const { result } = await withUploaded();
+    await act(async () => {
+      result.current.setContent('지난 초안');
+      result.current.startPhotoPost(photo('chat-photo.jpg'));
+    });
+    await waitFor(() => expect(result.current.canSubmit).toBe(true));
+    // 지난 초안의 사진 두 장은 서버에서도 취소된다.
+    expect(deleteFeedImage).toHaveBeenCalledWith(100);
+    expect(deleteFeedImage).toHaveBeenCalledWith(101);
+    expect(result.current.images).toHaveLength(1);
+    expect(result.current.images[0]).toMatchObject({ status: 'done' });
+    expect(result.current.content).toBe('');
+    expect(result.current.board).toBe('FREE');
+    expect(createFeedPost).not.toHaveBeenCalled();
+  });
+
   it('올라간 사진을 빼거나 작성을 버리면 서버 업로드도 취소한다', async () => {
     const { result } = await withUploaded();
     await act(async () => {

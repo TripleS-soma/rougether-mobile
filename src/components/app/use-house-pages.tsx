@@ -92,6 +92,7 @@ export function useHousePages({
   wornCharacterId,
   onPagerLockChange,
   roomPreviewStore,
+  onShareChatPhoto,
 }: {
   /** 셸 내비 상태 — screen 상태는 셸 소유(useState setter 계약, #692). */
   nav: {
@@ -180,6 +181,8 @@ export function useHousePages({
    * 그보다 먼저 서는 use-friend-visit이 같은 인스턴스에 닿지 못한다.
    */
   roomPreviewStore: ReturnType<typeof useMemberRoomPreviews>;
+  /** 채팅 사진 크게 보기의 [피드에 올리기] — 피드가 꺼져 있으면 없다. */
+  onShareChatPhoto?: (uri: string) => void;
 }) {
   const scheme = useResolvedScheme();
   const { screen, setScreen, goBack } = nav;
@@ -503,6 +506,7 @@ export function useHousePages({
         houseId={currentHouse.houseId}
         houseName={currentHouse.name}
         onBack={closeChat}
+        onSharePhoto={onShareChatPhoto}
       />
     ) : screen === 'houseMissions' && currentHouse ? (
       <HouseMissionsScreen

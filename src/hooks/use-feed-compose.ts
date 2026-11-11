@@ -183,6 +183,18 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
     [discard],
   );
 
+  /**
+   * 사진 한 장으로 글 시작 (2026-11-11 — 채팅 사진의 [피드에 올리기]). 빈 초안에서 시작해 그 사진을
+   * 곧바로 올린다. 자동으로 게시하지 않는다 — 사용자가 본문을 쓰고 직접 [올리기]를 누른다.
+   */
+  const startPhotoPost = useCallback(
+    (file: PickedLibraryImageWithSize) => {
+      discard();
+      addImages([file]);
+    },
+    [discard, addImages],
+  );
+
   /** 게시 — 성공하면 새 글, 아니면 null(안내는 onError). */
   const submit = useCallback(async (): Promise<FeedPost | null> => {
     if (submittingRef.current) return null;
@@ -272,6 +284,7 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
       setBoard,
       setRoutine,
       startRecordPost,
+      startPhotoPost,
       removeRecord,
       addImages,
       retryImage,
@@ -292,6 +305,7 @@ export function useFeedCompose({ onError }: { onError?: (message: string) => voi
       setBoard,
       setRoutine,
       startRecordPost,
+      startPhotoPost,
       removeRecord,
       addImages,
       retryImage,
