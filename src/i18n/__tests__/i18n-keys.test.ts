@@ -25,7 +25,6 @@ describe('i18n resources', () => {
     const files = [
       require('@/i18n/resources/ko/common.json'),
       require('@/i18n/resources/ko/christmas.json'),
-      require('@/i18n/resources/ko/pepero.json'),
       require('@/i18n/resources/ko/settings.json'),
       require('@/i18n/resources/ko/member.json'),
       require('@/i18n/resources/ko/routineTodo.json'),
