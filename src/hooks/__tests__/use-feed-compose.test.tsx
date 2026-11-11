@@ -44,6 +44,26 @@ async function withUploaded(onError = jest.fn()) {
 }
 
 describe('useFeedCompose (#1409)', () => {
+  it('사진 없이 완료 루틴만 선택한 인증을 API로 보낸다', async () => {
+    const { result } = await renderHook(() => useFeedCompose(), { wrapper: queryWrapper() });
+    await act(async () => {
+      result.current.setBoard('VERIFICATION');
+      result.current.setRoutine(ROUTINE);
+    });
+    expect(result.current.canSubmit).toBe(true);
+    await act(async () => {
+      await result.current.submit();
+    });
+    expect(uploadFeedImage).not.toHaveBeenCalled();
+    expect(jest.mocked(createFeedPost).mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        boardType: 'VERIFICATION',
+        imageIds: [],
+        routineCompletion: ROUTINE,
+      }),
+    );
+  });
+
   it('고른 사진을 곧바로 올리고, 전부 올라가야 게시할 수 있다', async () => {
     const { result } = await withUploaded();
     expect(uploadFeedImage).toHaveBeenCalledTimes(2);
@@ -205,7 +225,7 @@ describe('useFeedCompose (#1409)', () => {
         await result.current.submit();
       });
       expect(createFeedPost).not.toHaveBeenCalled();
-      expect(onError).toHaveBeenCalledWith('사진을 한 장 이상 골라 주세요.');
+      expect(onError).toHaveBeenCalledWith('인증할 루틴을 골라 주세요.');
     });
 
     it('자유게시판의 빈 글은 보내지 않는다', async () => {

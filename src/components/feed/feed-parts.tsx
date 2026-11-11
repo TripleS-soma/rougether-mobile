@@ -43,7 +43,7 @@ export function FeedAvatar({ author, size = AVATAR_SIZE }: { author: FeedAuthor;
   }
   return (
     <View style={[styles.avatar, box, { backgroundColor: t.primarySoft }]}>
-      <Text style={[Typography.label, { color: t.primaryText }]}>{name.slice(0, 1)}</Text>
+      <Text style={[Typography.labelCompact, { color: t.primaryText }]}>{name.slice(0, 1)}</Text>
     </View>
   );
 }
@@ -70,11 +70,11 @@ export function FeedAuthorRow({
     <View style={styles.authorRow}>
       <FeedAvatar author={author} />
       <View style={styles.authorText}>
-        <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
+        <Text style={[Typography.labelCompact, { color: t.text }]} numberOfLines={1}>
           {feedAuthorName(author, tr('feed.anonymous'))}
         </Text>
         {time ? (
-          <Text style={[Typography.supporting, { color: t.textMuted }]} numberOfLines={1}>
+          <Text style={[Typography.caption, { color: t.textMuted }]} numberOfLines={1}>
             {edited ? `${time} · ${tr('feed.edited')}` : time}
           </Text>
         ) : null}
@@ -115,7 +115,7 @@ export function FeedActionRow({
           size={22}
           color={liked ? t.danger : t.icon}
         />
-        <Text style={[Typography.supporting, { color: t.textMuted }]}>
+        <Text style={[Typography.caption, { color: t.textMuted }]}>
           {tr('feed.likeCount', { count: likeCount })}
         </Text>
       </Pressable>
@@ -129,7 +129,7 @@ export function FeedActionRow({
           pressed && !!onOpenComments && pressedStyle('dim', t),
         ]}>
         <Icon name="comment" size={20} color={t.icon} />
-        <Text style={[Typography.supporting, { color: t.textMuted }]}>
+        <Text style={[Typography.caption, { color: t.textMuted }]}>
           {tr('feed.commentCount', { count: commentCount })}
         </Text>
       </Pressable>

@@ -19,8 +19,10 @@ describe('게시판별 작성 조건 (서버 #428)', () => {
     expect(feedComposeBlocker('FREE', [done], '', null)).toBeNull();
   });
 
-  it('인증게시판: 본문이 있어도 사진이 1장 이상 필요하다', () => {
-    expect(feedComposeBlocker('VERIFICATION', [], '본문만', routine)).toBe('needPhoto');
+  it('인증게시판: 사진과 본문 없이 완료 루틴만으로 올릴 수 있다', () => {
+    expect(feedComposeBlocker('VERIFICATION', [], '본문만', routine)).toBeNull();
+    expect(feedComposeBlocker('VERIFICATION', [], '', routine)).toBeNull();
+    expect(feedComposeBlocker('VERIFICATION', [], '', null)).toBe('needRoutine');
     expect(feedComposeBlocker('VERIFICATION', [done], '', routine)).toBeNull();
   });
 
@@ -57,10 +59,8 @@ describe('수정에서 게시판 전환 (서버 #430)', () => {
   };
   const legacy = { ...verified, routine: null };
 
-  it('사진 없는 글은 인증으로 옮길 수 없다', () => {
-    expect(feedEditBlocker(freeText, { board: 'VERIFICATION', routine, content: '글' })).toBe(
-      'needPhotoForVerification',
-    );
+  it('사진 없는 글도 루틴을 고르면 인증으로 옮길 수 있다', () => {
+    expect(feedEditBlocker(freeText, { board: 'VERIFICATION', routine, content: '글' })).toBeNull();
   });
 
   it('자유 → 인증은 루틴을 골라야 저장된다', () => {

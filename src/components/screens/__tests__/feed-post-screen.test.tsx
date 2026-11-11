@@ -176,16 +176,16 @@ describe('FeedPostScreen (#1409)', () => {
     expect(verified.getByTestId('feed-board-badge-VERIFICATION')).toBeTruthy();
   });
 
-  it('사진 없는 자유글은 인증으로 옮길 수 없고, 본문을 비우면 저장할 수 없다 (서버 #430)', async () => {
+  it('사진 없는 자유글도 인증 선택이 가능하고 자유글의 빈 본문은 막는다', async () => {
     const onEditPost = jest.fn().mockResolvedValue(true);
     const ui = await render(
       <FeedPostScreen post={{ ...DEMO_FEED_TEXT_POST, mine: true }} onEditPost={onEditPost} />,
     );
     await fireEvent.press(ui.getByLabelText('게시물 수정'));
     expect(ui.getByLabelText('인증 게시판').props.accessibilityState).toMatchObject({
-      disabled: true,
+      disabled: false,
     });
-    expect(ui.getByText('사진이 있는 글만 인증게시판으로 옮길 수 있어요.')).toBeTruthy();
+    expect(ui.queryByText('사진이 있는 글만 인증게시판으로 옮길 수 있어요.')).toBeNull();
 
     const input = ui.getByPlaceholderText('본문을 입력하세요');
     await fireEvent.changeText(input, '   ');

@@ -80,12 +80,14 @@ export function AnnouncementSection({
           </View>
           <View style={styles.rowBody}>
             <View style={styles.rowHead}>
-              <Text style={[Typography.label, { color: t.text }]}>{a.title}</Text>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              <Text style={[Typography.labelCompact, styles.rowTitle, { color: t.text }]}>
+                {a.title}
+              </Text>
+              <Text style={[Typography.caption, styles.rowTime, { color: t.textMuted }]}>
                 {announcementDateLabel(a.date, tr)}
               </Text>
             </View>
-            <Text style={[Typography.body, { color: a.read ? t.textMuted : t.text }]}>
+            <Text style={[Typography.bodyCompact, { color: a.read ? t.textMuted : t.text }]}>
               {a.body}
             </Text>
             {a.action ? (
@@ -135,7 +137,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.three,
+    gap: Spacing.two,
     borderRadius: Radius.md,
     borderCurve: 'continuous',
     borderWidth: 1,
@@ -148,13 +150,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  rowTitle: { flex: 1, minWidth: 0 },
+  rowTime: { flexShrink: 0 },
   rowBody: {
+    minWidth: 0,
     flex: 1,
     gap: Spacing.half,
   },
   rowHead: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: Spacing.two,
     justifyContent: 'space-between',
   },
   unreadDot: {
