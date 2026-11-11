@@ -4,7 +4,7 @@
       "members": "Members {{n}}",
       "houseA11y": "{{name}} house",
       "zoomExit": "Exit zoom",
-      "railSearch": "Find houses",
+      "railAdd": "Add house",
       "manageA11y": "Manage house, members {{members}}",
       "missionsA11yTitle": "Our house goals",
       "missionsA11yToday": "Today {{done}}/{{total}} contributed",

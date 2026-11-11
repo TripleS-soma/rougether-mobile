@@ -4,7 +4,7 @@
       "members": "멤버 {{n}}",
       "houseA11y": "{{name}} 집",
       "zoomExit": "확대 종료",
-      "railSearch": "집 탐색",
+      "railAdd": "집 추가",
       "manageA11y": "집 관리, 멤버 {{members}}",
       "missionsA11yTitle": "우리 집의 목표",
       "missionsA11yToday": "오늘 {{done}}/{{total}} 기여",
