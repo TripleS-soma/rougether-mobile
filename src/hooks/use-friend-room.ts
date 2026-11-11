@@ -50,6 +50,7 @@ export type FriendRoom = {
   /** null until the room endpoint answered (renders as an empty room). */
   placement: FriendRoomPlacement | null;
   characterId?: CharacterId;
+  characterScale?: number;
   /** The friend's CDN animation keys (room response); local sprite fallback. */
   characterFrames?: string[];
   streakDays: number;
@@ -186,6 +187,7 @@ export function useFriendRoom() {
               }
             : null,
           characterId: friendCharacterId,
+          characterScale: room?.characterScale,
           // 친구 방 응답에는 `poses[]`가 없다(#735 — 2026-08-24 재확인). 그래서 예전엔
           // 레거시 `animations`만 폈는데, 내 방은 `poses`를 써서 **같은 캐릭터가 두
           // 화면에서 다른 그림으로** 나왔다 (#968). 마스터 `/characters`가 주는 poses를

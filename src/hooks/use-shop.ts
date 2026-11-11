@@ -1,3 +1,4 @@
+import { normalizeCharacterScale } from '@/components/room/character-scale';
 /**
  * Shop catalogue + purchase + room placement, backed by the API. Three queries
  * — the catalogue (`GET /items`), the inventory (`GET /me/items`,
@@ -61,6 +62,7 @@ export type RoomPlacement = {
   backgroundId: string | null;
   /** 낙관적 잠금 리비전 — 저장 시 baseRevision으로 그대로 보낸다. */
   layoutRevision: number;
+  characterScale: number;
   /** 내 방에 낀 거미줄 (#829) — 없으면 null. */
   cobweb: RoomCobweb | null;
 };
@@ -107,6 +109,7 @@ export function useShop() {
       floorId: saved ? saved.floorId : fallback.floorId,
       backgroundId: saved ? saved.backgroundId : fallback.backgroundId,
       layoutRevision: room?.layoutRevision ?? 0,
+      characterScale: normalizeCharacterScale(room?.characterScale),
       // 서버가 안 주면 깨끗한 방 (#829).
       cobweb: room?.cobweb ?? null,
     };
@@ -233,12 +236,16 @@ export function useShop() {
       wallpaperId: string,
       floorId: string | null = null,
       backgroundId: string | null = null,
+      characterScale?: number,
     ): Promise<'ok' | 'conflict' | 'fail'> => {
       const map = userItemMapRef.current;
       const baseRevision = revisionRef.current;
       const surfaceUid = (id: string | null) => (id ? (map.get(id) ?? null) : null);
       const body = {
         baseRevision,
+        ...(characterScale != null
+          ? { characterScale: normalizeCharacterScale(characterScale) }
+          : {}),
         surfaceSlots: [
           { slotType: 'wallpaper', userItemId: surfaceUid(wallpaperId) },
           { slotType: 'floor', userItemId: surfaceUid(floorId) },
@@ -257,6 +264,7 @@ export function useShop() {
             prev && {
               ...prev,
               layoutRevision: res.layoutRevision ?? baseRevision + 1,
+              characterScale: res.characterScale ?? prev.characterScale ?? 1,
               placements: body.placements,
               slots: body.surfaceSlots.filter(
                 (s): s is { slotType: string; userItemId: number } => s.userItemId != null,

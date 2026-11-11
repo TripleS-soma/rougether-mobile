@@ -1433,6 +1433,7 @@ export type RoomCobwebResponse = {
 };
 
 export type RoomLayoutUpdateRequest = {
+  characterScale?: number;
   baseRevision: number;
   surfaceSlots: SurfaceSlotAssignment[];
   placements: PlacementItem[];
@@ -1451,6 +1452,7 @@ export type RoomPlacementResponse = {
 };
 
 export type RoomRenderResponse = {
+  characterScale?: number;
   growthLevel?: number;
   layoutFormat?: 'SLOT_V1' | 'FREE_V1';
   character?: RenderCharacter;
@@ -1460,6 +1462,7 @@ export type RoomRenderResponse = {
 };
 
 export type RoomResponse = {
+  characterScale?: number;
   roomUserId?: number;
   ownerBio?: string | null;
   growthLevel?: number;

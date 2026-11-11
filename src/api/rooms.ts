@@ -10,6 +10,7 @@ import type {
 
 /** RoomResponse + 자유 배치 필드(#327) — 다음 gen:api-types 때 types.ts로 흡수. */
 export type RoomWithLayout = RoomResponse & {
+  characterScale?: number;
   layoutFormat?: 'SLOT_V1' | 'FREE_V1';
   layoutRevision?: number;
   placements?: RoomPlacementWire[];
@@ -69,6 +70,7 @@ export type RoomPlacementWire = {
  */
 export function updateRoomLayout(body: {
   baseRevision: number;
+  characterScale?: number;
   surfaceSlots: RoomSlotSave[];
   placements: RoomPlacementSave[];
 }) {

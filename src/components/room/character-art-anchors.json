@@ -1,0 +1,290 @@
+{
+  "bear-1": {
+    "centerOffset": -0.05421686746987952,
+    "bottomInset": 0.12349397590361445
+  },
+  "bear-2": {
+    "centerOffset": -0.015060240963855422,
+    "bottomInset": 0.11746987951807229
+  },
+  "bear-3": {
+    "centerOffset": 0.015060240963855422,
+    "bottomInset": 0.12349397590361445
+  },
+  "bear-4": {
+    "centerOffset": 0.04819277108433735,
+    "bottomInset": 0.11746987951807229
+  },
+  "cat-1": {
+    "centerOffset": -0.0286144578313253,
+    "bottomInset": 0.10090361445783133
+  },
+  "cat-2": {
+    "centerOffset": -0.01957831325301205,
+    "bottomInset": 0.10993975903614457
+  },
+  "cat-3": {
+    "centerOffset": -0.025602409638554216,
+    "bottomInset": 0.11295180722891567
+  },
+  "cat-4": {
+    "centerOffset": 0.018072289156626505,
+    "bottomInset": 0.11295180722891567
+  },
+  "characters/1f9c6b56-9c30-4554-b1ce-0be83642e627.webp": {
+    "centerOffset": 0.011458333333333333,
+    "bottomInset": 0.07708333333333334
+  },
+  "characters/3b1f16c8-7772-4c40-8065-0e3baf1a6f21.webp": {
+    "centerOffset": 0.011458333333333333,
+    "bottomInset": 0.07708333333333334
+  },
+  "characters/46c58f8f-5495-491e-a7be-095ba5eb4e95.webp": {
+    "centerOffset": 0.007291666666666667,
+    "bottomInset": 0.07083333333333333
+  },
+  "characters/4eb35995-6b9a-4baa-863b-7f1914dc6365.webp": {
+    "centerOffset": 0.007291666666666667,
+    "bottomInset": 0.07083333333333333
+  },
+  "characters/bear/animations/blink.gif": {
+    "centerOffset": 0,
+    "bottomInset": 0.0738255033557047
+  },
+  "characters/bear/animations/idle.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/bear/animations/pose-cycle.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/bear/animations/wave.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/cat/animations/blink.gif": {
+    "centerOffset": -0.03333333333333333,
+    "bottomInset": 0.06666666666666667
+  },
+  "characters/cat/animations/idle.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/cat/animations/pose-cycle.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/cat/animations/wave.webp": {
+    "centerOffset": 0,
+    "bottomInset": 0.07777777777777778
+  },
+  "characters/dog/animations/blink.gif": {
+    "centerOffset": 0,
+    "bottomInset": 0.1342281879194631
+  },
+  "characters/dog/animations/idle.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/dog/animations/pose-cycle.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/dog/animations/wave.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/fox/animations/idle.webp": {
+    "centerOffset": -0.0015060240963855422,
+    "bottomInset": 0.11897590361445783
+  },
+  "characters/fox/animations/pose-cycle.webp": {
+    "centerOffset": 0,
+    "bottomInset": 0.12198795180722892
+  },
+  "characters/fox/animations/wave.webp": {
+    "centerOffset": 0,
+    "bottomInset": 0.12198795180722892
+  },
+  "characters/fox/base-v1.webp": {
+    "centerOffset": -0.0015060240963855422,
+    "bottomInset": 0.11897590361445783
+  },
+  "characters/horse/animations/blink.gif": {
+    "centerOffset": 0,
+    "bottomInset": 0.087248322147651
+  },
+  "characters/horse/animations/idle.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/horse/animations/pose-cycle.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/horse/animations/wave.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/otter/animations/blink.gif": {
+    "centerOffset": 0.003355704697986577,
+    "bottomInset": 0.09395973154362416
+  },
+  "characters/otter/animations/idle.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/otter/animations/pose-cycle.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/otter/animations/wave.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/panda/animations/blink.gif": {
+    "centerOffset": 0,
+    "bottomInset": 0.087248322147651
+  },
+  "characters/panda/animations/idle.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/panda/animations/pose-cycle.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/panda/animations/wave.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/sheep/animations/blink.gif": {
+    "centerOffset": 0,
+    "bottomInset": 0.087248322147651
+  },
+  "characters/sheep/animations/idle.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/sheep/animations/pose-cycle.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/sheep/animations/wave.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/tiger/animations/blink.gif": {
+    "centerOffset": 0,
+    "bottomInset": 0.12751677852348994
+  },
+  "characters/tiger/animations/idle.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/tiger/animations/pose-cycle.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "characters/tiger/animations/wave.webp": {
+    "centerOffset": -0.002777777777777778,
+    "bottomInset": 0.08333333333333333
+  },
+  "dog-1": {
+    "centerOffset": -0.05271084337349398,
+    "bottomInset": 0.2786144578313253
+  },
+  "dog-2": {
+    "centerOffset": -0.018072289156626505,
+    "bottomInset": 0.17018072289156627
+  },
+  "dog-3": {
+    "centerOffset": 0.016566265060240965,
+    "bottomInset": 0.16716867469879518
+  },
+  "dog-4": {
+    "centerOffset": 0.05120481927710843,
+    "bottomInset": 0.2063253012048193
+  },
+  "horse-1": {
+    "centerOffset": -0.05271084337349398,
+    "bottomInset": 0.13102409638554216
+  },
+  "horse-2": {
+    "centerOffset": -0.018072289156626505,
+    "bottomInset": 0.13102409638554216
+  },
+  "horse-3": {
+    "centerOffset": 0.015060240963855422,
+    "bottomInset": 0.13102409638554216
+  },
+  "horse-4": {
+    "centerOffset": 0.045180722891566265,
+    "bottomInset": 0.13102409638554216
+  },
+  "otter-1": {
+    "centerOffset": -0.05120481927710843,
+    "bottomInset": 0.13102409638554216
+  },
+  "otter-2": {
+    "centerOffset": -0.016566265060240965,
+    "bottomInset": 0.13704819277108435
+  },
+  "otter-3": {
+    "centerOffset": 0.012048192771084338,
+    "bottomInset": 0.13704819277108435
+  },
+  "otter-4": {
+    "centerOffset": 0.04819277108433735,
+    "bottomInset": 0.13102409638554216
+  },
+  "panda-1": {
+    "centerOffset": -0.05120481927710843,
+    "bottomInset": 0.13704819277108435
+  },
+  "panda-2": {
+    "centerOffset": -0.016566265060240965,
+    "bottomInset": 0.13704819277108435
+  },
+  "panda-3": {
+    "centerOffset": 0.012048192771084338,
+    "bottomInset": 0.13704819277108435
+  },
+  "panda-4": {
+    "centerOffset": 0.04819277108433735,
+    "bottomInset": 0.13704819277108435
+  },
+  "sheep-1": {
+    "centerOffset": -0.05271084337349398,
+    "bottomInset": 0.13102409638554216
+  },
+  "sheep-2": {
+    "centerOffset": -0.016566265060240965,
+    "bottomInset": 0.13102409638554216
+  },
+  "sheep-3": {
+    "centerOffset": 0.016566265060240965,
+    "bottomInset": 0.13102409638554216
+  },
+  "sheep-4": {
+    "centerOffset": 0.045180722891566265,
+    "bottomInset": 0.13102409638554216
+  },
+  "tiger-1": {
+    "centerOffset": -0.05271084337349398,
+    "bottomInset": 0.26957831325301207
+  },
+  "tiger-2": {
+    "centerOffset": -0.01957831325301205,
+    "bottomInset": 0.16716867469879518
+  },
+  "tiger-3": {
+    "centerOffset": 0.015060240963855422,
+    "bottomInset": 0.16716867469879518
+  },
+  "tiger-4": {
+    "centerOffset": 0.05120481927710843,
+    "bottomInset": 0.1822289156626506
+  }
+}
