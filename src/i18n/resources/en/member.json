@@ -446,6 +446,10 @@
           "title": "Back to My Room",
           "body": "Tap the Room tab below to continue the mission."
         },
+        "useBanner": {
+          "title": "Continue the mission",
+          "body": "Tap the mission banner above to start right away."
+        },
         "completeRoutine": {
           "title": "Complete today's routine",
           "body": "Tap the check to finish today's share and earn coins."

@@ -42,6 +42,17 @@ type TargetActions = {
 const CoachTargetContext = createContext<TargetActions | null>(null);
 const CoachRectsContext = createContext<Record<string, TargetRect> | null>(null);
 
+/** 좌표 맵에서 대상 하나를 뺀다 — 없으면 같은 참조를 돌려줘 구독자가 다시 그려지지 않는다. */
+export function withoutTarget(
+  rects: Record<string, TargetRect>,
+  key: string,
+): Record<string, TargetRect> {
+  if (!(key in rects)) return rects;
+  const next = { ...rects };
+  delete next[key];
+  return next;
+}
+
 /**
  * 코치마크 대상 좌표 저장소 (#351). 앱 셸 최상단에 한 번 감싸고,
  * 스포트라이트로 짚을 요소를 <CoachTarget id="…">로 감싼다.
@@ -68,7 +79,11 @@ export function CoachTargetProvider({ children }: { children: ReactNode }) {
   const registerMeasure = useCallback((key: string, measure: () => void) => {
     measuresRef.current.set(key, measure);
     return () => {
-      if (measuresRef.current.get(key) === measure) measuresRef.current.delete(key);
+      if (measuresRef.current.get(key) !== measure) return;
+      measuresRef.current.delete(key);
+      // 대상이 화면에서 사라지면 좌표도 지운다 — 남겨 두면 그 대상이 없는 화면에서 옛 자리에
+      // 구멍이 뚫린다(뽑기 화면에 하단 탭 자리 구멍, 2026-11-11 제보).
+      setRects((prev) => withoutTarget(prev, key));
     };
   }, []);
   const remeasureAll = useCallback(() => {
