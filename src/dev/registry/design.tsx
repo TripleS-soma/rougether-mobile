@@ -499,15 +499,16 @@ export const designEntries: GalleryEntry[] = [
   {
     name: 'UI · NotificationBanner',
     description:
-      '앱이 켜져 있을 때 뜨는 인앱 푸시 배너 (#902) — 종류별 아이콘 + 제목/본문, 탭하면 알림함. 갤러리에서는 자동으로 안 닫힌다.',
+      '앱이 켜져 있을 때 뜨는 인앱 배너 — 주간회고 안내에서 이번 주 다시 보지 않기를 선택할 수 있다. 갤러리에서는 자동으로 안 닫힌다.',
     render: () => (
       <View style={{ alignSelf: 'stretch', minHeight: 96 }}>
         <NotificationBanner
-          type="FRIEND_CHEER"
-          title="루티니1님이 응원을 보냈어요"
-          body="오늘도 루틴 지키는 중! 화이팅 🐾"
+          type="WEEKLY_REPORT"
+          title="주간회고가 도착했어요"
+          body="지난주 루틴을 돌아보고 이번 주 조정 제안을 확인해 보세요"
           visibleMs={0}
           onPress={() => {}}
+          secondaryAction={{ label: '이번 주 다시 보지 않기', onPress: () => {} }}
         />
       </View>
     ),

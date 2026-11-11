@@ -29,6 +29,8 @@ export type NotificationBannerProps = {
   onPress?: () => void;
   /** 자동 종료·스와이프·탭 후 정리. */
   onDismiss?: () => void;
+  /** Optional explicit dismissal action, separate from opening the notification. */
+  secondaryAction?: { label: string; onPress: () => void };
   /** 자동 닫힘까지의 시간 — 0이면 자동으로 안 닫힌다(갤러리·테스트용). */
   visibleMs?: number;
 };
@@ -50,6 +52,7 @@ export function NotificationBanner({
   body,
   onPress,
   onDismiss,
+  secondaryAction,
   visibleMs = BANNER_VISIBLE_MS,
 }: NotificationBannerProps) {
   const t = useTokens();
@@ -118,12 +121,12 @@ export function NotificationBanner({
             ],
           },
         ]}>
-        <Pressable
-          onPress={handlePress}
-          accessibilityRole="button"
-          accessibilityLabel={`${title}. ${body}`}
-          style={({ pressed }) => pressed && pressedStyle('dim', t)}>
-          <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.card}>
+        <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.surface}>
+          <Pressable
+            onPress={handlePress}
+            accessibilityRole="button"
+            accessibilityLabel={`${title}. ${body}`}
+            style={({ pressed }) => [styles.card, pressed && pressedStyle('dim', t)]}>
             <View style={[styles.iconWrap, { backgroundColor: t.surfaceMuted }]}>
               <Icon name={notificationIcon(type)} size={18} color={t.text} />
             </View>
@@ -135,8 +138,22 @@ export function NotificationBanner({
                 {body}
               </Text>
             </View>
-          </GlassSurface>
-        </Pressable>
+          </Pressable>
+          {secondaryAction ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={secondaryAction.label}
+              onPress={() => {
+                secondaryAction.onPress();
+                onDismiss?.();
+              }}
+              style={({ pressed }) => [styles.secondaryAction, pressed && pressedStyle('dim', t)]}>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                {secondaryAction.label}
+              </Text>
+            </Pressable>
+          ) : null}
+        </GlassSurface>
       </Animated.View>
     </GestureDetector>
   );
@@ -151,18 +168,27 @@ const styles = StyleSheet.create({
     zIndex: 60,
     elevation: 60,
   },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
+  surface: {
     borderRadius: Radius.lg,
     borderCurve: 'continuous',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.three,
     shadowColor: ShadowColor,
     shadowOpacity: 0.15,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.three,
+  },
+  secondaryAction: {
+    alignSelf: 'flex-end',
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.four,
+    paddingBottom: Spacing.two,
   },
   iconWrap: {
     width: 34,

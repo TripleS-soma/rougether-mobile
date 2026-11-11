@@ -347,6 +347,7 @@ export function useMyRoomPages({
     body: string;
     /** 탭 목적지 — 없으면 알림함 (#902). 새 회고 배너는 회고 화면으로 (#1056). */
     onPress?: () => void;
+    secondaryAction?: { label: string; onPress: () => void };
   } | null>(null);
   // key는 단조 증가 카운터다 — Date.now()면 같은 밀리초에 두 알림이 오는
   // 배치 전달에서 key가 안 바뀌어 배너가 다시 마운트되지 않는다(#902 리뷰).
@@ -481,18 +482,18 @@ export function useMyRoomPages({
   // 보기는 셸이 setScreen만 부르므로(훅 순서상 이 훅의 콜백을 못 씀) 배너
   // 경로에서만 불러오면 설정 경로가 "아직 회고가 없어요"로 비어 보였다
   // (1.4.0 스크린샷 촬영 중 발견). 목록이 늦게 와도 latest가 생기면 다시 돈다.
+  const { loadDetail: loadWeeklyReportDetail, markRead: markWeeklyReportRead } = weeklyReport;
   useEffect(() => {
     if (screen !== 'weeklyReport') return;
-    void weeklyReport.loadDetail();
-    weeklyReport.markRead();
-  }, [screen, weeklyReport]);
+    void loadWeeklyReportDetail();
+    markWeeklyReportRead();
+  }, [screen, loadWeeklyReportDetail, markWeeklyReportRead]);
   // 새 회고 인앱 배너 (#1056) — 서버 알림 타입이 아직 없어(#1057) 앱이 감지한다.
-  // 미읽음 새 회고가 잡히면 상단 배너로 알리고, 탭하면 회고 화면. 한 회고당
-  // 이번 실행에서 1회 — 읽음 표식은 영구라 다음 실행에 또 뜨지는 않는다.
+  // Unread reports announce once per session unless the user hides that report week.
   const announcedReportId = useRef<number | null>(null);
   useEffect(() => {
     const id = weeklyReport.latest?.reportId;
-    if (!weeklyReport.unread || id == null || announcedReportId.current === id) return;
+    if (!weeklyReport.shouldAnnounce || id == null || announcedReportId.current === id) return;
     announcedReportId.current = id;
     pushBannerSeq.current += 1;
     setPushBanner({
@@ -501,8 +502,17 @@ export function useMyRoomPages({
       title: i18n.t('routineTodo.weeklyReport.arrivedTitle'),
       body: i18n.t('routineTodo.weeklyReport.arrivedBody'),
       onPress: () => openWeeklyReport(),
+      secondaryAction: {
+        label: i18n.t('routineTodo.weeklyReport.hideThisWeek'),
+        onPress: weeklyReport.dismissReminder,
+      },
     });
-  }, [weeklyReport.unread, weeklyReport.latest?.reportId, openWeeklyReport]);
+  }, [
+    weeklyReport.shouldAnnounce,
+    weeklyReport.dismissReminder,
+    weeklyReport.latest?.reportId,
+    openWeeklyReport,
+  ]);
 
   // AI 조정 추천 (#1006) — 수락은 서버에서 루틴 버전을 분기시켜 **id가 바뀌므로**
   // 응답을 부분 반영하지 않고 루틴 데이터를 통째로 다시 받는다. 완료 기록
