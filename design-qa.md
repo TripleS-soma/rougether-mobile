@@ -26,6 +26,7 @@ npx --yes expo-release-guard@0.2.0 check android-manifest
 
 Android SDK·JDK 17 환경에서 `android/gradlew :app:processReleaseMainManifest`를 실행한 뒤
 루트에서 `npx --yes expo-release-guard@0.2.0 check android-merged-manifest`로 최종 병합 권한을 검사합니다.
+
 ## 동작 및 범위
 
 - 브라우저에서 체크박스가 선택되고 꾸미기 콜백 뒤 모달이 닫히며 미리보기의 후속 상태로 전환됨을 확인했다. 미리보기는 서버 요청 없는 fixture다.
