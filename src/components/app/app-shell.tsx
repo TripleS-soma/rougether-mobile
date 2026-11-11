@@ -2,7 +2,7 @@ import {
   closeOpenSwipeRow,
   PRESS_START_EVENT,
 } from '@/components/screens/my-room/swipe-delete-row';
-import { i18n, useT } from '@/i18n';
+import { useT, i18n } from '@/i18n';
 import { SpeakerSheet } from '@/components/room/speaker-sheet';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
