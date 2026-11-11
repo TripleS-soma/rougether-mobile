@@ -2,11 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
-import { getSessionUserId } from '@/api/auth';
+import { getSessionUserId, onSessionCleared } from '@/api/auth';
 import { ensureHouseChatRoom, fetchChatMessages, markChatRead, sendChatMessage } from '@/api/chat';
+import { cancelChatImage, uploadChatImage } from '@/api/chat-images';
+import type { PickedLibraryImageWithSize } from '@/lib/pick-image';
 import { ErrorCode } from '@/api/error-codes';
 import { ApiError } from '@/api/http';
-import type { ChatMessageResponse, ChatReader, ChatRoomResponse } from '@/api/types';
+import type { ChatMessageResponse, ChatSendRequest } from '@/api/chat-types';
+import type { ChatReader, ChatRoomResponse } from '@/api/types';
 import type { ChatMessageView } from '@/components/screens/house-chat-screen';
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { track } from '@/lib/analytics';
@@ -21,11 +24,14 @@ const RECOVERY_PAGE_SIZE = 100;
 const RECOVERY_MAX_PAGES = 20;
 
 /** 전송 실패 중 화면이 안내할 것 — 나머지(네트워크 등)는 말풍선의 '다시 보내기'로. */
-export type HouseChatError = 'banned' | 'forbidden' | 'invalid';
+export type HouseChatError =
+  'banned' | 'forbidden' | 'invalid' | 'photoInvalid' | 'photoLimit' | 'photoUnavailable';
 
 type Outgoing = {
   clientMessageId: string;
   content: string;
+  file?: PickedLibraryImageWithSize;
+  imageId?: number;
   createdAt: string;
   status: 'pending' | 'failed';
 };
@@ -136,23 +142,35 @@ export function useHouseChat({
   const wanted = useRef(0);
   const recovering = useRef(false);
   const generation = useRef(0);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    const unsubscribe = onSessionCleared(() => {
+      generation.current += 1;
+      setOutbox([]);
+      setConfirmed([]);
+    });
+    return () => {
+      mounted.current = false;
+      generation.current += 1;
+      unsubscribe();
+    };
+  }, []);
   const olderInFlight = useRef(false);
   const hasOlderRef = useRef(false);
   const readSent = useRef(0);
   const readPending = useRef(0);
   const readTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const outboxRef = useLatestRef(outbox);
+  const deliveryInFlight = useRef(new Set<string>());
   const roomIdRef = useLatestRef(roomId);
   const userIdRef = useLatestRef(userId);
   const onErrorRef = useLatestRef(onError);
   const roomKeyRef = useLatestRef(roomKey);
 
   const { mutateAsync: sendAsync } = useMutation({
-    mutationFn: (vars: { roomId: number; clientMessageId: string; content: string }) =>
-      sendChatMessage(vars.roomId, {
-        clientMessageId: vars.clientMessageId,
-        content: vars.content,
-      }),
+    mutationFn: (vars: { roomId: number; body: ChatSendRequest }) =>
+      sendChatMessage(vars.roomId, vars.body),
   });
   const { mutateAsync: readAsync } = useMutation({
     mutationFn: (vars: { roomId: number; sequence: number }) =>
@@ -236,6 +254,10 @@ export function useHouseChat({
     if (roomId == null) return;
     const gen = ++generation.current;
     bySeq.current = new Map();
+    setConfirmed([]);
+    setOutbox([]);
+    setInitialLoading(true);
+    setReaders([]);
     cursor.current = 0;
     loaded.current = false;
     wanted.current = 0;
@@ -327,19 +349,61 @@ export function useHouseChat({
   );
 
   const deliver = useCallback(
-    async (clientMessageId: string, content: string) => {
+    async (item: Outgoing) => {
+      const { clientMessageId, content } = item;
       const id = roomIdRef.current;
-      if (id == null) return;
+      if (id == null || deliveryInFlight.current.has(clientMessageId)) return;
+      const gen = generation.current;
+      const ownerId = userIdRef.current;
+      const current = () =>
+        mounted.current &&
+        getSessionUserId() === ownerId &&
+        gen === generation.current &&
+        roomIdRef.current === id &&
+        userIdRef.current === ownerId;
+      deliveryInFlight.current.add(clientMessageId);
       const drop = () =>
         setOutbox((prev) => prev.filter((o) => o.clientMessageId !== clientMessageId));
       try {
-        const msg = await sendRef.current({ roomId: id, clientMessageId, content });
+        let imageId = item.imageId;
+        if (item.file && imageId == null) {
+          const uploaded = await uploadChatImage(id, item.file);
+          imageId = uploaded.imageId;
+          if (!current()) {
+            if (getSessionUserId() === ownerId) void cancelChatImage(imageId).catch(() => {});
+            return;
+          }
+          // POST 응답 유실 뒤에는 업로드를 반복하지 않고 같은 사진과 UUID를 다시 보낸다.
+          item.imageId = imageId;
+          setOutbox((prev) =>
+            prev.map((o) => (o.clientMessageId === clientMessageId ? { ...o, imageId } : o)),
+          );
+        }
+        if (!current()) return;
+        const body: ChatSendRequest =
+          imageId == null ? { clientMessageId, content } : { clientMessageId, imageId };
+        const msg = await sendRef.current({ roomId: id, body });
+        if (!current()) return;
         drop();
         merge([msg]);
         track('house_chat_send');
         if (msg.sequence != null) wanted.current = Math.max(wanted.current, msg.sequence);
         void recover();
       } catch (err) {
+        if (!current()) return;
+        if (err instanceof ApiError && err.code === 'CHAT_IMAGE_UNAVAILABLE') {
+          drop();
+          onErrorRef.current?.('photoUnavailable');
+          return;
+        }
+        if (err instanceof ApiError && err.status === 429) {
+          onErrorRef.current?.('photoLimit');
+        }
+        if (err instanceof ApiError && (err.code === 'CHAT_IMAGE_INVALID' || err.status === 413)) {
+          drop();
+          onErrorRef.current?.('photoInvalid');
+          return;
+        }
         if (err instanceof ApiError && err.code === ErrorCode.CHAT_MESSAGE_CONFLICT) {
           // 같은 키로 다른 본문 — 서버에 있는 쪽이 정본이다. 말풍선을 거두고 다시 받는다.
           drop();
@@ -366,22 +430,50 @@ export function useHouseChat({
         setOutbox((prev) =>
           prev.map((o) => (o.clientMessageId === clientMessageId ? { ...o, status: 'failed' } : o)),
         );
+      } finally {
+        deliveryInFlight.current.delete(clientMessageId);
       }
     },
-    [roomIdRef, sendRef, merge, recover, onErrorRef],
+    [roomIdRef, userIdRef, sendRef, merge, recover, onErrorRef],
   );
 
   const send = useCallback(
     (text: string) => {
       if (!text.trim() || roomIdRef.current == null) return;
       const clientMessageId = newClientMessageId();
-      setOutbox((prev) => [
-        ...prev,
-        { clientMessageId, content: text, createdAt: new Date().toISOString(), status: 'pending' },
-      ]);
-      void deliver(clientMessageId, text);
+      const item: Outgoing = {
+        clientMessageId,
+        content: text,
+        createdAt: new Date().toISOString(),
+        status: 'pending',
+      };
+      setOutbox((prev) => [...prev, item]);
+      void deliver(item);
     },
     [roomIdRef, deliver],
+  );
+
+  const sendPhoto = useCallback(
+    (file: PickedLibraryImageWithSize) => {
+      if (roomIdRef.current == null) return;
+      if (
+        !['image/jpeg', 'image/png'].includes(file.type.toLowerCase()) ||
+        (file.fileSize ?? 0) > 10 * 1024 * 1024
+      ) {
+        onErrorRef.current?.('photoInvalid');
+        return;
+      }
+      const item: Outgoing = {
+        clientMessageId: newClientMessageId(),
+        content: '',
+        file,
+        createdAt: new Date().toISOString(),
+        status: 'pending',
+      };
+      setOutbox((prev) => [...prev, item]);
+      void deliver(item);
+    },
+    [roomIdRef, onErrorRef, deliver],
   );
 
   const retrySend = useCallback(
@@ -391,7 +483,7 @@ export function useHouseChat({
       setOutbox((prev) =>
         prev.map((o) => (o.clientMessageId === clientMessageId ? { ...o, status: 'pending' } : o)),
       );
-      void deliver(clientMessageId, item.content);
+      void deliver(item);
     },
     [outboxRef, deliver],
   );
@@ -440,6 +532,8 @@ export function useHouseChat({
   const messages = useMemo<ChatMessageView[]>(() => {
     const sent: ChatMessageView[] = confirmed.map((m) => ({
       key: `s${m.sequence}`,
+      messageId: m.messageId,
+      image: m.image,
       sequence: m.sequence,
       clientMessageId: m.clientMessageId,
       senderUserId: m.senderUserId,
@@ -455,6 +549,7 @@ export function useHouseChat({
       clientMessageId: o.clientMessageId,
       senderUserId: userId,
       content: o.content,
+      localImageUri: o.file?.uri,
       createdAt: o.createdAt,
       unreadCount: 0,
       status: o.status,
@@ -476,6 +571,7 @@ export function useHouseChat({
       hasOlder,
       loadingOlder,
       send,
+      sendPhoto,
       retrySend,
       loadOlder,
       reportVisible,
@@ -490,6 +586,7 @@ export function useHouseChat({
       hasOlder,
       loadingOlder,
       send,
+      sendPhoto,
       retrySend,
       loadOlder,
       reportVisible,
