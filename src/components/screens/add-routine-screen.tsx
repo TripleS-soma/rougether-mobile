@@ -1,14 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  BackHandler,
-  Keyboard,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { BackHandler, Keyboard, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppTextInput as TextInput } from '@/components/ui/app-text-input';
 
 import { CategoryFormSheet } from '@/components/screens/sheets/category-form-sheet';
 import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';

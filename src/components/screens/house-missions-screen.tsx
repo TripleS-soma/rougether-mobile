@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppTextInput as TextInput } from '@/components/ui/app-text-input';
 
 import type { House, HouseMission, NewHouseMission } from '@/components/screens/house/types';
 import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';

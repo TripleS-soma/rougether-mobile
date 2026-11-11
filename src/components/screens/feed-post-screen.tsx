@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { type ElementRef, useRef, useState } from 'react';
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -8,9 +8,9 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
+import { AppTextInput as TextInput } from '@/components/ui/app-text-input';
 
 import type { ReportReason } from '@/api/types';
 import { FEED_BOARD_TYPES, FeedBoardTabs } from '@/components/feed/feed-board';
@@ -377,7 +377,7 @@ export function FeedPostScreen({
   const bareScreen = useScreenStyle([]);
   const screenWithBottom = useScreenStyle(['bottom']);
   const [draft, setDraft] = useState('');
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<ElementRef<typeof TextInput>>(null);
   const [replyTarget, setReplyTarget] = useState<FeedComment | null>(null);
   const [sending, setSending] = useState(false);
   const [confirmPost, setConfirmPost] = useState(false);

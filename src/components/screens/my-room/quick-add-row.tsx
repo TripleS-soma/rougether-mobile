@@ -1,5 +1,6 @@
-import { forwardRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { type ElementRef, forwardRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { AppTextInput as TextInput } from '@/components/ui/app-text-input';
 
 import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
@@ -20,7 +21,7 @@ export type QuickAddRowProps = {
    * 부모에 알린다. 이게 없으면 피커를 여는 순간 커밋되어 행이 닫힌다.
    */
   onDatePickerPressIn: () => void;
-  inputRef?: React.Ref<TextInput>;
+  inputRef?: React.Ref<ElementRef<typeof TextInput>>;
 };
 
 /**
