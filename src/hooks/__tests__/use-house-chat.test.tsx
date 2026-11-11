@@ -236,6 +236,29 @@ describe('useHouseChat (#1408)', () => {
 
 const photo = { uri: 'file:///photo.jpg', name: 'photo.jpg', type: 'image/jpeg', fileSize: 1234 };
 describe('사진 전송', () => {
+  it('목록 다시 불러오기는 실패한 사진과 재시도 ID를 보존한다', async () => {
+    mockSend
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockImplementationOnce(async (_room, body) => ({ ...msg(4, 1), ...body }));
+    const { result } = await setup();
+    await act(async () => result.current.sendPhoto(photo));
+    await waitFor(() => expect(result.current.messages.at(-1)?.status).toBe('failed'));
+    const key = result.current.messages.at(-1)!.clientMessageId!;
+    await act(async () => result.current.retryLoad());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.messages.at(-1)?.clientMessageId).toBe(key);
+    await act(async () => result.current.retrySend(key));
+    await waitFor(() => expect(mockSend).toHaveBeenCalledTimes(2));
+    expect(uploadChatImage).toHaveBeenCalledTimes(1);
+    expect(mockSend.mock.calls[1]).toEqual(mockSend.mock.calls[0]);
+  });
+  it('텍스트 전송의 429는 사진 한도라고 안내하지 않는다', async () => {
+    mockSend.mockRejectedValueOnce(new ApiError(429, 'POST', '/chat/rooms/5/messages'));
+    const { result, onError } = await setup();
+    await act(async () => result.current.send('hello'));
+    await waitFor(() => expect(result.current.messages.at(-1)?.status).toBe('failed'));
+    expect(onError).not.toHaveBeenCalledWith('photoLimit');
+  });
   it('업로드 뒤 사진 ID만 전송하고, 응답 유실 재시도에 동일 UUID와 사진 ID를 재사용한다', async () => {
     mockSend
       .mockRejectedValueOnce(new Error('response lost'))
