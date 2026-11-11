@@ -212,16 +212,13 @@ export const FULL_SWIPE_BACK_EXCLUDED: ReadonlySet<Screen> = new Set<Screen>([
   'feedPost',
 ]);
 /**
- * 슬라이드 없이 즉시 바뀌는 전환 (#1327) — 주간 보기는 달력 탭과 **같은 자리에 같은
- * 달력**을 그리고 스스로 접힘/펼침을 연출하므로, 층을 밀어 넣으면 연출이 깨진다.
- * 달력 탭 ↔ 주간 보기만 즉시 교체하고, 주간 보기에서 연 루틴 수정 같은 서브화면은
- * 종전대로 슬라이드한다.
+ * 페이저(상주 탭 층)가 그리는 화면인지 — 하단 탭 화면과 주간 보기(#1327). 주간 보기는 달력 탭과
+ * **같은 자리에 같은 달력**을 그리고 스스로 접힘/펼침을 연출하므로 탭은 아니어도 페이저에 산다.
+ * 이 화면들 사이의 전환은 층을 밀지 않고(페이저·화면이 직접 연출), 여기서 연 루틴 수정 같은
+ * 서브화면만 슬라이드한다.
  */
-export function isInstantTransition(prev: Screen, next: Screen): boolean {
-  return (
-    (prev === 'calendar' && next === 'calendarWeek') ||
-    (prev === 'calendarWeek' && next === 'calendar')
-  );
+export function livesInPager(screen: Screen): boolean {
+  return TAB_FOR_SCREEN[screen] != null || screen === 'calendarWeek';
 }
 /** Screens that own input all the way to the screen edge. */
 export const EDGE_BACK_DISABLED_SCREENS: ReadonlySet<Screen> = new Set<Screen>(['minigameRunner']);
