@@ -2,7 +2,7 @@ import {
   closeOpenSwipeRow,
   PRESS_START_EVENT,
 } from '@/components/screens/my-room/swipe-delete-row';
-import { useT } from '@/i18n';
+import { useT, i18n } from '@/i18n';
 import { SpeakerSheet } from '@/components/room/speaker-sheet';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
@@ -19,7 +19,6 @@ import { hasNoHouses, useHousePages } from '@/components/app/use-house-pages';
 import { useFeedPages } from '@/components/app/use-feed-pages';
 import { useFeedHouseNavigation } from '@/components/app/use-feed-house-navigation';
 import { useToast } from '@/components/ui/toast';
-import { i18n } from '@/i18n';
 import { useMarketPages } from '@/components/app/use-market-pages';
 import { useMissionLinks } from '@/components/app/use-mission-links';
 import { useMyRoomPages } from '@/components/app/use-my-room-pages';
