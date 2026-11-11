@@ -40,6 +40,7 @@ export * from './calendar-import';
 export * from './categories';
 export * from './chat';
 export * from './events';
+export * from './login-gifts';
 export * from './feed';
 export * from './houses';
 export * from './market';
