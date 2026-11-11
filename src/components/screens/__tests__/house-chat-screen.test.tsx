@@ -215,3 +215,10 @@ describe('HouseChatScreen — 방 알림 음소거 (서버 #435)', () => {
     expect(screen.queryByLabelText('이 채팅방 알림')).toBeNull();
   });
 });
+
+it('사진 선택 버튼을 누르면 선택 콜백을 부른다', async () => {
+  const pick = jest.fn();
+  const screen = await render(<HouseChatScreen messages={[]} onPickPhoto={pick} />);
+  await fireEvent.press(screen.getByLabelText('사진 선택'));
+  expect(pick).toHaveBeenCalledTimes(1);
+});
