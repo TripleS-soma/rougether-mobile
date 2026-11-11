@@ -21,6 +21,7 @@ const emptyRes = (url: string, init?: RequestInit) => ({
   ok: true,
   status: 200,
   text: async () => {
+    if (url.endsWith('/events/login-gifts')) return JSON.stringify({ gifts: [] });
     if (url.endsWith('/routines') && init?.method === 'POST') {
       const body = JSON.parse(String(init.body ?? '{}')) as { title?: string };
       return JSON.stringify({
