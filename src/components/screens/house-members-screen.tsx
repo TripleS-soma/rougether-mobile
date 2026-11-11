@@ -759,7 +759,7 @@ export function HouseMembersScreen({
                 t={t}
               />
             </View>
-            {/* 온보딩 자동 입주 허용 (#1407) — 공개 집에만 실제 적용된다. */}
+            {/* 자동 입주 설정은 온보딩과 게시물 경유 참여에 함께 적용됨. */}
             <View style={styles.autoJoinRow}>
               <View style={styles.autoJoinCopy}>
                 <Text style={[Typography.body, { color: t.text }]}>

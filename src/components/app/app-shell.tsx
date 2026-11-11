@@ -2,7 +2,7 @@ import {
   closeOpenSwipeRow,
   PRESS_START_EVENT,
 } from '@/components/screens/my-room/swipe-delete-row';
-import { useT } from '@/i18n';
+import { useT, i18n } from '@/i18n';
 import { SpeakerSheet } from '@/components/room/speaker-sheet';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
@@ -17,6 +17,8 @@ import { useScreenTransition } from '@/components/app/use-screen-transition';
 import { useFriendVisit } from '@/components/app/use-friend-visit';
 import { hasNoHouses, useHousePages } from '@/components/app/use-house-pages';
 import { useFeedPages } from '@/components/app/use-feed-pages';
+import { useFeedHouseNavigation } from '@/components/app/use-feed-house-navigation';
+import { useToast } from '@/components/ui/toast';
 import { useMarketPages } from '@/components/app/use-market-pages';
 import { useMissionLinks } from '@/components/app/use-mission-links';
 import { useMyRoomPages } from '@/components/app/use-my-room-pages';
@@ -259,6 +261,15 @@ export function AppShell({
   // 이 use-house-pages보다 먼저 서서 소비하므로 훅으로 못 내린다.
   const [houseIndex, setHouseIndex] = useState(0);
   const currentHouse = houses[houseIndex] ?? houses[0];
+  const { show: showFeedHouseToast } = useToast();
+  const openFeedHouse = useFeedHouseNavigation({
+    houses,
+    screen,
+    refreshHouses: housesData.refreshHouses,
+    setHouseIndex,
+    setScreen,
+    onMissing: () => showFeedHouseToast(i18n.t('feed.house.loadError'), 'error'),
+  });
 
   // Shop catalogue + purchase (diamond via API; wallet synced from the purchase
   // response). Server-side room placement isn't wired yet, so arrangement is
@@ -579,6 +590,7 @@ export function AppShell({
   const feedPages = useFeedPages({
     nav: { screen, setScreen, goBack },
     openGame: minigames.openGame,
+    onOpenHouse: openFeedHouse,
   });
   const feedShareRecord = feedPages.shareRecord;
   useEffect(() => {
