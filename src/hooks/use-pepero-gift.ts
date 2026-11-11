@@ -8,6 +8,9 @@ import { useWallet } from '@/hooks/use-wallet';
 import { queryKeys } from '@/lib/query-keys';
 
 export const PEPERO_GIFT_CODE = 'PEPERO_DAY_20261111';
+// The approved success copy is specific to this event's 111-coin reward.
+export const PEPERO_COIN_AMOUNT = 111;
+const MAX_RECEIPT_POLLS = 12;
 export const PEPERO_START = Date.parse('2026-11-11T00:00:00+09:00');
 export const PEPERO_END = Date.parse('2026-11-12T00:00:00+09:00');
 export const isPeperoDay = (now: number) => now >= PEPERO_START && now < PEPERO_END;
@@ -41,23 +44,24 @@ export function usePeperoGift({ enabled }: { enabled: boolean }) {
     queryFn: async () => {
       if (userId == null || getSessionUserId() !== userId) return { gifts: [] };
       const result = await fetchLoginGifts();
-      return getSessionUserId() === userId ? result : { gifts: [] };
+      return getSessionUserId() === userId && Array.isArray(result?.gifts) ? result : { gifts: [] };
     },
     enabled: enabled && inWindow && userId != null,
     staleTime: 0,
     retry: 1,
     refetchInterval: (query) =>
-      query.state.data?.gifts.some((gift) => gift.code === PEPERO_GIFT_CODE && gift.grantedAt)
-        ? false
-        : 5_000,
+      query.state.dataUpdateCount + query.state.errorUpdateCount <= MAX_RECEIPT_POLLS &&
+      !query.state.data?.gifts?.some((gift) => gift?.code === PEPERO_GIFT_CODE && gift.grantedAt)
+        ? 5_000
+        : false,
   });
   const gift =
     inWindow && getSessionUserId() === userId
-      ? (receipts.data?.gifts.find(
+      ? (receipts.data?.gifts?.find(
           (entry) =>
-            entry.code === PEPERO_GIFT_CODE &&
+            entry?.code === PEPERO_GIFT_CODE &&
             entry.grantedAt != null &&
-            entry.coinAmount === 111 &&
+            entry.coinAmount === PEPERO_COIN_AMOUNT &&
             entry.reward?.userItemId != null,
         ) ?? null)
       : null;
