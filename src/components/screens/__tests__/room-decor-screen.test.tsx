@@ -59,7 +59,7 @@ const lastApply = (fn: jest.Mock) =>
 describe('RoomDecorScreen (#327 — 자유 배치)', () => {
   it('keeps the character centered when resizing, supports undo, and saves its scale', async () => {
     const onApply = jest.fn();
-    const { getByTestId, getByLabelText, getByText, getByRole } = await render(
+    const { getByTestId, getByLabelText, getByText, getByRole, queryByTestId } = await render(
       <RoomDecorScreen initialItems={[]} initialCharacterScale={1} onApply={onApply} />,
     );
     expect(getByTestId('decor-character').parent?.props.pointerEvents).toBe('none');
@@ -73,7 +73,11 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
     const left = parseFloat(frame.left);
     const width = parseFloat(frame.width);
     expect(left + width / 2).toBeCloseTo(50);
+    const dismissSizeSheet = getByTestId('bottom-sheet-modal').props.onDismiss;
     await fireEvent.press(getByText('확인'));
+    await waitFor(() => expect(queryByTestId('character-size-slider')).toBeNull());
+    // UIKit의 닫힘 완료 후에만 뒤쪽 화면에서 다음 동작을 할 수 있다.
+    await act(async () => dismissSizeSheet());
     await fireEvent.press(getByLabelText('실행 취소'));
     await fireEvent.press(getByRole('button', { name: '캐릭터 크기' }));
     await waitFor(() =>
