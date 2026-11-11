@@ -1,6 +1,13 @@
 import { Image } from 'expo-image';
 import { memo, useEffect, useMemo } from 'react';
-import { type ImageStyle, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
+import {
+  type ImageStyle,
+  Platform,
+  type StyleProp,
+  StyleSheet,
+  View,
+  type ViewStyle,
+} from 'react-native';
 
 import { characterArtOffset } from '@/components/room/character-scale';
 
@@ -52,6 +59,28 @@ const SPRITES: Partial<Record<CharacterId, number[]>> = {
   sheep: [sheep1, sheep2, sheep3, sheep4],
   tiger: [tiger1, tiger2, tiger3, tiger4],
 };
+
+/**
+ * 서버 포즈 프레임(움직이는 webp)을 재생할지 (2026-11-09). **끈다** — 몸 전체가 계속 출렁여
+ * "떠다니는" 느낌이었다(사용자 제보). 첫 장면에 멈춘 그림 위에 `CharacterIdle`(숨쉬기·탭 반응)을
+ * 얹는다. 그림 출처(admin 등록 포즈)는 그대로라 아트가 바뀌어도 앱 수정이 필요 없다.
+ * autoplay로 멈추는 건 iOS뿐이다 — 웹·Android는 아래 `preferBundledStill` 참고.
+ */
+export const CHARACTER_ART_AUTOPLAY = false;
+
+/**
+ * 재생을 끈 상태에서 **iOS가 아니면** 번들 정적 포즈를 그린다(번들 포즈가 있는 캐릭터) — 서버 포즈
+ * 대신이지만 같은 캐릭터·같은 포즈 순서다.
+ *
+ * - 웹: 브라우저가 autoplay를 무시해 움직이는 webp를 멈출 방법이 없다.
+ * - Android (2026-11-11 제보): expo-image는 그림이 준비된 순간 한 번 `stop()`할 뿐인데, 움직이는
+ *   webp를 그리는 라이브러리(penfeizhou `FrameAnimationDrawable`)는 뷰가 **다시 보이게 될 때마다**
+ *   자체 autoPlay 플래그로 재생을 다시 시작한다(`setVisible`). 탭을 오가거나 앱이 앞으로 오면
+ *   멈춰 둔 그림이 다시 움직였다. 네이티브를 고치지 않고는 막을 수 없어 움직이는 파일을 아예 안 쓴다.
+ */
+function preferBundledStill(characterId: CharacterId): boolean {
+  return !CHARACTER_ART_AUTOPLAY && Platform.OS !== 'ios' && !!SPRITES[characterId];
+}
 
 /** Number of poses available per character. */
 const POSE_COUNT = 4;
@@ -115,7 +144,10 @@ export const CharacterAvatar = memo(function CharacterAvatar({
   // 탭 순환 순서 = 서버 등록 순서. 유효하지 않은 키는 조용히 버린다.
   // 포즈 탭마다(그리고 부모 리렌더마다) 배열을 새로 걸러내던 것을 프레임 목록이
   // 실제로 바뀔 때만 하도록 묶는다 — 방 캔버스 리프라 호출 빈도가 높다.
-  const cdnFrames = useMemo(() => (frames ?? []).filter(isCdnKey), [frames]);
+  const cdnFrames = useMemo(
+    () => (preferBundledStill(characterId) ? [] : (frames ?? []).filter(isCdnKey)),
+    [frames, characterId],
+  );
   const cdnFrameList = cdnFrames.join('|');
 
   // width/height 스타일도 size가 그대로면 참조를 유지한다 (<Image>의 style 배열).
@@ -149,6 +181,7 @@ export const CharacterAvatar = memo(function CharacterAvatar({
         cachePolicy="memory-disk"
         // 줌 대상에서는 원본 해상도로 — 다운스케일 디코딩은 확대 시 흐려진다.
         allowDownscaling={!sharp}
+        autoplay={CHARACTER_ART_AUTOPLAY}
         accessibilityLabel={character.name}
         testID="cdn-animation"
       />
