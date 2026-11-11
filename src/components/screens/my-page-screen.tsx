@@ -41,6 +41,8 @@ export type MyPageScreenProps = ScrollRestoreProps & {
   onOpenWalletHistory?: () => void;
   /** 주간회고 다시 보기 (#1056) — 설정 항목에서 내 정보 항목으로 (#1088). */
   onOpenWeeklyReport?: () => void;
+  onOpenSuggestions?: () => void;
+  onOpenUpdates?: () => void;
   /** 캘린더 연동 (#844) — 설정 > 알림에서 내 정보 행으로 (#1097). 미배선이면 숨김. */
   onOpenCalendarImport?: () => void;
   /** 친구 초대 (#518). */
@@ -76,6 +78,8 @@ export const MyPageScreen = memo(function MyPageScreen({
   attendancePending = false,
   onOpenWalletHistory,
   onOpenWeeklyReport,
+  onOpenSuggestions,
+  onOpenUpdates,
   onOpenCalendarImport,
   onInviteFriends,
   onOpenHelp,
@@ -96,6 +100,8 @@ export const MyPageScreen = memo(function MyPageScreen({
   const scrollRestore = useScrollRestore(scrollRef, { getInitialScrollY, onScrollY });
 
   const rows: Row[] = [
+    { icon: 'chat', label: tr('member.myPage.suggestions'), onPress: onOpenSuggestions },
+    { icon: 'bell', label: tr('member.myPage.updates'), onPress: onOpenUpdates },
     { icon: 'list', label: tr('member.myPage.weeklyReport'), onPress: onOpenWeeklyReport },
     // 캘린더 연동은 "설정"이 아니라 콘텐츠 가져오기라 여기로 (#1097). 네이티브 모듈이
     // 없는 곳(웹)은 미배선이라 숨긴다.
