@@ -4,26 +4,45 @@ import { Animated, Easing } from 'react-native';
 import { useAppFrame } from '@/hooks/use-app-frame';
 import {
   BACK_SCREEN,
-  isInstantTransition,
+  livesInPager,
   type Screen,
   TAB_FOR_SCREEN,
 } from '@/components/app/navigation';
+import type { NavTab } from '@/components/ui/bottom-nav';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 import { NATIVE_DRIVER } from '@/utils/animation';
 
 type Slot = 'a' | 'b';
+/** 화면이 사는 층 — 탭 화면은 상주 층(`tabs`), 서브화면은 a/b 둘을 번갈아 쓴다. */
+type Holder = 'tabs' | Slot;
 type Direction = 'push' | 'pop';
 
 export type ScreenLayer = {
-  key: Slot;
+  key: Holder;
   node: ReactNode;
   style: {
     transform: { translateX: Animated.AnimatedInterpolation<number> | Animated.Value }[];
     zIndex: number;
   };
-  /** 떠나는 층은 터치를 받지 않는다 — 300ms 안에 두 번 눌리는 사고 방지. */
+  /**
+   * 현재 화면의 층만 터치를 받는다 — 떠나는 층은 300ms 안에 두 번 눌리는 사고를 막고, 비어 있는 층은
+   * 화면 전체를 덮는 빈 뷰라 밑의 층으로 가는 터치를 가로채지 않게 한다.
+   */
   pointerEvents: 'auto' | 'none';
+  /** 서브화면 밑에 깔려 쉬는 탭 층 — 마운트는 유지하되 그리지도, 읽히지도 않는다. */
+  hidden: boolean;
 };
+
+/**
+ * 페이저가 서 있을 탭. 서브화면에 있는 동안에는 마지막 탭을 그대로 든다 — 탭 층이 밑에 살아 있으므로
+ * (아래 `useScreenTransition`) 인덱스가 흔들리면 돌아왔을 때 다른 탭에 서 있게 된다.
+ */
+export function usePagerTab(screen: Screen): NavTab {
+  const tab = TAB_FOR_SCREEN[screen] ?? (screen === 'calendarWeek' ? 'calendar' : null);
+  const lastRef = useRef<NavTab>(tab ?? 'myRoom');
+  if (tab != null) lastRef.current = tab;
+  return lastRef.current;
+}
 
 /** 슬라이드 시간 — 네이티브 push(약 350ms)보다 살짝 빠르게, 페이드(300)와 같은 결. */
 export const SCREEN_SLIDE_MS = 300;
@@ -44,10 +63,15 @@ export function isBackTransition(prev: Screen, next: Screen, addReturnScreen: Sc
 type TransitionState = {
   screen: Screen;
   /** 현재 화면이 사는 층. 같은 화면이 유지되는 동안 바뀌지 않는다 — 리마운트 금지. */
-  slot: Slot;
-  /** 현재 화면의 최신 노드 — 다음 전환 때 "떠나는 층"이 된다. */
+  holder: Holder;
+  /** 마지막으로 쓴 서브 층 — 다음 서브화면은 반대쪽에 선다. */
+  lastSlot: Slot;
+  /** 현재 서브화면의 최신 노드 — 다음 전환 때 "떠나는 층"이 된다. */
   node: ReactNode;
-  exiting: { slot: Slot; node: ReactNode; direction: Direction } | null;
+  /** 떠나는 층. 탭 층은 스테일 노드를 들지 않는다(상주 노드가 그대로 밀려난다). */
+  exiting: { holder: Holder; node: ReactNode; direction: Direction } | null;
+  /** 탭 층은 탭 화면이 처음 뜬 뒤로 계속 마운트해 둔다 — 서브화면에서 시작한 실행은 그때까지 미룬다. */
+  tabsMounted: boolean;
   version: number;
 };
 
@@ -68,15 +92,25 @@ const other = (s: Slot): Slot => (s === 'a' ? 'b' : 'a');
  * 탭 간 전환은 페이저(#563)가 손가락 추종으로 직접 그리므로 여기선 층을 바꾸지
  * 않는다. 렌더 단계에서 ref를 갱신하는 건 같은 `screen`이면 멱등이라 StrictMode
  * 이중 렌더에도 안전하다.
+ *
+ * **탭 화면은 상주 층에 산다 (2026-11-11 제보)** — 종전엔 탭 화면도 a/b 층의 한 화면이라, 서브화면에
+ * 들어가면 300ms 뒤 페이저(다섯 탭)가 통째로 언마운트되고 돌아올 때 다시 마운트됐다. 그 마운트가
+ * 복귀 슬라이드와 같은 프레임에 걸려 UI 스레드가 약 240ms 멈췄다(갤럭시 S25 울트라 녹화: 복귀
+ * 300ms에 고유 프레임 6~11장). 주간 보기(#1327)에서 같은 증상을 페이저를 살려 두는 것으로 고쳤던
+ * 것을 모든 서브화면으로 넓힌다. 탭 층은 서브화면 밑에서 `hidden`(안 그림·터치 없음·접근성 숨김)으로
+ * 쉬다가, 돌아올 때 마운트 없이 그대로 밀려 들어온다. 스크롤 위치도 그대로 남는다.
  */
 export function useScreenTransition({
   screen,
   addReturnScreen,
+  tabsNode,
   node,
 }: {
   screen: Screen;
   addReturnScreen: Screen;
-  /** 현재 `screen`의 화면 트리 — 셸이 매 렌더 새로 만든다. */
+  /** 탭 페이저 — 상주 층에 그린다. 셸이 매 렌더 새로 만들고, 스테일로 붙들지 않는다. */
+  tabsNode: ReactNode;
+  /** 현재 `screen`의 서브화면 트리 — 셸이 매 렌더 새로 만든다. 탭 화면에서는 비어 있다. */
   node: ReactNode;
 }): ScreenLayer[] {
   // 슬라이드 거리는 앱 프레임 폭 — 웹 데스크톱에서 화면이 창 밖 1500px에서 날아오지 않게.
@@ -84,13 +118,24 @@ export function useScreenTransition({
   const [, rerender] = useReducer((n: number) => n + 1, 0);
   const enterX = useAnimatedValue(0);
   const exitX = useAnimatedValue(0);
-  const stateRef = useRef<TransitionState>({ screen, slot: 'a', node, exiting: null, version: 0 });
+  const stateRef = useRef<TransitionState>(
+    livesInPager(screen)
+      ? {
+          screen,
+          holder: 'tabs',
+          lastSlot: 'b',
+          node,
+          exiting: null,
+          tabsMounted: true,
+          version: 0,
+        }
+      : { screen, holder: 'a', lastSlot: 'a', node, exiting: null, tabsMounted: false, version: 0 },
+  );
 
   const state = stateRef.current;
   if (state.screen !== screen) {
-    const prevTab = TAB_FOR_SCREEN[state.screen];
-    const nextTab = TAB_FOR_SCREEN[screen];
-    if ((prevTab != null && nextTab != null) || isInstantTransition(state.screen, screen)) {
+    const toPager = livesInPager(screen);
+    if (state.holder === 'tabs' && toPager) {
       // 탭 간 — 페이저가 그린다. 층도 그대로. 달력 탭 ↔ 주간 보기(#1327)도 층을 안 바꾼다 —
       // 화면 스스로 접힘/펼침을 연출한다.
       stateRef.current = { ...state, screen, node };
@@ -98,11 +143,18 @@ export function useScreenTransition({
       const direction: Direction = isBackTransition(state.screen, screen, addReturnScreen)
         ? 'pop'
         : 'push';
+      const slot = other(state.lastSlot);
       stateRef.current = {
         screen,
-        slot: other(state.slot),
+        holder: toPager ? 'tabs' : slot,
+        lastSlot: toPager ? state.lastSlot : slot,
         node,
-        exiting: { slot: state.slot, node: state.node, direction },
+        exiting: {
+          holder: state.holder,
+          node: state.holder === 'tabs' ? null : state.node,
+          direction,
+        },
+        tabsMounted: state.tabsMounted || toPager,
         version: state.version + 1,
       };
     }
@@ -147,19 +199,21 @@ export function useScreenTransition({
 
   const current = stateRef.current;
   const push = current.exiting?.direction === 'push';
-  const layerFor = (slot: Slot): ScreenLayer => {
-    const isCurrent = slot === current.slot;
-    const isExiting = current.exiting?.slot === slot;
+  const layerFor = (holder: Holder): ScreenLayer => {
+    const isCurrent = holder === current.holder;
+    const isExiting = current.exiting?.holder === holder;
+    const slotNode = isCurrent ? current.node : isExiting ? current.exiting!.node : null;
     return {
-      key: slot,
-      node: isCurrent ? current.node : isExiting ? current.exiting!.node : null,
+      key: holder,
+      node: holder === 'tabs' ? (current.tabsMounted ? tabsNode : null) : slotNode,
       style: {
         transform: [{ translateX: isCurrent ? enterX : isExiting ? exitX : 0 }],
         // 진입은 새 화면이 위, 복귀는 떠나는 화면이 위.
         zIndex: isCurrent ? (push || !current.exiting ? 2 : 1) : isExiting && !push ? 2 : 1,
       } as ScreenLayer['style'],
-      pointerEvents: isExiting ? 'none' : 'auto',
+      pointerEvents: isCurrent ? 'auto' : 'none',
+      hidden: holder === 'tabs' && !isCurrent && !isExiting,
     };
   };
-  return [layerFor('a'), layerFor('b')];
+  return [layerFor('tabs'), layerFor('a'), layerFor('b')];
 }

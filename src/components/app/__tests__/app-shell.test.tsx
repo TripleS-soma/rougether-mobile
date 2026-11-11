@@ -705,3 +705,25 @@ describe('AppShell — 주간 보기는 달력 탭 제자리 전환 (2026-11-04)
     expect(view.getByLabelText('나의 방')).toBeTruthy();
   });
 });
+
+// 2026-11-11 제보(갤럭시 S25 울트라): 서브화면에 들어갈 때마다 다섯 탭 페이저가 언마운트됐다가
+// 돌아올 때 다시 마운트돼, 복귀 슬라이드가 약 240ms 멈췄다. 페이저는 밑에 숨어서 산다.
+describe('AppShell — 서브화면을 다녀와도 탭 페이저를 다시 마운트하지 않는다 (2026-11-11)', () => {
+  it('서브화면 동안 페이저는 숨은 채 같은 인스턴스로 남고, 돌아오면 그대로 보인다', async () => {
+    const view = await renderWithProviders(<AppShell />);
+    await fireEvent.press(view.getByLabelText('내 정보'));
+    const pager = view.getByTestId('tab-pager');
+
+    await fireEvent.press(view.getByText('프로필 편집'));
+    // 슬라이드가 끝나면 탭 층은 화면·스크린 리더에서 사라진다(마운트는 유지).
+    await waitFor(() => expect(view.queryByTestId('tab-pager')).toBeNull());
+    expect(view.getByTestId('tab-pager', { includeHiddenElements: true })).toBe(pager);
+    expect(view.queryByLabelText('나의 방')).toBeNull();
+
+    await fireEvent.press(view.getByLabelText('뒤로 가기'));
+    await waitFor(() => expect(view.getByTestId('tab-pager')).toBe(pager));
+    // 떠나는 서브화면이 비워지면 떠났던 탭(내 정보)에 그대로 서 있다.
+    await waitFor(() => expect(view.getAllByText('프로필 편집')).toHaveLength(1));
+    expect(view.getByLabelText('나의 방')).toBeTruthy();
+  });
+});

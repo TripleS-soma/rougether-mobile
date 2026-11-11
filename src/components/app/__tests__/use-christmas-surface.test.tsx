@@ -124,6 +124,13 @@ it('refreshes yesterday cached attendance before consuming a new KST home-entry 
   expect(result.current.active).toBe(false);
   await rerender({ ...args, home: false });
   jest.mocked(todayIso).mockReturnValue('2026-11-10');
+  // 자정이 지나면 어제 받은 캐시는 더 이상 오늘 것이 아니다.
+  jest.mocked(useChristmasEvent).mockReturnValue({
+    ...state,
+    event: { ...event, popupDismissed: true },
+    status: { ...status, availableToday: false },
+    freshForToday: false,
+  } as unknown as ReturnType<typeof useChristmasEvent>);
   let finish!: () => void;
   state.refresh.mockReturnValue(
     new Promise((resolve) => {
@@ -131,6 +138,7 @@ it('refreshes yesterday cached attendance before consuming a new KST home-entry 
     }),
   );
   await rerender(args);
+  expect(state.refresh).toHaveBeenCalledTimes(1);
   expect(result.current.active).toBe(false);
   jest.mocked(useChristmasEvent).mockReturnValue({
     ...state,
@@ -261,6 +269,70 @@ it('does not consume the day when an inactive event is opened and closed manuall
   await rerender(args);
   await waitFor(() => expect(props(result.current, 0).visible).toBe(true));
   expect(props(result.current, 1).visible).toBe(false);
+});
+
+// 2026-11-11: 방으로 돌아올 때마다 요청 2개와 셸 리렌더가 복귀 슬라이드 한가운데에 끼어들었다.
+it('does not refetch on same-day returns home or app foreground, and still shows a deferred popup', async () => {
+  // 스파이를 새로 걸지 않는다 — RN 목은 이미 jest.fn이라 mockRestore가 구현까지 지운다.
+  const subscription = jest.mocked(AppState.addEventListener);
+  const { result, rerender } = await renderHook(
+    (input: typeof args) => useChristmasSurface(input),
+    { initialProps: args },
+  );
+  await waitFor(() => expect(props(result.current, 0).visible).toBe(true));
+  await act(async () => props(result.current, 0).onClose());
+  // 안내 팝업 차례에 다른 시트가 막고 있다가, 사용자가 방을 떠났다 돌아온다.
+  await rerender({ ...args, blocked: true });
+  await act(async () => props(result.current, 0).onDismissed());
+  expect(result.current.active).toBe(false);
+  await rerender({ ...args, home: false, blocked: false });
+  await rerender(args);
+  await waitFor(() => expect(props(result.current, 1).visible).toBe(true));
+
+  const onAppState = subscription.mock.calls.find(([type]) => type === 'change')![1];
+  await act(() => onAppState('background'));
+  await act(() => onAppState('active'));
+  expect(state.refresh).not.toHaveBeenCalled();
+});
+
+// 밤새 앱을 뒤에 둔 흔한 경우 — 뒤로 가기 전 마지막 렌더는 "오늘 것"이었고, 그 사이 렌더는 없다.
+it('refetches when the app comes forward after KST midnight passed in the background', async () => {
+  const subscription = jest.mocked(AppState.addEventListener);
+  const checkedIn = {
+    ...state,
+    event: { ...event, popupDismissed: true },
+    status: { ...status, availableToday: false },
+  };
+  jest
+    .mocked(useChristmasEvent)
+    .mockReturnValue(checkedIn as unknown as ReturnType<typeof useChristmasEvent>);
+  const { result } = await renderHook(() => useChristmasSurface(args));
+  const onAppState = subscription.mock.calls.find(([type]) => type === 'change')![1];
+  await act(() => onAppState('background'));
+  expect(state.refresh).not.toHaveBeenCalled();
+
+  // 뒤에 있는 동안 날짜가 바뀐다 — 다음 렌더부터 어제 캐시는 오늘 것이 아니다.
+  jest.mocked(todayIso).mockReturnValue('2026-11-10');
+  jest.mocked(useChristmasEvent).mockReturnValue({
+    ...checkedIn,
+    freshForToday: false,
+  } as unknown as ReturnType<typeof useChristmasEvent>);
+  let finish!: () => void;
+  state.refresh.mockReturnValue(
+    new Promise((resolve) => {
+      finish = () => resolve(null);
+    }),
+  );
+  await act(() => onAppState('active'));
+  expect(state.refresh).toHaveBeenCalledTimes(1);
+  expect(result.current.active).toBe(false);
+
+  jest.mocked(useChristmasEvent).mockReturnValue({
+    ...state,
+    event: { ...event, popupDismissed: true },
+  } as unknown as ReturnType<typeof useChristmasEvent>);
+  await act(async () => finish());
+  await waitFor(() => expect(props(result.current, 0).visible).toBe(true));
 });
 
 it('does not consume the new day on a foreground midnight render before the next focus refresh', async () => {

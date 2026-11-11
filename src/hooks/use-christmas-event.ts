@@ -41,6 +41,8 @@ export function useChristmasEvent({ enabled = true } = {}) {
     queryFn: () => forSession(userId, fetchChristmasEvent),
     enabled: enabled && userId != null,
     staleTime: 0,
+    // 앱이 앞으로 올 때마다 다시 받지 않는다 — 날짜가 바뀐 경우만 서피스가 `refresh`로 받는다.
+    refetchOnWindowFocus: false,
     retry: false,
   });
   const event = metadata.data?.code === 'christmas_2026' ? metadata.data : null;
@@ -50,6 +52,7 @@ export function useChristmasEvent({ enabled = true } = {}) {
     queryFn: () => forSession(userId, () => fetchAttendanceEvent(eventId!)),
     enabled: enabled && userId != null && eventId != null && eventId > 0,
     staleTime: 0,
+    refetchOnWindowFocus: false,
     retry: false,
   });
   const status = usable(attendance.data) ? attendance.data : null;
