@@ -287,12 +287,14 @@ export function AppShell({
     saveLayout,
   } = useShop();
 
+  const [characterScale, setCharacterScale] = useState(1);
   const [placedItems, setPlacedItems] = useState<PlacedFurniture[]>([]);
   const [wallpaperId, setWallpaperId] = useState(DEFAULT_WALLPAPER_ID);
   const [floorId, setFloorId] = useState<string | null>(null);
   const [backgroundId, setBackgroundId] = useState<string | null>(null);
   useEffect(() => {
     setPlacedItems(placement.items);
+    setCharacterScale(placement.characterScale);
     setWallpaperId(placement.wallpaperId);
     setFloorId(placement.floorId);
     setBackgroundId(placement.backgroundId);
@@ -471,6 +473,7 @@ export function AppShell({
       growthPoints,
       pointsToNextLevel,
       placements: placedItems,
+      characterScale,
       wallpaperId,
       floorId,
       backgroundId,
@@ -725,6 +728,7 @@ export function AppShell({
       {screen === 'decor' ? (
         <RoomDecorScreen
           initialItems={placedItems}
+          initialCharacterScale={characterScale}
           highlightItemIds={newDecorItemIds}
           initialTab={decorInitialTab}
           initialWallpaperId={wallpaperId}
@@ -744,10 +748,11 @@ export function AppShell({
           characterFrames={wornCharacterFrames}
           // 일괄 구매(프리뷰 저장, #501)가 결과를 기다린다 — Promise를 그대로.
           onBuy={(itemId) => purchaseFurniture(itemId)}
-          onApply={async (its, wp, fl, bg) => {
-            const result = await saveLayout(its, wp, fl, bg);
+          onApply={async (its, wp, fl, bg, scale) => {
+            const result = await saveLayout(its, wp, fl, bg, scale);
             if (result === 'ok') {
               setPlacedItems(its);
+              setCharacterScale(scale);
               setWallpaperId(wp);
               setFloorId(fl);
               setBackgroundId(bg);

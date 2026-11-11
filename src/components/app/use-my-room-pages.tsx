@@ -127,6 +127,7 @@ export function useMyRoomPages({
     characterUnlocked: boolean;
     characterUnlockLevel: number;
     placements: MyRoomScreenProps['placements'];
+    characterScale: number;
     wallpaperId: string;
     floorId: string | null;
     backgroundId: string | null;
@@ -559,6 +560,7 @@ export function useMyRoomPages({
     loadError: !!myRoomError,
     onRetry: retryMyRoom,
     placements: room.placements,
+    characterScale: room.characterScale,
     wallpaperId: room.wallpaperId,
     floorId: room.floorId,
     backgroundId: room.backgroundId,

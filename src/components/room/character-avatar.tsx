@@ -2,6 +2,8 @@ import { Image } from 'expo-image';
 import { memo, useEffect, useMemo } from 'react';
 import { type ImageStyle, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
+import { characterArtOffset } from '@/components/room/character-scale';
+
 import { PawPictogram } from '@/components/ui/pictograms';
 import { CHARACTER_OPTIONS, type CharacterId } from '@/constants/characters';
 import { assetSource, isCdnKey, RESOURCE_BASE } from '@/resources/asset';
@@ -70,6 +72,8 @@ export type CharacterAvatarProps = {
   /** Which pose frame to show; wraps over the available frames. Defaults to 0. */
   pose?: number;
   size?: number;
+  /** Room-only resize correction: keep the visible feet at the original baseline. */
+  roomScale?: number;
   style?: StyleProp<ImageStyle>;
   /** 원본 해상도 디코딩 — 카메라 줌 대상(집 창문)용. */
   sharp?: boolean;
@@ -98,6 +102,7 @@ export const CharacterAvatar = memo(function CharacterAvatar({
   pose = 0,
   prefetchFrames = false,
   size = 96,
+  roomScale,
   style,
   sharp = false,
   contentPosition = 'center',
@@ -134,7 +139,11 @@ export const CharacterAvatar = memo(function CharacterAvatar({
     return (
       <Image
         source={assetSource(key)}
-        style={[sizeStyle, style]}
+        style={[
+          sizeStyle,
+          style,
+          roomScale == null ? undefined : characterArtOffset(key, roomScale),
+        ]}
         contentFit="contain"
         contentPosition={contentPosition}
         cachePolicy="memory-disk"
@@ -163,7 +172,13 @@ export const CharacterAvatar = memo(function CharacterAvatar({
   return (
     <Image
       source={source}
-      style={[sizeStyle, style]}
+      style={[
+        sizeStyle,
+        style,
+        roomScale == null
+          ? undefined
+          : characterArtOffset(`${characterId}-${wrapPose(pose, POSE_COUNT) + 1}`, roomScale),
+      ]}
       contentFit="contain"
       contentPosition={contentPosition}
       allowDownscaling={!sharp}

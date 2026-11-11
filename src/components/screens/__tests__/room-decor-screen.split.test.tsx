@@ -85,7 +85,7 @@ describe('RoomDecorScreen 2단 레이아웃 — 동작', () => {
     await fireEvent.press(ui.getByLabelText('벽 꾸미기'));
     await fireEvent.press(ui.getByLabelText('발자국 패턴'));
     await fireEvent.press(ui.getByText('적용하기'));
-    await waitFor(() => expect(onApply).toHaveBeenCalledWith([], 'paw', null, null));
+    await waitFor(() => expect(onApply).toHaveBeenCalledWith([], 'paw', null, null, 1));
   });
 
   it('프리뷰 가구를 선택하면 툴바가 뜨고, 다시 탭하면 구매 확인이 열린다', async () => {

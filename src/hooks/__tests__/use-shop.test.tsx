@@ -126,6 +126,21 @@ describe('useShop — 구매·배치 저장은 캐시에 쓴다 (#1027)', () => 
     }) as unknown as typeof fetch;
   };
 
+  it('saves character size and reads back the persisted response into the room cache', async () => {
+    setUp({ ok: true, status: 200, body: { layoutRevision: 4, characterScale: 0.85 } });
+    const client = createTestQueryClient();
+    const { result } = await renderHook(() => useShop(), { wrapper: queryWrapper(client) });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      expect(await result.current.saveLayout([], '1', null, null, 0.85)).toBe('ok');
+    });
+    const call = (global.fetch as jest.Mock).mock.calls.find(
+      ([url, init]) => String(url).endsWith('/rooms/me/layout') && init?.method === 'PUT',
+    );
+    expect(JSON.parse(call![1].body).characterScale).toBe(0.85);
+    await waitFor(() => expect(result.current.placement.characterScale).toBe(0.85));
+  });
+
   it('구매 → 보유중이 되고, 재조회 없이 그 아이템을 배치 저장할 수 있다', async () => {
     setUp({ ok: true, status: 200, body: { layoutRevision: 4 } });
     const client = createTestQueryClient();

@@ -510,6 +510,13 @@
         "piano": "Quiet piano"
       },
       "nowPlayingArtist": "Rougether"
+    },
+    "characterScale": {
+      "title": "Character size",
+      "hint": "Resize while keeping the feet centered in place.",
+      "smaller": "Smaller character",
+      "larger": "Larger character",
+      "reset": "Default size"
     }
   }
 }

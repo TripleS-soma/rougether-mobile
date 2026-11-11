@@ -1,3 +1,5 @@
+import { CharacterScaleSheet } from '@/components/screens/decor/character-scale-sheet';
+import { characterFrameStyle, normalizeCharacterScale } from '@/components/room/character-scale';
 import { type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -135,6 +137,7 @@ export function dominantDecorTab(
 export type RoomDecorScreenProps = RoomCatalogProps & {
   /** 자유 배치 초기 상태 (#327); 없으면 데모 프리필. */
   initialItems?: PlacedFurniture[];
+  initialCharacterScale?: number;
   /** 방이 이미 FREE_V1로 전환됐는지 — 첫 저장 전환 확인 모달 판단. */
   initialWallpaperId?: string;
   initialFloorId?: string | null;
@@ -169,6 +172,7 @@ export type RoomDecorScreenProps = RoomCatalogProps & {
     wallpaperId: string,
     floorId: string | null,
     backgroundId: string | null,
+    characterScale: number,
   ) => Promise<'ok' | 'conflict' | 'fail'> | void;
   /** 리비전 충돌 모달의 '새로 불러오기' — 서버 상태로 재로드 후 화면을 나간다. */
   onConflictReload?: () => void;
@@ -200,6 +204,7 @@ const NO_SURFACES: Wallpaper[] = [];
 
 export function RoomDecorScreen({
   initialItems,
+  initialCharacterScale = 1,
   onConflictReload,
   highlightItemIds,
   initialTab = 'furniture',
@@ -266,12 +271,16 @@ export function RoomDecorScreen({
     canUndo,
     canRedo,
   } = useDecorHistory(() => ({
+    characterScale: normalizeCharacterScale(initialCharacterScale),
     items: initialItems ?? demoItems(),
     wallpaperId: initialWallpaperId,
     floorId: initialFloorId,
     backgroundId: initialBackgroundId,
   }));
   const { items, wallpaperId, floorId, backgroundId } = doc;
+  const characterScale = doc.characterScale ?? 1;
+  const [characterScaleOpen, setCharacterScaleOpen] = useState(false);
+  const [previewCharacterScale, setPreviewCharacterScale] = useState<number | null>(null);
   const resolve = <T,>(u: SetStateAction<T>, prev: T): T =>
     typeof u === 'function' ? (u as (p: T) => T)(prev) : u;
   const setItems = (u: SetStateAction<PlacedFurniture[]>) =>
@@ -287,19 +296,24 @@ export function RoomDecorScreen({
   const placedSet = useMemo(() => new Set(items.map((p) => p.furnitureId)), [items]);
   // Snapshot of the layout at mount — leaving with a different layout
   // (미적용 변경) asks whether to save first. 좌표까지 비교한다.
-  const snap = (its: PlacedFurniture[], wp: string, fl: string | null, bg: string | null): string =>
-    JSON.stringify({ its, wp, fl, bg });
+  const snap = (
+    its: PlacedFurniture[],
+    wp: string,
+    fl: string | null,
+    bg: string | null,
+    scale: number,
+  ): string => JSON.stringify({ its, wp, fl, bg, scale });
   const initialSnapRef = useRef<string | null>(null);
   if (initialSnapRef.current === null) {
-    initialSnapRef.current = snap(items, wallpaperId, floorId, backgroundId);
+    initialSnapRef.current = snap(items, wallpaperId, floorId, backgroundId, characterScale);
   }
   // 가구를 놓을 때마다·툴바를 누를 때마다 배치 전량을 직렬화하던 자리 (#771).
   // **비싼 직렬화만** memo하고 비교는 매 렌더 한다 — `initialSnapRef`는 저장
   // 성공 때 doApply가 갱신하는 ref라, dirty 전체를 memo하면 저장 후에도
   // 낡은 true가 캐시돼 "변경사항을 저장할까요?"가 잘못 다시 뜬다.
   const currentSnap = useMemo(
-    () => snap(items, wallpaperId, floorId, backgroundId),
-    [items, wallpaperId, floorId, backgroundId],
+    () => snap(items, wallpaperId, floorId, backgroundId, characterScale),
+    [items, wallpaperId, floorId, backgroundId, characterScale],
   );
   const dirty = currentSnap !== initialSnapRef.current;
   // 첫 변경 (#1664) — 무엇을 바꿨든 한 번. 저장으로 dirty가 풀렸다 다시 켜져도 세지 않는다.
@@ -370,13 +384,31 @@ export function RoomDecorScreen({
   const [conflictOpen, setConflictOpen] = useState(false);
 
   type ApplyValues = LayoutValues;
-  const currentValues = (): ApplyValues => ({ items, wallpaperId, floorId, backgroundId });
+  const currentValues = (): ApplyValues => ({
+    items,
+    wallpaperId,
+    floorId,
+    backgroundId,
+    characterScale,
+  });
   // 제외하고 저장 등에서 넘어온 값 — 마이그레이션 확인을 건너뛴 뒤에도 유지.
   const doApply = async (thenBack: boolean, v: ApplyValues = currentValues()) => {
-    const result = await onApply?.(v.items, v.wallpaperId, v.floorId, v.backgroundId);
+    const result = await onApply?.(
+      v.items,
+      v.wallpaperId,
+      v.floorId,
+      v.backgroundId,
+      v.characterScale ?? 1,
+    );
     if (result === 'conflict') return setConflictOpen(true);
     if (result === 'fail') return; // 실패 토스트는 훅이 띄운다.
-    initialSnapRef.current = snap(v.items, v.wallpaperId, v.floorId, v.backgroundId);
+    initialSnapRef.current = snap(
+      v.items,
+      v.wallpaperId,
+      v.floorId,
+      v.backgroundId,
+      v.characterScale ?? 1,
+    );
     if (thenBack) leave();
   };
   /** 프리뷰 정리가 끝난 값으로 저장을 이어간다. */
@@ -405,6 +437,7 @@ export function RoomDecorScreen({
     // 화면 상태도 저장값과 맞춘다 — 프리뷰가 방에 남아 보이면 안 된다.
     // 한 단계로 — 프리뷰 빼기가 실행 취소 4번으로 쪼개지지 않게 (#1640).
     commitDoc(() => ({
+      characterScale: v.characterScale,
       items: v.items,
       wallpaperId: v.wallpaperId,
       floorId: v.floorId,
@@ -853,17 +886,29 @@ export function RoomDecorScreen({
           style={[styles.guideY, { backgroundColor: t.primary }, guideYStyle]}
         />
         {/* 캐릭터는 항상 가구 앞 — 오버레이(드래그 중 z 9999)보다 위 전용 레이어. */}
-        <View pointerEvents="none" style={styles.characterLayer}>
-          {/* Room과 같은 두 겹(자리 박스 + 꽉 채운 아바타) — 아바타에 자리 스타일을
+          <View pointerEvents="box-none" style={styles.characterLayer}>
+            {/* Room과 같은 두 겹(자리 박스 + 꽉 채운 아바타) — 아바타에 자리 스타일을
             직접 주면 기본 96px 높이가 남아 나의 방보다 작게 그려졌다. */}
-          <View style={styles.characterFigure}>
-            <CharacterAvatar
-              characterId={characterId}
-              frames={characterFrames}
-              style={styles.characterFill}
-            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={tr('roomShop.characterScale.title')}
+              testID="decor-character"
+              onPress={() => {
+                setSelectedId(null);
+                setCharacterScaleOpen(true);
+              }}
+              style={[
+                styles.characterFigure,
+                characterFrameStyle(previewCharacterScale ?? characterScale),
+              ]}>
+              <CharacterAvatar
+                characterId={characterId}
+                frames={characterFrames}
+                roomScale={previewCharacterScale ?? characterScale}
+                style={styles.characterFill}
+              />
+            </Pressable>
           </View>
-        </View>
         {/* 선택 툴바 (#333) — 캔버스 위 플로팅, 캐릭터 레이어보다도 위.
           벽 쪽(상반부) 가구를 가리지 않게 하단으로 회피하고(#608), 점프가
           거슬리지 않게 드래그 중에는 숨겼다가 드롭 시점에 재배치된다. */}
@@ -1197,6 +1242,13 @@ export function RoomDecorScreen({
         onConfirm={() => void confirmPendingBuy()}
       />
 
+      <CharacterScaleSheet
+        visible={characterScaleOpen}
+        value={previewCharacterScale ?? characterScale}
+        onPreview={setPreviewCharacterScale}
+        onCommit={(value) => commitDoc((d) => ({ ...d, characterScale: value }))}
+        onClose={() => setCharacterScaleOpen(false)}
+      />
       {/* Leaving with unapplied changes — save, discard, or stay. */}
       <UnsavedLeaveModal
         visible={confirmLeave}

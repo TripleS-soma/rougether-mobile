@@ -343,6 +343,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   diamondBalance = 0,
   characterId = DEFAULT_CHARACTER_ID,
   characterFrames,
+  characterScale,
   wallpaperId = DEFAULT_WALLPAPER_ID,
   floorId,
   backgroundId,
@@ -694,6 +695,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     speakerPlaying,
     characterId,
     characterFrames,
+    characterScale,
     cobweb,
     onCleanCobweb: onCleanCobweb ? handleCleanCobweb : undefined,
     wallpaperId,
@@ -718,8 +720,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         backgroundId,
         placements,
         characterId,
+        characterScale,
       }),
-    [wallpaperId, floorId, backgroundId, placements, characterId],
+    [wallpaperId, floorId, backgroundId, placements, characterId, characterScale],
   );
   useWidgetRoomCapture({
     shotRef: roomShotRef,

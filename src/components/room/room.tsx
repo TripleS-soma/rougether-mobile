@@ -1,3 +1,4 @@
+import { characterFrameStyle } from '@/components/room/character-scale';
 import { SpeakerSprite } from '@/components/room/speaker-sprite';
 import { isSpeakerFurniture } from '@/resources/speaker';
 import { Image } from 'expo-image';
@@ -50,6 +51,7 @@ export type RoomProps = {
   characterId?: CharacterId | null;
   /** 서버가 등록한 포즈 프레임(CDN 키, 등록 순서) — 없으면 번들 스프라이트 (#735). */
   characterFrames?: string[];
+  characterScale?: number;
   /** Item + wallpaper catalogue to resolve ids against (defaults to the local set). */
   furniture?: FurnitureItem[];
   wallpapers?: Wallpaper[];
@@ -120,6 +122,7 @@ export type RoomSceneProps = RoomCatalogProps &
     RoomProps,
     | 'characterId'
     | 'characterFrames'
+    | 'characterScale'
     | 'wallpaperId'
     | 'floorId'
     | 'backgroundId'
@@ -142,6 +145,7 @@ export type MemberRoomPreview = {
   floorId?: string | null;
   backgroundId?: string | null;
   characterId?: CharacterId;
+  characterScale?: number;
   /** 그 방에 낀 거미줄 (#829) — 없으면 깨끗한 방. */
   cobweb?: RoomCobweb | null;
 };
@@ -158,6 +162,7 @@ export function memberRoomScene(
   return {
     ...catalogs,
     characterId: room?.characterId ?? null,
+    characterScale: room?.characterScale,
     placements: room?.placements ?? [],
     wallpaperId: room?.wallpaperId,
     floorId: room?.floorId,
@@ -181,6 +186,7 @@ export const Room = memo(function Room({
   backgroundId,
   characterId = DEFAULT_CHARACTER_ID,
   characterFrames,
+  characterScale = 1,
   furniture = FURNITURE_ITEMS,
   wallpapers = WALLPAPERS,
   floors = [],
@@ -381,10 +387,11 @@ export const Room = memo(function Room({
           onPress={() => setPose((p) => p + 1)}
           accessibilityRole="button"
           accessibilityLabel={tr('app.room.poseA11y', { name: character.name })}
-          style={styles.character}>
+          style={[styles.character, characterFrameStyle(characterScale)]}>
           <CharacterAvatar
             characterId={characterId}
             frames={characterFrames}
+            roomScale={characterScale}
             pose={pose}
             // 여기서만 포즈가 넘어간다 — 다음 장을 미리 받아둘 값어치가 있다 (#970).
             prefetchFrames
@@ -397,10 +404,11 @@ export const Room = memo(function Room({
         // 아바타에 자리 스타일을 직접 주면 CharacterAvatar의 기본 96px 높이가 살아남아
         // 폭은 42%·높이는 96px인 박스에 contain으로 들어가, 작은 방(집 좌석)에선
         // 캐릭터가 러그 위로 떠 보이고(#1194) 큰 방(친구 방)에선 나의 방보다 작았다.
-        <View style={styles.character} pointerEvents="none">
+        <View style={[styles.character, characterFrameStyle(characterScale)]} pointerEvents="none">
           <CharacterAvatar
             characterId={characterId}
             frames={characterFrames}
+            roomScale={characterScale}
             style={styles.characterFill}
             sharp={sharp}
           />
