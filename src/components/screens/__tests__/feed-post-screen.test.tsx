@@ -19,6 +19,15 @@ async function finishNativeSheetDismissal(onDismiss: () => void) {
 
 const [OTHER_POST, MY_POST] = DEMO_FEED_POSTS;
 
+it('남의 게시물에서 작성자의 집 선택을 열고 내 글에는 버튼을 표시하지 않는다', async () => {
+  const open = jest.fn();
+  const ui = await render(<FeedPostScreen post={OTHER_POST} onOpenAuthorHouses={open} />);
+  await fireEvent.press(ui.getByText('입주 신청'));
+  expect(open).toHaveBeenCalledTimes(1);
+  await ui.rerender(<FeedPostScreen post={MY_POST} onOpenAuthorHouses={open} />);
+  expect(ui.queryByText('입주 신청')).toBeNull();
+});
+
 describe('답글 입력 (#1570)', () => {
   it('답글 대상·입력창을 표시하고 성공할 때만 대상과 본문을 비운다', async () => {
     const onAddComment = jest.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);

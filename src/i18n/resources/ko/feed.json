@@ -140,6 +140,34 @@
       "draftWithRank": "🐱 {{game}} {{score}}점, 전체 {{rank}}위 달성!",
       "composeHint": "기록 카드는 자유게시판에만 올라가요. ✕를 누르면 카드 없이 글만 올려요.",
       "invalidRemoved": "기록 카드를 붙일 수 없어서 뺐어요. 글은 그대로 올릴 수 있어요."
+    },
+    "house": {
+      "entry": "입주 신청",
+      "title": "어느 집에 입주할까요?",
+      "hint": "작성자가 참여 중인 집을 골라 주세요.",
+      "loadError": "집 목록을 불러오지 못했어요.",
+      "empty": "작성자가 참여 중인 집이 없어요.",
+      "request": "입주 신청",
+      "pending": "승인 대기",
+      "open": "집으로 가기",
+      "full": "정원 마감",
+      "kicked": "입주할 수 없음",
+      "working": "처리 중...",
+      "close": "닫기",
+      "members": "{{count}} / {{max}}명",
+      "membersUnlimited": "{{count}}명, 정원 제한 없음",
+      "requested": "입주 신청을 보냈어요. 방장이 수락하면 입주할 수 있어요.",
+      "joined": "입주했어요!",
+      "error": {
+        "HOUSE_FULL": "집 정원이 가득 찼어요. 다른 집을 골라 주세요.",
+        "HOUSE_KICKED_MEMBER": "강퇴된 집에는 다시 입주할 수 없어요.",
+        "HOUSE_NOT_FOUND": "작성자가 더 이상 참여하지 않는 집이에요. 목록을 다시 확인해 주세요.",
+        "FEED_POST_NOT_FOUND": "삭제되었거나 볼 수 없는 게시물이에요.",
+        "HOUSE_JOIN_REQUEST_ALREADY_PENDING": "이미 입주 신청 중이에요. 방장의 승인을 기다려 주세요.",
+        "generic": "참여를 처리하지 못했어요. 잠시 후 다시 시도해 주세요."
+      },
+      "instantHint": "신청하면 바로 입주해요",
+      "approvalHint": "방장이 수락하면 입주할 수 있어요"
     }
   }
 }
