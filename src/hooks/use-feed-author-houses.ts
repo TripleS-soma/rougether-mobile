@@ -80,8 +80,8 @@ export function useFeedAuthorHouses(
   return useMemo(
     () => ({
       houses: data ?? NO_HOUSES,
-      loading: isFetching,
-      error: isError,
+      loading: data === undefined && isFetching,
+      error: data === undefined && isError,
       joiningId,
       refresh,
       join,

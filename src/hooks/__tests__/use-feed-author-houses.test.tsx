@@ -57,6 +57,26 @@ it('집 선택을 열기 전에는 서버에 요청하지 않는다', async () =
   expect(fetchFeedAuthorHouses).not.toHaveBeenCalled();
 });
 
+it('받은 목록은 재조회 중이거나 재조회가 실패해도 유지한다', async () => {
+  const { result } = await setup();
+  await waitFor(() => expect(result.current.houses).toHaveLength(1));
+  let fail!: (error: Error) => void;
+  jest.mocked(fetchFeedAuthorHouses).mockImplementationOnce(
+    () =>
+      new Promise((_, reject) => {
+        fail = reject;
+      }),
+  );
+  await act(async () => result.current.refresh());
+  expect(result.current.loading).toBe(false);
+  expect(result.current.houses).toHaveLength(1);
+  await act(async () => {
+    fail(new Error('temporary outage'));
+  });
+  await waitFor(() => expect(result.current.error).toBe(false));
+  expect(result.current.houses).toHaveLength(1);
+});
+
 it('비공개 집 신청 성공은 PENDING이며 입주 성공으로 처리하지 않는다', async () => {
   jest.mocked(joinFeedAuthorHouse).mockResolvedValue({
     houseId: 20,

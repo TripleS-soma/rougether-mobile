@@ -103,8 +103,8 @@ export function useFeedPages({
     showError,
   );
   useEffect(() => {
-    if (screen !== 'feedPost') setHousePickerOpen(false);
-  }, [screen]);
+    setHousePickerOpen(false);
+  }, [screen, postId]);
   const openAuthorHouses = useCallback(() => setHousePickerOpen(true), []);
   const closeAuthorHouses = useCallback(() => setHousePickerOpen(false), []);
   const houseContextRef = useLatestRef({ screen, postId, onOpenHouse });
