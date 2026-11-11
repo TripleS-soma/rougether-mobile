@@ -115,6 +115,53 @@ export function pushDataOf(
   return trigger.payload as Record<string, unknown>;
 }
 
+/**
+ * 서버가 집 채팅 푸시에 붙이는 묶음 키 (서버 #526) — FCM data의 `groupKey`, Android 알림 tag,
+ * APNs thread-id가 모두 이 값이다. 같은 집의 알림이 한 묶음으로 보이게 하는 단위.
+ */
+export function chatPushGroupKey(houseId: number): string {
+  return `chat-house-${houseId}`;
+}
+
+/**
+ * Android에서 앱이 꺼져 있을 때 FCM SDK가 직접 띄운 알림은 expo-notifications가 만든 게 아니라
+ * data가 없다 — 식별자만 `expo-notifications://foreign_notifications?tag=<tag>&id=<id>` 꼴로 온다
+ * (`ExpoPresentationDelegate.getInternalIdentifierKey`). 그 tag가 묶음 키인지 본다.
+ */
+function hasForeignTag(identifier: string, tag: string): boolean {
+  if (!identifier.startsWith('expo-notifications://foreign_notifications')) return false;
+  const query = identifier.split('?')[1] ?? '';
+  return query.split('&').some((pair) => pair === `tag=${encodeURIComponent(tag)}`);
+}
+
+/**
+ * 트레이에 남은 그 집 채팅 알림을 모두 지운다 (#1746). 알림 하나를 눌러 채팅에 들어오면 OS는
+ * 누른 것만 지워서, 같은 집의 나머지가 읽은 뒤에도 남았다. 채팅 화면이 열릴 때 부른다 —
+ * 알림을 눌렀든 앱 안에서 들어왔든 같다. 실패는 삼킨다(지우지 못해도 채팅은 열려야 한다).
+ *
+ * 그 집 알림인지는 두 가지로 본다: data(`type`·`houseId` — iOS, 그리고 앱이 켜진 채 받아
+ * expo-notifications가 띄운 Android 알림)와 FCM SDK가 띄운 Android 알림의 tag.
+ */
+export async function dismissChatPushes(houseId: number): Promise<void> {
+  if (!supportsPushNotifications()) return;
+  const groupKey = chatPushGroupKey(houseId);
+  try {
+    const presented = await Notifications.getPresentedNotificationsAsync();
+    const mine = presented.filter(({ request }) => {
+      const tap = pushTapFrom(pushDataOf(request));
+      if (tap.type === 'CHAT_MESSAGE' && tap.houseId === houseId) return true;
+      return hasForeignTag(request.identifier, groupKey);
+    });
+    await Promise.all(
+      mine.map(({ request }) =>
+        Notifications.dismissNotificationAsync(request.identifier).catch(() => {}),
+      ),
+    );
+  } catch {
+    // 권한이 없거나 OS가 목록을 못 주는 경우 — 지울 게 없는 것과 같다.
+  }
+}
+
 export function onNotificationTap(cb: (notification?: PushTap) => void): () => void {
   if (!supportsPushNotifications()) return () => {};
   let alive = true;

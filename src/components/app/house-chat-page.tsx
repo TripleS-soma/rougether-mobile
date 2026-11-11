@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useMutation } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AppState, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { reportChatMessage } from '@/api/chat';
 import type { ReportReason } from '@/api/types';
 import { ReportSheet } from '@/components/ui/report-sheet';
@@ -16,7 +16,7 @@ import { useChatMute } from '@/hooks/use-chat-mute';
 import { type HouseChatError, useHouseChat } from '@/hooks/use-house-chat';
 import { useT } from '@/i18n';
 import { track } from '@/lib/analytics';
-import { setForegroundPushFilter } from '@/lib/push-events';
+import { dismissChatPushes, setForegroundPushFilter } from '@/lib/push-events';
 
 /**
  * 집 채팅 셸 화면 (#1408) — 데이터 훅(소켓·전송·읽음)과 순수 화면을 잇는다. 채팅
@@ -119,6 +119,16 @@ function HouseChatRoomPage({
   useEffect(() => {
     track('house_chat_view');
   }, []);
+
+  // 이 집 채팅을 열면 트레이에 쌓인 이 집 채팅 알림을 한 번에 지운다 (#1746) — 알림 하나를 눌러
+  // 들어와도 OS는 누른 것만 지운다. 채팅을 연 채로 앱을 떠났다 돌아왔을 때도 같다.
+  useEffect(() => {
+    void dismissChatPushes(houseId);
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void dismissChatPushes(houseId);
+    });
+    return () => sub.remove();
+  }, [houseId]);
 
   // 이 방을 보는 동안 그 방 새 메시지 푸시는 배너·소리·알림 목록 모두 숨긴다(이미 화면에 있다).
   const roomId = chat.roomId;
