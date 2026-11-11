@@ -354,7 +354,7 @@ export const roomEntries: GalleryEntry[] = [
   {
     name: 'RoomDecorScreen',
     description:
-      'Ported from the prototype RoomDecorScreen (#8): live room preview + wallpaper/furniture catalog.',
+      '방 꾸미기: 캐릭터 크기 버튼을 눌러 크기 슬라이더를 열고 발바닥 중앙 고정을 확인합니다.',
     render: () => (
       <View style={{ height: 900, alignSelf: 'stretch' }}>
         <RoomDecorScreen />

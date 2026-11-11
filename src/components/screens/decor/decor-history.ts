@@ -17,6 +17,7 @@ import type { PlacedFurniture } from '@/resources/furniture';
  * 선택 상태는 문서가 아니다 — 히스토리에 넣으면 "선택만 바꾼 단계"가 끼어 되돌리기가 헛돈다.
  */
 export type DecorDoc = {
+  characterScale?: number;
   items: PlacedFurniture[];
   wallpaperId: string;
   floorId: string | null;
@@ -65,6 +66,7 @@ const sameItem = (a: PlacedFurniture, b: PlacedFurniture) =>
 /** 문서가 실제로 바뀌었는지 — 배열은 새로 만들어도 내용이 같으면 같은 문서다. */
 export function sameDoc(a: DecorDoc, b: DecorDoc): boolean {
   if (a === b) return true;
+  if ((a.characterScale ?? 1) !== (b.characterScale ?? 1)) return false;
   if (a.wallpaperId !== b.wallpaperId || a.floorId !== b.floorId) return false;
   if (a.backgroundId !== b.backgroundId) return false;
   if (a.items === b.items) return true;
