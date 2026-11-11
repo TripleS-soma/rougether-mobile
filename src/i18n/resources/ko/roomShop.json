@@ -291,7 +291,7 @@
       "choosePhoto": "가구 사진 선택",
       "sending": "사진 보내는 중",
       "submit": "생성권 1회로 만들기",
-      "photoHint": "만들 대상 하나가 또렷하게 보이는 JPG·PNG 사진 · 최대 10MB\n여러 대상이 함께 보이면 원하는 대상만 남도록 사진을 잘라주세요.\n사진은 AI 가구 제작에 사용돼요. 생성에 실패하면 사용한 생성권이나 코인을 돌려드려요.",
+      "photoHint": "대상 하나가 잘 보이는 사진 · JPG/PNG · 최대 10MB",
       "attendanceTitle": "7일 출석하고, 내 가구 만들기",
       "attendanceBody": "7일 연속 출석하면 생성권 1회를 받아요.",
       "attendanceCta": "출석 이벤트 보기",
@@ -340,7 +340,7 @@
         "existingFurniture": "이전에 완성한 가구는 가구함에 그대로 있어요."
       },
       "coins": "보유 코인 {{n}}",
-      "paymentHint": "생성권을 먼저 사용해요. 생성권이 없으면 {{n}}코인으로 만들 수 있어요.",
+      "paymentHint": "생성권 or {{n}}코인 사용",
       "submitCoins": "{{n}}코인으로 만들기",
       "tabMake": "만들기",
       "tabMine": "내 가구 {{n}}",
@@ -356,7 +356,13 @@
       "goMake": "만들러 가기",
       "sheetA11y": "내가 만든 가구 자세히",
       "close": "닫기",
-      "retryGoMake": "다시 만들러 가기"
+      "retryGoMake": "다시 만들러 가기",
+      "examplesTitle": "이런 가구를 만들 수 있어요",
+      "example": {
+        "guitar": "통기타",
+        "cup": "찻잔",
+        "bear": "곰 장식"
+      }
     },
     "minigame": {
       "runner": {

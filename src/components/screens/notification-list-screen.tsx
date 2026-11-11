@@ -379,10 +379,14 @@ export function NotificationListScreen({
                 </View>
                 <View style={styles.rowBody}>
                   <View style={styles.rowHead}>
-                    <Text style={[Typography.label, { color: t.text }]}>{n.title}</Text>
-                    <Text style={[Typography.supporting, { color: t.textMuted }]}>{n.date}</Text>
+                    <Text style={[Typography.labelCompact, styles.rowTitle, { color: t.text }]}>
+                      {n.title}
+                    </Text>
+                    <Text style={[Typography.caption, styles.rowTime, { color: t.textMuted }]}>
+                      {n.date}
+                    </Text>
                   </View>
-                  <Text style={[Typography.body, { color: n.read ? t.textMuted : t.text }]}>
+                  <Text style={[Typography.bodyCompact, { color: n.read ? t.textMuted : t.text }]}>
                     {n.body}
                   </Text>
                 </View>
@@ -432,7 +436,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.three,
+    gap: Spacing.two,
     borderRadius: Radius.md,
     borderCurve: 'continuous',
     borderWidth: 1,
@@ -445,13 +449,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  rowTitle: { flex: 1, minWidth: 0 },
+  rowTime: { flexShrink: 0 },
   rowBody: {
+    minWidth: 0,
     flex: 1,
     gap: Spacing.half,
   },
   rowHead: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: Spacing.two,
     justifyContent: 'space-between',
   },
   unreadDot: {
