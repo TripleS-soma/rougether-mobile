@@ -30,16 +30,15 @@ export function CharacterScaleSheet({
   const t = useTokens();
   const Typography = useTypography();
   const tr = useT();
-  const slider = useRef<View>(null);
+  const trackWidth = useRef(0);
   const latest = useRef({ value, onPreview, onCommit });
   latest.current = { value, onPreview, onCommit };
-  const drag = useRef({ active: false, ready: false, x: 0, width: 1, pageX: 0, value });
-  const update = () => {
+  const drag = useRef({ active: false, ready: false, x: 0, width: 1, value });
+  const update = (localX: number) => {
     const d = drag.current;
     if (!d.active || !d.ready) return;
     d.value = normalizeCharacterScale(
-      CHARACTER_SCALE_MIN +
-        ((d.pageX - d.x) / d.width) * (CHARACTER_SCALE_MAX - CHARACTER_SCALE_MIN),
+      CHARACTER_SCALE_MIN + (localX / d.width) * (CHARACTER_SCALE_MAX - CHARACTER_SCALE_MIN),
     );
     latest.current.onPreview(d.value);
   };
@@ -48,24 +47,17 @@ export function CharacterScaleSheet({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (event) => {
-        const current = {
+        drag.current = {
           active: true,
-          ready: false,
-          x: 0,
-          width: 1,
-          pageX: event.nativeEvent.pageX,
+          ready: trackWidth.current > 0,
+          x: event.nativeEvent.locationX,
+          width: trackWidth.current,
           value: latest.current.value,
         };
-        drag.current = current;
-        slider.current?.measureInWindow((x, _y, width) => {
-          if (drag.current !== current || !current.active || width <= 0) return;
-          Object.assign(current, { x, width, ready: true });
-          update();
-        });
+        update(event.nativeEvent.locationX);
       },
-      onPanResponderMove: (event) => {
-        drag.current.pageX = event.nativeEvent.pageX;
-        update();
+      onPanResponderMove: (_event, gestureState) => {
+        update(drag.current.x + gestureState.dx);
       },
       onPanResponderRelease: () => {
         const d = drag.current;
@@ -108,7 +100,9 @@ export function CharacterScaleSheet({
             <Icon name="subtract" color={t.text} />
           </Pressable>
           <View
-            ref={slider}
+            onLayout={(event) => {
+              trackWidth.current = event.nativeEvent.layout.width;
+            }}
             {...gesture.panHandlers}
             testID="character-size-slider"
             accessibilityRole="adjustable"
