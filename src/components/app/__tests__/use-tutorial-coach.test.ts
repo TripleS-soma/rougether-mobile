@@ -27,4 +27,26 @@ describe('tutorialCoachStep (#1324)', () => {
       'nav-house',
     );
   });
+
+  it('하단 탭이 없는 화면에서는 탭 대신 미션 배너를 짚는다 — 뽑기 직후 3번째 미션 (2026-11-11)', () => {
+    const noNav = { navVisible: false, bannerVisible: true };
+    // 뽑기를 마쳐 미션이 '가구 배치'로 넘어갔는데 아직 뽑기 화면 — 방 탭은 여기 없다.
+    const coach = tutorialCoachStep('place-furniture', 'gacha', noNav);
+    expect(coach?.target).toBe('mission-banner');
+    expect(coach?.title).toBe('미션을 이어가요');
+    expect(tutorialCoachStep('invite-house', 'decor', noNav)?.target).toBe('mission-banner');
+    // 그 화면의 대상을 짚는 단계는 그대로다.
+    expect(tutorialCoachStep('first-draw', 'gacha', noNav)?.target).toBe('gacha-draw');
+    // 탭이 있는 화면은 지금처럼 탭을 짚는다.
+    expect(
+      tutorialCoachStep('place-furniture', 'house', { navVisible: true, bannerVisible: true })
+        ?.target,
+    ).toBe('nav-myRoom');
+  });
+
+  it('탭도 배너도 없는 화면에서는 잠그지 않는다 — 짚을 곳 없이 잠기면 빠져나올 수 없다', () => {
+    expect(
+      tutorialCoachStep('place-furniture', 'gacha', { navVisible: false, bannerVisible: false }),
+    ).toBeNull();
+  });
 });
