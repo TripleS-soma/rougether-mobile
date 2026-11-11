@@ -1,7 +1,8 @@
+import { Button } from '@/components/ui/button';
 import { useT } from '@/i18n';
 import { Redirect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Button, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import {
   fetchCharacters,
@@ -19,7 +20,7 @@ import {
   toServerCharacterId,
 } from '@/api/adapters';
 import type { CharacterItem, GoalItem } from '@/api/types';
-import { useResolvedScheme, useTokens } from '@/hooks/use-tokens';
+import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
 import { SplashBackground, SplashBackgroundDark } from '@/constants/theme';
 import { AppShell } from '@/components/app/app-shell';
 import { OnboardingHouseGate } from '@/components/app/onboarding-house-gate';
@@ -320,6 +321,7 @@ export function AppRoot() {
  */
 function BootFallback({ onRetry }: { onRetry?: () => void }) {
   const tr = useT();
+  const Typography = useTypography();
   const scheme = useResolvedScheme();
   const t = useTokens();
   return (
@@ -330,8 +332,10 @@ function BootFallback({ onRetry }: { onRetry?: () => void }) {
       ]}>
       {onRetry ? (
         <>
-          <Text style={{ color: t.text }}>{tr('common.startupConnectionError')}</Text>
-          <Button title={tr('common.retry')} onPress={onRetry} />
+          <Text style={[Typography.body, { color: t.text }]}>
+            {tr('common.startupConnectionError')}
+          </Text>
+          <Button label={tr('common.retry')} onPress={onRetry} />
         </>
       ) : (
         <ActivityIndicator color={t.primary} />
