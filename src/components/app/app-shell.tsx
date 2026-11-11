@@ -884,6 +884,7 @@ export function AppShell({
           body={myRoomPages.pushBanner.body}
           onPress={myRoomPages.pushBanner.onPress ?? myRoomPages.openNotifications}
           onDismiss={myRoomPages.dismissPushBanner}
+          secondaryAction={myRoomPages.pushBanner.secondaryAction}
         />
       ) : null}
 

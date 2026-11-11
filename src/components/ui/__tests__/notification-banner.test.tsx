@@ -5,6 +5,25 @@ import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-han
 import { NotificationBanner } from '@/components/ui/notification-banner';
 
 describe('NotificationBanner (#902 — 인앱 푸시 배너)', () => {
+  it('이번 주 숨기기는 회고를 열지 않고 안내만 닫는다', async () => {
+    const onPress = jest.fn();
+    const onHide = jest.fn();
+    const onDismiss = jest.fn();
+    const ui = await render(
+      <NotificationBanner
+        title="주간회고가 도착했어요"
+        body="지난주 루틴을 돌아보세요"
+        onPress={onPress}
+        onDismiss={onDismiss}
+        secondaryAction={{ label: '이번 주 다시 보지 않기', onPress: onHide }}
+      />,
+    );
+    await fireEvent.press(ui.getByRole('button', { name: '이번 주 다시 보지 않기' }));
+    expect(onHide).toHaveBeenCalledTimes(1);
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
   it('제목과 본문을 보여주고, 탭하면 목적지로 보낸 뒤 스스로 닫는다', async () => {
     const onPress = jest.fn();
     const onDismiss = jest.fn();

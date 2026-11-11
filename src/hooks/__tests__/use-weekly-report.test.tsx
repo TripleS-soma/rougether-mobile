@@ -2,8 +2,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useWeeklyReport } from '@/hooks/use-weekly-report';
+import * as api from '@/api';
 import { jsonRes as res } from '@/test-utils/fetch';
 import { queryWrapper } from '@/test-utils/query-wrapper';
+
+jest.mock('@/api', () => ({
+  ...jest.requireActual('@/api'),
+  getSessionUserId: jest.fn(() => 7),
+}));
 
 const realFetch = global.fetch;
 afterEach(() => {
@@ -32,6 +38,64 @@ function mockServer() {
 }
 
 describe('useWeeklyReport', () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+    jest.mocked(api.getSessionUserId).mockReturnValue(7);
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it('이번 주 숨김은 읽음이나 상세 열람 없이 즉시 적용되고 재실행 후에도 유지된다', async () => {
+    const calls = mockServer();
+    const first = await renderHook(() => useWeeklyReport(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(first.result.current.shouldAnnounce).toBe(true));
+    await act(async () => first.result.current.dismissReminder());
+    expect(first.result.current.shouldAnnounce).toBe(false);
+    expect(first.result.current.unread).toBe(true);
+    expect(calls.some((url) => /\/reports\/weekly\/9$/.test(url))).toBe(false);
+    await waitFor(async () =>
+      expect(await AsyncStorage.getItem('rougether.weeklyReport.dismissedWeek.v1.7')).toBe(
+        '2026-08-09',
+      ),
+    );
+    await first.unmount();
+    const second = await renderHook(() => useWeeklyReport(), { wrapper: queryWrapper() });
+    expect(second.result.current.shouldAnnounce).toBe(false);
+    await waitFor(() => expect(second.result.current.loaded).toBe(true));
+    expect(second.result.current.shouldAnnounce).toBe(false);
+    await act(async () => second.result.current.loadDetail());
+    await waitFor(() => expect(second.result.current.detail?.reportId).toBe(9));
+  });
+
+  it('다음 주 회고는 다시 알리고 다른 계정의 숨김은 물려받지 않는다', async () => {
+    await AsyncStorage.setItem('rougether.weeklyReport.dismissedWeek.v1.7', '2026-08-02');
+    await AsyncStorage.setItem('rougether.weeklyReport.dismissedWeek.v1.8', '2026-08-09');
+    mockServer();
+    const { result } = await renderHook(() => useWeeklyReport(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.shouldAnnounce).toBe(true));
+  });
+
+  it('숨긴 주차는 읽지 않아도 다시 알리지 않는다', async () => {
+    await AsyncStorage.setItem('rougether.weeklyReport.dismissedWeek.v1.7', '2026-08-09');
+    mockServer();
+    const { result } = await renderHook(() => useWeeklyReport(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    expect(result.current.unread).toBe(true);
+    expect(result.current.shouldAnnounce).toBe(false);
+  });
+
+  it('로그인 계정이 바뀌면 해당 계정의 숨김을 다시 읽는다', async () => {
+    await AsyncStorage.setItem('rougether.weeklyReport.dismissedWeek.v1.7', '2026-08-09');
+    mockServer();
+    const { result, rerender } = await renderHook(() => useWeeklyReport(), {
+      wrapper: queryWrapper(),
+    });
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    expect(result.current.shouldAnnounce).toBe(false);
+    jest.mocked(api.getSessionUserId).mockReturnValue(8);
+    await rerender(undefined);
+    await waitFor(() => expect(result.current.shouldAnnounce).toBe(true));
+  });
+
   it('목록 순서와 무관하게 가장 최근 주를 고른다', async () => {
     mockServer();
     const { result } = await renderHook(() => useWeeklyReport(), { wrapper: queryWrapper() });
