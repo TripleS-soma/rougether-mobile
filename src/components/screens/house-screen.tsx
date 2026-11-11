@@ -137,6 +137,11 @@ export type HouseScreenProps = RoomCatalogProps &
     onOpenChat?: () => void;
     /** 레일 '채팅'의 안 읽은 메시지 수 — 0이면 배지 없음. */
     chatUnread?: number;
+    /**
+     * 집 피드 열기 — 없으면(houseId 없는 집·데모, 피드가 꺼진 설치본) 레일에 '집 피드'를 그리지
+     * 않는다. 채팅 바로 아래. 새 글 표시(배지)는 없다.
+     */
+    onOpenFeed?: () => void;
     /** 현재 집 미션에 연동된 내 루틴 (#578) — 연동/기여함 라벨 판정. */
     linkedRoutines?: { missionId: number; completedToday?: boolean }[];
     /** Mission ids contributed this session (기여 직후 즉시 반영용 보조 신호). */
@@ -201,6 +206,7 @@ export const HouseScreen = memo(function HouseScreen({
   onOpenMissions,
   onOpenChat,
   chatUnread = 0,
+  onOpenFeed,
   linkedRoutines = [],
   contributedMissionIds = [],
   onUpdateHouse,
@@ -921,6 +927,16 @@ export const HouseScreen = memo(function HouseScreen({
                 : tr('house.chat.railA11y')
             }
             count={chatUnread}
+            t={t}
+            Typography={Typography}
+          />
+        ) : null}
+        {onOpenFeed ? (
+          <RailButton
+            icon={<Icon name="house-feed" size={20} color={t.text} />}
+            label={tr('house.feed.rail')}
+            onPress={tapHouseAction('feed', onOpenFeed)}
+            accessibilityLabel={tr('house.feed.railA11y')}
             t={t}
             Typography={Typography}
           />

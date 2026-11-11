@@ -15,8 +15,10 @@ import type { ReviewTrigger } from '@/lib/store-review';
  * 어떤 경우에도 앱을 죽이면 안 된다는 게 이 파일의 계약이다.
  */
 
-/** 집 화면 진입점 (#1660) — 레일(채팅·집 탐색)과 하늘 위 알약(레벨 → 목표, 인원수 → 집 관리). */
-export type HouseAction = 'missions' | 'chat' | 'search' | 'manage';
+/**
+ * 집 화면 진입점 (#1660) — 레일(채팅·집 피드·집 탐색)과 하늘 위 알약(레벨 → 목표, 인원수 → 집 관리).
+ */
+export type HouseAction = 'missions' | 'chat' | 'feed' | 'search' | 'manage';
 
 /** 방 화면 버튼 — 오른쪽 열 6개 + 메뉴(☰) 항목은 `menu_` 접두. */
 export type RoomAction =

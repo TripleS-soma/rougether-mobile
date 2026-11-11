@@ -226,3 +226,32 @@ describe('FeedComposeScreen (#1409)', () => {
     });
   });
 });
+
+describe('FeedComposeScreen — 올릴 곳 (집 피드)', () => {
+  const HOUSES = [{ houseId: 3, name: '아침을 여는 집' }];
+
+  it('scope가 없으면(내 집 없음·기록 글) 올릴 곳 줄을 그리지 않는다', async () => {
+    const ui = await render(<FeedComposeScreen content="본문" />);
+    expect(ui.queryByTestId('feed-scope')).toBeNull();
+    expect(ui.queryByText('전체 공개')).toBeNull();
+  });
+
+  it('공개 피드에서 연 작성은 전체 공개로 시작하고, 집을 고르면 알린다', async () => {
+    const onChange = jest.fn();
+    const ui = await render(
+      <FeedComposeScreen content="본문" scope={{ houseId: null, houses: HOUSES, onChange }} />,
+    );
+    expect(ui.getByText('전체 공개')).toBeTruthy();
+    await fireEvent.press(ui.getByTestId('feed-scope'));
+    await fireEvent.press(await ui.findByTestId('feed-scope-option-3'));
+    expect(onChange).toHaveBeenCalledWith(3);
+  });
+
+  it('집 피드에서 연 작성은 그 집으로 고정 — 안내만 보인다', async () => {
+    const ui = await render(
+      <FeedComposeScreen content="본문" scope={{ houseId: 3, houses: HOUSES, locked: true }} />,
+    );
+    expect(ui.getByText('아침을 여는 집에 올려요')).toBeTruthy();
+    expect(ui.queryByText('바꾸기')).toBeNull();
+  });
+});

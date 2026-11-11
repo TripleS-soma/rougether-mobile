@@ -447,6 +447,7 @@ export function AppShell({
       else if (dest.kind === 'marketOrders') marketPages.openOrders();
       else if (dest.kind === 'marketAsset') marketPages.openAsset(dest.assetId);
       else if (dest.kind === 'houseChat') housePages.openChatFor(dest.houseId);
+      else if (dest.kind === 'houseFeedPost') housePages.openFeedPostFor(dest.houseId, dest.postId);
       else setScreen(dest.screen);
       return true;
     },
@@ -588,6 +589,8 @@ export function AppShell({
     nav: { screen, setScreen, goBack },
     openGame: minigames.openGame,
     onOpenHouse: openFeedHouse,
+    // 작성 화면의 "올릴 곳" 선택지 — 집 스위처 순서의 내 집.
+    houses: arrangedHouses,
   });
   const feedShareRecord = feedPages.shareRecord;
   useEffect(() => {
