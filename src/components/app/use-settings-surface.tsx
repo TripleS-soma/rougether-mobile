@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } 
 import { Linking, Platform } from 'react-native';
 
 import { type Screen } from '@/components/app/navigation';
+import type { OwnedCharacter } from '@/components/member/owned-character-grid';
 import { useInviteArrival } from '@/components/app/use-invite-arrival';
 import { SettingsScreen } from '@/components/screens/settings-screen';
 import { BlockedUsersScreen } from '@/components/screens/blocked-users-screen';
@@ -82,6 +83,8 @@ export function useSettingsSurface({
     bio: string;
     characterId: CharacterId;
     characterFrames?: string[];
+    ownedCharacters?: OwnedCharacter[];
+    onSelectCharacter?: (serverId: number) => void;
     onSave: (nickname: string, bio: string) => void;
   };
   /** 내 정보 지표 한 줄 (#1088) — 스트릭·지갑은 나의 방 데이터 훅 소유. */
@@ -401,6 +404,8 @@ export function useSettingsSurface({
       <ProfileEditScreen
         initialNickname={profile.nickname}
         initialBio={profile.bio}
+        ownedCharacters={profile.ownedCharacters}
+        onSelectCharacter={profile.onSelectCharacter}
         characterId={profile.characterId}
         onSave={(nick, b) => {
           profile.onSave(nick, b);

@@ -25,6 +25,8 @@ import { StarterRoutineScreen } from '@/components/screens/starter-routine-scree
 import { recommendStarterRoutines } from '@/constants/starter-routines';
 import { PasswordChangeScreen } from '@/components/screens/password-change-screen';
 import { PolicyViewerScreen } from '@/components/screens/policy-viewer-screen';
+import { CharacterSelectionScreen } from '@/components/screens/character-selection-screen';
+import { CHARACTER_OPTIONS } from '@/constants/characters';
 import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import { LanguageScreen } from '@/components/screens/language-screen';
 import { FontScreen } from '@/components/screens/font-screen';
@@ -221,6 +223,55 @@ function AttendanceSheetDemo() {
           };
         }}
       />
+    </View>
+  );
+}
+
+function ProfileCharacterPreview() {
+  const [characterId, setCharacterId] = useState<'cat' | 'otter' | 'fox'>('cat');
+  const characters = [
+    { serverId: 1, id: 'cat' as const, name: '루양이', selected: characterId === 'cat' },
+    { serverId: 8, id: 'otter' as const, name: '수달', selected: characterId === 'otter' },
+    { serverId: 99, id: 'fox' as const, name: '여루', selected: characterId === 'fox' },
+  ];
+  return (
+    <ProfileEditScreen
+      initialNickname="루티"
+      initialBio="매일 조금씩"
+      characterId={characterId}
+      ownedCharacters={characters}
+      onSelectCharacter={(id) => {
+        const next = characters.find((c) => c.serverId === id);
+        if (next) setCharacterId(next.id);
+      }}
+    />
+  );
+}
+
+function CharacterSelectionPreview({ count }: { count: number }) {
+  const [selected, setSelected] = useState(1);
+  const [closed, setClosed] = useState(false);
+  const pool =
+    count === 2
+      ? CHARACTER_OPTIONS.filter((c) => c.id === 'cat' || c.id === 'fox')
+      : CHARACTER_OPTIONS;
+  const characters = Array.from({ length: count }, (_, index) => ({
+    serverId: index + 1,
+    id: pool[index % pool.length].id,
+    name: index < pool.length ? pool[index].name : '배치 확인',
+    selected: selected === index + 1,
+  }));
+  return (
+    <View style={{ height: '100%', alignSelf: 'stretch' }}>
+      {closed ? (
+        <ProfileCharacterPreview />
+      ) : (
+        <CharacterSelectionScreen
+          characters={characters}
+          onSelect={setSelected}
+          onBack={() => setClosed(true)}
+        />
+      )}
     </View>
   );
 }
@@ -436,11 +487,21 @@ export const memberEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'CharacterSelectionTwoPreview',
+    description: '수달 없이 루양이와 여루만 보유한 전체 선택 화면, 실서버 미호출.',
+    render: () => <CharacterSelectionPreview count={2} />,
+  },
+  {
+    name: 'CharacterSelectionTenPreview',
+    description: '10개 카드 배치 검증, 마지막 캐릭터는 기존 그림을 재사용한 로컬 레이아웃 fixture.',
+    render: () => <CharacterSelectionPreview count={10} />,
+  },
+  {
     name: 'ProfileEditScreen',
-    description: '설정 → 프로필 편집: 닉네임 + 한 줄 소개 편집.',
+    description: '내 정보 → 프로필 편집: 보유 캐릭터, 닉네임, 한 줄 소개.',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
-        <ProfileEditScreen />
+        <ProfileCharacterPreview />
       </View>
     ),
   },

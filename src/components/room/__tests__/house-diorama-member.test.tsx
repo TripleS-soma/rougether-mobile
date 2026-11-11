@@ -57,7 +57,7 @@ describe('HouseDioramaMember', () => {
     await render(
       <HouseDioramaMember characterId="cat" furniture={furniture} preview={{ placements: [] }} />,
     );
-    expect(screen.getByLabelText('고양이')).toBeTruthy();
+    expect(screen.getByLabelText('루양이')).toBeTruthy();
     expect(screen.queryByTestId(/^room-furniture-/)).toBeNull();
   });
 

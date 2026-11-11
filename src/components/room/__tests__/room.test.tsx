@@ -18,17 +18,17 @@ describe('Room', () => {
       );
       // Check the rendered image, where the avatar's default 96px height used to
       // survive and center small house characters above their floor position.
-      const staticImage = StyleSheet.flatten(getByLabelText('고양이').props.style);
+      const staticImage = StyleSheet.flatten(getByLabelText('루양이').props.style);
       expect(staticImage).toMatchObject({ width: '100%', height: '100%' });
-      const staticFrame = StyleSheet.flatten(getByLabelText('고양이').parent?.props.style);
+      const staticFrame = StyleSheet.flatten(getByLabelText('루양이').parent?.props.style);
       expect(staticFrame).toMatchObject({ width: '42%', aspectRatio: 1, bottom: '16%' });
       expect(staticFrame.height).toBeUndefined();
 
       await rerender(<Room fill={fill} characterFrames={frames} interactiveCharacter />);
-      expect(StyleSheet.flatten(getByLabelText('고양이, 눌러서 포즈 바꾸기').props.style)).toEqual(
+      expect(StyleSheet.flatten(getByLabelText('루양이, 눌러서 포즈 바꾸기').props.style)).toEqual(
         staticFrame,
       );
-      expect(StyleSheet.flatten(getByLabelText('고양이').props.style)).toEqual(staticImage);
+      expect(StyleSheet.flatten(getByLabelText('루양이').props.style)).toEqual(staticImage);
     },
   );
 
@@ -53,7 +53,7 @@ describe('Room', () => {
     expect((parseFloat(item.left) * 360) / 100 + width / 2).toBeCloseTo(108);
     expect((parseFloat(item.top) * 432) / 100 + width / 2).toBeCloseTo(302.4);
     expect(item.transform).toEqual([{ scale: 1.5 }, { rotate: '15deg' }, { scaleX: -1 }]);
-    const character = StyleSheet.flatten(getByLabelText('고양이, 눌러서 포즈 바꾸기').props.style);
+    const character = StyleSheet.flatten(getByLabelText('루양이, 눌러서 포즈 바꾸기').props.style);
     expect(character).toMatchObject({ width: '42%', aspectRatio: 1 });
     expect(character.height).toBeUndefined();
     expect(placement).toEqual({
@@ -95,7 +95,7 @@ describe('Room', () => {
     );
     expect(getByLabelText('포근한 침대')).toBeTruthy();
     expect(getByLabelText('햇살 창문')).toBeTruthy();
-    expect(getByLabelText('고양이')).toBeTruthy(); // default character (cat), pose 0
+    expect(getByLabelText('루양이')).toBeTruthy(); // default character (cat), pose 0
   });
 
   it('placements에 없는 가구는 그리지 않는다', async () => {
@@ -116,13 +116,13 @@ describe('Room', () => {
     const { queryByLabelText, getByLabelText } = await render(<Room />);
     expect(queryByLabelText('포근한 침대')).toBeNull();
     expect(queryByLabelText('햇살 창문')).toBeNull();
-    expect(getByLabelText('고양이')).toBeTruthy(); // 캐릭터는 그대로.
+    expect(getByLabelText('루양이')).toBeTruthy(); // 캐릭터는 그대로.
   });
 
   it('renders an unoccupied room without any character when characterId is null', async () => {
     const { queryByLabelText } = await render(<Room characterId={null} />);
     // 빈방 타일(#281): 방만 있고 캐릭터·가구가 없다.
-    expect(queryByLabelText('고양이')).toBeNull();
+    expect(queryByLabelText('루양이')).toBeNull();
     expect(queryByLabelText('포근한 침대')).toBeNull();
   });
 
@@ -178,7 +178,7 @@ describe('Room', () => {
     // 가구는 그리되 장식으로 — 칸 자체가 '○○의 방' 라벨을 가진다(웹 axe: 역할 없는 aria-label 금지).
     expect(getByTestId('room-furniture-bed')).toBeTruthy();
     expect(queryByLabelText('포근한 침대')).toBeNull();
-    expect(getByLabelText('고양이')).toBeTruthy();
+    expect(getByLabelText('루양이')).toBeTruthy();
     expect(StyleSheet.flatten(getByTestId('room-canvas').props.style).backgroundColor).toBe(
       'transparent',
     );
@@ -186,11 +186,11 @@ describe('Room', () => {
 
   it('exposes a tappable character that cycles poses when interactive', async () => {
     const { getByLabelText } = await render(<Room interactiveCharacter />);
-    const character = getByLabelText('고양이, 눌러서 포즈 바꾸기');
+    const character = getByLabelText('루양이, 눌러서 포즈 바꾸기');
     expect(character).toBeTruthy();
     // Tapping cycles the pose without unmounting the character.
     fireEvent.press(character);
-    expect(getByLabelText('고양이, 눌러서 포즈 바꾸기')).toBeTruthy();
+    expect(getByLabelText('루양이, 눌러서 포즈 바꾸기')).toBeTruthy();
   });
 
   // 서버 등록 포즈 프레임 — 순서 그대로 순환한다 (#735).
@@ -251,11 +251,11 @@ describe('Room', () => {
 
   it('비인터랙티브 캐릭터도 자리 박스를 꽉 채운다 — 기본 96px 높이가 남지 않는다 (#1194)', async () => {
     const { getByLabelText } = await render(<Room characterId="cat" />);
-    const avatar = StyleSheet.flatten(getByLabelText('고양이').props.style);
+    const avatar = StyleSheet.flatten(getByLabelText('루양이').props.style);
     expect(avatar.width).toBe('100%');
     expect(avatar.height).toBe('100%');
     // 자리 박스(부모)는 계약 좌표 — 폭 42%, 정사각, 바닥에서 16%.
-    const slot = StyleSheet.flatten(getByLabelText('고양이').parent?.props.style);
+    const slot = StyleSheet.flatten(getByLabelText('루양이').parent?.props.style);
     expect(slot.width).toBe('42%');
     expect(slot.bottom).toBe('16%');
     expect(slot.aspectRatio).toBe(1);

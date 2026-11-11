@@ -82,23 +82,23 @@ const FOX_FRAMES = ['idle', 'pose-cycle', 'wave'].map(
 );
 it('plays only the opted-in fox and uses three bundled poses for a still or reduced-motion view', async () => {
   const view = await render(<CharacterAvatar characterId="fox" frames={FOX_FRAMES} animate />);
-  expect(view.getByLabelText('여우').props.autoplay).toBe(true);
-  expect(view.getByLabelText('여우').props.useAppleWebpCodec).toBe(false);
+  expect(view.getByLabelText('여루').props.autoplay).toBe(true);
+  expect(view.getByLabelText('여루').props.useAppleWebpCodec).toBe(false);
   expect(view.getByTestId('cdn-animation').props.source[0].uri).toContain(
     'fox/animations/idle.webp',
   );
   await view.rerender(<CharacterAvatar characterId="fox" frames={FOX_FRAMES} />);
   expect(view.queryByTestId('cdn-animation')).toBeNull();
-  const first = view.getByLabelText('여우').props.source;
+  const first = view.getByLabelText('여루').props.source;
   await view.rerender(<CharacterAvatar characterId="fox" pose={1} />);
-  expect(view.getByLabelText('여우').props.source).not.toEqual(first);
+  expect(view.getByLabelText('여루').props.source).not.toEqual(first);
   await view.rerender(<CharacterAvatar characterId="fox" pose={3} />);
-  expect(view.getByLabelText('여우').props.source).toEqual(first);
+  expect(view.getByLabelText('여루').props.source).toEqual(first);
   jest.mocked(useReducedMotion).mockReturnValue(true);
   await view.rerender(<CharacterAvatar characterId="fox" frames={FOX_FRAMES} animate />);
   expect(view.queryByTestId('cdn-animation')).toBeNull();
-  expect(view.getByLabelText('여우').props.autoplay).toBe(false);
-  expect(view.getByLabelText('여우').props.source).toEqual(first);
+  expect(view.getByLabelText('여루').props.autoplay).toBe(false);
+  expect(view.getByLabelText('여루').props.source).toEqual(first);
   jest.mocked(useReducedMotion).mockReturnValue(false);
   await view.rerender(
     <CharacterAvatar characterId="dog" frames={['characters/dog/animations/idle.webp']} animate />,

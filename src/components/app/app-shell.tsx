@@ -391,6 +391,8 @@ export function AppShell({
       bio,
       characterId: wornCharacterId,
       characterFrames: wornCharacterFrames,
+      ownedCharacters,
+      onSelectCharacter: wearCharacter,
       onSave: handleProfileSave,
     },
     stats: { streak, coin: wallet.coin, diamond: wallet.diamond },
@@ -468,7 +470,7 @@ export function AppShell({
     // 그날 첫 완료 → 튜토리얼 '루틴 완료' 미션(#1324) + 출석 시트 자동 출석 (#1294).
     onCompletedToday: completedTodayHandler,
     onOpenNotification: openNotification,
-    character: { wornCharacterId, wornCharacterFrames, ownedCharacters, wearCharacter },
+    character: { wornCharacterId, wornCharacterFrames },
     room: {
       growthLevel,
       characterUnlocked,

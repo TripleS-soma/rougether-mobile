@@ -188,9 +188,9 @@ it('shows the day-3 fox, supports a missed character claim and keeps the earned 
   const screen = await render(
     <ChristmasAttendanceModal {...attendanceProps} status={foxStatus} onClaimCharacter={claim} />,
   );
-  expect(screen.getByText('3일차 여우')).toBeTruthy();
+  expect(screen.getByText('3일차 여루')).toBeTruthy();
   expect(screen.queryByRole('checkbox')).toBeNull();
-  await fireEvent.press(screen.getByText('여우 받기'));
+  await fireEvent.press(screen.getByText('여루 받기'));
   expect(claim).toHaveBeenCalledTimes(1);
   const result: AttendanceCheckInResult = {
     newCheckIn: true,

@@ -141,7 +141,7 @@ describe('API adapters — member', () => {
     expect(toOwnedCharacter({ characterId: 1, code: 'cat', selected: false })).toEqual({
       serverId: 1,
       id: 'cat',
-      name: '고양이',
+      name: '루양이',
       assetKey: undefined,
       frames: [],
       selected: false,

@@ -121,7 +121,7 @@ describe('CharacterAvatar 서버 움짤', () => {
       <CharacterAvatar characterId="cat" frames={['characters/cat/idle.webp']} />,
     );
     expect(ui.queryByTestId('cdn-animation')).toBeNull();
-    expect(ui.getByLabelText('고양이')).toBeTruthy();
+    expect(ui.getByLabelText('루양이')).toBeTruthy();
   });
 
   it('웹은 움짤을 멈출 수 없어 번들 정지 그림을 쓴다', async () => {
@@ -130,6 +130,6 @@ describe('CharacterAvatar 서버 움짤', () => {
       <CharacterAvatar characterId="cat" frames={['characters/cat/idle.webp']} />,
     );
     expect(ui.queryByTestId('cdn-animation')).toBeNull();
-    expect(ui.getByLabelText('고양이')).toBeTruthy();
+    expect(ui.getByLabelText('루양이')).toBeTruthy();
   });
 });

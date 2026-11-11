@@ -453,39 +453,54 @@ const FOX_REWARD = {
   claimable: true,
 };
 
-it('claims a past day-3 reward once without checking in or changing coins', async () => {
-  let received = false;
-  global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
-    const status = {
-      ...STATUS,
-      characterReward: { ...FOX_REWARD, received, claimable: !received },
-    };
-    if (init?.method === 'POST') {
-      expect(url).toMatch(/\/attendance\/30\/character-reward$/);
-      received = true;
-      return jsonRes({
-        grantedNow: true,
-        status: { ...status, characterReward: { ...FOX_REWARD, received: true, claimable: false } },
-      });
-    }
-    return jsonRes(url.endsWith('/christmas') ? EVENT : status);
-  }) as unknown as typeof fetch;
-  const env = wrapper();
-  const invalidate = jest.spyOn(env.client, 'invalidateQueries');
-  const { result, rerender, unmount } = await renderHook(() => useChristmasEvent(), {
-    wrapper: env.wrapper,
-  });
-  await waitFor(() => expect(result.current.status?.characterReward?.received).toBe(true));
-  await rerender({});
-  await act(() => result.current.refresh());
-  expect(
-    (global.fetch as jest.Mock).mock.calls.filter(([, init]) => init?.method === 'POST'),
-  ).toHaveLength(1);
-  expect(result.current.status).toMatchObject({ progressDays: 4, checkedInToday: false });
-  expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.myCharacters.byUser(7) });
-  expect(env.client.getQueryData(queryKeys.wallet(7))).toBeUndefined();
-  await unmount();
-});
+it.each([
+  { progressDays: 4, checkedInToday: false },
+  { progressDays: 3, checkedInToday: true },
+  { progressDays: 30, checkedInToday: true },
+])(
+  'claims a past day-3 reward once without changing coins (%p)',
+  async ({ progressDays, checkedInToday }) => {
+    let received = false;
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const status = {
+        ...STATUS,
+        progressDays,
+        checkedInToday,
+        availableToday: !checkedInToday,
+        completed: progressDays === 30,
+        checkInDates: checkedInToday ? [datetime.todayIso()] : [],
+        characterReward: { ...FOX_REWARD, received, claimable: !received },
+      };
+      if (init?.method === 'POST') {
+        expect(url).toMatch(/\/attendance\/30\/character-reward$/);
+        received = true;
+        return jsonRes({
+          grantedNow: true,
+          status: {
+            ...status,
+            characterReward: { ...FOX_REWARD, received: true, claimable: false },
+          },
+        });
+      }
+      return jsonRes(url.endsWith('/christmas') ? EVENT : status);
+    }) as unknown as typeof fetch;
+    const env = wrapper();
+    const invalidate = jest.spyOn(env.client, 'invalidateQueries');
+    const { result, rerender, unmount } = await renderHook(() => useChristmasEvent(), {
+      wrapper: env.wrapper,
+    });
+    await waitFor(() => expect(result.current.status?.characterReward?.received).toBe(true));
+    await rerender({});
+    await act(() => result.current.refresh());
+    expect(
+      (global.fetch as jest.Mock).mock.calls.filter(([, init]) => init?.method === 'POST'),
+    ).toHaveLength(1);
+    expect(result.current.status).toMatchObject({ progressDays, checkedInToday });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.myCharacters.byUser(7) });
+    expect(env.client.getQueryData(queryKeys.wallet(7))).toBeUndefined();
+    await unmount();
+  },
+);
 
 it.each([false, true])(
   'recovers a character claim response loss (persisted=%s) without automatic POST retry',

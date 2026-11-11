@@ -118,12 +118,10 @@ export function useMyRoomPages({
   character: {
     wornCharacterId: CharacterId;
     wornCharacterFrames: MyRoomScreenProps['characterFrames'];
-    ownedCharacters: MyRoomScreenProps['ownedCharacters'];
-    wearCharacter: (serverId: number) => void;
   };
   /** 방 렌더 prop — 배치 상태·카탈로그는 꾸미기(셸 잔류)와 공유라 셸 소유. */
   room: RoomGrowthProps & {
-    /** 캐릭터 교체 해금 (방 레벨 10, 2026-10-14) — 서버 내 방 응답 `characterUnlocked`. */
+    /** 캐릭터 뽑기 해금 (방 레벨 10) — 서버 내 방 응답 `characterUnlocked`. */
     characterUnlocked: boolean;
     characterUnlockLevel: number;
     placements: MyRoomScreenProps['placements'];
@@ -575,8 +573,6 @@ export function useMyRoomPages({
     onManageRoutines: openRoutineManage,
     onOpenNotifications: openNotificationList,
     unreadNotificationCount: unreadCount + announcements.unreadCount,
-    ownedCharacters: character.ownedCharacters,
-    onSelectCharacter: character.wearCharacter,
     // 보유한 활성 캐릭터는 레벨과 관계없이 교체함. 뽑기 해금은 별도 유지함.
     characterLockLevel: undefined,
     onManageCategories: openCategoryManage,

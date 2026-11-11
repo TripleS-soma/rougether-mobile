@@ -45,7 +45,7 @@ export const CHARACTER_OPTIONS: CharacterOption[] = [
 
 /**
  * 온보딩 무료 선택지. 예전엔 레벨 5 보상 모루를 여기서 뺐는데, 모루가 제거돼(2026-10-14)
- * 지금은 전체 목록과 같다 — 호출부 이름은 의도(무료 선택지)를 드러내려 남긴다.
+ * 여루는 출석 전용이라 무료 선택지에서 제외한다.
  */
 export const STARTER_CHARACTER_OPTIONS = CHARACTER_OPTIONS.filter((c) => c.id !== 'fox');
 
