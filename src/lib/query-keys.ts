@@ -11,6 +11,8 @@ import type { FeedBoardType } from '@/api/types';
  * 앞으로 이관하는 훅은 여기에 키를 추가하고, 무효화는 접두 키(`all`)로 한다.
  */
 export const queryKeys = {
+  suggestions: (userId: number | null | undefined) => ['suggestions', userId] as const,
+  appUpdates: (userId: number | null | undefined) => ['app-updates', userId] as const,
   minigames: {
     catalog: (rulesVersion: number) => ['minigames', 'catalog', rulesVersion] as const,
     leaderboard: (userId: number | null | undefined, gameCode: string) =>
