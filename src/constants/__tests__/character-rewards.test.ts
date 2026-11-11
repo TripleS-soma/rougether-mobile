@@ -6,7 +6,7 @@ import {
 } from '@/constants/characters';
 
 // 모루(레벨 5 보상)는 2026-10-14에 제거됐다 — 목록에 남아 있으면 뽑기·교체에 다시 나온다.
-it('lists the eight characters without the removed Moru', () => {
+it('includes the attendance fox but keeps it out of free starters', () => {
   expect(CHARACTER_OPTIONS.map((c) => c.id)).toEqual([
     'cat',
     'dog',
@@ -16,8 +16,10 @@ it('lists the eight characters without the removed Moru', () => {
     'sheep',
     'horse',
     'otter',
+    'fox',
   ]);
-  expect(STARTER_CHARACTER_OPTIONS).toEqual(CHARACTER_OPTIONS);
+  expect(STARTER_CHARACTER_OPTIONS).toHaveLength(8);
+  expect(STARTER_CHARACTER_OPTIONS.map((c) => c.id)).not.toContain('fox');
 });
 
 // 캐릭터 뽑기·교체는 방 레벨 10에 열린다. 서버 값이 정본이고 없으면 현재 레벨로 판정한다.

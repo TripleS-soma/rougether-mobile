@@ -35,6 +35,9 @@
       },
       "otter": {
         "name": "Otter"
+      },
+      "fox": {
+        "name": "Fox"
       }
     },
     "login": {

@@ -7,7 +7,6 @@
     "endsOn": "{{date}}까지",
     "dayClaimed": "{{day}}번째 출석, 선물 수령 완료",
     "dayClosed": "{{day}}번째 출석, 닫힌 선물 봉투",
-    "cumulativeHint": "하루 한 번, 빠져도 횟수는 유지돼요",
     "checkIn": "출석하기",
     "checkingIn": "출석 확인 중",
     "checkedIn": "오늘 출석 완료",
@@ -22,6 +21,11 @@
     "neverShow": "다시 보지 않기",
     "saving": "저장 중",
     "dismissError": "숨김 설정을 저장하지 못했어요. 다시 시도해주세요.",
-    "popupHeading": "내 방에도 크리스마스"
+    "popupHeading": "내 방에도 크리스마스",
+    "foxRewardTitle": "{{day}}일차 여우",
+    "characterReceived": "{{name}}를 받았어요",
+    "claimCharacter": "여우 받기",
+    "claimingCharacter": "여우 데려오는 중",
+    "characterReceivedBadge": "받았어요"
   }
 }

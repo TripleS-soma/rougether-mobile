@@ -7,7 +7,6 @@
     "endsOn": "Until {{date}}",
     "dayClaimed": "Check-in {{day}}, gift received",
     "dayClosed": "Check-in {{day}}, closed gift envelope",
-    "cumulativeHint": "Once a day. Missed days keep your progress.",
     "checkIn": "Check in",
     "checkingIn": "Checking in",
     "checkedIn": "Checked in today",
@@ -22,6 +21,11 @@
     "neverShow": "Do not show again",
     "saving": "Saving",
     "dismissError": "Could not save your preference. Please try again.",
-    "popupHeading": "Christmas in your room"
+    "popupHeading": "Christmas in your room",
+    "foxRewardTitle": "Day {{day}}: Fox",
+    "characterReceived": "You received {{name}}",
+    "claimCharacter": "Get Fox",
+    "claimingCharacter": "Bringing Fox home",
+    "characterReceivedBadge": "Received"
   }
 }

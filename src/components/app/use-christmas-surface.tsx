@@ -172,6 +172,13 @@ export function useChristmasSurface({
     else if (next.recovered) setVisible(false);
     else setActionError(true);
   }, []);
+  const onClaimCharacter = useCallback(async () => {
+    const requestUser = getSessionUserId();
+    setActionError(false);
+    const next = await latest.current.claimCharacter();
+    if (getSessionUserId() !== requestUser) return;
+    if (!next.result && !next.recovered) setActionError(true);
+  }, []);
   const closePopup = useCallback(async (permanent: boolean) => {
     if (latest.current.dismissing) return;
     const requestUser = getSessionUserId();
@@ -226,6 +233,8 @@ export function useChristmasSurface({
         loading={christmas.loading || christmas.fetching}
         error={christmas.error || actionError}
         checkingIn={christmas.checkingIn}
+        claimingCharacter={christmas.claimingCharacter}
+        onClaimCharacter={onClaimCharacter}
         result={result}
         onCheckIn={onCheckIn}
         onClose={closeAttendance}

@@ -169,3 +169,46 @@ it('exposes an honest save failure and retries the chosen preference', async () 
   await fireEvent.press(screen.getByText('이벤트 뽑기 바로가기'));
   expect(popupProps.onGoEvent).toHaveBeenCalledWith(true);
 });
+
+it('shows the day-3 fox, supports a missed character claim and keeps the earned fox visible before closing', async () => {
+  jest.useFakeTimers();
+  const claim = jest.fn();
+  const foxStatus: AttendanceStatus = {
+    ...status,
+    characterReward: {
+      day: 3,
+      characterId: 99,
+      name: '여우',
+      assetKey: 'characters/fox/base-v1.webp',
+      received: false,
+      claimable: true,
+    },
+  };
+  const screen = await render(
+    <ChristmasAttendanceModal {...attendanceProps} status={foxStatus} onClaimCharacter={claim} />,
+  );
+  expect(screen.getByText('3일차 여우')).toBeTruthy();
+  expect(screen.queryByRole('checkbox')).toBeNull();
+  await fireEvent.press(screen.getByText('여우 받기'));
+  expect(claim).toHaveBeenCalledTimes(1);
+  const result: AttendanceCheckInResult = {
+    newCheckIn: true,
+    coinRewardAmount: 30,
+    coinBalance: 100,
+    rewardGrantedNow: false,
+    characterGrantedNow: true,
+    status: {
+      ...foxStatus,
+      checkedInToday: true,
+      characterReward: { ...foxStatus.characterReward!, received: true, claimable: false },
+    },
+  };
+  await screen.rerender(
+    <ChristmasAttendanceModal {...attendanceProps} status={result.status} result={result} />,
+  );
+  expect(screen.getByText('받았어요')).toBeTruthy();
+  await act(() => jest.advanceTimersByTime(CHRISTMAS_REWARD_SETTLE_MS));
+  expect(attendanceProps.onClose).not.toHaveBeenCalled();
+  await act(() => jest.advanceTimersByTime(1500));
+  expect(attendanceProps.onClose).toHaveBeenCalledTimes(1);
+});

@@ -49,7 +49,7 @@ it('opens the picker at room level 10 and hides the removed Moru', async () => {
   await waitFor(() => expect(selectBodies).toEqual([{ characterId: 2 }]));
 });
 
-it('shows a locked menu item below level 10 that explains when it opens', async () => {
+it('opens the owned-character picker below level 10 without changing the gacha lock', async () => {
   const selectBodies: unknown[] = [];
   mockServer({ growthLevel: 4, characterUnlocked: false, characterUnlockLevel: 10 }, selectBodies);
   // 잠금 안내는 토스트로 뜬다 — 토스트를 그리는 Provider가 있어야 보인다.
@@ -61,7 +61,8 @@ it('shows a locked menu item below level 10 that explains when it opens', async 
   await fireEvent.press(view.getByLabelText('메뉴'));
   await waitFor(() => expect(view.getByText('캐릭터 교체')).toBeTruthy());
   await fireEvent.press(view.getByText('캐릭터 교체'));
-  await waitFor(() => expect(view.getByText('캐릭터 교체는 방 레벨 10에 열려요')).toBeTruthy());
-  expect(view.queryByLabelText('강아지 착용')).toBeNull();
-  expect(selectBodies).toEqual([]);
+  await waitFor(() => expect(view.getByLabelText('강아지 착용')).toBeTruthy());
+  expect(view.queryByText('캐릭터 교체는 방 레벨 10에 열려요')).toBeNull();
+  await fireEvent.press(view.getByLabelText('강아지 착용'));
+  await waitFor(() => expect(selectBodies).toEqual([{ characterId: 2 }]));
 });

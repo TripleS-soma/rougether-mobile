@@ -7,7 +7,8 @@
  */
 import { i18n } from '@/i18n';
 
-export type CharacterId = 'cat' | 'dog' | 'tiger' | 'panda' | 'bear' | 'sheep' | 'horse' | 'otter';
+export type CharacterId =
+  'cat' | 'dog' | 'tiger' | 'panda' | 'bear' | 'sheep' | 'horse' | 'otter' | 'fox';
 
 export type CharacterOption = {
   id: CharacterId;
@@ -39,25 +40,26 @@ export const CHARACTER_OPTIONS: CharacterOption[] = [
   localized('sheep', '#F3EFE8'),
   localized('horse', '#F3E7D6'),
   localized('otter', '#E6E0D6'),
+  localized('fox', '#F5E6D3'),
 ];
 
 /**
  * 온보딩 무료 선택지. 예전엔 레벨 5 보상 모루를 여기서 뺐는데, 모루가 제거돼(2026-10-14)
  * 지금은 전체 목록과 같다 — 호출부 이름은 의도(무료 선택지)를 드러내려 남긴다.
  */
-export const STARTER_CHARACTER_OPTIONS = CHARACTER_OPTIONS;
+export const STARTER_CHARACTER_OPTIONS = CHARACTER_OPTIONS.filter((c) => c.id !== 'fox');
 
 export const DEFAULT_CHARACTER_ID: CharacterId = 'cat';
 
 /**
  * 온보딩 캐릭터 선택 캐러셀 스위치 — 온보딩은 지금도 고양이 하나로 시작한다.
- * 캐릭터 교체·캐릭터 뽑기는 이 스위치가 아니라 **방 레벨 10 해금**(`CHARACTER_UNLOCK_LEVEL`,
+ * 캐릭터 뽑기는 이 스위치가 아니라 **방 레벨 10 해금**(`CHARACTER_UNLOCK_LEVEL`,
  * 서버 `characterUnlocked`)으로 열린다(2026-10-14).
  */
 export const CHARACTER_SELECTION_ENABLED = false;
 
 /**
- * 캐릭터 뽑기·교체가 열리는 방 레벨 (2026-10-14 제품 오너 결정, spec room/features).
+ * 캐릭터 뽑기가 열리는 방 레벨 (2026-10-14 제품 오너 결정, spec room/features).
  * 판정의 정본은 서버 `characterUnlocked`이고, 이 값은 서버 필드가 없을 때의 대체값이다.
  */
 export const CHARACTER_UNLOCK_LEVEL = 10;

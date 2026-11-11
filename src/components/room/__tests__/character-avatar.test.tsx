@@ -1,7 +1,11 @@
 import { render } from '@testing-library/react-native';
 import { Image } from 'expo-image';
 
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
+
 import { CharacterAvatar } from '@/components/room/character-avatar';
+
+jest.mock('@/hooks/use-reduced-motion', () => ({ useReducedMotion: jest.fn(() => false) }));
 
 /** 서버 poses[] 순서 그대로 (#735). */
 const FRAMES = [
@@ -71,4 +75,33 @@ describe('CharacterAvatar', () => {
     await render(<CharacterAvatar characterId="panda" frames={FRAMES} />);
     expect(prefetch).not.toHaveBeenCalled();
   });
+});
+
+const FOX_FRAMES = ['idle', 'pose-cycle', 'wave'].map(
+  (name) => `characters/fox/animations/${name}.webp`,
+);
+it('plays only the opted-in fox and uses three bundled poses for a still or reduced-motion view', async () => {
+  const view = await render(<CharacterAvatar characterId="fox" frames={FOX_FRAMES} animate />);
+  expect(view.getByLabelText('여우').props.autoplay).toBe(true);
+  expect(view.getByLabelText('여우').props.useAppleWebpCodec).toBe(false);
+  expect(view.getByTestId('cdn-animation').props.source[0].uri).toContain(
+    'fox/animations/idle.webp',
+  );
+  await view.rerender(<CharacterAvatar characterId="fox" frames={FOX_FRAMES} />);
+  expect(view.queryByTestId('cdn-animation')).toBeNull();
+  const first = view.getByLabelText('여우').props.source;
+  await view.rerender(<CharacterAvatar characterId="fox" pose={1} />);
+  expect(view.getByLabelText('여우').props.source).not.toEqual(first);
+  await view.rerender(<CharacterAvatar characterId="fox" pose={3} />);
+  expect(view.getByLabelText('여우').props.source).toEqual(first);
+  jest.mocked(useReducedMotion).mockReturnValue(true);
+  await view.rerender(<CharacterAvatar characterId="fox" frames={FOX_FRAMES} animate />);
+  expect(view.queryByTestId('cdn-animation')).toBeNull();
+  expect(view.getByLabelText('여우').props.autoplay).toBe(false);
+  expect(view.getByLabelText('여우').props.source).toEqual(first);
+  jest.mocked(useReducedMotion).mockReturnValue(false);
+  await view.rerender(
+    <CharacterAvatar characterId="dog" frames={['characters/dog/animations/idle.webp']} animate />,
+  );
+  expect(view.getByLabelText('강아지').props.autoplay).toBe(false);
 });

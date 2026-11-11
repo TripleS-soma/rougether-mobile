@@ -31,6 +31,15 @@ export type AttendanceReward = {
   received: boolean;
 };
 
+export type AttendanceCharacterReward = {
+  day: number;
+  characterId: number;
+  name: string;
+  assetKey: string;
+  received: boolean;
+  claimable: boolean;
+};
+
 export type AttendanceStatus = {
   eventId: number;
   code: string;
@@ -48,6 +57,7 @@ export type AttendanceStatus = {
   checkInDates: string[];
   dailyRewards: AttendanceDailyReward[];
   reward: AttendanceReward | null;
+  characterReward?: AttendanceCharacterReward | null;
 };
 
 export type AttendanceCheckInResult = {
@@ -58,6 +68,7 @@ export type AttendanceCheckInResult = {
   coinBalance: number;
   /** 이번 호출에서 보상 가구를 새로 지급했는지. 이미 보유했으면 false. */
   rewardGrantedNow: boolean;
+  characterGrantedNow?: boolean;
   status: AttendanceStatus;
 };
 
@@ -96,3 +107,12 @@ export const fetchAttendanceEvent = (eventId: number) =>
   apiGet<AttendanceStatus>(`/events/attendance/${eventId}`);
 export const checkInAttendanceEvent = (eventId: number) =>
   apiPost<AttendanceCheckInResult>(`/events/attendance/${eventId}/check-ins`);
+
+export type AttendanceCharacterRewardResult = {
+  grantedNow: boolean;
+  status: AttendanceStatus;
+};
+
+/** 과거에 달성한 캐릭터만 수령함. 오늘 출석과 코인을 변경하지 않음. */
+export const claimAttendanceCharacter = (eventId: number) =>
+  apiPost<AttendanceCharacterRewardResult>(`/events/attendance/${eventId}/character-reward`);

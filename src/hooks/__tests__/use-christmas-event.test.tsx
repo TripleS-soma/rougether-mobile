@@ -443,3 +443,127 @@ it.each([[['2026-11-10']], [undefined]] as const)(
     await unmount();
   },
 );
+
+const FOX_REWARD = {
+  day: 3,
+  characterId: 99,
+  name: '여우',
+  assetKey: 'characters/fox/base-v1.webp',
+  received: false,
+  claimable: true,
+};
+
+it('claims a past day-3 reward once without checking in or changing coins', async () => {
+  let received = false;
+  global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+    const status = {
+      ...STATUS,
+      characterReward: { ...FOX_REWARD, received, claimable: !received },
+    };
+    if (init?.method === 'POST') {
+      expect(url).toMatch(/\/attendance\/30\/character-reward$/);
+      received = true;
+      return jsonRes({
+        grantedNow: true,
+        status: { ...status, characterReward: { ...FOX_REWARD, received: true, claimable: false } },
+      });
+    }
+    return jsonRes(url.endsWith('/christmas') ? EVENT : status);
+  }) as unknown as typeof fetch;
+  const env = wrapper();
+  const invalidate = jest.spyOn(env.client, 'invalidateQueries');
+  const { result, rerender, unmount } = await renderHook(() => useChristmasEvent(), {
+    wrapper: env.wrapper,
+  });
+  await waitFor(() => expect(result.current.status?.characterReward?.received).toBe(true));
+  await rerender({});
+  await act(() => result.current.refresh());
+  expect(
+    (global.fetch as jest.Mock).mock.calls.filter(([, init]) => init?.method === 'POST'),
+  ).toHaveLength(1);
+  expect(result.current.status).toMatchObject({ progressDays: 4, checkedInToday: false });
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.myCharacters.byUser(7) });
+  expect(env.client.getQueryData(queryKeys.wallet(7))).toBeUndefined();
+  await unmount();
+});
+
+it.each([false, true])(
+  'recovers a character claim response loss (persisted=%s) without automatic POST retry',
+  async (persisted) => {
+    let received = false;
+    let attempts = 0;
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') {
+        attempts++;
+        received = persisted || attempts > 1;
+        if (attempts === 1) throw new TypeError('Network request failed');
+        return jsonRes({
+          grantedNow: true,
+          status: {
+            ...STATUS,
+            characterReward: { ...FOX_REWARD, received: true, claimable: false },
+          },
+        });
+      }
+      return jsonRes(
+        url.endsWith('/christmas')
+          ? EVENT
+          : { ...STATUS, characterReward: { ...FOX_REWARD, received, claimable: !received } },
+      );
+    }) as unknown as typeof fetch;
+    const env = wrapper();
+    const { result, unmount } = await renderHook(() => useChristmasEvent(), {
+      wrapper: env.wrapper,
+    });
+    await waitFor(() => expect(attempts).toBe(1));
+    await waitFor(() => expect(result.current.checkingIn).toBe(false));
+    expect(result.current.status?.characterReward?.received).toBe(persisted);
+    await act(() => result.current.refresh());
+    expect(attempts).toBe(1);
+    if (!persisted) {
+      await act(async () =>
+        expect((await result.current.claimCharacter()).result?.grantedNow).toBe(true),
+      );
+      expect(attempts).toBe(2);
+    }
+    await unmount();
+  },
+);
+
+it('waits for an old-account claim to settle before claiming the new account reward', async () => {
+  let finish!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  const claimedFor: number[] = [];
+  global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+    const requestUser = getSessionUserId()!;
+    if (init?.method === 'POST') {
+      claimedFor.push(requestUser);
+      if (requestUser === 7) await pending;
+      return jsonRes({
+        grantedNow: true,
+        status: { ...STATUS, characterReward: { ...FOX_REWARD, received: true, claimable: false } },
+      });
+    }
+    return jsonRes(url.endsWith('/christmas') ? EVENT : { ...STATUS, characterReward: FOX_REWARD });
+  }) as unknown as typeof fetch;
+  const env = wrapper();
+  const { result, rerender, unmount } = await renderHook(() => useChristmasEvent(), {
+    wrapper: env.wrapper,
+  });
+  await waitFor(() => expect(claimedFor).toEqual([7]));
+  jest.mocked(getSessionUserId).mockReturnValue(8);
+  await rerender({});
+  await waitFor(() => expect(result.current.status?.characterReward?.claimable).toBe(true));
+  expect(claimedFor).toEqual([7]);
+  await act(async () => {
+    finish();
+  });
+  await waitFor(() => expect(claimedFor).toEqual([7, 8]));
+  await waitFor(() => expect(result.current.status?.characterReward?.received).toBe(true));
+  expect(env.client.getQueryData(queryKeys.attendanceEvent(7, 30))).toMatchObject({
+    characterReward: { received: false },
+  });
+  await unmount();
+});
