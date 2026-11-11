@@ -619,7 +619,11 @@ export function AppShell({
   // 코치마크 단계 (#1324) — noHouses를 읽으므로 그 아래에서 계산.
   const coachStep =
     missions.step && missions.completedIndex == null
-      ? tutorialCoachStep(missions.step.id, screen, { noHouses: noHouses })
+      ? tutorialCoachStep(missions.step.id, screen, {
+          noHouses: noHouses,
+          navVisible: activeTab != null,
+          bannerVisible: missionBanner != null,
+        })
       : null;
   const coachSteps = useMemo(() => (coachStep ? [coachStep] : []), [coachStep]);
   const tr = useT();
