@@ -8,7 +8,7 @@ beforeEach(() => jest.mocked(useColorScheme).mockReturnValue('light'));
 
 describe('HouseScreen — 레일 채팅', () => {
   describe('레일 채팅 (#1408)', () => {
-    it('onOpenChat이 있으면 레일에 채팅·집 탐색 순으로 뜨고, 안 읽은 수를 배지로 보인다 (#1646)', async () => {
+    it('onOpenChat이 있으면 레일에 채팅·집 추가 순으로 뜨고, 안 읽은 수를 배지로 보인다 (#1646)', async () => {
       const onOpenChat = jest.fn();
       const ui = await render(
         <HouseScreen
@@ -21,10 +21,10 @@ describe('HouseScreen — 레일 채팅', () => {
       const labels = ui
         .getAllByRole('button')
         .map((b) => b.props.accessibilityLabel as string | undefined)
-        .filter((l): l is string => !!l && /^(집 채팅|집 탐색)/.test(l));
-      // 레일은 채팅·집 탐색 둘뿐이다 — 목표·집 관리는 하늘 위 알약으로 옮겼다 (#1646).
+        .filter((l): l is string => !!l && /^(집 채팅|집 추가)/.test(l));
+      // 레일은 채팅·집 추가 둘뿐이다 — 목표·집 관리는 하늘 위 알약으로 옮겼다 (#1646).
       expect(labels).toHaveLength(2);
-      const order = ['채팅', '집 탐색'].map((k) => labels.findIndex((l) => l.includes(k)));
+      const order = ['채팅', '집 추가'].map((k) => labels.findIndex((l) => l.includes(k)));
       expect(order.every((v, i) => v >= 0 && (i === 0 || v > order[i - 1]))).toBe(true);
       expect(ui.getByText('3')).toBeTruthy();
       await fireEvent.press(ui.getByLabelText('집 채팅, 안 읽은 메시지 3개'));

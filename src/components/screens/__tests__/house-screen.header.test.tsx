@@ -32,7 +32,7 @@ describe('HouseScreen — 헤더·레일·집 전환·미션 요약', () => {
     expect(getByText(long).props.numberOfLines).toBe(1);
   });
 
-  it('집 탐색은 레일, 집 관리는 멤버 알약에서 연다 (#986 → #1646)', async () => {
+  it('집 추가(집 탐색 화면)는 레일, 집 관리는 멤버 알약에서 연다 (#986 → #1646)', async () => {
     const onOpenMissions = jest.fn();
     const onOpenSearch = jest.fn();
     const onOpenMembers = jest.fn();
@@ -44,7 +44,7 @@ describe('HouseScreen — 헤더·레일·집 전환·미션 요약', () => {
         onOpenMembers={onOpenMembers}
       />,
     );
-    await fireEvent.press(getByLabelText('집 탐색'));
+    await fireEvent.press(getByLabelText('집 추가'));
     expect(onOpenSearch).toHaveBeenCalled();
     await fireEvent.press(getByLabelText(/^집 관리/));
     expect(onOpenMembers).toHaveBeenCalled();
@@ -186,7 +186,7 @@ describe('HouseScreen — 헤더·레일·집 전환·미션 요약', () => {
     const { getByLabelText } = await render(<HouseScreen houses={[MISSION_HOUSE]} {...handlers} />);
     await fireEvent.press(getByLabelText(/^우리 집의 목표/));
     await fireEvent.press(getByLabelText(/^집 채팅/));
-    await fireEvent.press(getByLabelText('집 탐색'));
+    await fireEvent.press(getByLabelText('집 추가'));
     await fireEvent.press(getByLabelText(/^집 관리/));
     const actions = mockTrack.mock.calls
       .filter(([event]) => event === 'house_action_tap')
