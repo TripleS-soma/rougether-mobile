@@ -83,8 +83,8 @@ function FeedScreenDemo() {
 }
 
 /**
- * 피드 작성 게시판 선택 데모 (서버 #428·#430) — 자유는 글만으로도, 인증은 사진과 최근 7일
- * 완료 루틴이 있어야 켜진다.
+ * 피드 작성 게시판 선택 데모 (서버 #428·#430) — 자유는 글만으로도, 인증은 사진 없이도 최근 7일
+ * 완료 루틴이 있으면 켜진다.
  */
 function FeedComposeDemo() {
   const [board, setBoard] = useState<FeedBoardType>('FREE');
@@ -632,7 +632,7 @@ export const memberEntries: GalleryEntry[] = [
   {
     name: 'FeedComposeScreen · 자유게시판',
     description:
-      '피드 작성의 게시판 선택 (서버 #428·#430): 자유는 사진 없이 본문만으로 올리기가 켜지고, 인증으로 바꾸면 최근 7일 완료 루틴 고르기와 사진 1장 이상이 필요하다는 안내. 로컬 상태만.',
+      '피드 작성의 게시판 선택 (서버 #428·#430): 자유는 사진 없이 본문만으로 올리기가 켜지고, 인증으로 바꾸면 최근 7일 완료 루틴을 고르면 사진 없이도 올릴 수 있다. 로컬 상태만.',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <FeedComposeDemo />

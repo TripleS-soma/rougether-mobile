@@ -111,7 +111,7 @@ const FeedPostRow = memo(function FeedPostRow({
       ]}>
       <View style={styles.rowText}>
         {text ? (
-          <Text style={[Typography.body, { color: t.text }]} numberOfLines={ROW_LINES}>
+          <Text style={[Typography.bodyCompact, { color: t.text }]} numberOfLines={ROW_LINES}>
             {text}
           </Text>
         ) : null}
@@ -120,12 +120,14 @@ const FeedPostRow = memo(function FeedPostRow({
         ) : null}
         <View style={styles.meta}>
           {time ? (
-            <Text style={[Typography.supporting, { color: t.textMuted }]} numberOfLines={1}>
+            <Text
+              style={[Typography.caption, styles.metaTime, { color: t.textMuted }]}
+              numberOfLines={1}>
               {time}
             </Text>
           ) : null}
           <Text
-            style={[Typography.supporting, styles.metaName, { color: t.textMuted }]}
+            style={[Typography.caption, styles.metaName, { color: t.textMuted }]}
             numberOfLines={1}>
             {name}
           </Text>
@@ -139,7 +141,7 @@ const FeedPostRow = memo(function FeedPostRow({
                 size={13}
                 color={post.likedByMe ? t.danger : t.textMuted}
               />
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>{post.likeCount}</Text>
+              <Text style={[Typography.caption, { color: t.textMuted }]}>{post.likeCount}</Text>
             </View>
           ) : null}
           {post.commentCount > 0 ? (
@@ -148,9 +150,7 @@ const FeedPostRow = memo(function FeedPostRow({
               accessible
               accessibilityLabel={tr('feed.commentCount', { count: post.commentCount })}>
               <Icon name="comment" size={13} color={t.textMuted} />
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                {post.commentCount}
-              </Text>
+              <Text style={[Typography.caption, { color: t.textMuted }]}>{post.commentCount}</Text>
             </View>
           ) : null}
         </View>
@@ -166,7 +166,7 @@ const FeedPostRow = memo(function FeedPostRow({
           />
           {post.images.length > 1 ? (
             <View style={[styles.countBadge, { backgroundColor: t.surface }]}>
-              <Text style={[Typography.supporting, { color: t.text }]}>
+              <Text style={[Typography.caption, { color: t.text }]}>
                 {tr('feed.imageCount', { count: post.images.length - 1 })}
               </Text>
             </View>
@@ -319,7 +319,8 @@ export function FeedScreen({
               <RetryState message={tr('feed.loadError')} onRetry={onRetry} />
             </View>
           ) : (
-            <Text style={[Typography.body, styles.state, styles.empty, { color: t.textMuted }]}>
+            <Text
+              style={[Typography.bodyCompact, styles.state, styles.empty, { color: t.textMuted }]}>
               {board === 'FREE'
                 ? tr('feed.emptyFree')
                 : board === 'MINE'
@@ -391,9 +392,11 @@ const styles = StyleSheet.create({
   },
   meta: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: Spacing.two,
   },
+  metaTime: { flexShrink: 0 },
   metaName: {
     flexShrink: 1,
   },

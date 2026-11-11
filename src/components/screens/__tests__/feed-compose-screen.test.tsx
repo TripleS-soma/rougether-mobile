@@ -16,16 +16,30 @@ const done = (key: string, imageId: number): FeedDraftImage => ({
 });
 
 describe('FeedComposeScreen (#1409)', () => {
-  it('인증게시판은 사진이 없으면 올리기가 꺼져 있고 안내가 보인다', async () => {
+  it('인증게시판은 루틴을 고르기 전에는 올릴 수 없다', async () => {
     const onSubmit = jest.fn();
-    const { getByLabelText, getByText } = await render(
+    const { getByLabelText, queryByText } = await render(
       <FeedComposeScreen board="VERIFICATION" content="본문만" onSubmit={onSubmit} />,
     );
     const submit = getByLabelText('올리기');
     expect(submit.props.accessibilityState).toMatchObject({ disabled: true });
     await fireEvent.press(submit);
     expect(onSubmit).not.toHaveBeenCalled();
-    expect(getByText('사진을 한 장 이상 골라 주세요.')).toBeTruthy();
+    expect(queryByText('사진을 한 장 이상 골라 주세요.')).toBeNull();
+  });
+
+  it('사진 없는 인증도 루틴을 고르면 제출할 수 있고 중복 안내를 표시하지 않는다', async () => {
+    const onSubmit = jest.fn();
+    const ui = await render(
+      <FeedComposeScreen
+        board="VERIFICATION"
+        routine={{ routineId: 16, date: '2026-10-04' }}
+        onSubmit={onSubmit}
+      />,
+    );
+    expect(ui.queryByText(/최근 7일 안에 완료한 루틴 하나와 사진/)).toBeNull();
+    await fireEvent.press(ui.getByLabelText('올리기'));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
   it('올리는 중인 사진이 있으면 꺼져 있고, 전부 올라가면 켜진다', async () => {
@@ -83,7 +97,7 @@ describe('FeedComposeScreen (#1409)', () => {
     expect(ui.getByLabelText('자유 게시판').props.accessibilityState).toMatchObject({
       selected: true,
     });
-    expect(ui.getByText('본문을 쓰거나 사진을 골라 주세요.')).toBeTruthy();
+    expect(ui.queryByText('본문을 쓰거나 사진을 골라 주세요.')).toBeNull();
     expect(ui.getByLabelText('올리기').props.accessibilityState).toMatchObject({ disabled: true });
 
     await ui.rerender(<FeedComposeScreen content="   " onSubmit={onSubmit} />);
@@ -119,7 +133,7 @@ describe('FeedComposeScreen (#1409)', () => {
       expect(ui.getByLabelText('올리기').props.accessibilityState).toMatchObject({
         disabled: true,
       });
-      expect(ui.getByText('인증할 루틴을 골라 주세요.')).toBeTruthy();
+      expect(ui.getByText('인증할 루틴')).toBeTruthy();
       await fireEvent.press(ui.getByLabelText('물 2L 마시기, 10/4 완료'));
       expect(onChangeRoutine).toHaveBeenCalledWith({ routineId: 16, date: '2026-10-04' });
 

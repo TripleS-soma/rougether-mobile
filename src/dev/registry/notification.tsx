@@ -32,6 +32,24 @@ export const notificationEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <NotificationListScreen
+          notifications={[
+            {
+              id: 901,
+              type: 'ANNOUNCEMENT',
+              title: '빼빼로데이 한정판 가구와 111코인 지급 중!',
+              body: '오늘 접속하면 한정판 가구와 111코인을 받아요. 내 방을 꾸며보세요!',
+              date: '17시간 전',
+              read: true,
+            },
+            {
+              id: 902,
+              type: 'ANNOUNCEMENT',
+              title: '친구가 거미줄을 청소해줬다냥!',
+              body: '깨끗해진 방에 놀러 오세요.',
+              date: '2시간 전',
+              read: false,
+            },
+          ]}
           announcements={getAnnouncements().map((a, i) => ({ ...a, read: i > 0 }))}
         />
       </View>

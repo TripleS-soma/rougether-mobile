@@ -709,7 +709,18 @@ export const FontWeight = {
 } as const;
 
 export type TypeRole =
-  'display1' | 'display2' | 'h1' | 'h2' | 'h3' | 'large' | 'body' | 'label' | 'supporting' | 'code';
+  | 'bodyCompact'
+  | 'labelCompact'
+  | 'display1'
+  | 'display2'
+  | 'h1'
+  | 'h2'
+  | 'h3'
+  | 'large'
+  | 'body'
+  | 'label'
+  | 'supporting'
+  | 'code';
 
 export type TypeStyle = {
   fontSize: number;
@@ -726,6 +737,8 @@ export type TypeStyle = {
  * 전 롤 +2px 상향 (#659) — "전체적으로 작다" 피드백; fontSize·lineHeight 세트.
  */
 export const Typography: Record<TypeRole, TypeStyle> = {
+  bodyCompact: { fontSize: 16, lineHeight: 23, fontWeight: FontWeight.normal },
+  labelCompact: { fontSize: 14, lineHeight: 20, fontWeight: FontWeight.semibold },
   display1: { fontSize: 36, lineHeight: 42, fontWeight: FontWeight.bold },
   display2: { fontSize: 30, lineHeight: 36, fontWeight: FontWeight.bold },
   h1: { fontSize: 26, lineHeight: 32, fontWeight: FontWeight.bold },

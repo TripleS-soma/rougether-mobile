@@ -66,7 +66,7 @@
       "uploading": "올리는 중",
       "uploadFailed": "실패 · 다시",
       "contentLabel": "본문",
-      "contentPlaceholder": "어떤 이야기를 나눌까요? (선택)",
+      "contentPlaceholder": "어떤 이야기를 나눌까요?",
       "counter": "{{count}}/{{max}}",
       "submit": "올리기",
       "submitting": "올리는 중…",

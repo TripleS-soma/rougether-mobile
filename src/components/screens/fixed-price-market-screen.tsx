@@ -53,21 +53,26 @@ export function FixedPriceMarketScreen(p: FixedPriceMarketScreenProps) {
       <PawRefreshScroll
         onRefresh={p.onRefresh}
         contentContainerStyle={[styles.body, column, { paddingTop: inset || Spacing.four }]}>
-        {p.onOpenGuide ? (
-          <Button
-            label={tr('market.screen.guideA11y')}
-            variant="secondary"
-            onPress={p.onOpenGuide}
-          />
-        ) : null}
-        <CoachTarget id="market-manage">
-          <Button
-            label={tr(p.mine ? 'market.screen.browse' : 'market.screen.manage')}
-            variant="secondary"
-            onPress={p.onToggleMine}
-          />
-        </CoachTarget>
-        <Text style={[Typography.body, { color: t.textMuted }]}>{tr('market.shop.intro')}</Text>
+        <View style={styles.actions}>
+          {p.onOpenGuide ? (
+            <View style={styles.action}>
+              <Button
+                label={tr('market.screen.guideA11y')}
+                variant="secondary"
+                onPress={p.onOpenGuide}
+                style={styles.compactButton}
+              />
+            </View>
+          ) : null}
+          <CoachTarget id="market-manage" style={styles.action}>
+            <Button
+              label={tr(p.mine ? 'market.screen.browse' : 'market.screen.manage')}
+              variant="secondary"
+              onPress={p.onToggleMine}
+              style={styles.compactButton}
+            />
+          </CoachTarget>
+        </View>
         {p.loading ? <ActivityIndicator /> : null}
         {p.error ? (
           <Button label={tr('market.shop.retry')} onPress={() => void p.onRefresh?.()} />
@@ -75,37 +80,48 @@ export function FixedPriceMarketScreen(p: FixedPriceMarketScreenProps) {
         {!p.loading && !p.error && !p.listings.length ? (
           <Text style={[Typography.body, { color: t.textMuted }]}>{tr('market.list.empty')}</Text>
         ) : null}
-        {p.listings.map((item, index) => (
-          <CoachTarget
-            key={item.assetId}
-            id={index === 0 ? 'market-card' : `market-card-${item.assetId}`}>
-            <View style={[styles.card, { backgroundColor: t.surface }]}>
-              <MarketAssetImage assetKey={item.assetKey} name={item.name} size={Spacing.six * 4} />
-              <Text style={[Typography.h3, { color: t.text }]}>{item.name}</Text>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                {tr('market.creator', {
-                  name: item.creatorNickname ?? tr('market.creatorUnknown'),
-                })}
-              </Text>
-              <Text style={[Typography.label, { color: t.text }]}>
-                {item.price == null
-                  ? tr('market.shop.notListed')
-                  : tr('market.coins', { n: item.price })}
-              </Text>
-              <Button
-                label={tr(
-                  item.isCreator
-                    ? 'market.shop.manage'
-                    : item.owned
-                      ? 'market.shop.owned'
-                      : 'market.shop.view',
-                )}
-                variant="secondary"
-                onPress={() => p.onOpen?.(item.assetId)}
-              />
-            </View>
-          </CoachTarget>
-        ))}
+        <View style={styles.grid}>
+          {p.listings.map((item, index) => (
+            <CoachTarget
+              key={item.assetId}
+              style={styles.gridCell}
+              id={index === 0 ? 'market-card' : `market-card-${item.assetId}`}>
+              <View style={[styles.card, { backgroundColor: t.surface }]}>
+                <MarketAssetImage
+                  assetKey={item.assetKey}
+                  name={item.name}
+                  size={Spacing.six * 2}
+                  style={styles.gridImage}
+                />
+                <Text style={[Typography.labelCompact, { color: t.text }]} numberOfLines={2}>
+                  {item.name}
+                </Text>
+                <Text style={[Typography.caption, { color: t.textMuted }]} numberOfLines={1}>
+                  {tr('market.creator', {
+                    name: item.creatorNickname ?? tr('market.creatorUnknown'),
+                  })}
+                </Text>
+                <Text style={[Typography.label, { color: t.text }]}>
+                  {item.price == null
+                    ? tr('market.shop.notListed')
+                    : tr('market.coins', { n: item.price })}
+                </Text>
+                <Button
+                  label={tr(
+                    item.isCreator
+                      ? 'market.shop.manage'
+                      : item.owned
+                        ? 'market.shop.owned'
+                        : 'market.shop.view',
+                  )}
+                  variant="secondary"
+                  style={styles.compactButton}
+                  onPress={() => p.onOpen?.(item.assetId)}
+                />
+              </View>
+            </CoachTarget>
+          ))}
+        </View>
         {p.hasNext ? (
           <Button label={tr('market.list.more')} onPress={p.onLoadMore} disabled={p.loadingMore} />
         ) : null}
@@ -300,6 +316,17 @@ export function FixedPriceListingScreen(p: FixedPriceListingScreenProps) {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   body: { paddingHorizontal: Spacing.four, paddingBottom: Spacing.six, gap: Spacing.three },
-  card: { padding: Spacing.four, borderRadius: Radius.lg, gap: Spacing.two },
+  actions: { flexDirection: 'row', gap: Spacing.two },
+  action: { flex: 1, minWidth: 0 },
+  compactButton: { minHeight: 44, paddingVertical: Spacing.two, paddingHorizontal: Spacing.two },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: Spacing.three,
+  },
+  gridCell: { width: '48%' },
+  gridImage: { width: '100%', height: undefined, aspectRatio: 1 },
+  card: { flex: 1, padding: Spacing.two, borderRadius: Radius.md, gap: Spacing.two },
   input: { padding: Spacing.three, borderWidth: 1, borderRadius: Radius.md },
 });
