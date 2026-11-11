@@ -43,6 +43,8 @@ Claude(또는 작업자)가 대화·작업 중 아래에 해당한다고 **스�
 
 ## 목록
 
+- [2026-11-11, OTA 발행 성공과 실제 스토어 설치본의 기능 도달 구분](2026-11-11-ios-store-ota-feature-gap.md)
+
 - [2026-11-11, 한글 조합 글자가 사라진 문제와 비어 있는 폰트 윤곽](2026-11-11-korean-input-empty-glyph.md)
 - [2026-11-11 · 멈춰 둔 캐릭터가 Android에서만 다시 움직인 문제 — 한 번의 stop()과 다시 보일 때마다 재생하는 드로어블](2026-11-11-android-animated-webp-autoplay.md)
 - [2026-11-10, 공식 SDK 다운로드 장애와 네이티브 지문 추적 누락](2026-11-10-ios-sdk-download-fingerprint.md)
