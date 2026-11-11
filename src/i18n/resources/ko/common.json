@@ -3,7 +3,9 @@
     "back": "뒤로 가기",
     "apply": "적용하기",
     "cancel": "취소",
-    "confirm": "확인"
+    "confirm": "확인",
+    "startupConnectionError": "연결을 확인한 뒤 다시 시도해 주세요.",
+    "retry": "다시 시도"
   },
   "nav": {
     "myRoom": "나의 방",
