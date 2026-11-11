@@ -354,7 +354,8 @@
       "fallback": "이번 주는 회고 문구를 만들지 못해 통계만 보여드려요.",
       "weekdayA11y": "{{weekday}} {{total}}개 중 {{done}}개 완료",
       "weekdayNoneA11y": "{{weekday}} 예정 없음",
-      "routineA11y": "{{title}}, {{total}}개 중 {{done}}개 완료"
+      "routineA11y": "{{title}}, {{total}}개 중 {{done}}개 완료",
+      "hideThisWeek": "이번 주 다시 보지 않기"
     },
     "recommendation": {
       "stale": "제안이 더는 유효하지 않아요",
