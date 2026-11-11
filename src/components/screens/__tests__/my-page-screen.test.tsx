@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, within } from '@testing-library/react-native';
 
 import { MyPageScreen } from '@/components/screens/my-page-screen';
 
@@ -92,4 +92,19 @@ describe('MyPageScreen', () => {
     await rerender(<MyPageScreen />);
     expect(queryByTestId('my-page-tiles')).toBeNull();
   });
+});
+
+it('건의하기와 업데이트를 주간회고 바로 위에 두고 각각 연결한다', async () => {
+  const suggestions = jest.fn();
+  const updates = jest.fn();
+  const ui = await render(<MyPageScreen onOpenSuggestions={suggestions} onOpenUpdates={updates} />);
+  const labels = within(ui.getByTestId('my-page-rows'))
+    .getAllByText(/^(건의하기|업데이트|주간회고 다시 보기)$/)
+    .map((node) => node.props.children);
+  const index = labels.indexOf('주간회고 다시 보기');
+  expect(labels.slice(index - 2, index)).toEqual(['건의하기', '업데이트']);
+  await fireEvent.press(ui.getByText('건의하기'));
+  await fireEvent.press(ui.getByText('업데이트'));
+  expect(suggestions).toHaveBeenCalledTimes(1);
+  expect(updates).toHaveBeenCalledTimes(1);
 });

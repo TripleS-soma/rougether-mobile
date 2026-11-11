@@ -343,6 +343,77 @@ describe('HouseMembersScreen — 구성원 관리 (구 house-screen 흐름, #753
     expect(onLeaveHouse).toHaveBeenCalledWith(7);
   });
 
+  // 집 피드 — 나간 뒤에는 집 글을 직접 지울 수 없어 나가는 시점에 한 번 고른다.
+  describe('나가며 내 글과 댓글도 지우기 (집 피드)', () => {
+    const MEMBER_HOUSE: House = { ...MISSION_HOUSE, myRole: 'MEMBER' };
+    const LABEL = '이 집의 내 글·댓글도 지우기';
+
+    it('피드가 꺼진 설치본(feedCleanupOption 없음)에는 체크박스가 없다', async () => {
+      const ui = await render(screenFor(MEMBER_HOUSE, { onLeaveHouse: jest.fn() }));
+      await fireEvent.press(ui.getByLabelText('집 나가기'));
+      expect(ui.queryByLabelText(LABEL)).toBeNull();
+    });
+
+    it('피드가 켜진 설치본에서는 체크박스가 보이고, 기본은 꺼짐', async () => {
+      const ui = await render(
+        screenFor(MEMBER_HOUSE, { onLeaveHouse: jest.fn(), feedCleanupOption: true }),
+      );
+      await fireEvent.press(ui.getByLabelText('집 나가기'));
+      expect(ui.getByLabelText(LABEL).props.accessibilityState).toMatchObject({ checked: false });
+      expect(ui.getByText(/나간 뒤에는 직접 지울 수 없어요/)).toBeTruthy();
+    });
+
+    it('고르지 않고 나가면 종전처럼 집 id만 넘긴다', async () => {
+      const onLeaveHouse = jest.fn();
+      const ui = await render(screenFor(MEMBER_HOUSE, { onLeaveHouse, feedCleanupOption: true }));
+      await fireEvent.press(ui.getByLabelText('집 나가기'));
+      await fireEvent.press(ui.getByLabelText('나가기 확인'));
+      expect(onLeaveHouse).toHaveBeenCalledTimes(1);
+      expect(onLeaveHouse.mock.calls[0]).toEqual([7]);
+    });
+
+    it('체크하고 나가면 deleteFeedContent를 함께 넘긴다', async () => {
+      const onLeaveHouse = jest.fn();
+      const ui = await render(screenFor(MEMBER_HOUSE, { onLeaveHouse, feedCleanupOption: true }));
+      await fireEvent.press(ui.getByLabelText('집 나가기'));
+      await fireEvent.press(ui.getByLabelText(LABEL));
+      expect(ui.getByLabelText(LABEL).props.accessibilityState).toMatchObject({ checked: true });
+      await fireEvent.press(ui.getByLabelText('나가기 확인'));
+      expect(onLeaveHouse.mock.calls[0]).toEqual([7, { deleteFeedContent: true }]);
+    });
+
+    it('체크했다가 취소하고 다시 열면 꺼진 채로 시작한다', async () => {
+      const onLeaveHouse = jest.fn();
+      const ui = await render(screenFor(MEMBER_HOUSE, { onLeaveHouse, feedCleanupOption: true }));
+      await fireEvent.press(ui.getByLabelText('집 나가기'));
+      await fireEvent.press(ui.getByLabelText(LABEL));
+      await fireEvent.press(ui.getByLabelText('나가기 취소'));
+      await fireEvent.press(ui.getByLabelText('집 나가기'));
+      expect(ui.getByLabelText(LABEL).props.accessibilityState).toMatchObject({ checked: false });
+      await fireEvent.press(ui.getByLabelText('나가기 확인'));
+      expect(onLeaveHouse.mock.calls[0]).toEqual([7]);
+    });
+
+    it('혼자 남은 방장의 집 삭제에는 체크박스가 없다 — 집이 해체되며 글도 지워진다', async () => {
+      const onLeaveHouse = jest.fn();
+      const loneHouse: House = {
+        ...MISSION_HOUSE,
+        memberCount: 1,
+        floors: [
+          {
+            level: '1층',
+            rooms: [{ name: '나', color: '#E8E0D0', isMine: true, membershipId: 43 }],
+          },
+        ],
+      };
+      const ui = await render(screenFor(loneHouse, { onLeaveHouse, feedCleanupOption: true }));
+      await fireEvent.press(ui.getByLabelText('집 삭제'));
+      expect(ui.queryByLabelText(LABEL)).toBeNull();
+      await fireEvent.press(ui.getByLabelText('집 삭제 확인'));
+      expect(onLeaveHouse.mock.calls[0]).toEqual([7]);
+    });
+  });
+
   it('guides the owner to transfer ownership instead of leaving', async () => {
     const { getByText, queryByLabelText } = await render(
       screenFor(MISSION_HOUSE, { onLeaveHouse: jest.fn() }),

@@ -460,3 +460,104 @@ describe('useFeedCompose (#1409)', () => {
     });
   });
 });
+
+describe('useFeedCompose — 올릴 곳 (집 피드)', () => {
+  const lastRequest = () => jest.mocked(createFeedPost).mock.calls.at(-1)?.[0];
+
+  it('기본은 전체 공개 — houseId를 싣지 않는다', async () => {
+    const { result } = await renderHook(() => useFeedCompose(), { wrapper: queryWrapper() });
+    await act(async () => {
+      result.current.setContent('모두에게');
+    });
+    await act(async () => {
+      await result.current.submit();
+    });
+    expect(result.current.houseId).toBeNull();
+    expect(lastRequest()).not.toHaveProperty('houseId');
+  });
+
+  it('집을 고르면 그 houseId로 올리고, 올린 뒤에는 다시 전체 공개로 돌아간다', async () => {
+    const { result } = await renderHook(() => useFeedCompose(), { wrapper: queryWrapper() });
+    await act(async () => {
+      result.current.setContent('우리 집에만');
+      result.current.setHouseId(3);
+    });
+    expect(result.current.houseId).toBe(3);
+    await act(async () => {
+      await result.current.submit();
+    });
+    expect(lastRequest()).toEqual(expect.objectContaining({ houseId: 3, content: '우리 집에만' }));
+    expect(result.current.houseId).toBeNull();
+  });
+
+  it('작성을 버리면 고른 집도 버린다', async () => {
+    const { result } = await renderHook(() => useFeedCompose(), { wrapper: queryWrapper() });
+    await act(async () => {
+      result.current.setHouseId(3);
+    });
+    await act(async () => {
+      result.current.discard();
+    });
+    expect(result.current.houseId).toBeNull();
+  });
+
+  it('집 피드에서 연 작성(lockedHouseId)은 늘 그 집으로 올린다', async () => {
+    const { result } = await renderHook(() => useFeedCompose({ lockedHouseId: 5 }), {
+      wrapper: queryWrapper(),
+    });
+    await act(async () => {
+      result.current.setContent('집 피드에서');
+      result.current.discard();
+      result.current.setContent('집 피드에서');
+    });
+    expect(result.current.houseId).toBe(5);
+    await act(async () => {
+      await result.current.submit();
+    });
+    expect(lastRequest()).toEqual(expect.objectContaining({ houseId: 5 }));
+    expect(result.current.houseId).toBe(5);
+  });
+
+  it('같은 본문도 올릴 곳이 다르면 다른 글 — 재시도 id를 새로 만든다', async () => {
+    jest.mocked(createFeedPost).mockRejectedValueOnce(new Error('offline'));
+    const { result } = await renderHook(() => useFeedCompose(), { wrapper: queryWrapper() });
+    await act(async () => {
+      result.current.setContent('같은 글');
+    });
+    await act(async () => {
+      await result.current.submit();
+    });
+    await act(async () => {
+      result.current.setHouseId(3);
+    });
+    await act(async () => {
+      await result.current.submit();
+    });
+    const [first, second] = jest.mocked(createFeedPost).mock.calls.map(([req]) => req);
+    expect(first.clientPostId).not.toBe(second.clientPostId);
+  });
+
+  it('기록 카드가 붙은 글은 공개 피드 전용 — 고른 집을 싣지 않는다', async () => {
+    const { result } = await renderHook(() => useFeedCompose(), { wrapper: queryWrapper() });
+    await act(async () => {
+      result.current.startRecordPost(
+        {
+          runId: 'run-1',
+          gameCode: 'fish',
+          score: 10,
+          rank: null,
+          personalBest: false,
+          achievedAt: '2026-10-04T00:00:00Z',
+        },
+        '기록 자랑',
+      );
+      result.current.setHouseId(3);
+    });
+    expect(result.current.houseId).toBeNull();
+    await act(async () => {
+      await result.current.submit();
+    });
+    expect(lastRequest()).not.toHaveProperty('houseId');
+    expect(lastRequest()).toEqual(expect.objectContaining({ minigameRecord: { runId: 'run-1' } }));
+  });
+});

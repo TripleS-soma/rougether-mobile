@@ -19,6 +19,15 @@ import type {
   FeedRoutineResponse,
 } from '@/api/types';
 
+/** 집 피드 필드 — 생성 타입에 아직 없다(`@/api/feed`의 `FeedPostWire`와 같은 모양). */
+type HouseFeedPostFields = { houseId?: number | null; deletable?: boolean };
+type HouseFeedCommentFields = { deletable?: boolean };
+
+/** 양의 정수 집 id만 받는다 — 없거나(배포 전 서버) null이면 공개 글. */
+function toHouseId(raw: number | null | undefined): number | null {
+  return typeof raw === 'number' && Number.isInteger(raw) && raw > 0 ? raw : null;
+}
+
 function toFeedAuthor(res: FeedAuthorResponse | undefined): FeedAuthor {
   return {
     userId: res?.userId ?? 0,
@@ -55,7 +64,7 @@ function toFeedMinigameRecord(
   };
 }
 
-export function toFeedPost(res: FeedPostResponse): FeedPost | null {
+export function toFeedPost(res: FeedPostResponse & HouseFeedPostFields): FeedPost | null {
   if (res.postId == null) return null;
   return {
     postId: res.postId,
@@ -70,12 +79,17 @@ export function toFeedPost(res: FeedPostResponse): FeedPost | null {
     commentCount: Math.max(0, res.commentCount ?? 0),
     likedByMe: res.likedByMe ?? false,
     mine: res.mine ?? false,
+    houseId: toHouseId(res.houseId),
+    // 응답에 없으면(배포 전 서버) false — 내 글의 삭제는 종전대로 `mine`이 판정한다.
+    deletable: res.deletable === true,
     createdAt: res.createdAt ?? '',
     updatedAt: res.updatedAt ?? res.createdAt ?? '',
   };
 }
 
-export function toFeedComment(res: FeedCommentResponse): FeedComment | null {
+export function toFeedComment(
+  res: FeedCommentResponse & HouseFeedCommentFields,
+): FeedComment | null {
   if (res.commentId == null) return null;
   return {
     commentId: res.commentId,
@@ -83,6 +97,7 @@ export function toFeedComment(res: FeedCommentResponse): FeedComment | null {
     author: toFeedAuthor(res.author),
     content: res.content ?? '',
     mine: res.mine ?? false,
+    deletable: res.deletable === true,
     createdAt: res.createdAt ?? '',
     parentCommentId: res.parentCommentId ?? null,
     replyToCommentId: res.replyToCommentId ?? null,

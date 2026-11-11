@@ -104,6 +104,16 @@ export type FeedPost = {
   commentCount: number;
   likedByMe: boolean;
   mine: boolean;
+  /**
+   * 집 글이면 그 집 id, 공개 글은 null(또는 없음). 집 글은 그 집 구성원만 읽고 쓰며 공개
+   * 피드에 섞이지 않는다.
+   */
+  houseId?: number | null;
+  /**
+   * 내가 지울 수 있는 글 — 본인이거나 집 글의 방장. 내 글은 `mine`이 종전대로 판정하므로 화면은
+   * `!mine && deletable`(방장이 보는 남의 글)에만 쓴다. 응답에 없으면 false.
+   */
+  deletable?: boolean;
   /** ISO-8601 UTC. 표시는 기기 시간대 상대 시각. */
   createdAt: string;
   updatedAt: string;
@@ -115,6 +125,8 @@ export type FeedComment = {
   author: FeedAuthor;
   content: string;
   mine: boolean;
+  /** 집 글의 방장이 보는 남의 댓글이면 true — 화면은 `!mine && deletable`에만 쓴다. */
+  deletable?: boolean;
   createdAt: string;
   parentCommentId: number | null;
   replyToCommentId: number | null;
@@ -155,4 +167,19 @@ export type FeedDraftImage = {
   imageId?: number;
   /** 실패 안내 문구(현지화 완료). */
   error?: string;
+};
+
+/** 글을 올릴 수 있는 내 집 하나 — 작성 화면의 "올릴 곳" 선택지. */
+export type FeedScopeHouse = { houseId: number; name: string };
+
+/**
+ * 작성 화면의 올릴 곳 (집 피드). `houseId` null = 전체 공개.
+ * - `locked`: 집 피드에서 연 작성 — 그 집으로 고정하고 안내만 보인다.
+ * - 아니면 공개 피드에서 연 작성 — 전체 공개와 내 집들 중에서 고른다(기본 전체 공개).
+ */
+export type FeedComposeScope = {
+  houseId: number | null;
+  houses: readonly FeedScopeHouse[];
+  locked?: boolean;
+  onChange?: (houseId: number | null) => void;
 };

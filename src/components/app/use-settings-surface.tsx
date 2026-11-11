@@ -8,6 +8,7 @@ import { type Screen } from '@/components/app/navigation';
 import { useInviteArrival } from '@/components/app/use-invite-arrival';
 import { SettingsScreen } from '@/components/screens/settings-screen';
 import { BlockedUsersScreen } from '@/components/screens/blocked-users-screen';
+import { FeedbackPage } from '@/components/app/feedback-page';
 import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { HelpScreen } from '@/components/screens/help-screen';
 import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
@@ -307,6 +308,8 @@ export function useSettingsSurface({
     track('rate_app_tap');
     openStorePage({ review: true });
   }, []);
+  const openSuggestions = useCallback(() => setScreen('suggestions'), [setScreen]);
+  const openUpdates = useCallback(() => setScreen('updates'), [setScreen]);
   const openBugReport = useCallback(() => {
     setScreen('bugReport');
     void loadBugReports();
@@ -333,6 +336,8 @@ export function useSettingsSurface({
     onInviteFriends: openInviteFriends,
     onOpenHelp: openHelp,
     onReportBug: openBugReport,
+    onOpenSuggestions: openSuggestions,
+    onOpenUpdates: openUpdates,
   };
 
   // 설정 서브화면의 스크롤 위치 (#763) — 테마·폰트·알림에 다녀오면 설정 화면이
@@ -469,6 +474,8 @@ export function useSettingsSurface({
         onUnblock={(userId) => void handleUnblock(userId)}
         onBack={backToSettings}
       />
+    ) : screen === 'suggestions' || screen === 'updates' ? (
+      <FeedbackPage key={screen} kind={screen} onBack={backToMyPage} />
     ) : screen === 'bugReport' ? (
       <BugReportScreen
         entries={bugReports}

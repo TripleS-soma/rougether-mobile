@@ -10,8 +10,10 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import type { PickedLibraryImageWithSize } from '@/lib/pick-image';
 import { pickChatPhoto } from '@/lib/pick-chat-photo';
+import { useHouseNotifications } from '@/components/app/use-house-notifications';
 import { HouseChatScreen } from '@/components/screens/house-chat-screen';
 import { useToast } from '@/components/ui/toast';
+import { FEED_ENABLED } from '@/constants/feed';
 import { useChatMute } from '@/hooks/use-chat-mute';
 import { type HouseChatError, useHouseChat } from '@/hooks/use-house-chat';
 import { useT } from '@/i18n';
@@ -123,6 +125,9 @@ function HouseChatRoomPage({
   // 방별 음소거 (서버 #435) — 상태를 받기 전엔 버튼을 그리지 않는다(켜짐으로 잘못 보이지 않게).
   const muteFailed = useCallback(() => toast(tr('house.chat.muteFailed'), 'error'), [toast, tr]);
   const mute = useChatMute({ roomId: chat.roomId, onError: muteFailed });
+  // 집 피드가 켜진 설치본은 종이 "이 집 알림" 시트(채팅·자유글·인증글)를 연다. 꺼진 설치본은
+  // 새 글 알림이 없으니 종전대로 종이 채팅 알림을 바로 끄고 켠다.
+  const notifications = useHouseNotifications({ houseId, enabled: FEED_ENABLED });
 
   useEffect(() => {
     track('house_chat_view');
@@ -165,8 +170,9 @@ function HouseChatRoomPage({
         onSharePhoto={onSharePhoto}
         onRetrySend={chat.retrySend}
         onVisible={chat.reportVisible}
-        muted={mute.muted}
-        onToggleMute={mute.loaded ? () => void mute.toggle() : undefined}
+        muted={FEED_ENABLED ? notifications.allMuted : mute.muted}
+        onToggleMute={!FEED_ENABLED && mute.loaded ? () => void mute.toggle() : undefined}
+        onOpenNotifications={FEED_ENABLED ? notifications.open : undefined}
         onBack={onBack}
       />
       <Modal visible={photo != null} transparent animationType="fade" onRequestClose={clearPhoto}>
@@ -207,6 +213,7 @@ function HouseChatRoomPage({
           if (reportId != null) report({ messageId: reportId, reason, detail });
         }}
       />
+      {FEED_ENABLED ? notifications.sheet : null}
     </>
   );
 }

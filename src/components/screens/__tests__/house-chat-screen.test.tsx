@@ -245,3 +245,24 @@ it('[피드에 올리기]는 내가 보낸 사진에만 붙는다 (2026-11-11)',
   await fireEvent.press(screen.getByLabelText('피드에 올리기'));
   expect(onSharePhoto).toHaveBeenCalledWith('file:///tmp/mine.jpg');
 });
+
+describe('HouseChatScreen — 이 집 알림 시트 (집 피드)', () => {
+  it('onOpenNotifications가 있으면 종은 스위치가 아니라 시트를 여는 버튼', async () => {
+    const onOpenNotifications = jest.fn();
+    const onToggleMute = jest.fn();
+    const screen = await render(
+      <HouseChatScreen
+        messages={[]}
+        myUserId={1}
+        onOpenNotifications={onOpenNotifications}
+        onToggleMute={onToggleMute}
+      />,
+    );
+    expect(screen.queryByLabelText('이 채팅방 알림')).toBeNull();
+    const bell = screen.getByLabelText('이 집 알림 설정');
+    expect(bell.props.accessibilityRole).toBe('button');
+    await fireEvent.press(bell);
+    expect(onOpenNotifications).toHaveBeenCalledTimes(1);
+    expect(onToggleMute).not.toHaveBeenCalled();
+  });
+});
