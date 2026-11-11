@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { AppTextInput as TextInput } from '@/components/ui/app-text-input';
 
 import type { MarketListing } from '@/api/market-shop';
 import type { ReportReason } from '@/api/types';

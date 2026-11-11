@@ -4,11 +4,11 @@ import {
   Platform,
   Pressable,
   Text,
-  TextInput,
   View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { AppTextInput as TextInput } from '@/components/ui/app-text-input';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { CharacterIdle } from '@/components/room/character-idle';
