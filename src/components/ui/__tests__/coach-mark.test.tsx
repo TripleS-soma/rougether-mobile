@@ -8,6 +8,7 @@ import {
   CoachTarget,
   CoachTargetProvider,
   toOverlayRect,
+  withoutTarget,
 } from '@/components/ui/coach-mark';
 
 const STEPS: CoachStep[] = [
@@ -171,6 +172,37 @@ describe('좌표 저장소 분리 (성능 장부 R2)', () => {
         />
       </CoachTargetProvider>,
     );
+    expect(ui.getByText('제목')).toBeTruthy();
+  });
+
+  it('대상이 화면에서 사라지면 좌표도 지운다 — 옛 자리에 구멍이 남지 않게 (2026-11-11)', () => {
+    const nav = { x: 12, y: 700, w: 80, h: 60 };
+    const draw = { x: 40, y: 600, w: 120, h: 56 };
+    const rects = { 'nav-myRoom': nav, 'gacha-draw': draw };
+    expect(withoutTarget(rects, 'nav-myRoom')).toEqual({ 'gacha-draw': draw });
+    // 원본은 그대로, 없는 대상이면 같은 참조(구독자가 다시 그려지지 않는다).
+    expect(rects['nav-myRoom']).toBe(nav);
+    expect(withoutTarget(rects, 'house-manage')).toBe(rects);
+  });
+
+  it('대상이 마운트 해제돼도 던지지 않는다', async () => {
+    const tree = (mounted: boolean) => (
+      <CoachTargetProvider>
+        {mounted ? (
+          <CoachTarget id="nav-myRoom">
+            <Text>방</Text>
+          </CoachTarget>
+        ) : null}
+        <CoachMarkOverlay
+          hardLock
+          steps={[{ target: 'nav-myRoom', title: '제목', body: '본문' }]}
+          index={0}
+          frame={{ w: 390, h: 800 }}
+        />
+      </CoachTargetProvider>
+    );
+    const ui = await render(tree(true));
+    await ui.rerender(tree(false));
     expect(ui.getByText('제목')).toBeTruthy();
   });
 });
