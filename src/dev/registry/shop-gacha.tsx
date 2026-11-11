@@ -1,4 +1,3 @@
-import { PeperoGiftPreview } from '@/dev/pepero-gift-preview';
 import { ChristmasEventPreview } from '@/dev/christmas-event-preview';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
@@ -35,11 +34,6 @@ function WalletHistorySheetDemo() {
 }
 
 export const shopGachaEntries: GalleryEntry[] = [
-  {
-    name: 'PeperoGiftPopupPreview',
-    description: '빼빼로데이 111코인과 소원 관측기 지급 완료',
-    render: () => <PeperoGiftPreview />,
-  },
   {
     name: 'ChristmasAttendancePreview',
     description: '누적 30회 선물 봉투 · 서버 미호출 fixture',
