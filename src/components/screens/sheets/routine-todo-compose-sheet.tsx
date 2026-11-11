@@ -1,5 +1,6 @@
 import { useContext, useEffect, useRef, useState } from 'react';
-import { Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppTextInput as TextInput } from '@/components/ui/app-text-input';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { BottomSheet, SheetDragExclude } from '@/components/ui/bottom-sheet';
 import { Calendar } from '@/components/ui/calendar';

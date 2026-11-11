@@ -2,6 +2,7 @@ import { loadAsync } from 'expo-font';
 import { useEffect } from 'react';
 
 import { type BrandFontId, displayFaceFor, FONT_OPTIONS } from '@/constants/theme';
+import { inputFontFamily } from '@/constants/input-font';
 
 /**
  * Web (PWA) counterpart of the native config-plugin embed: registers the app
@@ -34,12 +35,16 @@ const PRETENDARD = [
   'Pretendard-Bold',
 ];
 
+const withInputFonts = (families: readonly string[]) => [
+  ...new Set([...families, ...families.map((family) => inputFontFamily(family)!)]),
+];
+
 /** 폰트 하나를 쓰는 데 필요한 패밀리 — 주아 혼합은 본문이 Pretendard라 함께 받는다. */
 export const WEB_FONT_FAMILIES: Record<BrandFontId, readonly string[]> = {
-  nanum: ['NanumSquareRoundR', 'NanumSquareRoundB', 'NanumSquareRoundEB'],
+  nanum: withInputFonts(['NanumSquareRoundR', 'NanumSquareRoundB', 'NanumSquareRoundEB']),
   pretendard: PRETENDARD,
   jua: ['Jua-Regular', ...PRETENDARD],
-  suit: ['SUIT-Regular', 'SUIT-Medium', 'SUIT-SemiBold', 'SUIT-Bold'],
+  suit: withInputFonts(['SUIT-Regular', 'SUIT-Medium', 'SUIT-SemiBold', 'SUIT-Bold']),
   system: [],
 };
 

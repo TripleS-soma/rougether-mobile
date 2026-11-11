@@ -3,6 +3,7 @@
  * 웹 폰트 선택 로드 표를 고정한다. 실제 크기 효과는 PR 본문의 expo export 실측.
  */
 import { FONT_OPTIONS } from '@/constants/theme';
+import { inputFontFamily } from '@/constants/input-font';
 
 // metro.config.js가 쓰는 판정 함수 — 설정 파일 자체는 Sentry metro 등을 끌어와 jest에서 못 연다.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -49,5 +50,16 @@ describe('웹 폰트는 선택한 폰트만 받는다 (B4)', () => {
     expect(WEB_FONT_FAMILIES.jua).toEqual(
       expect.arrayContaining(['Jua-Regular', 'Pretendard-Regular']),
     );
+  });
+
+  it('선택 폰트에 필요한 입력용 대체 패밀리도 중복 없이 등록한다', () => {
+    for (const { id } of FONT_OPTIONS) {
+      const families = WEB_FONT_FAMILIES[id];
+      expect(new Set(families).size).toBe(families.length);
+      for (const family of families) expect(families).toContain(inputFontFamily(family));
+    }
+    expect(WEB_FONT_FAMILIES.nanum).not.toContain('SUIT-Regular');
+    expect(WEB_FONT_FAMILIES.nanum).not.toContain('Pretendard-Medium');
+    expect(WEB_FONT_FAMILIES.suit).not.toContain('NanumSquareRoundR');
   });
 });

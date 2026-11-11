@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { AppTextInput as TextInput } from '@/components/ui/app-text-input';
 
 import { Field } from '@/components/ui/field';
 import { pressedStyle } from '@/components/ui/press-feedback';

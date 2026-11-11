@@ -1,0 +1,410 @@
+[
+  {
+    "file": "assets/fonts/Jua-Regular.ttf",
+    "family": "Jua-Regular",
+    "sha256": "769677aef240bfc3b9965f2b50748075bff885e6c6992fc591a3fb268279f898",
+    "hangulMapped": 2367,
+    "hangulDrawn": 2367,
+    "probes": {
+      "루": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 779
+      },
+      "게": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 830
+      },
+      "더": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 746
+      },
+      "겓": {
+        "mapped": false,
+        "hasOutline": false,
+        "advance": null
+      },
+      "겍": {
+        "mapped": false,
+        "hasOutline": false,
+        "advance": null
+      }
+    }
+  },
+  {
+    "file": "assets/fonts/NanumSquareRoundB.ttf",
+    "family": "NanumSquareRoundB",
+    "sha256": "61fd37816a1ee1a9336876742392d80bdafd340e5124a088aeda20446e2e15de",
+    "hangulMapped": 11172,
+    "hangulDrawn": 2479,
+    "probes": {
+      "루": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 910
+      },
+      "게": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 910
+      },
+      "더": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 910
+      },
+      "겓": {
+        "mapped": true,
+        "hasOutline": false,
+        "advance": 910
+      },
+      "겍": {
+        "mapped": true,
+        "hasOutline": false,
+        "advance": 910
+      }
+    }
+  },
+  {
+    "file": "assets/fonts/NanumSquareRoundEB.ttf",
+    "family": "NanumSquareRoundEB",
+    "sha256": "9e845fc35c5bc4a5b7ed59d85a1760059de5ce55b5e5a4d7535f7efa87695e39",
+    "hangulMapped": 11172,
+    "hangulDrawn": 2479,
+    "probes": {
+      "루": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 910
+      },
+      "게": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 910
+      },
+      "더": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 910
+      },
+      "겓": {
+        "mapped": true,
+        "hasOutline": false,
+        "advance": 910
+      },
+      "겍": {
+        "mapped": true,
+        "hasOutline": false,
+        "advance": 910
+      }
+    }
+  },
+  {
+    "file": "assets/fonts/NanumSquareRoundR.ttf",
+    "family": "NanumSquareRoundR",
+    "sha256": "52862fdf05b55ba886ca21998222d9598ef84c975e68046b9a8d8f1af09228a0",
+    "hangulMapped": 11172,
+    "hangulDrawn": 2479,
+    "probes": {
+      "루": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 910
+      },
+      "게": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 910
+      },
+      "더": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 910
+      },
+      "겓": {
+        "mapped": true,
+        "hasOutline": false,
+        "advance": 910
+      },
+      "겍": {
+        "mapped": true,
+        "hasOutline": false,
+        "advance": 910
+      }
+    }
+  },
+  {
+    "file": "assets/fonts/Pretendard-Bold.otf",
+    "family": "Pretendard-Bold",
+    "sha256": "2e91915fab54df71cc9598ebf608b2bdb54c6fe3c066ac61dff0bc44fca71cc7",
+    "hangulMapped": 11172,
+    "hangulDrawn": 11172,
+    "probes": {
+      "루": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 1770
+      },
+      "게": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 1770
+      },
+      "더": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 1770
+      },
+      "겓": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 1770
+      },
+      "겍": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 1770
+      }
+    }
+  },
+  {
+    "file": "assets/fonts/Pretendard-Medium.otf",
+    "family": "Pretendard-Medium",
+    "sha256": "d39e50e4bb52b4993b6a4eeb821a171254745bd824446af01e1f616b89fface0",
+    "hangulMapped": 11172,
+    "hangulDrawn": 11172,
+    "probes": {
+      "루": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 1770
+      },
+      "게": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 1770
+      },
+      "더": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 1770
+      },
+      "겓": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 1770
+      },
+      "겍": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 1770
+      }
+    }
+  },
+  {
+    "file": "assets/fonts/Pretendard-Regular.otf",
+    "family": "Pretendard-Regular",
+    "sha256": "3ffbacde6ab8411f1d2db54bb9b1f0b3ee2a738932033722cf0388c06aed1c93",
+    "hangulMapped": 11172,
+    "hangulDrawn": 11172,
+    "probes": {
+      "루": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 1770
+      },
+      "게": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 1770
+      },
+      "더": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 1770
+      },
+      "겓": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 1770
+      },
+      "겍": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 1770
+      }
+    }
+  },
+  {
+    "file": "assets/fonts/Pretendard-SemiBold.otf",
+    "family": "Pretendard-SemiBold",
+    "sha256": "c89bc43027dc7cde5726e96223376f8eec09302b2fc1f8147fd5b57cfc376118",
+    "hangulMapped": 11172,
+    "hangulDrawn": 11172,
+    "probes": {
+      "루": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 1770
+      },
+      "게": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 1770
+      },
+      "더": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 1770
+      },
+      "겓": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 1770
+      },
+      "겍": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 1770
+      }
+    }
+  },
+  {
+    "file": "assets/fonts/SUIT-Bold.otf",
+    "family": "SUIT-Bold",
+    "sha256": "40178aa07b8ce5ef7bfe8381641272de8e6020095245995d95ed71c26f54f2a8",
+    "hangulMapped": 11172,
+    "hangulDrawn": 2668,
+    "probes": {
+      "루": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 874
+      },
+      "게": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 874
+      },
+      "더": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 874
+      },
+      "겓": {
+        "mapped": true,
+        "hasOutline": false,
+        "advance": 874
+      },
+      "겍": {
+        "mapped": true,
+        "hasOutline": false,
+        "advance": 874
+      }
+    }
+  },
+  {
+    "file": "assets/fonts/SUIT-Medium.otf",
+    "family": "SUIT-Medium",
+    "sha256": "204c9e9caad3a1f7cfe45bbec9e71cd679f6f009edfaa9fae85363722f5b333e",
+    "hangulMapped": 11172,
+    "hangulDrawn": 2668,
+    "probes": {
+      "루": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 874
+      },
+      "게": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 874
+      },
+      "더": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 874
+      },
+      "겓": {
+        "mapped": true,
+        "hasOutline": false,
+        "advance": 874
+      },
+      "겍": {
+        "mapped": true,
+        "hasOutline": false,
+        "advance": 874
+      }
+    }
+  },
+  {
+    "file": "assets/fonts/SUIT-Regular.otf",
+    "family": "SUIT-Regular",
+    "sha256": "75559147fba6cf373d3a9b5e4a2ea3ba2f8dfb22e5debaabb90277365b8831ad",
+    "hangulMapped": 11172,
+    "hangulDrawn": 2668,
+    "probes": {
+      "루": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 874
+      },
+      "게": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 874
+      },
+      "더": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 874
+      },
+      "겓": {
+        "mapped": true,
+        "hasOutline": false,
+        "advance": 874
+      },
+      "겍": {
+        "mapped": true,
+        "hasOutline": false,
+        "advance": 874
+      }
+    }
+  },
+  {
+    "file": "assets/fonts/SUIT-SemiBold.otf",
+    "family": "SUIT-SemiBold",
+    "sha256": "faeab67df52b4400aec8893507b5b1502057b53f1224bfe6c89cdba2bece0ca1",
+    "hangulMapped": 11172,
+    "hangulDrawn": 2668,
+    "probes": {
+      "루": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 874
+      },
+      "게": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 874
+      },
+      "더": {
+        "mapped": true,
+        "hasOutline": true,
+        "advance": 874
+      },
+      "겓": {
+        "mapped": true,
+        "hasOutline": false,
+        "advance": 874
+      },
+      "겍": {
+        "mapped": true,
+        "hasOutline": false,
+        "advance": 874
+      }
+    }
+  }
+]
