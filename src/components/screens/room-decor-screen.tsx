@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button';
 import { CharacterScaleSheet } from '@/components/screens/decor/character-scale-sheet';
 import { characterFrameStyle, normalizeCharacterScale } from '@/components/room/character-scale';
 import { type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -886,29 +887,23 @@ export function RoomDecorScreen({
           style={[styles.guideY, { backgroundColor: t.primary }, guideYStyle]}
         />
         {/* 캐릭터는 항상 가구 앞 — 오버레이(드래그 중 z 9999)보다 위 전용 레이어. */}
-          <View pointerEvents="box-none" style={styles.characterLayer}>
-            {/* Room과 같은 두 겹(자리 박스 + 꽉 채운 아바타) — 아바타에 자리 스타일을
+        <View pointerEvents="none" style={styles.characterLayer}>
+          {/* Room과 같은 두 겹(자리 박스 + 꽉 채운 아바타) — 아바타에 자리 스타일을
             직접 주면 기본 96px 높이가 남아 나의 방보다 작게 그려졌다. */}
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={tr('roomShop.characterScale.title')}
-              testID="decor-character"
-              onPress={() => {
-                setSelectedId(null);
-                setCharacterScaleOpen(true);
-              }}
-              style={[
-                styles.characterFigure,
-                characterFrameStyle(previewCharacterScale ?? characterScale),
-              ]}>
-              <CharacterAvatar
-                characterId={characterId}
-                frames={characterFrames}
-                roomScale={previewCharacterScale ?? characterScale}
-                style={styles.characterFill}
-              />
-            </Pressable>
+          <View
+            testID="decor-character"
+            style={[
+              styles.characterFigure,
+              characterFrameStyle(previewCharacterScale ?? characterScale),
+            ]}>
+            <CharacterAvatar
+              characterId={characterId}
+              frames={characterFrames}
+              roomScale={previewCharacterScale ?? characterScale}
+              style={styles.characterFill}
+            />
           </View>
+        </View>
         {/* 선택 툴바 (#333) — 캔버스 위 플로팅, 캐릭터 레이어보다도 위.
           벽 쪽(상반부) 가구를 가리지 않게 하단으로 회피하고(#608), 점프가
           거슬리지 않게 드래그 중에는 숨겼다가 드롭 시점에 재배치된다. */}
@@ -1058,15 +1053,26 @@ export function RoomDecorScreen({
             ) : null}
           </View>
 
-          <View style={styles.filterRow}>
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              {tr('roomShop.decor.ownedOnly')}
-            </Text>
-            <ToggleSwitch
-              value={ownedOnly}
-              onToggle={() => setOwnedOnly((v) => !v)}
-              accessibilityLabel={tr('roomShop.decor.ownedOnly')}
+          <View style={styles.decorActions}>
+            <Button
+              label={tr('roomShop.characterScale.title')}
+              variant="secondary"
+              onPress={() => {
+                setSelectedId(null);
+                setCharacterScaleOpen(true);
+              }}
+              style={{ paddingVertical: Spacing.two, paddingHorizontal: Spacing.three }}
             />
+            <View style={styles.filterRow}>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                {tr('roomShop.decor.ownedOnly')}
+              </Text>
+              <ToggleSwitch
+                value={ownedOnly}
+                onToggle={() => setOwnedOnly((v) => !v)}
+                accessibilityLabel={tr('roomShop.decor.ownedOnly')}
+              />
+            </View>
           </View>
 
           {picker === 'wallpaper' ? (
@@ -1500,6 +1506,13 @@ const styles = StyleSheet.create({
     aspectRatio: ROOM_RENDER_CONTRACT.character.aspectRatio,
   },
   characterFill: { width: '100%', height: '100%' },
+  decorActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+  },
   filterRow: {
     flexDirection: 'row',
     alignItems: 'center',

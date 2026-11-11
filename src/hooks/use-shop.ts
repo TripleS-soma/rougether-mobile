@@ -1,4 +1,3 @@
-import { normalizeCharacterScale } from '@/components/room/character-scale';
 /**
  * Shop catalogue + purchase + room placement, backed by the API. Three queries
  * — the catalogue (`GET /items`), the inventory (`GET /me/items`,
@@ -16,6 +15,7 @@ import { normalizeCharacterScale } from '@/components/room/character-scale';
  *
  * 반환 계약은 종전과 같다 — 호출부(`app-shell`)를 건드리지 않는다.
  */
+import { normalizeCharacterScale } from '@/components/room/character-scale';
 import { useCallback, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
