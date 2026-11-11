@@ -17,6 +17,7 @@ const ICONS = {
   list: 'list-outline',
   folder: 'folder-open-outline',
   add: 'add',
+  subtract: 'remove',
   search: 'search',
   members: 'people',
   kebab: 'ellipsis-vertical',

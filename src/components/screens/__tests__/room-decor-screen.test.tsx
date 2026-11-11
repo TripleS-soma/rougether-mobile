@@ -57,6 +57,35 @@ const lastApply = (fn: jest.Mock) =>
   fn.mock.calls[fn.mock.calls.length - 1][0] as PlacedFurniture[];
 
 describe('RoomDecorScreen (#327 — 자유 배치)', () => {
+  it('keeps the character centered when resizing, supports undo, and saves its scale', async () => {
+    const onApply = jest.fn();
+    const { getByTestId, getByLabelText, getByText } = await render(
+      <RoomDecorScreen initialItems={[]} initialCharacterScale={1} onApply={onApply} />,
+    );
+    await fireEvent.press(getByTestId('decor-character'));
+    await waitFor(() => expect(getByTestId('character-size-slider')).toBeTruthy());
+    await fireEvent(getByTestId('character-size-slider'), 'accessibilityAction', {
+      nativeEvent: { actionName: 'decrement' },
+    });
+    expect(getByTestId('character-size-slider').props.accessibilityValue.now).toBe(99);
+    const frame = StyleSheet.flatten(getByTestId('decor-character').props.style);
+    const left = parseFloat(frame.left);
+    const width = parseFloat(frame.width);
+    expect(left + width / 2).toBeCloseTo(50);
+    await fireEvent.press(getByText('확인'));
+    await fireEvent.press(getByLabelText('실행 취소'));
+    await fireEvent.press(getByTestId('decor-character'));
+    await waitFor(() =>
+      expect(getByTestId('character-size-slider').props.accessibilityValue.now).toBe(100),
+    );
+    await fireEvent.press(getByLabelText('캐릭터 크게'));
+    await fireEvent.press(getByText('확인'));
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() =>
+      expect(onApply).toHaveBeenCalledWith([], expect.any(String), null, null, 1.01),
+    );
+  });
+
   it('renders the title with the furniture panel open by default (#487)', async () => {
     const { getByLabelText, queryByText, queryByLabelText } = await render(<RoomDecorScreen />);
     // 헤더 제거(#510) — 제목 없이 플로팅 뒤로가기·재화만 남는다.
@@ -105,7 +134,7 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
     expect(onApply.mock.calls[0][0]).toEqual([
       expect.objectContaining({ furnitureId: 'plant', x: 0.5, y: 0.55, z: 1 }),
     ]);
-    expect(onApply.mock.calls[0].slice(1)).toEqual(['simple', null, null]);
+    expect(onApply.mock.calls[0].slice(1)).toEqual(['simple', null, null, 1]);
   });
 
   it('snapshots item render defaults only when a new FREE_V1 item is placed', async () => {
@@ -244,7 +273,7 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
     await fireEvent.press(getByLabelText('벽 꾸미기'));
     await fireEvent.press(getByLabelText('발자국 패턴'));
     await fireEvent.press(getByText('적용하기'));
-    await waitFor(() => expect(onApply).toHaveBeenCalledWith([], 'paw', null, null));
+    await waitFor(() => expect(onApply).toHaveBeenCalledWith([], 'paw', null, null, 1));
   });
 
   it('offers 배경/바닥 segments only when the catalogue has them', async () => {
@@ -290,7 +319,7 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
     await fireEvent.press(getByText('배경'));
     await fireEvent.press(getByLabelText('해변 배경'));
     await fireEvent.press(getByText('적용하기'));
-    await waitFor(() => expect(onApply).toHaveBeenCalledWith([], 'simple', 'f1', 'b1'));
+    await waitFor(() => expect(onApply).toHaveBeenCalledWith([], 'simple', 'f1', 'b1', 1));
   });
 
   it('clears an applied floor via 비우기', async () => {
@@ -305,7 +334,7 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
     await fireEvent.press(getByLabelText('바닥 꾸미기'));
     await fireEvent.press(getByLabelText('비우기'));
     await fireEvent.press(getByText('적용하기'));
-    await waitFor(() => expect(onApply).toHaveBeenCalledWith([], 'simple', null, null));
+    await waitFor(() => expect(onApply).toHaveBeenCalledWith([], 'simple', null, null, 1));
   });
 
   it('서브픽커의 선택 닫기는 전체 패널로 복귀한다 (#487)', async () => {
@@ -1163,7 +1192,7 @@ describe('RoomDecorScreen — 전체보기 탭', () => {
     expect(queryByLabelText('초록 식물')).toBeNull();
     await fireEvent.press(getByLabelText('발자국 패턴'));
     await fireEvent.press(getByText('적용하기'));
-    await waitFor(() => expect(onApply).toHaveBeenCalledWith([], 'paw', null, null));
+    await waitFor(() => expect(onApply).toHaveBeenCalledWith([], 'paw', null, null, 1));
   });
 
   it('shows 바닥/배경 tabs only when the catalogue has them', async () => {

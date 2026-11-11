@@ -19,6 +19,18 @@ const moveTo = (x: number) => (d: DecorDoc) => ({
 });
 
 describe('decorHistoryReducer (#1640)', () => {
+  it('records character resize independently of furniture and restores it on undo', () => {
+    const changed = decorHistoryReducer(start(), {
+      type: 'commit',
+      update: (d) => ({ ...d, characterScale: 0.7 }),
+    });
+    expect(changed.past).toHaveLength(1);
+    expect(changed.present.characterScale).toBe(0.7);
+    const undone = decorHistoryReducer(changed, { type: 'undo' });
+    expect(undone.present.characterScale ?? 1).toBe(1);
+    expect(decorHistoryReducer(undone, { type: 'redo' }).present.characterScale).toBe(0.7);
+  });
+
   it('commit → undo → redo가 문서를 그대로 오간다', () => {
     let s = decorHistoryReducer(start(), { type: 'commit', update: moveTo(0.2) });
     s = decorHistoryReducer(s, { type: 'commit', update: moveTo(0.8) });

@@ -25,7 +25,10 @@ const meta = {
     onPress: fn(),
   },
   argTypes: {
-    name: { control: 'select', options: ['back', 'close', 'add', 'edit', 'bell', 'settings'] },
+    name: {
+      control: 'select',
+      options: ['back', 'close', 'add', 'subtract', 'edit', 'bell', 'settings'],
+    },
     accessibilityLabel: { control: 'text', description: '스크린 리더에 전달할 동작 설명' },
     variant: { control: 'inline-radio', options: ['muted', 'primary', 'ghost'] },
     size: { control: { type: 'range', min: 32, max: 64, step: 4 } },
@@ -53,4 +56,9 @@ export const Ghost: Story = {
 export const Disabled: Story = {
   name: '비활성',
   args: { name: 'edit', accessibilityLabel: '편집', disabled: true },
+};
+
+export const Subtract: Story = {
+  name: '크기 줄이기',
+  args: { name: 'subtract', accessibilityLabel: '캐릭터 작게', variant: 'ghost' },
 };

@@ -166,6 +166,7 @@ export function useFriendVisit({
         backgrounds={catalogue.backgrounds}
         characterId={friendRoom.characterId}
         characterFrames={friendRoom.characterFrames}
+        characterScale={friendRoom.characterScale}
         streakDays={friendRoom.streakDays}
         cobweb={friendRoom.cobweb}
         onCleanCobweb={async () => {

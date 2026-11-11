@@ -14,6 +14,7 @@ const ICON_LABELS = {
   list: '목록',
   folder: '폴더',
   add: '추가',
+  subtract: '줄이기',
   search: '검색',
   members: '멤버',
   kebab: '더보기',
