@@ -41,6 +41,24 @@ afterEach(async () => {
   clients.forEach((client) => client.clear());
   clients.length = 0;
   jest.restoreAllMocks();
+  jest.useRealTimers();
+});
+
+it('normalizes a malformed list and bounds polling when no receipt ever arrives', async () => {
+  jest.useFakeTimers();
+  global.fetch = jest.fn(async () => jsonRes({})) as unknown as typeof fetch;
+  const e = env();
+  const { result } = await renderHook(() => usePeperoGift({ enabled: true }), {
+    wrapper: e.wrapper,
+  });
+  for (let i = 0; i < 20; i++) {
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(5_000);
+    });
+  }
+  expect(result.current.gift).toBeNull();
+  expect(result.current.loading).toBe(false);
+  expect(global.fetch).toHaveBeenCalledTimes(13);
 });
 
 it('uses KST Nov 11 boundaries and makes no request outside the event', async () => {
