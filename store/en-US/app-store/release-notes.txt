@@ -1,9 +1,3 @@
-• The feed is here! Share your day on the Free board and today's completed routines on the Proof board. Proof posts carry a badge with the routine you completed
-• See just your own posts with "Mine", and switch a post between Free and Proof when you edit it
-• Report posts or comments that bother you and block members you don't want to see. Manage blocked members in Settings
-• Meet the furniture market: buy and sell furniture with other members, and list furniture you made from a photo
-• Play Routine Runner big, in landscape
-• The weekly calendar now shows all 7 days of a week that spans two months
-• Unlink a routine or category from its house mission yourself
-• The app is lighter and faster overall (tab switching, first screen, gacha effects)
-• Fixed the keyboard covering the message field in house chat (Android)
+Christmas furniture and an event draw are now available. Earn check-in rewards and decorate your room with the furniture you've collected.
+
+We've improved the check-in screen and event notices so they don't overlap, and fixed a few small issues.
