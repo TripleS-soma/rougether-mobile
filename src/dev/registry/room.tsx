@@ -14,6 +14,7 @@ import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { RoomGrowthPill } from '@/components/ui/room-growth-pill';
 import { RoomQuickTodoPreview } from '@/dev/todo-compose-preview';
 import { Button } from '@/components/ui/button';
+import { FURNITURE_STUDIO_EXAMPLES } from '@/resources/furniture-studio-examples';
 import { FurnitureStudioScreen } from '@/components/screens/furniture-studio-screen';
 import { FriendWeekStrip } from '@/components/screens/house/friend-week-strip';
 import { shiftIso, todayIso } from '@/utils/datetime';
@@ -194,7 +195,8 @@ export const roomEntries: GalleryEntry[] = [
     description: '출석 생성권 또는 100코인으로 사진 속 가구 만들기.',
     render: () => (
       <FurnitureStudioScreen
-        balance={{ available: 1, reserved: 0 }}
+        balance={{ available: 8, reserved: 0 }}
+        coinBalance={194}
         jobs={[]}
         photo={null}
         onAttendance={() => {}}
@@ -378,8 +380,10 @@ export const roomEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 640 }}>
         <FixedPriceMarketScreen
-          listings={DEMO_MARKET_ASSETS.map((a) => ({
+          listings={DEMO_MARKET_ASSETS.map((a, index) => ({
             ...a,
+            name: ['통기타 장식', '따뜻한 찻잔', '크리스마스 곰 장식'][index % 3],
+            assetKey: FURNITURE_STUDIO_EXAMPLES[index % FURNITURE_STUDIO_EXAMPLES.length].key,
             itemId: a.itemId ?? 1,
             isCreator: false,
             price: a.bestAskPrice ?? 30,
@@ -387,6 +391,8 @@ export const roomEntries: GalleryEntry[] = [
             owned: false,
           }))}
           coinBalance={120}
+          onOpenGuide={() => {}}
+          onToggleMine={() => {}}
         />
       </View>
     ),

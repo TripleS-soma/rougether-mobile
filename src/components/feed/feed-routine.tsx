@@ -120,7 +120,9 @@ export function FeedRoutinePicker({
               { backgroundColor: t.surfaceMuted },
               pressed && pressedStyle('dim', t),
             ]}>
-            <Text style={[Typography.label, { color: t.primaryText }]}>{tr('app.ui.retry')}</Text>
+            <Text style={[Typography.labelCompact, { color: t.primaryText }]}>
+              {tr('app.ui.retry')}
+            </Text>
           </Pressable>
         ) : null}
       </View>
@@ -128,7 +130,7 @@ export function FeedRoutinePicker({
   } else if (groups.length === 0) {
     body = (
       <View style={[styles.state, styles.empty, { backgroundColor: t.surfaceMuted }]}>
-        <Text style={[Typography.label, { color: t.text }]}>{tr('feed.routine.empty')}</Text>
+        <Text style={[Typography.labelCompact, { color: t.text }]}>{tr('feed.routine.empty')}</Text>
         <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
           {tr('feed.routine.emptyHint')}
         </Text>
@@ -161,7 +163,7 @@ export function FeedRoutinePicker({
                 </Text>
                 <Text
                   style={[
-                    Typography.label,
+                    Typography.labelCompact,
                     { color: active ? t.primaryText : count > 0 ? t.text : t.textMuted },
                   ]}>
                   {Number(day.slice(8))}
@@ -209,7 +211,7 @@ export function FeedRoutinePicker({
                     color={selected ? t.primaryText : t.textMuted}
                   />
                   <Text
-                    style={[Typography.body, styles.shrink, { color: t.text }]}
+                    style={[Typography.bodyCompact, styles.shrink, { color: t.text }]}
                     numberOfLines={1}>
                     {option.title}
                   </Text>
@@ -224,7 +226,9 @@ export function FeedRoutinePicker({
 
   return (
     <View style={styles.wrap} accessibilityRole="radiogroup" testID="feed-routine-picker">
-      <Text style={[Typography.label, { color: t.text }]}>{tr('feed.routine.pickerTitle')}</Text>
+      <Text style={[Typography.labelCompact, { color: t.text }]}>
+        {tr('feed.routine.pickerTitle')}
+      </Text>
       <Text style={[Typography.supporting, { color: t.textMuted }]}>
         {tr('feed.routine.pickerHint')}
       </Text>
