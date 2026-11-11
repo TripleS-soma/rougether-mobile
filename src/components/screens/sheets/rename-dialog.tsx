@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AppTextInput as TextInput } from '@/components/ui/app-text-input';
 
 import type { Routine } from '@/constants/routines';
 import { Overlay, Radius, Spacing } from '@/constants/theme';

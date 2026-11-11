@@ -6,9 +6,9 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
+import { AppTextInput as TextInput } from '@/components/ui/app-text-input';
 
 import { FEED_BOARD_TYPES, FeedBoardTabs } from '@/components/feed/feed-board';
 import { FeedMinigameRecordCard } from '@/components/feed/feed-minigame-record';

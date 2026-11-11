@@ -1,6 +1,7 @@
 import type { HouseDisplayMode } from '@/resources/house-display-mode';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppTextInput as TextInput } from '@/components/ui/app-text-input';
 
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
 import { HouseCoverArt } from '@/components/room/house-cover-art';

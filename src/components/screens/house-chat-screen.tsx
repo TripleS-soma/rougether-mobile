@@ -8,10 +8,10 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
   type ViewToken,
 } from 'react-native';
+import { AppTextInput as TextInput } from '@/components/ui/app-text-input';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui/icon';

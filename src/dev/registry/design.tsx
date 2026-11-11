@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Text, TextInput as ComparisonTextInput, View } from 'react-native';
 import { LinkifiedText } from '@/components/ui/linkified-text';
 import { ListRow } from '@/components/ui/list-row';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,7 @@ import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { CATEGORY_ICON_GEOMETRY, CategoryIcon } from '@/components/ui/category-icon';
 import { Button } from '@/components/ui/button';
+import { AppTextInput } from '@/components/ui/app-text-input';
 import { Calendar } from '@/components/ui/calendar';
 import { CoachMarkOverlay } from '@/components/ui/coach-mark';
 import { Card } from '@/components/ui/card';
@@ -33,6 +34,41 @@ import { TokenSwatches } from '@/dev/token-swatches';
 import { TypeScalePreview } from '@/dev/type-scale-preview';
 import { NavigationPreview } from '@/dev/navigation-preview';
 import type { GalleryEntry } from '@/dev/registry/types';
+import { Spacing } from '@/constants/theme';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
+
+function InputFontDemo() {
+  const [value, setValue] = useState('루겓');
+  const t = useTokens();
+  const Typography = useTypography();
+  return (
+    <View style={{ alignSelf: 'stretch', gap: Spacing.two }}>
+      <Text style={[Typography.supporting, { color: t.text }]}>선택 폰트 원본</Text>
+      <ComparisonTextInput
+        value={value}
+        onChangeText={setValue}
+        accessibilityLabel="원본 폰트 비교"
+        style={[
+          Typography.body,
+          { backgroundColor: t.surfaceMuted, color: t.text, padding: Spacing.two },
+        ]}
+      />
+      <Text style={[Typography.supporting, { color: t.text }]}>한글 전체를 그리는 입력 폰트</Text>
+      <AppTextInput
+        value={value}
+        onChangeText={setValue}
+        accessibilityLabel="한글 조합 글리프 확인"
+        maxLength={40}
+        style={[
+          Typography.body,
+          { backgroundColor: t.surfaceMuted, color: t.text, padding: Spacing.two },
+        ]}
+      />
+      <Button label="비우기" onPress={() => setValue('')} />
+      <Button label="루겓 불러오기" onPress={() => setValue('루겓')} />
+    </View>
+  );
+}
 
 /** 달력 주 접힘 데모 (#1327) — 접기/펼치기 토글과 주 이동을 독립적으로 본다. */
 function CalendarWeekDemo() {
@@ -161,6 +197,11 @@ function ToastDemo() {
 }
 
 export const designEntries: GalleryEntry[] = [
+  {
+    name: 'AppTextInput · 한글 글리프',
+    description: '루게더 입력과 삭제 중 거치는 루겓, 폰트별 표시와 초기화 확인 (#1731).',
+    render: () => <InputFontDemo />,
+  },
   {
     name: 'Design tokens · active theme',
     description: 'Brand semantic colors, Astryx-aligned naming (default: cozy).',

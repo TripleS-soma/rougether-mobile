@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { memo, useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppTextInput as TextInput } from '@/components/ui/app-text-input';
 
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
