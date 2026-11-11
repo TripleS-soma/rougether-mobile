@@ -720,6 +720,7 @@ export type TypeRole =
   | 'body'
   | 'label'
   | 'supporting'
+  | 'caption'
   | 'code';
 
 export type TypeStyle = {
@@ -748,6 +749,7 @@ export const Typography: Record<TypeRole, TypeStyle> = {
   body: { fontSize: 18, lineHeight: 26, fontWeight: FontWeight.normal },
   label: { fontSize: 16, lineHeight: 22, fontWeight: FontWeight.semibold },
   supporting: { fontSize: 14, lineHeight: 18, fontWeight: FontWeight.normal },
+  caption: { fontSize: 13, lineHeight: 17, fontWeight: FontWeight.normal },
   code: { fontSize: 15, lineHeight: 20, fontWeight: FontWeight.medium },
 };
 
