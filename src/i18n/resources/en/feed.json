@@ -140,6 +140,34 @@
       "draftWithRank": "🐱 Scored {{score}} in {{game}} — #{{rank}} overall!",
       "composeHint": "Record cards go on the Free board only. Tap ✕ to post just the text.",
       "invalidRemoved": "We couldn't attach the record card, so we removed it. You can still post the text."
+    },
+    "house": {
+      "entry": "Request to join",
+      "title": "Which house would you like to join?",
+      "hint": "Choose a house the author belongs to.",
+      "loadError": "Could not load the houses.",
+      "empty": "The author does not belong to any houses.",
+      "request": "Request to join",
+      "pending": "Awaiting approval",
+      "open": "Open house",
+      "full": "House full",
+      "kicked": "Cannot join",
+      "working": "Working...",
+      "close": "Close",
+      "members": "{{count}} / {{max}} members",
+      "membersUnlimited": "{{count}} members, no limit",
+      "requested": "Request sent. You can move in once the owner approves.",
+      "joined": "You moved in!",
+      "error": {
+        "HOUSE_FULL": "This house is full. Please choose another house.",
+        "HOUSE_KICKED_MEMBER": "You cannot rejoin a house you were removed from.",
+        "HOUSE_NOT_FOUND": "The author no longer belongs to this house. Refresh the list.",
+        "FEED_POST_NOT_FOUND": "This post was deleted or is unavailable.",
+        "HOUSE_JOIN_REQUEST_ALREADY_PENDING": "You already requested to join. Please wait for approval.",
+        "generic": "Could not process your request. Please try again."
+      },
+      "instantHint": "Your request moves you in right away",
+      "approvalHint": "You can move in once the owner approves"
     }
   }
 }

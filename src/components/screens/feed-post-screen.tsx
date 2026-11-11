@@ -37,6 +37,7 @@ import type {
   FeedRoutineCompletion,
 } from '@/components/screens/feed/types';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Icon } from '@/components/ui/icon';
 import { Loading } from '@/components/ui/loading';
@@ -66,6 +67,7 @@ type ModerationTarget =
 type ReportResult = Promise<boolean> | boolean;
 
 export type FeedPostScreenProps = {
+  onOpenAuthorHouses?: () => void;
   post?: FeedPost | null;
   loading?: boolean;
   loadError?: boolean;
@@ -340,6 +342,7 @@ function EditPostDialog({
  * 작성자 차단(#1428, App Store 1.2). 순수·prop 기반.
  */
 export function FeedPostScreen({
+  onOpenAuthorHouses,
   post = null,
   loading = false,
   loadError = false,
@@ -513,6 +516,14 @@ export function FeedPostScreen({
         board={post.boardType}
         now={now}
       />
+      {!post.mine && onOpenAuthorHouses ? (
+        <Button
+          label={tr('feed.house.entry')}
+          variant="secondary"
+          leftIcon="house"
+          onPress={onOpenAuthorHouses}
+        />
+      ) : null}
       {post.boardType === 'VERIFICATION' && post.routine ? (
         <FeedRoutineBadge routine={post.routine} />
       ) : null}
