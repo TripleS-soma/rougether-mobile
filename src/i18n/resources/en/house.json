@@ -75,7 +75,7 @@
       "reissueA11y": "Reissue invite code",
       "reissue": "Reissue",
       "ownerCodeHint": "Share the code with friends to invite them.",
-      "memberCodeHint": "Invite friends with your personal code. They join once the owner approves.",
+      "memberCodeHint": "Join after host approval",
       "issueCode": "Get an invite code",
       "copyA11y": "Copy invite code",
       "copy": "Copy code",
