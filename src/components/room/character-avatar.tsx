@@ -11,7 +11,13 @@ import {
 
 import { PawPictogram } from '@/components/ui/pictograms';
 import { CHARACTER_OPTIONS, type CharacterId } from '@/constants/characters';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { assetSource, isCdnKey, RESOURCE_BASE } from '@/resources/asset';
+
+import fox1 from '@/assets/images/characters/fox-1.webp';
+import fox2 from '@/assets/images/characters/fox-2.webp';
+import fox3 from '@/assets/images/characters/fox-3.webp';
+import foxIdle from '@/assets/images/characters/fox-idle.webp';
 
 import bear1 from '@/assets/images/characters/bear-1.webp';
 import bear2 from '@/assets/images/characters/bear-2.webp';
@@ -49,6 +55,7 @@ import tiger4 from '@/assets/images/characters/tiger-4.webp';
 /** Static pose frames per character (index 0–3). */
 const SPRITES: Partial<Record<CharacterId, number[]>> = {
   bear: [bear1, bear2, bear3, bear4],
+  fox: [fox1, fox2, fox3],
   cat: [cat1, cat2, cat3, cat4],
   dog: [dog1, dog2, dog3, dog4],
   horse: [horse1, horse2, horse3, horse4],
@@ -76,12 +83,10 @@ export const CHARACTER_ART_AUTOPLAY = false;
  *   자체 autoPlay 플래그로 재생을 다시 시작한다(`setVisible`). 탭을 오가거나 앱이 앞으로 오면
  *   멈춰 둔 그림이 다시 움직였다. 네이티브를 고치지 않고는 막을 수 없어 움직이는 파일을 아예 안 쓴다.
  */
-function preferBundledStill(characterId: CharacterId): boolean {
+function preferBundledStill(characterId: CharacterId, animateFox: boolean): boolean {
+  if (characterId === 'fox') return !animateFox;
   return !CHARACTER_ART_AUTOPLAY && Platform.OS !== 'ios' && !!SPRITES[characterId];
 }
-
-/** Number of poses available per character. */
-const POSE_COUNT = 4;
 
 /** `pose` wraps over however many frames the avatar actually has. */
 function wrapPose(pose: number, count: number) {
@@ -90,6 +95,8 @@ function wrapPose(pose: number, count: number) {
 
 export type CharacterAvatarProps = {
   characterId: CharacterId;
+  /** 여우 원화의 눈/꼬리 재생. 내 방처럼 단일 캐릭터를 보는 곳에서만 켬. */
+  animate?: boolean;
   /**
    * 서버가 등록한 포즈 프레임(CDN 키) — 등록 순서 그대로. 유효한 키가 하나라도
    * 있으면 번들 스프라이트 대신 이 애니메이션 webp를 그리고, `pose`가 이 목록을
@@ -123,6 +130,7 @@ export type CharacterAvatarProps = {
  */
 export const CharacterAvatar = memo(function CharacterAvatar({
   characterId,
+  animate = false,
   frames,
   pose = 0,
   prefetchFrames = false,
@@ -131,6 +139,8 @@ export const CharacterAvatar = memo(function CharacterAvatar({
   sharp = false,
   contentPosition = 'center',
 }: CharacterAvatarProps) {
+  const reducedMotion = useReducedMotion();
+  const animateFox = characterId === 'fox' && animate && !reducedMotion;
   const character = useMemo(
     () => CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0],
     [characterId],
@@ -140,8 +150,8 @@ export const CharacterAvatar = memo(function CharacterAvatar({
   // 포즈 탭마다(그리고 부모 리렌더마다) 배열을 새로 걸러내던 것을 프레임 목록이
   // 실제로 바뀔 때만 하도록 묶는다 — 방 캔버스 리프라 호출 빈도가 높다.
   const cdnFrames = useMemo(
-    () => (preferBundledStill(characterId) ? [] : (frames ?? []).filter(isCdnKey)),
-    [frames, characterId],
+    () => (preferBundledStill(characterId, animateFox) ? [] : (frames ?? []).filter(isCdnKey)),
+    [frames, characterId, animateFox],
   );
   const cdnFrameList = cdnFrames.join('|');
 
@@ -172,7 +182,8 @@ export const CharacterAvatar = memo(function CharacterAvatar({
         cachePolicy="memory-disk"
         // 줌 대상에서는 원본 해상도로 — 다운스케일 디코딩은 확대 시 흐려진다.
         allowDownscaling={!sharp}
-        autoplay={CHARACTER_ART_AUTOPLAY}
+        autoplay={CHARACTER_ART_AUTOPLAY || animateFox}
+        useAppleWebpCodec={!animateFox}
         accessibilityLabel={character.name}
         testID="cdn-animation"
       />
@@ -180,7 +191,10 @@ export const CharacterAvatar = memo(function CharacterAvatar({
   }
 
   const sprites = SPRITES[characterId];
-  const source = sprites?.[wrapPose(pose, POSE_COUNT)];
+  const source =
+    animateFox && wrapPose(pose, sprites?.length ?? 1) === 0
+      ? foxIdle
+      : sprites?.[wrapPose(pose, sprites.length)];
 
   if (!source) {
     // No frame art for this character yet — a neutral paw mark stands in.
@@ -200,6 +214,8 @@ export const CharacterAvatar = memo(function CharacterAvatar({
       contentFit="contain"
       contentPosition={contentPosition}
       allowDownscaling={!sharp}
+      autoplay={animateFox}
+      useAppleWebpCodec={!animateFox}
       accessibilityLabel={character.name}
     />
   );

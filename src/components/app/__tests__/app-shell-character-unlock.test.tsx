@@ -10,8 +10,7 @@ afterEach(() => {
 });
 
 /**
- * 캐릭터 교체는 방 레벨 10에 열린다 (2026-10-14) — 판정은 서버 내 방 응답 `characterUnlocked`.
- * 예전엔 레벨 5 보상 모루를 가지면 열렸는데, 모루는 제거됐다.
+ * 프로필 편집에서 보유 캐릭터를 교체한다. 방 레벨과 관계없으며 뽑기 해금과 분리한다.
  */
 function mockServer(room: Record<string, unknown>, selectBodies: unknown[] = []) {
   global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
@@ -36,20 +35,20 @@ function mockServer(room: Record<string, unknown>, selectBodies: unknown[] = [])
   }) as unknown as typeof fetch;
 }
 
-it('opens the picker at room level 10 and hides the removed Moru', async () => {
+it('selects a character from profile edit and hides the removed Moru', async () => {
   const selectBodies: unknown[] = [];
   mockServer({ growthLevel: 10, characterUnlocked: true, characterUnlockLevel: 10 }, selectBodies);
   const view = await renderWithProviders(<AppShell />);
-  await fireEvent.press(view.getByLabelText('메뉴'));
-  await waitFor(() => expect(view.getByText('캐릭터 교체')).toBeTruthy());
-  await fireEvent.press(view.getByText('캐릭터 교체'));
+  await fireEvent.press(view.getByLabelText('내 정보'));
+  await fireEvent.press(view.getByText('프로필 편집'));
+  await fireEvent.press(view.getByLabelText('캐릭터 변경'));
   await waitFor(() => expect(view.getByLabelText('강아지 착용')).toBeTruthy());
   expect(view.queryByLabelText('모루 착용')).toBeNull();
   await fireEvent.press(view.getByLabelText('강아지 착용'));
   await waitFor(() => expect(selectBodies).toEqual([{ characterId: 2 }]));
 });
 
-it('shows a locked menu item below level 10 that explains when it opens', async () => {
+it('selects from profile edit below level 10 without changing the gacha lock', async () => {
   const selectBodies: unknown[] = [];
   mockServer({ growthLevel: 4, characterUnlocked: false, characterUnlockLevel: 10 }, selectBodies);
   // 잠금 안내는 토스트로 뜬다 — 토스트를 그리는 Provider가 있어야 보인다.
@@ -58,10 +57,11 @@ it('shows a locked menu item below level 10 that explains when it opens', async 
       <AppShell />
     </ToastProvider>,
   );
-  await fireEvent.press(view.getByLabelText('메뉴'));
-  await waitFor(() => expect(view.getByText('캐릭터 교체')).toBeTruthy());
-  await fireEvent.press(view.getByText('캐릭터 교체'));
-  await waitFor(() => expect(view.getByText('캐릭터 교체는 방 레벨 10에 열려요')).toBeTruthy());
-  expect(view.queryByLabelText('강아지 착용')).toBeNull();
-  expect(selectBodies).toEqual([]);
+  await fireEvent.press(view.getByLabelText('내 정보'));
+  await fireEvent.press(view.getByText('프로필 편집'));
+  await fireEvent.press(view.getByLabelText('캐릭터 변경'));
+  await waitFor(() => expect(view.getByLabelText('강아지 착용')).toBeTruthy());
+  expect(view.queryByText('캐릭터 교체는 방 레벨 10에 열려요')).toBeNull();
+  await fireEvent.press(view.getByLabelText('강아지 착용'));
+  await waitFor(() => expect(selectBodies).toEqual([{ characterId: 2 }]));
 });

@@ -39,6 +39,7 @@ const state = {
   dismissing: false,
   refresh: jest.fn(),
   checkIn: jest.fn(),
+  claimCharacter: jest.fn(),
   dismissPopup: jest.fn(),
 };
 const args = { home: true, ready: true, blocked: false, onGoGacha: jest.fn() };
@@ -47,6 +48,7 @@ const props = (value: ReturnType<typeof useChristmasSurface>, index: number) =>
 beforeEach(() => {
   Object.defineProperty(AppState, 'currentState', { value: 'active', configurable: true });
   jest.clearAllMocks();
+  jest.spyOn(AppState, 'addEventListener').mockReturnValue({ remove: jest.fn() });
   jest.mocked(todayIso).mockReturnValue('2026-11-09');
   jest.mocked(getSessionUserId).mockReturnValue(7);
   state.refresh.mockResolvedValue(null);
@@ -316,4 +318,19 @@ it('does not consume the new day on a foreground midnight render before the next
   await waitFor(() => expect(props(result.current, 0).visible).toBe(true));
   expect(props(result.current, 1).visible).toBe(false);
   subscription.mockRestore();
+});
+
+it('keeps a failed character claim on attendance and clears the error after explicit retry', async () => {
+  state.claimCharacter
+    .mockResolvedValueOnce({ result: null, recovered: false })
+    .mockResolvedValueOnce({ result: { grantedNow: true }, recovered: false });
+  const { result } = await renderHook(() => useChristmasSurface(args));
+  await waitFor(() => expect(props(result.current, 0).visible).toBe(true));
+  await act(async () => props(result.current, 0).onClaimCharacter());
+  expect(props(result.current, 0).error).toBe(true);
+  expect(props(result.current, 0).visible).toBe(true);
+  expect(props(result.current, 1).visible).toBe(false);
+  await act(async () => props(result.current, 0).onClaimCharacter());
+  expect(props(result.current, 0).error).toBe(false);
+  expect(state.claimCharacter).toHaveBeenCalledTimes(2);
 });

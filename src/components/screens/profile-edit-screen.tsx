@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import {
+  Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -9,6 +11,8 @@ import {
   View,
 } from 'react-native';
 
+import type { OwnedCharacter } from '@/components/member/owned-character-grid';
+import { CharacterSelectionScreen } from '@/components/screens/character-selection-screen';
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { Field } from '@/components/ui/field';
 import { ActionBar } from '@/components/ui/action-bar';
@@ -27,12 +31,14 @@ export type ProfileEditScreenProps = {
   initialNickname?: string;
   initialBio?: string;
   characterId?: CharacterId;
+  ownedCharacters?: OwnedCharacter[];
+  onSelectCharacter?: (serverId: number) => void;
   onSave?: (nickname: string, bio: string) => void;
   onBack?: () => void;
 };
 
 /**
- * "프로필 편집" screen reached from 설정 → 프로필 편집. Edits nickname + one-line
+ * "프로필 편집" screen reached from 내 정보 → 프로필 편집. Edits nickname + one-line
  * bio over the current character avatar. Pure/prop-driven; persistence is wired
  * by the app shell via onSave.
  */
@@ -42,6 +48,8 @@ export function ProfileEditScreen({
   characterId = DEFAULT_CHARACTER_ID,
   onSave,
   onBack,
+  ownedCharacters,
+  onSelectCharacter,
 }: ProfileEditScreenProps) {
   const t = useTokens();
   const column = useResponsiveColumn();
@@ -52,6 +60,7 @@ export function ProfileEditScreen({
   const tr = useT();
   const [nickname, setNickname] = useState(initialNickname);
   const [bio, setBio] = useState(initialBio);
+  const [choosingCharacter, setChoosingCharacter] = useState(false);
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
 
   const trimmed = nickname.trim();
@@ -80,9 +89,23 @@ export function ProfileEditScreen({
             <View style={[styles.avatar, { backgroundColor: character.bg }]}>
               <CharacterAvatar characterId={characterId} size={88} />
             </View>
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              {tr('member.profileEdit.characterHint')}
-            </Text>
+            {ownedCharacters && onSelectCharacter ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={tr('member.profileEdit.changeCharacter')}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setChoosingCharacter(true);
+                }}
+                style={({ pressed }) => [
+                  styles.characterChange,
+                  pressed && pressedStyle('dim', t),
+                ]}>
+                <Text style={[Typography.label, { color: t.primary }]}>
+                  {tr('member.profileEdit.changeCharacter')}
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
 
           <View style={styles.form}>
@@ -127,6 +150,23 @@ export function ProfileEditScreen({
           </Pressable>
         </ActionBar>
       </KeyboardAvoidingView>
+      {ownedCharacters && onSelectCharacter ? (
+        <Modal
+          testID="character-selection-modal"
+          visible={choosingCharacter}
+          presentationStyle="fullScreen"
+          animationType="slide"
+          onRequestClose={() => setChoosingCharacter(false)}>
+          <CharacterSelectionScreen
+            characters={ownedCharacters}
+            onBack={() => setChoosingCharacter(false)}
+            onSelect={(id) => {
+              if (!ownedCharacters.find((c) => c.serverId === id)?.selected) onSelectCharacter(id);
+              setChoosingCharacter(false);
+            }}
+          />
+        </Modal>
+      ) : null}
     </View>
   );
 }
@@ -146,6 +186,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
   },
+  characterChange: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
   avatar: {
     width: 96,
     height: 96,

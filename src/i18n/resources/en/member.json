@@ -35,6 +35,9 @@
       },
       "otter": {
         "name": "Otter"
+      },
+      "fox": {
+        "name": "Fox"
       }
     },
     "login": {
@@ -247,12 +250,13 @@
     },
     "profileEdit": {
       "title": "Edit profile",
-      "characterHint": "You can change your character in My Room.",
       "nicknamePlaceholder": "Enter a nickname",
       "bio": "Bio",
       "bioPlaceholder": "Introduce yourself in one line",
       "bioHint": "Housemates see this intro when they visit your room.",
-      "saveA11y": "Save profile"
+      "saveA11y": "Save profile",
+      "characterSelectTitle": "Choose a character",
+      "changeCharacter": "Change character"
     },
     "help": {
       "title": "Help",

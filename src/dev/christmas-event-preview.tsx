@@ -36,13 +36,39 @@ const FIXTURE_STATUS: AttendanceStatus = {
 };
 
 /** Local fixture only; no event check-in, wallet or inventory request is made. */
-export function ChristmasEventPreview({ popup = false }: { popup?: boolean }) {
+export function ChristmasEventPreview({
+  popup = false,
+  foxReward = false,
+}: {
+  popup?: boolean;
+  foxReward?: boolean;
+}) {
   const { entry } = useLocalSearchParams<{ entry?: string | string[] }>();
   const { height } = useWindowDimensions();
   const [visible, setVisible] = useState(Boolean(entry));
   const [stage, setStage] = useState<'attendance' | 'popup'>(popup ? 'popup' : 'attendance');
   const [background, setBackground] = useState<'room' | 'gacha'>('room');
-  const [status, setStatus] = useState(FIXTURE_STATUS);
+  const [status, setStatus] = useState<AttendanceStatus>(() =>
+    foxReward
+      ? {
+          ...FIXTURE_STATUS,
+          progressDays: 2,
+          currentStreak: 2,
+          dailyRewards: FIXTURE_STATUS.dailyRewards.map((day) => ({
+            ...day,
+            claimed: day.day <= 2,
+          })),
+          characterReward: {
+            day: 3,
+            characterId: 99,
+            name: '여우',
+            assetKey: 'characters/fox/base-v1.webp',
+            received: false,
+            claimable: false,
+          },
+        }
+      : FIXTURE_STATUS,
+  );
   const [result, setResult] = useState<AttendanceCheckInResult | null>(null);
   const nextStage = useRef<'attendance' | 'popup' | 'gacha' | null>(null);
   const autoPopup = useRef(!popup);
@@ -109,15 +135,23 @@ export function ChristmasEventPreview({ popup = false }: { popup?: boolean }) {
           if (status.checkedInToday) return;
           const next = {
             ...status,
-            progressDays: 1,
-            currentStreak: 1,
+            progressDays: (status.progressDays ?? 0) + 1,
+            currentStreak: status.currentStreak + 1,
+            characterReward: status.characterReward
+              ? { ...status.characterReward, received: true }
+              : undefined,
+            dailyRewards: status.dailyRewards.map((day) => ({
+              ...day,
+              claimed: day.day <= (status.progressDays ?? 0) + 1,
+            })),
             checkedInToday: true,
             availableToday: false,
           };
           setStatus(next);
           setResult({
             newCheckIn: true,
-            coinRewardAmount: status.dailyRewards[0].coinAmount,
+            coinRewardAmount: status.dailyRewards[status.progressDays ?? 0].coinAmount,
+            characterGrantedNow: foxReward,
             coinBalance: 0,
             rewardGrantedNow: false,
             status: next,

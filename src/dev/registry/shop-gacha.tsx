@@ -46,6 +46,11 @@ export const shopGachaEntries: GalleryEntry[] = [
     render: () => <ChristmasEventPreview />,
   },
   {
+    name: 'ChristmasFoxRewardPreview',
+    description: '누적 3일차 여우 보상 · 서버 미호출 fixture',
+    render: () => <ChristmasEventPreview foxReward />,
+  },
+  {
     name: 'ChristmasPopupPreview',
     description: '실제 앱 위 크리스마스 안내 · 서버 미호출 fixture',
     render: () => <ChristmasEventPreview popup />,

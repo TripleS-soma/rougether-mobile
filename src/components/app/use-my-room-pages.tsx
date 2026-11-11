@@ -118,12 +118,10 @@ export function useMyRoomPages({
   character: {
     wornCharacterId: CharacterId;
     wornCharacterFrames: MyRoomScreenProps['characterFrames'];
-    ownedCharacters: MyRoomScreenProps['ownedCharacters'];
-    wearCharacter: (serverId: number) => void;
   };
   /** 방 렌더 prop — 배치 상태·카탈로그는 꾸미기(셸 잔류)와 공유라 셸 소유. */
   room: RoomGrowthProps & {
-    /** 캐릭터 교체 해금 (방 레벨 10, 2026-10-14) — 서버 내 방 응답 `characterUnlocked`. */
+    /** 캐릭터 뽑기 해금 (방 레벨 10) — 서버 내 방 응답 `characterUnlocked`. */
     characterUnlocked: boolean;
     characterUnlockLevel: number;
     placements: MyRoomScreenProps['placements'];
@@ -529,9 +527,6 @@ export function useMyRoomPages({
     [recommendations, currentDaysById],
   );
 
-  // 캐릭터 교체는 방 레벨 10에 열린다(2026-10-14) — 판정은 서버 `characterUnlocked`.
-  const canSelectCharacter = room.characterUnlocked;
-
   /** 탭 페이저의 나의 방 페이지 prop — `<MyRoomScreen {...tabProps} />`. */
   const tabProps = {
     userName: nickname,
@@ -578,11 +573,8 @@ export function useMyRoomPages({
     onManageRoutines: openRoutineManage,
     onOpenNotifications: openNotificationList,
     unreadNotificationCount: unreadCount + announcements.unreadCount,
-    ownedCharacters: canSelectCharacter ? character.ownedCharacters : undefined,
-    onSelectCharacter: canSelectCharacter ? character.wearCharacter : undefined,
-    // 방을 받기 전엔(레벨 미상) 잠금 항목도 숨긴다 — 해금 계정에 자물쇠가 잠깐 비치지 않게 (#1547 리뷰).
-    characterLockLevel:
-      canSelectCharacter || room.growthLevel == null ? undefined : room.characterUnlockLevel,
+    // 보유한 활성 캐릭터는 레벨과 관계없이 교체함. 뽑기 해금은 별도 유지함.
+    characterLockLevel: undefined,
     onManageCategories: openCategoryManage,
     onUpdateCategory: updateRoutineCategory,
     onOpenGacha: openGacha,

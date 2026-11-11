@@ -4,6 +4,7 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 import type { AttendanceCheckInResult, AttendanceStatus } from '@/api/events';
 import { ChristmasModalFrame } from '@/components/screens/christmas/christmas-modal-frame';
+import { CharacterAvatar } from '@/components/room/character-avatar';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { ScalePressable } from '@/components/ui/scale-pressable';
@@ -14,6 +15,7 @@ import { useT } from '@/i18n';
 import { NATIVE_DRIVER } from '@/utils/animation';
 
 export const CHRISTMAS_REWARD_SETTLE_MS = 1100;
+export const CHRISTMAS_CHARACTER_REWARD_SETTLE_MS = 2600;
 
 function GiftEnvelope({ day, claimed, next }: { day: number; claimed: boolean; next: boolean }) {
   const t = useTokens();
@@ -76,6 +78,8 @@ export type ChristmasAttendanceModalProps = {
   loading?: boolean;
   error?: boolean | string;
   checkingIn?: boolean;
+  claimingCharacter?: boolean;
+  onClaimCharacter?: () => void | Promise<unknown>;
   result?: AttendanceCheckInResult | null;
   onCheckIn: () => void | Promise<unknown>;
   onClose: () => void;
@@ -91,6 +95,8 @@ export function ChristmasAttendanceModal({
   loading = false,
   error = false,
   checkingIn = false,
+  claimingCharacter = false,
+  onClaimCharacter,
   result,
   onCheckIn,
   onClose,
@@ -130,7 +136,11 @@ export function ChristmasAttendanceModal({
     // Idempotent recovery closes without pretending to award coins again.
     const timer = setTimeout(
       () => onCloseRef.current(),
-      result.newCheckIn ? CHRISTMAS_REWARD_SETTLE_MS : 0,
+      result.newCheckIn
+        ? result.characterGrantedNow
+          ? CHRISTMAS_CHARACTER_REWARD_SETTLE_MS
+          : CHRISTMAS_REWARD_SETTLE_MS
+        : 0,
     );
     return () => {
       clearTimeout(timer);
@@ -138,7 +148,7 @@ export function ChristmasAttendanceModal({
     };
   }, [visible, result, onCloseRef, rewardRise]);
 
-  const busy = checkingIn || success;
+  const busy = checkingIn || claimingCharacter || success;
   const close = () => {
     if (!busy) onClose();
   };
@@ -214,9 +224,40 @@ export function ChristmasAttendanceModal({
                 ))}
               </View>
             </View>
-            <Text style={[Typography.supporting, styles.centerText, { color: t.textMuted }]}>
-              {tr('christmas.cumulativeHint')}
-            </Text>
+            {status.characterReward ? (
+              <View
+                style={[
+                  styles.characterReward,
+                  { backgroundColor: t.primarySoft, borderColor: t.border },
+                ]}>
+                <CharacterAvatar characterId="fox" size={76} animate />
+                <View style={styles.characterRewardDetails}>
+                  <Text style={[Typography.label, emph('semibold'), { color: t.text }]}>
+                    {tr('christmas.foxRewardTitle', { day: status.characterReward.day })}
+                  </Text>
+                  {status.characterReward.received ? (
+                    <Text
+                      accessibilityLiveRegion="polite"
+                      style={[Typography.supporting, { color: t.success }]}>
+                      {tr('christmas.characterReceivedBadge')}
+                    </Text>
+                  ) : status.characterReward.claimable && onClaimCharacter ? (
+                    <Button
+                      label={tr(
+                        claimingCharacter
+                          ? 'christmas.claimingCharacter'
+                          : 'christmas.claimCharacter',
+                      )}
+                      disabled={busy || loading}
+                      variant="secondary"
+                      onPress={() => {
+                        void onClaimCharacter();
+                      }}
+                    />
+                  ) : null}
+                </View>
+              </View>
+            ) : null}
             {success && result.coinRewardAmount > 0 ? (
               <Animated.View
                 accessibilityLiveRegion="polite"
@@ -320,5 +361,14 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     minHeight: 24,
   },
+  characterReward: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    padding: Spacing.two,
+    borderWidth: 1,
+    borderRadius: Radius.xl,
+  },
+  characterRewardDetails: { flex: 1, gap: Spacing.one },
   error: { gap: Spacing.two },
 });
