@@ -2,6 +2,7 @@ import { useContext, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
+import { CoachTarget } from '@/components/ui/coach-mark';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { MissionFlagPictogram } from '@/components/ui/pictograms';
@@ -55,38 +56,41 @@ export function MissionBanner({
       {/* 카드 = 형제 Pressable 2개 — 버튼 안 버튼 중첩은 웹에서 hydration
           경고를 내므로(button-in-button) 이동·건너뛰기를 나란히 둔다. */}
       {/* 카드는 글래스 면 (#1050 후속) — 방·집 위에 뜨는 배너라 밑이 비친다. */}
-      <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.card}>
-        <Pressable
-          onPress={onPress}
-          accessibilityRole="button"
-          accessibilityLabel={tr('house.missionBanner.a11y', { n: stepIndex + 1, label })}
-          style={({ pressed }) => [styles.goArea, pressed && pressedStyle('dim', t)]}>
-          <MissionFlagPictogram size={26} />
-          <View style={styles.texts}>
-            {/* 탭 어포던스 (#571 후속) — 배너가 실행 화면으로 데려다주는
-                다리인데 눌러도 된다는 표시가 없었다. 기존 줄에 병합해
-                배너 높이는 그대로. */}
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              {tr('house.missionBanner.progress', { n: stepIndex + 1, total: totalSteps })}
-            </Text>
-            <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
-              {label}
-            </Text>
-          </View>
-        </Pressable>
-        {canSkip ? (
+      {/* 코치마크 대상 — 하단 탭이 없는 화면(뽑기 등)에서는 튜토리얼이 이 배너를 짚는다. */}
+      <CoachTarget id="mission-banner">
+        <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.card}>
           <Pressable
-            onPress={() => setConfirming(true)}
+            onPress={onPress}
             accessibilityRole="button"
-            accessibilityLabel={tr('house.missionBanner.skipA11y')}
-            hitSlop={8}
-            style={({ pressed }) => pressed && pressedStyle('dim', t)}>
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              {tr('house.missionBanner.skip')}
-            </Text>
+            accessibilityLabel={tr('house.missionBanner.a11y', { n: stepIndex + 1, label })}
+            style={({ pressed }) => [styles.goArea, pressed && pressedStyle('dim', t)]}>
+            <MissionFlagPictogram size={26} />
+            <View style={styles.texts}>
+              {/* 탭 어포던스 (#571 후속) — 배너가 실행 화면으로 데려다주는
+                  다리인데 눌러도 된다는 표시가 없었다. 기존 줄에 병합해
+                  배너 높이는 그대로. */}
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                {tr('house.missionBanner.progress', { n: stepIndex + 1, total: totalSteps })}
+              </Text>
+              <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
+                {label}
+              </Text>
+            </View>
           </Pressable>
-        ) : null}
-      </GlassSurface>
+          {canSkip ? (
+            <Pressable
+              onPress={() => setConfirming(true)}
+              accessibilityRole="button"
+              accessibilityLabel={tr('house.missionBanner.skipA11y')}
+              hitSlop={8}
+              style={({ pressed }) => pressed && pressedStyle('dim', t)}>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                {tr('house.missionBanner.skip')}
+              </Text>
+            </Pressable>
+          ) : null}
+        </GlassSurface>
+      </CoachTarget>
 
       <ConfirmDialog
         visible={confirming}
