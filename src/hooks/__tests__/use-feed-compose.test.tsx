@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { createFeedPost, deleteFeedImage, uploadFeedImage } from '@/api/feed';
 import { ApiError } from '@/api/http';
+import { FEED_MAX_IMAGES } from '@/constants/feed';
 import { useFeedCompose } from '@/hooks/use-feed-compose';
 import { DEMO_FEED_POSTS } from '@/mocks/fixtures';
 import { queryWrapper } from '@/test-utils/query-wrapper';
@@ -179,6 +180,28 @@ describe('useFeedCompose (#1409)', () => {
     expect(result.current.content).toBe('');
     expect(result.current.board).toBe('FREE');
     expect(createFeedPost).not.toHaveBeenCalled();
+  });
+
+  // 비우기(discard)는 다음 렌더에야 반영된다 — 꽉 찬 초안이 남아 있어도 새 사진이 버려지면 안 된다.
+  it('지난 초안이 사진 한도까지 차 있어도 새 사진 한 장으로 시작한다 (#1761 리뷰)', async () => {
+    const { result } = await renderHook(() => useFeedCompose(), { wrapper: queryWrapper() });
+    await act(async () => {
+      result.current.addImages(
+        Array.from({ length: FEED_MAX_IMAGES }, (_, i) => photo(`old-${i}.jpg`)),
+      );
+    });
+    await waitFor(() => expect(result.current.canSubmit).toBe(true));
+    expect(result.current.images).toHaveLength(FEED_MAX_IMAGES);
+
+    await act(async () => {
+      result.current.startPhotoPost(photo('chat-photo.jpg'));
+    });
+    await waitFor(() => expect(result.current.canSubmit).toBe(true));
+    expect(result.current.images).toHaveLength(1);
+    expect(result.current.images[0]).toMatchObject({
+      uri: 'file:///chat-photo.jpg',
+      status: 'done',
+    });
   });
 
   it('올라간 사진을 빼거나 작성을 버리면 서버 업로드도 취소한다', async () => {

@@ -123,10 +123,13 @@ export function useFeedCompose({
     [patchImage, uploadAsync],
   );
 
-  /** 고른 사진 추가 — 조건에 안 맞는 장은 안내만 하고 빼고, 나머지는 곧바로 올린다. */
-  const addImages = useCallback(
-    (picked: PickedLibraryImageWithSize[]) => {
-      const room = FEED_MAX_IMAGES - imagesRef.current.length;
+  /**
+   * 남은 자리(`room`)만큼 사진을 붙인다 — 조건에 안 맞는 장은 안내만 하고 빼고, 나머지는 곧바로
+   * 올린다. 남은 자리는 부르는 쪽이 정한다: 초안을 방금 비운 직후에는 `imagesRef`가 아직 지난
+   * 렌더의 장수를 들고 있어, 여기서 세면 꽉 찬 초안 뒤의 새 사진이 조용히 버려진다 (#1761 리뷰).
+   */
+  const appendImages = useCallback(
+    (picked: PickedLibraryImageWithSize[], room: number) => {
       const accepted: FeedDraftImage[] = [];
       let rejection: string | null = null;
       for (const file of picked.slice(0, Math.max(0, room))) {
@@ -145,7 +148,14 @@ export function useFeedCompose({
       setImages((prev) => [...prev, ...accepted]);
       for (const img of accepted) void upload(img.key);
     },
-    [imagesRef, onErrorRef, upload],
+    [onErrorRef, upload],
+  );
+
+  /** 고른 사진 추가 — 지금 초안에 남은 자리까지만 받는다. */
+  const addImages = useCallback(
+    (picked: PickedLibraryImageWithSize[]) =>
+      appendImages(picked, FEED_MAX_IMAGES - imagesRef.current.length),
+    [appendImages, imagesRef],
   );
 
   const retryImage = useCallback((key: string) => void upload(key), [upload]);
@@ -202,13 +212,14 @@ export function useFeedCompose({
   /**
    * 사진 한 장으로 글 시작 (2026-11-11 — 채팅 사진의 [피드에 올리기]). 빈 초안에서 시작해 그 사진을
    * 곧바로 올린다. 자동으로 게시하지 않는다 — 사용자가 본문을 쓰고 직접 [올리기]를 누른다.
+   * 방금 비운 초안이라 남은 자리는 한도 전체다.
    */
   const startPhotoPost = useCallback(
     (file: PickedLibraryImageWithSize) => {
       discard();
-      addImages([file]);
+      appendImages([file], FEED_MAX_IMAGES);
     },
-    [discard, addImages],
+    [discard, appendImages],
   );
 
   /** 게시 — 성공하면 새 글, 아니면 null(안내는 onError). */
