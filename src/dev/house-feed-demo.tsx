@@ -249,7 +249,7 @@ const RAIL_HOUSE: House = {
   ],
 };
 
-/** 집 화면 레일 — 채팅 아래 '집 피드', 그 아래 집 추가. */
+/** 집 화면 레일 — 채팅 아래 '집 피드', 그 아래 집 탐색. */
 export function HouseFeedRailDemo() {
   return (
     <View style={{ height: 760, alignSelf: 'stretch' }}>

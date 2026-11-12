@@ -39,7 +39,7 @@ describe('HouseScreen — 레일 채팅', () => {
 });
 
 describe('HouseScreen — 레일 집 피드', () => {
-  it('onOpenFeed가 있으면 채팅 아래·집 추가 위에 집 피드가 뜨고, 누르면 연다', async () => {
+  it('onOpenFeed가 있으면 채팅 아래·집 탐색 위에 집 피드가 뜨고, 누르면 연다', async () => {
     const onOpenFeed = jest.fn();
     const ui = await render(
       <HouseScreen houses={[MISSION_HOUSE]} onOpenChat={() => {}} onOpenFeed={onOpenFeed} />,
@@ -47,8 +47,8 @@ describe('HouseScreen — 레일 집 피드', () => {
     const labels = ui
       .getAllByRole('button')
       .map((b) => b.props.accessibilityLabel as string | undefined)
-      .filter((l): l is string => !!l && /^(집 채팅|집 피드|집 추가)/.test(l));
-    expect(labels).toEqual(['집 채팅', '집 피드', '집 추가']);
+      .filter((l): l is string => !!l && /^(집 채팅|집 피드|집 탐색)/.test(l));
+    expect(labels).toEqual(['집 채팅', '집 피드', '집 탐색']);
     await fireEvent.press(ui.getByLabelText('집 피드'));
     expect(onOpenFeed).toHaveBeenCalledTimes(1);
   });
