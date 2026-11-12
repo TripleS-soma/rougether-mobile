@@ -11,6 +11,9 @@ import type {
   WalletResponse,
 } from './types';
 
+/** Optional account withdrawal feedback; omitted answers never prevent withdrawal. */
+export type WithdrawalReason = 'INCONVENIENT' | 'MISSING_FEATURE' | 'OTHER';
+
 // Single-flight /me — concurrent boot callers share one in-flight request.
 let meInFlight: Promise<MeResponse> | null = null;
 
@@ -61,8 +64,8 @@ export function updatePreferences(body: MemberPreferencesRequest) {
  * 커밋 후 카카오 unlink·애플 revoke를 best-effort로 호출한다. 204 응답.
  * 재로그인은 새 계정 신규 가입이 된다(기존 데이터 미복원).
  */
-export function deleteMe() {
-  return apiDelete<void>('/me');
+export function deleteMe(reason?: WithdrawalReason) {
+  return apiDelete<void>('/me', reason ? { reason } : undefined);
 }
 
 /**

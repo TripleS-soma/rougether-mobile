@@ -427,7 +427,7 @@ export const memberEntries: GalleryEntry[] = [
   {
     name: 'SettingsScreen',
     description:
-      '내 정보의 서브화면 (#1088): 디자인(다크모드·테마·폰트)·알림·기타·로그아웃·회원탈퇴. 업데이트 카드는 #1095에서 뺐다.',
+      '내 정보의 서브화면 (#1088): 디자인·알림·기타·로그아웃·회원탈퇴. 탈퇴 확인창에서 사유를 선택하거나 건너뛸 수 있다 (#1768).',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <SettingsScreen onBack={() => {}} onRateApp={() => {}} />

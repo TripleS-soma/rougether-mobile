@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import type { WithdrawalReason } from '@/api/me';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import { Linking, Platform } from 'react-native';
@@ -145,13 +146,16 @@ export function useSettingsSurface({
     // Clearing the session flips auth status → AppRoot redirects to /login.
     void logout();
   }, [logout]);
-  const handleWithdraw = useCallback(() => {
-    // 성공 시 status가 guest로 바뀌어 AppRoot가 로그인으로 보낸다 (#547).
-    void withdraw().then((ok) => {
-      if (ok) toast(tr('app.settingsToast.withdrawDone'));
-      else toast(tr('app.settingsToast.withdrawFailed'), 'error');
-    });
-  }, [withdraw, toast, tr]);
+  const handleWithdraw = useCallback(
+    (reason?: WithdrawalReason) => {
+      // 성공 시 status가 guest로 바뀌어 AppRoot가 로그인으로 보낸다 (#547).
+      void withdraw(reason).then((ok) => {
+        if (ok) toast(tr('app.settingsToast.withdrawDone'));
+        else toast(tr('app.settingsToast.withdrawFailed'), 'error');
+      });
+    },
+    [withdraw, toast, tr],
+  );
 
   // 외부 링크 — 핸들러 없는 기기(메일 앱 미설정 등)에서 reject되므로 토스트로 안내.
   const openSupportMail = useCallback(() => {
