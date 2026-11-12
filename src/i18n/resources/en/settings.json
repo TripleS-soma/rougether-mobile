@@ -31,6 +31,13 @@
     "withdrawConfirmBody": "All routines, records, and your profile will be deleted and can't be recovered. Logging in again with the same account starts fresh.",
     "withdrawConfirmLabel": "Delete",
     "withdrawConfirmA11y": "Confirm account deletion",
+    "withdrawReasonTitle": "Why are you leaving? (optional)",
+    "withdrawReasonHint": "You can delete your account without choosing a reason.",
+    "withdrawReasonOptions": {
+      "INCONVENIENT": "The app is difficult to use",
+      "MISSING_FEATURE": "Features I want are missing",
+      "OTHER": "Other"
+    },
     "themeName": {
       "cozy": "Cozy",
       "latte": "Latte",

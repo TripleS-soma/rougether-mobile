@@ -45,7 +45,7 @@ afterEach(async () => {
 });
 
 it('normalizes a malformed list and bounds polling when no receipt ever arrives', async () => {
-  jest.useFakeTimers();
+  jest.useFakeTimers({ now: PEPERO_START + 60_000 });
   global.fetch = jest.fn(async () => jsonRes({})) as unknown as typeof fetch;
   const e = env();
   const { result } = await renderHook(() => usePeperoGift({ enabled: true }), {

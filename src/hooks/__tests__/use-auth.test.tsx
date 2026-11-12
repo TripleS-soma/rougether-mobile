@@ -330,8 +330,8 @@ describe('AuthProvider — 회원탈퇴', () => {
     <AuthProvider>{children}</AuthProvider>
   );
 
-  it('성공: DELETE /me 후 세션이 지워지고 guest가 된다', async () => {
-    const fetchMock = jest.fn(async (url: string, init?: { method?: string }) => {
+  it('성공: 선택 사유를 DELETE /me에 보내고 세션이 지워져 guest가 된다', async () => {
+    const fetchMock = jest.fn(async (url: string, init?: { method?: string; body?: string }) => {
       if (init?.method === 'DELETE') return res(204);
       return res(200, { userId: 1, accessToken: 'a1', refreshToken: 'r1' });
     });
@@ -344,7 +344,7 @@ describe('AuthProvider — 회원탈퇴', () => {
 
     let ok = false;
     await act(async () => {
-      ok = await result.current.withdraw();
+      ok = await result.current.withdraw('INCONVENIENT');
     });
     expect(ok).toBe(true);
     expect(result.current.status).toBe('guest');
@@ -352,6 +352,7 @@ describe('AuthProvider — 회원탈퇴', () => {
       ([, init]) => (init as { method?: string })?.method === 'DELETE',
     );
     expect(String(deleteCall?.[0])).toContain('/me');
+    expect(deleteCall?.[1]?.body).toBe(JSON.stringify({ reason: 'INCONVENIENT' }));
   });
 
   it('성공: 계정 파생 로컬 데이터를 남김없이 지운다 (#922)', async () => {

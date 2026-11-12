@@ -2,6 +2,7 @@ import { memo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import type { WithdrawalReason } from '@/api/me';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { ListRow } from '@/components/ui/list-row';
@@ -89,7 +90,7 @@ export type SettingsScreenProps = ScrollRestoreProps & {
    * 회원탈퇴 (#547) — 확인 다이얼로그를 통과했을 때만 호출된다. 성공/실패
    * 처리(토스트·화면 전환)는 셸 몫.
    */
-  onWithdraw?: () => void;
+  onWithdraw?: (reason?: WithdrawalReason) => void;
 };
 
 /**
@@ -142,6 +143,7 @@ export const SettingsScreen = memo(function SettingsScreen({
   const [confirmLogout, setConfirmLogout] = useState(false);
   // 회원탈퇴는 복구 불가 — 파괴 확인 다이얼로그 뒤에만 (#547).
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
+  const [withdrawalReason, setWithdrawalReason] = useState<WithdrawalReason>();
   const currentFontName = FONT_OPTIONS.find((o) => o.id === fontId)?.name ?? '';
   const currentTheme = THEME_OPTIONS.find((o) => o.id === themeId);
   const currentLanguageName = LANGUAGE_OPTIONS.find((o) => o.id === language)?.name ?? '';
@@ -452,7 +454,10 @@ export const SettingsScreen = memo(function SettingsScreen({
             직전의 textDisabled는 대비 2.3:1인 데다 "비활성"으로도 읽혀서
             눌리는 링크인데 못 누르는 것처럼 보였다. */}
         <Pressable
-          onPress={() => setConfirmWithdraw(true)}
+          onPress={() => {
+            setWithdrawalReason(undefined);
+            setConfirmWithdraw(true);
+          }}
           accessibilityRole="button"
           accessibilityLabel={tr('settings.withdraw')}
           style={({ pressed }) => [styles.withdrawLink, pressed && pressedStyle('dim', t)]}>
@@ -471,10 +476,47 @@ export const SettingsScreen = memo(function SettingsScreen({
         destructive
         onConfirm={() => {
           setConfirmWithdraw(false);
-          onWithdraw?.();
+          onWithdraw?.(withdrawalReason);
         }}
-        onCancel={() => setConfirmWithdraw(false)}
-      />
+        onCancel={() => setConfirmWithdraw(false)}>
+        <View
+          style={styles.withdrawalReasons}
+          accessibilityRole="radiogroup"
+          accessibilityLabel={tr('settings.withdrawReasonTitle')}>
+          <Text style={[Typography.label, { color: t.text }]}>
+            {tr('settings.withdrawReasonTitle')}
+          </Text>
+          <Text style={[Typography.supporting, { color: t.textMuted }]}>
+            {tr('settings.withdrawReasonHint')}
+          </Text>
+          {(['INCONVENIENT', 'MISSING_FEATURE', 'OTHER'] as const).map((reason) => (
+            <Pressable
+              key={reason}
+              accessibilityRole="radio"
+              aria-checked={withdrawalReason === reason}
+              accessibilityState={{ checked: withdrawalReason === reason }}
+              accessibilityLabel={tr(`settings.withdrawReasonOptions.${reason}`)}
+              onPress={() =>
+                setWithdrawalReason((current) => (current === reason ? undefined : reason))
+              }
+              style={({ pressed }) => [
+                styles.withdrawalReason,
+                {
+                  borderColor: withdrawalReason === reason ? t.primary : t.border,
+                  backgroundColor: t.surfaceMuted,
+                },
+                pressed && pressedStyle('dim', t),
+              ]}>
+              <Text style={[Typography.label, { color: t.text }]}>
+                {tr(`settings.withdrawReasonOptions.${reason}`)}
+              </Text>
+              {withdrawalReason === reason ? (
+                <Icon name="check" size={16} color={t.primary} />
+              ) : null}
+            </Pressable>
+          ))}
+        </View>
+      </ConfirmDialog>
 
       <ConfirmDialog
         visible={confirmLogout}
@@ -494,6 +536,18 @@ export const SettingsScreen = memo(function SettingsScreen({
 });
 
 const styles = StyleSheet.create({
+  withdrawalReasons: {
+    gap: Spacing.two,
+  },
+  withdrawalReason: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three,
+    borderWidth: 1,
+    borderRadius: Radius.md,
+  },
   screen: {
     flex: 1,
   },

@@ -13,6 +13,7 @@ import {
 } from '@/api';
 import type { SocialLoginOptions } from '@/api/auth';
 import type { LoginResponse } from '@/api/types';
+import type { WithdrawalReason } from '@/api/me';
 import { getAppleCredential } from '@/lib/apple-auth';
 import { getGoogleIdToken, signOutGoogle } from '@/lib/google-auth';
 import { getKakaoAccessToken, signOutKakao } from '@/lib/kakao-auth';
@@ -51,7 +52,7 @@ type AuthContextValue = {
    * 정리하고 guest로 전환한다(AppRoot가 로그인 화면으로 보냄). 실패 시 false —
    * 호출부가 에러 문구를 띄운다.
    */
-  withdraw: () => Promise<boolean>;
+  withdraw: (reason?: WithdrawalReason) => Promise<boolean>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -218,11 +219,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await apiLogout();
         setStatus('guest');
       },
-      withdraw: async () => {
+      withdraw: async (reason?: WithdrawalReason) => {
         try {
           // 서버가 토큰 폐기·기기 토큰 삭제·소셜 unlink까지 한 번에 처리하므로
           // 탈퇴 호출이 먼저다(인증 필요) — 이후는 로컬 정리만.
-          await deleteMe();
+          await deleteMe(reason);
         } catch {
           return false;
         }

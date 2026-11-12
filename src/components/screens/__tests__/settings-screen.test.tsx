@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, within } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 
 import { SettingsScreen } from '@/components/screens/settings-screen';
@@ -181,6 +181,37 @@ describe('SettingsScreen 회원탈퇴', () => {
 
     await fireEvent.press(getByLabelText('회원탈퇴 확인'));
     expect(onWithdraw).toHaveBeenCalledTimes(1);
+    expect(onWithdraw).toHaveBeenCalledWith(undefined);
+  });
+
+  it('세 가지 선택지 중 고른 사유는 최종 확인할 때만 전달한다', async () => {
+    const onWithdraw = jest.fn();
+    const ui = await render(<SettingsScreen onWithdraw={onWithdraw} />);
+    await fireEvent.press(ui.getByLabelText('회원탈퇴'));
+    expect(
+      within(ui.getByLabelText('떠나는 이유를 알려주세요 (선택)')).getAllByRole('radio'),
+    ).toHaveLength(3);
+    await fireEvent.press(ui.getByLabelText('사용이 불편해요'));
+    expect(onWithdraw).not.toHaveBeenCalled();
+    expect(ui.getByLabelText('사용이 불편해요').props.accessibilityState.checked).toBe(true);
+    await fireEvent.press(ui.getByLabelText('회원탈퇴 확인'));
+    expect(onWithdraw).toHaveBeenCalledWith('INCONVENIENT');
+  });
+
+  it('선택을 취소하거나 확인창을 다시 열면 미선택으로 탈퇴할 수 있다', async () => {
+    const onWithdraw = jest.fn();
+    const ui = await render(<SettingsScreen onWithdraw={onWithdraw} />);
+    await fireEvent.press(ui.getByLabelText('회원탈퇴'));
+    await fireEvent.press(ui.getByLabelText('기타'));
+    await fireEvent.press(ui.getByLabelText('기타'));
+    expect(ui.getByLabelText('기타').props.accessibilityState.checked).toBe(false);
+    await fireEvent.press(ui.getByLabelText('원하는 기능이 없어요'));
+    await fireEvent.press(ui.getByText('취소'));
+    expect(onWithdraw).not.toHaveBeenCalled();
+    await fireEvent.press(ui.getByLabelText('회원탈퇴'));
+    expect(ui.getByLabelText('원하는 기능이 없어요').props.accessibilityState.checked).toBe(false);
+    await fireEvent.press(ui.getByLabelText('회원탈퇴 확인'));
+    expect(onWithdraw).toHaveBeenCalledWith(undefined);
   });
 
   it('취소하면 콜백 없이 닫힌다', async () => {
