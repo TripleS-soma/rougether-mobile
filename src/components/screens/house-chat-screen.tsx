@@ -30,6 +30,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { weekdayLongLabelKey } from '@/constants/routines';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAndroidKeyboardHeight } from '@/hooks/use-android-keyboard-height';
+import { useIosKeyboardHeight } from '@/hooks/use-ios-keyboard-height';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -168,7 +169,8 @@ export function chatDayLabel(dayIso: string, now: Date = new Date()): string {
  * 오래된 메시지 위에도 — 그 위가 어느 날인지 늘 알 수 있게).
  *
  * 키보드: iOS는 KAV padding, 안드로이드는 엣지투엣지라 창이 안 줄어들어 키보드 높이를
- * 직접 아래 여백으로 준다 (#1326, use-android-keyboard-height).
+ * 직접 아래 여백으로 준다 (#1326, use-android-keyboard-height). iOS 키보드는 홈 인디케이터
+ * 자리까지 덮으므로 떠 있는 동안은 하단 인셋 여백을 뺀다 — 입력줄이 키보드에 붙게.
  */
 export function HouseChatScreen({
   messages = EMPTY,
@@ -207,6 +209,9 @@ export function HouseChatScreen({
   const insets = useSafeAreaInsets();
   const headerInset = useHeaderContentInset();
   const androidKeyboard = useAndroidKeyboardHeight(Platform.OS === 'android');
+  const iosKeyboard = useIosKeyboardHeight(Platform.OS === 'ios');
+  // iOS 키보드가 홈 인디케이터 자리를 덮었으면 그 여백은 이미 KAV padding에 들어 있다.
+  const bottomSafeInset = iosKeyboard > insets.bottom ? 0 : insets.bottom;
   // 길게 눌러 메뉴를 연 메시지의 목록 키와 그 말풍선의 화면 자리.
   const [menu, setMenu] = useState<{ key: string; anchor?: MenuAnchor } | null>(null);
   const menuKey = menu?.key ?? null;
@@ -355,7 +360,7 @@ export function HouseChatScreen({
           // 안드로이드 keyboardDidShow 높이는 ime − 시스템 바다(ReactRootView). 엣지투엣지에선
           // 키보드가 내비바 자리까지 덮으니 하단 인셋을 그대로 두고 그 위에 더한다 — 빼면
           // 내비바 높이만큼 입력칸이 키보드 밑에 깔린다(2026-10-04 갤럭시 제보).
-          bottomInset={insets.bottom + androidKeyboard + Spacing.two}
+          bottomInset={bottomSafeInset + androidKeyboard + Spacing.two}
         />
       </KeyboardAvoidingView>
       <ScreenHeader
