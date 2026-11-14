@@ -24,7 +24,13 @@ import { dismissChatPushes, setForegroundPushFilter } from '@/lib/push-events';
  * 집 채팅 셸 화면 (#1408) — 데이터 훅(소켓·전송·읽음)과 순수 화면을 잇는다. 채팅
  * 화면에 있는 동안만 마운트되므로, 언마운트가 곧 소켓 종료다.
  */
-export function HouseChatPage(props: { houseId: number; houseName?: string; onBack: () => void }) {
+export function HouseChatPage(props: {
+  houseId: number;
+  houseName?: string;
+  onBack: () => void;
+  /** 내 사진을 피드 글로 — 셸이 작성 화면을 연다. */
+  onSharePhoto?: (uri: string) => void;
+}) {
   return <HouseChatRoomPage key={props.houseId} {...props} />;
 }
 
@@ -32,10 +38,12 @@ function HouseChatRoomPage({
   houseId,
   houseName,
   onBack,
+  onSharePhoto,
 }: {
   houseId: number;
   houseName?: string;
   onBack: () => void;
+  onSharePhoto?: (uri: string) => void;
 }) {
   const tr = useT();
   const t = useTokens();
@@ -159,6 +167,7 @@ function HouseChatRoomPage({
         onPickPhoto={() => void pickPhoto()}
         pickingPhoto={picking}
         onReport={setReportId}
+        onSharePhoto={onSharePhoto}
         onRetrySend={chat.retrySend}
         onVisible={chat.reportVisible}
         muted={FEED_ENABLED ? notifications.allMuted : mute.muted}

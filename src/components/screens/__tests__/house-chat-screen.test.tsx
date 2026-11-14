@@ -223,6 +223,29 @@ it('사진 선택 버튼을 누르면 선택 콜백을 부른다', async () => {
   expect(pick).toHaveBeenCalledTimes(1);
 });
 
+// 채팅 사진은 그 집 구성원에게만 보이는 사진이다 — 남이 올린 사진을 피드로 옮길 수 없다.
+it('[피드에 올리기]는 내가 보낸 사진에만 붙는다 (2026-11-11)', async () => {
+  const onSharePhoto = jest.fn();
+  const photos: ChatMessageView[] = [
+    { key: 'p1', sequence: 1, senderUserId: 2, senderNickname: '이웃', content: '', messageType: 'IMAGE', localImageUri: 'file:///tmp/theirs.jpg', createdAt: '2026-11-11T11:30:00Z', unreadCount: 0, status: 'sent' }, // prettier-ignore
+    { key: 'p2', sequence: 2, senderUserId: 1, senderNickname: '나', content: '', messageType: 'IMAGE', localImageUri: 'file:///tmp/mine.jpg', createdAt: '2026-11-11T11:31:00Z', unreadCount: 0, status: 'sent' }, // prettier-ignore
+  ];
+  const screen = await render(
+    <HouseChatScreen messages={photos} myUserId={1} onSharePhoto={onSharePhoto} />,
+  );
+  // 목록은 최신 메시지가 먼저 그려진다(뒤집힌 리스트).
+  const [mine, theirs] = screen.getAllByLabelText('사진 크게 보기');
+
+  await fireEvent.press(theirs);
+  expect(screen.getByTestId('chat-photo-sender')).toHaveTextContent('이웃');
+  expect(screen.queryByLabelText('피드에 올리기')).toBeNull();
+  await fireEvent.press(screen.getByLabelText('닫기'));
+
+  await fireEvent.press(mine);
+  await fireEvent.press(screen.getByLabelText('피드에 올리기'));
+  expect(onSharePhoto).toHaveBeenCalledWith('file:///tmp/mine.jpg');
+});
+
 describe('HouseChatScreen — 이 집 알림 시트 (집 피드)', () => {
   it('onOpenNotifications가 있으면 종은 스위치가 아니라 시트를 여는 버튼', async () => {
     const onOpenNotifications = jest.fn();
