@@ -14,7 +14,7 @@
     "startTabHint": "앱을 열 때 처음 보일 탭 · 다음 실행부터",
     "startTabOption": "시작 화면 {{name}}",
     "themeColor": "테마 색상",
-    "font": "폰트",
+    "font": "글씨",
     "language": "언어",
     "pushNotifications": "푸시 알림",
     "sound": "효과음",
@@ -44,6 +44,12 @@
       "jua": "주아 혼합",
       "suit": "SUIT",
       "system": "시스템 기본"
+    },
+    "fontValue": "{{font}} · {{size}}",
+    "fontSizeName": {
+      "small": "작게",
+      "medium": "보통",
+      "large": "크게"
     }
   },
   "language": {
