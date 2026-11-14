@@ -13,6 +13,7 @@ import Animated, {
 import { PagerGestureContext } from '@/components/ui/pager-scroll-view';
 import { useAppFrame } from '@/hooks/use-app-frame';
 import { PageActiveContext } from '@/hooks/use-page-active';
+import { registerGestureReader } from '@/lib/dead-drag-probe';
 import { SWIPE_CLAIM_DX, SWIPE_FAIL_DY } from '@/utils/gesture';
 
 /** 페이지 스냅 판정 — 폭 대비 이 비율을 넘게 끌면 넘어간다. */
@@ -273,6 +274,21 @@ export function TabPager({
       revealLo,
       revealHi,
     ],
+  );
+
+  // 먹통 드래그 진단 (2026-11-11) — 재발 순간의 페이저 상태(스와이프 래치·잠금·위치)를 내놓는다.
+  // 원인을 고치면 `lib/dead-drag-probe.ts`와 함께 걷어낸다.
+  useEffect(
+    () =>
+      registerGestureReader('pager', () => ({
+        state:
+          `i${indexSV.value}` +
+          ` sw${swiping.value ? 1 : 0}` +
+          ` lk${lock?.value ? 1 : 0}` +
+          ` tx${Math.round(tx.value)}`,
+        motion: `${indexSV.value}:${Math.round(tx.value)}`,
+      })),
+    [indexSV, swiping, lock, tx],
   );
 
   const rowStyle = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }] }));
