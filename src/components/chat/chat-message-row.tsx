@@ -1,5 +1,6 @@
+import { Image } from 'expo-image';
 import { memo, useRef } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type {
   ChatImageResponse,
@@ -177,7 +178,7 @@ export const ChatMessageRow = memo(function ChatMessageRow({
             <Pressable {...longPress}>
               <Image
                 source={emoticon.source}
-                resizeMode="contain"
+                contentFit="contain"
                 style={styles.emoticon}
                 accessibilityLabel={tr('house.chat.emoticons.message', {
                   name: tr(`house.chat.emoticons.labels.${emoticon.labelKey}`),
