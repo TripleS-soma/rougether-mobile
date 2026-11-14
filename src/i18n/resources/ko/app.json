@@ -58,7 +58,8 @@
       "linkFailed": "링크를 열 수 없어요. 잠시 후 다시 시도해 주세요.",
       "importedFailed": "{{imported}}개를 가져왔어요. {{failed}}개는 실패했어요.",
       "importedSkipped": "{{imported}}개를 가져왔어요. {{skipped}}개는 이미 가져온 일정이에요.",
-      "imported": "{{imported}}개를 가져왔어요."
+      "imported": "{{imported}}개를 가져왔어요.",
+      "fontSizeApplied": "글자 크기를 “{{name}}”(으)로 바꿨어요"
     },
     "invite": {
       "alreadyRedeemed": "초대코드는 한 번만 사용할 수 있어요",

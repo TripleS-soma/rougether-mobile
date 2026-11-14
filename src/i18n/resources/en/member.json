@@ -497,8 +497,10 @@
       "optionA11y": "{{name}} theme"
     },
     "font": {
-      "title": "Font",
-      "optionA11y": "{{name}} font"
+      "title": "Text",
+      "optionA11y": "{{name}} font",
+      "sizeTitle": "Text size",
+      "sizeOptionA11y": "Text size {{name}}"
     },
     "myCharacters": {
       "swapFailed": "Couldn't change character",

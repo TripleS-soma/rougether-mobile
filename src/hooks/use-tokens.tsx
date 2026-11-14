@@ -5,11 +5,14 @@ import {
   type BrandFontId,
   DarkThemes,
   DEFAULT_FONT_ID,
+  DEFAULT_FONT_SIZE_ID,
   DEFAULT_THEME_ID,
   DEFAULT_THEME_MODE,
   type EmphasisStyle,
   FONT_OPTIONS,
+  FONT_SIZE_OPTIONS,
   fontEmphasis,
+  type FontSizeId,
   type FontWeightKey,
   type SemanticColors,
   type ThemeId,
@@ -30,6 +33,9 @@ type ThemeControl = {
   /** App font choice (#382) — drives `useTypography()`. */
   fontId: BrandFontId;
   setFontId: (id: BrandFontId) => void;
+  /** 글자 크기 단계 (설정 → 글씨) — `useTypography()`의 크기표를 고른다. */
+  fontSizeId: FontSizeId;
+  setFontSizeId: (id: FontSizeId) => void;
 };
 
 const ThemeContext = createContext<ThemeControl>({
@@ -39,9 +45,11 @@ const ThemeContext = createContext<ThemeControl>({
   setMode: () => {},
   fontId: DEFAULT_FONT_ID,
   setFontId: () => {},
+  fontSizeId: DEFAULT_FONT_SIZE_ID,
+  setFontSizeId: () => {},
 });
 
-/** AsyncStorage key holding {themeId, mode, fontId} so the choice survives restarts. */
+/** AsyncStorage key holding {themeId, mode, fontId, fontSizeId} so the choice survives restarts. */
 const STORAGE_KEY = 'rougether.theme';
 
 /**
@@ -53,16 +61,25 @@ export function BrandThemeProvider({ children }: { children: ReactNode }) {
   const [themeId, setThemeId] = useState<ThemeId>(DEFAULT_THEME_ID);
   const [mode, setMode] = useState<ThemeMode>(DEFAULT_THEME_MODE);
   const [fontId, setFontId] = useState<BrandFontId>(DEFAULT_FONT_ID);
+  const [fontSizeId, setFontSizeId] = useState<FontSizeId>(DEFAULT_FONT_SIZE_ID);
 
   useEffect(() => {
     void AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
       if (!raw) return;
       try {
-        const saved = JSON.parse(raw) as { themeId?: string; mode?: string; fontId?: string };
+        const saved = JSON.parse(raw) as {
+          themeId?: string;
+          mode?: string;
+          fontId?: string;
+          fontSizeId?: string;
+        };
         if (saved.themeId && saved.themeId in Themes) setThemeId(saved.themeId as ThemeId);
         if (saved.mode === 'system' || saved.mode === 'light' || saved.mode === 'dark')
           setMode(saved.mode);
         if (FONT_OPTIONS.some((f) => f.id === saved.fontId)) setFontId(saved.fontId as BrandFontId);
+        // 크기를 고른 적 없는 기존 설치본은 값이 없다 — 기본 단계로 둔다.
+        if (FONT_SIZE_OPTIONS.some((f) => f.id === saved.fontSizeId))
+          setFontSizeId(saved.fontSizeId as FontSizeId);
       } catch {
         // Corrupt entry — fall back to defaults.
       }
@@ -70,26 +87,35 @@ export function BrandThemeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<ThemeControl>(() => {
-    const persist = (next: { themeId: ThemeId; mode: ThemeMode; fontId: BrandFontId }) =>
-      void AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+    const persist = (next: {
+      themeId: ThemeId;
+      mode: ThemeMode;
+      fontId: BrandFontId;
+      fontSizeId: FontSizeId;
+    }) => void AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
     return {
       themeId,
       mode,
       fontId,
+      fontSizeId,
       setThemeId: (id) => {
         setThemeId(id);
-        persist({ themeId: id, mode, fontId });
+        persist({ themeId: id, mode, fontId, fontSizeId });
       },
       setMode: (m) => {
         setMode(m);
-        persist({ themeId, mode: m, fontId });
+        persist({ themeId, mode: m, fontId, fontSizeId });
       },
       setFontId: (id) => {
         setFontId(id);
-        persist({ themeId, mode, fontId: id });
+        persist({ themeId, mode, fontId: id, fontSizeId });
+      },
+      setFontSizeId: (id) => {
+        setFontSizeId(id);
+        persist({ themeId, mode, fontId, fontSizeId: id });
       },
     };
-  }, [themeId, mode, fontId]);
+  }, [themeId, mode, fontId, fontSizeId]);
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
@@ -100,11 +126,13 @@ export function BrandThemeProvider({ children }: { children: ReactNode }) {
 export function BrandThemePreview({
   themeId,
   fontId,
+  fontSizeId,
   mode,
   children,
 }: {
   themeId?: ThemeId;
   fontId?: BrandFontId;
+  fontSizeId?: FontSizeId;
   mode?: ThemeMode;
   children: ReactNode;
 }) {
@@ -114,9 +142,10 @@ export function BrandThemePreview({
       ...parent,
       themeId: themeId ?? parent.themeId,
       fontId: fontId ?? parent.fontId,
+      fontSizeId: fontSizeId ?? parent.fontSizeId,
       mode: mode ?? parent.mode,
     }),
-    [parent, themeId, fontId, mode],
+    [parent, themeId, fontId, fontSizeId, mode],
   );
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
@@ -152,8 +181,8 @@ export function useTokens(): SemanticColors {
  * `Typography.body` etc.
  */
 export function useTypography(): Record<TypeRole, TypeStyle> {
-  const { fontId } = useContext(ThemeContext);
-  return useMemo(() => typographyFor(fontId), [fontId]);
+  const { fontId, fontSizeId } = useContext(ThemeContext);
+  return useMemo(() => typographyFor(fontId, fontSizeId), [fontId, fontSizeId]);
 }
 
 /**

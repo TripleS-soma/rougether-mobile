@@ -477,8 +477,10 @@
       "optionA11y": "{{name}} 테마"
     },
     "font": {
-      "title": "폰트",
-      "optionA11y": "{{name}} 폰트"
+      "title": "글씨",
+      "optionA11y": "{{name}} 폰트",
+      "sizeTitle": "글자 크기",
+      "sizeOptionA11y": "글자 크기 {{name}}"
     },
     "myCharacters": {
       "swapFailed": "캐릭터 교체에 실패했어요",

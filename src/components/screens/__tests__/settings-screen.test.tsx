@@ -110,9 +110,11 @@ describe('SettingsScreen', () => {
     const { getByLabelText, queryByLabelText } = await render(<SettingsScreen fontId="suit" />);
     // 인라인 라디오 칩(#382)은 사라지고 별도 화면으로 갔다.
     expect(queryByLabelText('SUIT 폰트')).toBeNull();
-    expect(getByLabelText('폰트')).toBeTruthy();
+    expect(getByLabelText('글씨')).toBeTruthy();
     // 들어가지 않고도 현재 폰트를 알 수 있다.
-    expect(getByLabelText('폰트')).toHaveTextContent(/SUIT/);
+    expect(getByLabelText('글씨')).toHaveTextContent(/SUIT/);
+    // 글자 크기 단계도 같은 행에 보인다.
+    expect(getByLabelText('글씨')).toHaveTextContent(/보통/);
   });
 
   it('테마 색상도 폰트처럼 현재값을 단다 (#972)', async () => {
@@ -133,7 +135,7 @@ describe('SettingsScreen', () => {
     expect(onOpenTheme).toHaveBeenCalledTimes(1);
     expect(onOpenFont).not.toHaveBeenCalled();
 
-    await fireEvent.press(getByLabelText('폰트'));
+    await fireEvent.press(getByLabelText('글씨'));
     expect(onOpenFont).toHaveBeenCalledTimes(1);
   });
 
