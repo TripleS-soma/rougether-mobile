@@ -29,20 +29,19 @@ export type ChatMessageResponse = BaseMessage & {
   image?: ChatImageResponse | null;
   /** 보낸 순서대로의 사진 전부. 옛 서버는 보내지 않는다. */
   images?: ChatImageResponse[] | null;
-  /** 사진과 함께 보낸 글. 사진만 보냈으면 null. */
+  /** 사진이나 이모티콘과 함께 보낸 글. 첨부만 보냈으면 null. */
   caption?: string | null;
-  /** 이모티콘 메시지의 key — 이 앱은 아직 그리지 않고 `content`의 대체 문구를 보여 준다. */
+  /** Bundled emoticon key; unknown keys retain the server's fallback text. */
   emoticonKey?: string | null;
   reactions?: ChatReaction[] | null;
 };
 export type ChatMessagePage = Omit<BasePage, 'items'> & { items?: ChatMessageResponse[] };
 
-/**
- * 글만 / 사진(1~10장)+선택 글 — 그 밖의 조합은 서버가 400으로 거부한다. 서버 계약에는 이모티콘
- * (`emoticonKey`)도 있지만 이 앱은 아직 보내지 않는다(전용 그림 준비 뒤 추가).
- */
+/** 글, 사진과 설명 글, 이모티콘과 글 중 하나. 사진과 이모티콘은 함께 보내지 않음. */
 export type ChatSendRequest = { clientMessageId: string } & (
-  { content: string; imageIds?: never } | { imageIds: number[]; content?: string }
+  | { content: string; imageIds?: never; emoticonKey?: never }
+  | { imageIds: number[]; content?: string; emoticonKey?: never }
+  | { emoticonKey: string; content?: string; imageIds?: never }
 );
 
 /** 사진 자르기 영역 — 회전 보정 후 사진 기준 0~1 비율. 서버가 이 영역만 남긴다. */

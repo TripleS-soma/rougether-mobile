@@ -60,6 +60,7 @@ const ICON_LABELS = {
   chat: '집 채팅',
   send: '보내기',
   'send-up': '보내기(메신저)',
+  emoticon: '이모티콘',
   share: '공유',
   crop: '사진 자르기',
   'house-feed': '집 피드',

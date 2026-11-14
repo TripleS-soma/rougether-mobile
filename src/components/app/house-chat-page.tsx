@@ -202,6 +202,7 @@ function HouseChatRoomPage({
         loadingOlder={chat.loadingOlder}
         onLoadOlder={chat.loadOlder}
         onSend={sendMessage}
+        onSendEmoticon={chat.sendEmoticon}
         photos={photos}
         onPickPhoto={() => void pickPhoto()}
         pickingPhoto={picking}
