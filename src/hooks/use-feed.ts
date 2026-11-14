@@ -26,6 +26,7 @@ import {
   feedErrorMessage,
   findFeedPost,
   isFeedPostGone,
+  isHouseFeedClosed,
   patchFeedPost,
   removeFeedPost,
 } from '@/hooks/feed-cache';
@@ -167,8 +168,18 @@ export function useFeedActions({ onError }: { onError?: FeedErrorHandler } = {})
 export function useFeed({
   enabled = true,
   board = 'ALL',
+  houseId = null,
   onError,
-}: { enabled?: boolean; board?: FeedBoardFilter; onError?: FeedErrorHandler } = {}) {
+}: {
+  enabled?: boolean;
+  board?: FeedBoardFilter;
+  /**
+   * 집 피드 — 그 집 글만 받는다(`GET /feed/posts?houseId=`). 공개 목록과 쿼리 키가 달라 캐시가
+   * 섞이지 않는다. null이면 종전 공개 피드.
+   */
+  houseId?: number | null;
+  onError?: FeedErrorHandler;
+} = {}) {
   const qc = useQueryClient();
   const userId = getSessionUserId();
   // `MINE`(#1455)은 게시판 무관 내 글 — authorId만 준다.
@@ -177,8 +188,11 @@ export function useFeed({
   const boardType = board === 'FREE' || board === 'VERIFICATION' ? board : undefined;
   // 키는 userId·board로 메모 — 매 렌더 새 배열이면 refresh 참조가 흔들린다 (#539).
   const queryKey = useMemo(
-    () => queryKeys.feed.list(userId, authorId, boardType ?? 'ALL'),
-    [userId, authorId, boardType],
+    () =>
+      houseId != null
+        ? queryKeys.feed.houseList(userId, houseId, boardType ?? 'ALL')
+        : queryKeys.feed.list(userId, authorId, boardType ?? 'ALL'),
+    [userId, authorId, boardType, houseId],
   );
 
   const {
@@ -191,21 +205,33 @@ export function useFeed({
     hasNextPage,
     fetchNextPage,
     refetch,
+    error: queryError,
   } = useInfiniteQuery({
     queryKey,
-    queryFn: ({ pageParam }) =>
-      fetchFeedPosts({
+    queryFn: async ({ pageParam }) => {
+      const page = await fetchFeedPosts({
         cursor: pageParam,
         size: FEED_PAGE_SIZE,
         boardType,
         authorId: authorId ?? undefined,
-      }),
+        ...(houseId != null ? { houseId } : {}),
+      });
+      // 집 피드에는 그 집 글만 — `houseId`를 모르는(배포 전) 서버가 쿼리를 무시하고 공개 글을
+      // 돌려줘도 집 피드에 섞어 보이지 않는다.
+      return houseId != null
+        ? { ...page, items: page.items.filter((p) => p.houseId === houseId) }
+        : page;
+    },
     initialPageParam: undefined as FeedCursor,
     getNextPageParam: (last) =>
       last.hasNext && last.nextCursor != null ? last.nextCursor : undefined,
     select: selectPosts,
     // 세션 id를 모르면 내 글을 물을 수 없다 — 전체 피드로 새지 않게 멈춘다.
     enabled: enabled && (!mine || authorId != null),
+    // 나갔거나 사라진 집은 다시 물어도 같은 답 — 한 번에 접는다(공개 피드는 기본 재시도 그대로).
+    ...(houseId != null
+      ? { retry: (count: number, err: unknown) => !isHouseFeedClosed(err) && count < 1 }
+      : {}),
   });
 
   /** 당겨서 새로고침 — spec: cursor 없이 다시. 이어 붙인 페이지는 버리고 첫 장만 받는다. */
@@ -233,18 +259,21 @@ export function useFeed({
   const loading = enabled && isPending;
   // 첫 페이지 실패만 에러 화면 — 더보기 실패는 기존 목록을 그대로 둔다.
   const error = isError && !isFetchNextPageError && posts.length === 0;
+  // 집 피드: 구성원이 아니거나(나감·강퇴) 집이 사라졌다 — 화면이 안내하고 집 탭으로 돌아간다.
+  const closed = houseId != null && isHouseFeedClosed(queryError);
 
   return useMemo(
     () => ({
       posts,
       loading,
       error,
+      closed,
       loadingMore: isFetchingNextPage,
       hasNext: hasNextPage,
       refresh,
       loadMore,
       ...actions,
     }),
-    [posts, loading, error, isFetchingNextPage, hasNextPage, refresh, loadMore, actions],
+    [posts, loading, error, closed, isFetchingNextPage, hasNextPage, refresh, loadMore, actions],
   );
 }

@@ -33,6 +33,7 @@ import {
   type MyJoinRequestSummary,
   kickHouseMember,
   leaveHouse as apiLeaveHouse,
+  type LeaveHouseOptions,
   previewHouseByCode,
   reissueInviteCode as apiReissueInviteCode,
   rejectHouseJoinRequest,
@@ -43,6 +44,7 @@ import { toHousePreview } from '@/api/adapters';
 import { useToast } from '@/components/ui/toast';
 import { i18n } from '@/i18n';
 import type { House, HouseEditInput } from '@/components/screens/house/types';
+import { clearHouseFeedCache } from '@/hooks/feed-cache';
 import { fetchHouseBundle } from '@/hooks/house-bundle';
 import { useHouseMissions } from '@/hooks/use-house-missions';
 import { useHouseSearch } from '@/hooks/use-house-search';
@@ -435,11 +437,17 @@ export function useHouses() {
     [toast, reloadHouse],
   );
 
-  /** 집 나가기(1인 방장은 집 삭제) — 성공 여부 반환 (연동 루틴 정리 판단, #338). */
+  /**
+   * 집 나가기(1인 방장은 집 삭제) — 성공 여부 반환 (연동 루틴 정리 판단, #338).
+   * `deleteFeedContent`(집 피드)를 주면 이 집 피드에 남긴 내 글·댓글도 서버가 지운다. 나가면
+   * 그 집 글에 접근할 수 없으니 받아 둔 집 피드 캐시는 어느 쪽이든 비운다.
+   */
   const leaveHouse = useCallback(
-    async (houseId: number): Promise<boolean> => {
+    async (houseId: number, options?: LeaveHouseOptions): Promise<boolean> => {
       try {
-        await apiLeaveHouse(houseId);
+        if (options?.deleteFeedContent) await apiLeaveHouse(houseId, { deleteFeedContent: true });
+        else await apiLeaveHouse(houseId);
+        clearHouseFeedCache(queryClient, userId, houseId);
         toast(i18n.t('house.toast.left'));
         await reloadMyHouses();
         return true;
@@ -448,7 +456,7 @@ export function useHouses() {
         return false;
       }
     },
-    [toast, reloadMyHouses],
+    [toast, reloadMyHouses, queryClient, userId],
   );
 
   // 원탭 응원 — 성공하면 서버가 대상에게 푸시를 보낸다 (#329).

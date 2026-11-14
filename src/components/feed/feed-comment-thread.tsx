@@ -20,6 +20,8 @@ type CommentActions = {
   onReply?: (comment: FeedComment) => void;
   onDelete?: (commentId: number) => void;
   onMenu?: (comment: FeedComment) => void;
+  /** 이 댓글에 ⋮를 보일지 — 기본은 남의 댓글 전부. 메뉴에 넣을 항목이 없는 댓글을 거른다. */
+  showMenu?: (comment: FeedComment) => boolean;
   replyDisabled?: boolean;
   now?: Date;
 };
@@ -30,6 +32,7 @@ function CommentRow({
   onReply,
   onDelete,
   onMenu,
+  showMenu,
   replyDisabled,
   now,
 }: CommentActions & {
@@ -94,7 +97,7 @@ function CommentRow({
           </Text>
         </Pressable>
       ) : null}
-      {!comment.mine && onMenu ? (
+      {!comment.mine && onMenu && (showMenu?.(comment) ?? true) ? (
         <Pressable
           onPress={() => onMenu(comment)}
           accessibilityRole="button"

@@ -130,10 +130,45 @@ export function isFeedPostGone(err: unknown): boolean {
   return err instanceof ApiError && err.code === 'FEED_POST_NOT_FOUND';
 }
 
+/**
+ * 나간 집의 피드 캐시를 비운다 (집 피드) — 나가면 그 집 글에 접근할 수 없으니 목록·그 집 글의
+ * 상세와 댓글·새 글 푸시 설정을 통째로 버린다. 공개 글과 다른 집 글은 그대로 둔다.
+ */
+export function clearHouseFeedCache(qc: QueryClient, userId: UserId, houseId: number) {
+  const postIds = new Set<number>();
+  for (const [, data] of qc.getQueriesData<FeedPostPages>({
+    queryKey: queryKeys.feed.houseLists(userId, houseId),
+  })) {
+    for (const page of data?.pages ?? []) for (const p of page.items) postIds.add(p.postId);
+  }
+  // 푸시·알림으로 바로 연 글은 목록에 없다 — 상세 캐시에서도 그 집 글을 찾는다.
+  for (const [, post] of qc.getQueriesData<FeedPost>({ queryKey: queryKeys.feed.posts(userId) })) {
+    if (post?.houseId === houseId) postIds.add(post.postId);
+  }
+  qc.removeQueries({ queryKey: queryKeys.feed.houseLists(userId, houseId) });
+  for (const postId of postIds) {
+    qc.removeQueries({ queryKey: queryKeys.feed.post(userId, postId), exact: true });
+    qc.removeQueries({ queryKey: queryKeys.feed.comments(userId, postId) });
+  }
+  qc.removeQueries({ queryKey: queryKeys.houseFeedNotification(userId, houseId), exact: true });
+}
+
+/** 집 피드가 돌려주는 집 쪽 코드 — `houseId`를 직접 지정한 등록·목록에서만 온다. */
+const HOUSE_FEED_ERROR_CODES: readonly string[] = ['HOUSE_NOT_MEMBER', 'HOUSE_NOT_FOUND'];
+
+/** 이 집의 피드를 더는 볼 수 없는가 — 나갔거나 강퇴됐거나(403) 집이 사라졌다(404). */
+export function isHouseFeedClosed(err: unknown): boolean {
+  return err instanceof ApiError && !!err.code && HOUSE_FEED_ERROR_CODES.includes(err.code);
+}
+
 /** 사용자가 마주칠 수 있는 오류 코드 → 안내 문구. 모르는 코드·네트워크 오류는 일반 문구. */
 export function feedErrorMessage(err: unknown): string {
   const code = err instanceof ApiError ? err.code : undefined;
-  if (code && code.startsWith('FEED_') && i18n.exists(`feed.error.${code}`)) {
+  if (
+    code &&
+    (code.startsWith('FEED_') || HOUSE_FEED_ERROR_CODES.includes(code)) &&
+    i18n.exists(`feed.error.${code}`)
+  ) {
     return i18n.t(`feed.error.${code}`);
   }
   return i18n.t('feed.error.generic');

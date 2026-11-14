@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
+import { Text } from 'react-native';
 import { expect, fn, screen } from 'storybook/test';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -77,5 +78,18 @@ export const ConfirmOnly: Story = {
   },
   play: async () => {
     await waitForDialog();
+  },
+};
+export const WithOption: Story = {
+  name: '선택지 한 줄(children)',
+  args: {
+    title: '집에서 나갈까요?',
+    body: '나가면 이 집과 연동된 루틴·할 일이 함께 삭제돼요.',
+    confirmLabel: '나가기',
+    children: <Text>이 집의 내 글·댓글도 지우기</Text>,
+  },
+  play: async () => {
+    await waitForDialog();
+    await expect(await screen.findByText('이 집의 내 글·댓글도 지우기')).toBeTruthy();
   },
 };

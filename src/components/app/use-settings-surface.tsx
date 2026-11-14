@@ -8,6 +8,7 @@ import { type Screen } from '@/components/app/navigation';
 import { useInviteArrival } from '@/components/app/use-invite-arrival';
 import { SettingsScreen } from '@/components/screens/settings-screen';
 import { BlockedUsersScreen } from '@/components/screens/blocked-users-screen';
+import { FeedbackPage } from '@/components/app/feedback-page';
 import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { HelpScreen } from '@/components/screens/help-screen';
 import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
@@ -27,7 +28,14 @@ import { useLanguage } from '@/hooks/use-language';
 import { type AppLanguage, LANGUAGE_PICKER_ENABLED, useT } from '@/i18n';
 import { ThemeScreen } from '@/components/screens/theme-screen';
 import { useToast } from '@/components/ui/toast';
-import { FONT_OPTIONS, THEME_OPTIONS, type BrandFontId, type ThemeId } from '@/constants/theme';
+import {
+  FONT_OPTIONS,
+  FONT_SIZE_OPTIONS,
+  THEME_OPTIONS,
+  type BrandFontId,
+  type FontSizeId,
+  type ThemeId,
+} from '@/constants/theme';
 import { useCalendarImport } from '@/hooks/use-calendar-import';
 import type { CharacterId } from '@/constants/characters';
 import { MODERATION_ENABLED } from '@/constants/moderation';
@@ -98,7 +106,7 @@ export function useSettingsSurface({
   /** 첫 온보딩 직후 1회 '친구에게 초대받아 오셨나요?' 붙여넣기 시트 (#1007). */
   offerInvitePaste?: boolean;
 }) {
-  const { themeId, setThemeId, mode: themeMode, setMode: setThemeMode, fontId, setFontId } = useBrandTheme(); // prettier-ignore
+  const { themeId, setThemeId, mode: themeMode, setMode: setThemeMode, fontId, setFontId, fontSizeId, setFontSizeId } = useBrandTheme(); // prettier-ignore
   const { show: toast } = useToast();
   // 콜백 deps가 참조하므로 그보다 위에 선언한다 — 아래에 두면 TDZ로 렌더가 죽는다(#1349 리뷰).
   const tr = useT();
@@ -133,6 +141,16 @@ export function useSettingsSurface({
       setScreen('settings');
     },
     [fontId, setFontId, toast, setScreen, tr],
+  );
+  const changeFontSizeId = useCallback(
+    (id: FontSizeId) => {
+      if (id === fontSizeId) return;
+      setFontSizeId(id);
+      const name = FONT_SIZE_OPTIONS.find((o) => o.id === id)?.name;
+      if (name) toast(tr('app.settingsToast.fontSizeApplied', { name }));
+      setScreen('settings');
+    },
+    [fontSizeId, setFontSizeId, toast, setScreen, tr],
   );
   // 캘린더 임포트 상태 (#844) — 권한·조회·임포트를 훅이 쥔다.
   const calendarImport = useCalendarImport();
@@ -307,6 +325,8 @@ export function useSettingsSurface({
     track('rate_app_tap');
     openStorePage({ review: true });
   }, []);
+  const openSuggestions = useCallback(() => setScreen('suggestions'), [setScreen]);
+  const openUpdates = useCallback(() => setScreen('updates'), [setScreen]);
   const openBugReport = useCallback(() => {
     setScreen('bugReport');
     void loadBugReports();
@@ -333,6 +353,8 @@ export function useSettingsSurface({
     onInviteFriends: openInviteFriends,
     onOpenHelp: openHelp,
     onReportBug: openBugReport,
+    onOpenSuggestions: openSuggestions,
+    onOpenUpdates: openUpdates,
   };
 
   // 설정 서브화면의 스크롤 위치 (#763) — 테마·폰트·알림에 다녀오면 설정 화면이
@@ -353,6 +375,7 @@ export function useSettingsSurface({
     onChangeThemeMode: setThemeMode,
     themeId,
     fontId,
+    fontSizeId,
     onOpenFont: openFont,
     onOpenTheme: openTheme,
     language,
@@ -386,7 +409,9 @@ export function useSettingsSurface({
     ) : screen === 'font' ? (
       <FontScreen
         fontId={fontId}
+        fontSizeId={fontSizeId}
         onApplyFont={changeFontId}
+        onApplyFontSize={changeFontSizeId}
         userName={profile.nickname}
         characterId={profile.characterId}
         onBack={backToSettings}
@@ -469,6 +494,8 @@ export function useSettingsSurface({
         onUnblock={(userId) => void handleUnblock(userId)}
         onBack={backToSettings}
       />
+    ) : screen === 'suggestions' || screen === 'updates' ? (
+      <FeedbackPage key={screen} kind={screen} onBack={backToMyPage} />
     ) : screen === 'bugReport' ? (
       <BugReportScreen
         entries={bugReports}

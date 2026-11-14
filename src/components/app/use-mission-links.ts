@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
+import type { LeaveHouseOptions } from '@/api/houses';
 import type { House } from '@/components/screens/house/types';
 import { useToast } from '@/components/ui/toast';
 import { i18n } from '@/i18n';
@@ -65,7 +66,7 @@ export function useMissionLinks({
   deleteRoutine: (id: string) => Promise<unknown>;
   deleteCategoryCascade: (categoryId: string) => Promise<unknown>;
   toggleCompletion: (id: string, date: string) => Promise<CompletionToggleResult | null>;
-  leaveHouse: (houseId: number) => Promise<boolean>;
+  leaveHouse: (houseId: number, options?: LeaveHouseOptions) => Promise<boolean>;
   deleteMission: (houseId: number, missionId: number) => Promise<boolean>;
   applyMissionContribution: (res: HouseMissionContributeResponse) => void;
 }) {
@@ -234,9 +235,11 @@ export function useMissionLinks({
 
   /** 집 나가기/삭제 성공 시 연동 카테고리를 루틴째 통삭제 (#338). */
   const leaveHouseWithLinked = useCallback(
-    async (houseId: number) => {
+    async (houseId: number, options?: LeaveHouseOptions) => {
       const cat = categories.find((c) => c.houseId === houseId);
-      if (!(await leaveHouse(houseId))) return;
+      // 옵션이 없을 땐 인수를 붙이지 않는다 — 종전 호출 모양 그대로.
+      const left = options ? await leaveHouse(houseId, options) : await leaveHouse(houseId);
+      if (!left) return;
       if (!cat) return;
       await deleteCategoryCascade(cat.id);
       toast(i18n.t('house.missionLinks.categoryDeleted'));

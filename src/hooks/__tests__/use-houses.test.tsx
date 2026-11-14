@@ -3,6 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import * as auth from '@/api/auth';
 import { useHouses } from '@/hooks/use-houses';
 import { createQueryClient } from '@/lib/query-client';
+import { queryKeys } from '@/lib/query-keys';
 import { jsonRes as res } from '@/test-utils/fetch';
 import { queryWrapper } from '@/test-utils/query-wrapper';
 
@@ -557,6 +558,64 @@ describe('useHouses — 집 목록 재조회 의미론', () => {
       expect(result.current.houses.find((h) => h.houseId === 1)?.isPublic).toBe(false),
     );
     expect(result.current.houses.find((h) => h.houseId === 2)?.isPublic).not.toBe(false);
+  });
+
+  // 집 피드 — 나가며 내 글·댓글도 지우기.
+  it('나가기는 기본으로 파라미터 없이, 고르면 deleteFeedContent=true로 보낸다', async () => {
+    const state = setUp();
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.houses.length).toBe(2));
+
+    const leaveCalls = () => {
+      const fetchMock = global.fetch as unknown as jest.Mock;
+      return fetchMock.mock.calls
+        .filter(([, init]) => (init as RequestInit | undefined)?.method === 'DELETE')
+        .map(([url]) => String(url));
+    };
+    state.houses = [{ houseId: 1, name: '가' }];
+    await act(async () => {
+      await result.current.leaveHouse(2);
+    });
+    expect(leaveCalls().at(-1)).toMatch(/\/houses\/2\/members\/me$/);
+
+    await act(async () => {
+      await result.current.leaveHouse(1, { deleteFeedContent: true });
+    });
+    expect(leaveCalls().at(-1)).toMatch(/\/houses\/1\/members\/me\?deleteFeedContent=true$/);
+
+    await act(async () => {
+      await result.current.leaveHouse(1, { deleteFeedContent: false });
+    });
+    expect(leaveCalls().at(-1)).toMatch(/\/houses\/1\/members\/me$/);
+  });
+
+  it('집을 나가면 받아 둔 그 집 피드 캐시를 비운다 — 다른 집·공개 목록은 그대로', async () => {
+    const state = setUp();
+    const client = createQueryClient();
+    const { result } = await renderHook(() => useHouses(), { wrapper: queryWrapper(client) });
+    await waitFor(() => expect(result.current.houses.length).toBe(2));
+    const userId = auth.getSessionUserId();
+    const page = (postId: number, houseId: number | null) => ({
+      pages: [{ items: [{ postId, houseId }], hasNext: false }],
+      pageParams: [undefined],
+    });
+    client.setQueryData(queryKeys.feed.houseList(userId, 2, 'ALL'), page(900, 2));
+    client.setQueryData(queryKeys.feed.houseList(userId, 2, 'FREE'), page(900, 2));
+    client.setQueryData(queryKeys.feed.houseList(userId, 1, 'ALL'), page(800, 1));
+    client.setQueryData(queryKeys.feed.list(userId, null, 'ALL'), page(700, null));
+    client.setQueryData(queryKeys.feed.post(userId, 900), { postId: 900, houseId: 2 });
+    client.setQueryData(queryKeys.houseFeedNotification(userId, 2), { houseId: 2 });
+
+    state.houses = [{ houseId: 1, name: '가' }];
+    await act(async () => {
+      await result.current.leaveHouse(2);
+    });
+    expect(client.getQueryData(queryKeys.feed.houseList(userId, 2, 'ALL'))).toBeUndefined();
+    expect(client.getQueryData(queryKeys.feed.houseList(userId, 2, 'FREE'))).toBeUndefined();
+    expect(client.getQueryData(queryKeys.feed.post(userId, 900))).toBeUndefined();
+    expect(client.getQueryData(queryKeys.houseFeedNotification(userId, 2))).toBeUndefined();
+    expect(client.getQueryData(queryKeys.feed.houseList(userId, 1, 'ALL'))).toBeDefined();
+    expect(client.getQueryData(queryKeys.feed.list(userId, null, 'ALL'))).toBeDefined();
   });
 
   it('집을 나가면 목록을 다시 받아 그 집이 빠진다', async () => {

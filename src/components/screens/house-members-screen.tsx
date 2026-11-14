@@ -81,8 +81,17 @@ export type HouseMembersScreenProps = {
    * undefined면 아직 모름(조회 전·실패): 토글은 꺼진 채 열리고 안 건드리면 보내지 않는다.
    */
   autoJoinEnabled?: boolean;
-  /** Leave the current house via the API. */
-  onLeaveHouse?: (houseId: number) => void;
+  /**
+   * Leave the current house via the API. 나가기 확인에서 "내 글과 댓글도 지우기"를 고르면 둘째
+   * 인수로 `{ deleteFeedContent: true }`가 온다 — 고르지 않으면 인수 없이 종전대로.
+   */
+  onLeaveHouse?: (houseId: number, options?: { deleteFeedContent: boolean }) => void;
+  /**
+   * 나가기 확인에 "이 집의 내 글·댓글도 지우기" 체크박스를 둔다 (집 피드) — 셸이
+   * 피드가 켜진 설치본(FEED_ENABLED)에서만 켠다. 기본은 꺼짐. 혼자 남은 방장의 '집 삭제'에는
+   * 그리지 않는다(집이 해체되면 서버가 집 글을 모두 지운다).
+   */
+  feedCleanupOption?: boolean;
   /** After a confirmed leave — the parent closes this sub-view. */
   onLeaveDone: () => void;
 };
@@ -112,6 +121,7 @@ export function HouseMembersScreen({
   onUpdateHouse,
   autoJoinEnabled,
   onLeaveHouse,
+  feedCleanupOption = false,
   onLeaveDone,
 }: HouseMembersScreenProps) {
   const t = useTokens();
@@ -220,8 +230,22 @@ export function HouseMembersScreen({
   // 혼자 남은 방장은 위임 상대가 없어 바로 탈퇴할 수 있고, 마지막 구성원이
   // 나가면 집이 정리된다(서버 계약) — 버튼을 '집 삭제'로 정직하게 표기 (#309).
   const isLoneOwner = isOwner && members.filter((m) => !isKicked(m.name)).length <= 1;
+  // 나가며 내 글·댓글도 지울지 (집 피드) — 나간 뒤에는 직접 지울 수 없어 이때 한 번 고른다.
+  const showFeedCleanup = feedCleanupOption && !isLoneOwner;
+  const [deleteFeedContent, setDeleteFeedContent] = useState(false);
+  const openLeaveConfirm = () => {
+    // 열 때마다 꺼진 채로 — 지난번에 켰다가 취소한 선택이 남아 있지 않게.
+    setDeleteFeedContent(false);
+    setShowLeaveConfirm(true);
+  };
   const confirmLeave = () => {
-    if (currentHouse.houseId) onLeaveHouse?.(currentHouse.houseId);
+    if (currentHouse.houseId) {
+      if (showFeedCleanup && deleteFeedContent) {
+        onLeaveHouse?.(currentHouse.houseId, { deleteFeedContent: true });
+      } else {
+        onLeaveHouse?.(currentHouse.houseId);
+      }
+    }
     setShowLeaveConfirm(false);
     onLeaveDone();
   };
@@ -554,7 +578,7 @@ export function HouseMembersScreen({
               </Text>
             ) : (
               <Pressable
-                onPress={() => setShowLeaveConfirm(true)}
+                onPress={openLeaveConfirm}
                 accessibilityRole="button"
                 accessibilityLabel={
                   isLoneOwner ? tr('house.members.deleteHouse') : tr('house.members.leaveHouse')
@@ -617,8 +641,41 @@ export function HouseMembersScreen({
         cancelAccessibilityLabel={tr('house.members.leaveConfirm.cancelA11y')}
         destructive
         onConfirm={confirmLeave}
-        onCancel={() => setShowLeaveConfirm(false)}
-      />
+        onCancel={() => setShowLeaveConfirm(false)}>
+        {showFeedCleanup ? (
+          <Pressable
+            onPress={() => setDeleteFeedContent((v) => !v)}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: deleteFeedContent }}
+            aria-checked={deleteFeedContent}
+            accessibilityLabel={tr('house.members.leaveConfirm.deleteFeed')}
+            accessibilityHint={tr('house.members.leaveConfirm.deleteFeedHint')}
+            testID="leave-delete-feed"
+            style={({ pressed }) => [
+              styles.leaveOption,
+              { backgroundColor: t.surfaceMuted },
+              pressed && pressedStyle('dim', t),
+            ]}>
+            <View
+              style={[
+                styles.leaveCheck,
+                deleteFeedContent
+                  ? { backgroundColor: t.primary, borderColor: t.primary }
+                  : { backgroundColor: t.surface, borderColor: t.textDisabled },
+              ]}>
+              {deleteFeedContent ? <Icon name="check" size={14} color={t.onPrimary} /> : null}
+            </View>
+            <View style={styles.leaveOptionText}>
+              <Text style={[Typography.label, { color: t.text }]}>
+                {tr('house.members.leaveConfirm.deleteFeed')}
+              </Text>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                {tr('house.members.leaveConfirm.deleteFeedHint')}
+              </Text>
+            </View>
+          </Pressable>
+        ) : null}
+      </ConfirmDialog>
 
       <ConfirmDialog
         visible={memberToKick != null}
@@ -832,7 +889,31 @@ export function HouseMembersScreen({
   );
 }
 
+const LEAVE_CHECK_SIZE = 20;
+
 const styles = StyleSheet.create({
+  leaveOption: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.two,
+    padding: Spacing.three,
+    borderRadius: Radius.md,
+    borderCurve: 'continuous',
+  },
+  leaveCheck: {
+    width: LEAVE_CHECK_SIZE,
+    height: LEAVE_CHECK_SIZE,
+    marginTop: 1,
+    borderRadius: Radius.sm,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  leaveOptionText: {
+    flex: 1,
+    gap: Spacing.half,
+  },
   screen: {
     flex: 1,
   },

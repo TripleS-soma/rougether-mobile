@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { pressedStyle } from '@/components/ui/press-feedback';
@@ -17,6 +18,11 @@ export type ConfirmDialogProps = {
   cancelLabel?: string | null;
   /** a11y label of the cancel button when it differs from the caption (예: '재발급 취소'). */
   cancelAccessibilityLabel?: string;
+  /**
+   * 본문과 버튼 사이의 추가 내용 — 확정과 함께 고르는 선택지 한 줄(예: 집을 나가며 "내 글도
+   * 지우기" 체크박스). 버튼이 셋 이상이거나 입력 폼이면 화면 전용 다이얼로그를 쓴다.
+   */
+  children?: ReactNode;
   /** Confirm button takes the danger fill (삭제·로그아웃·나가기). */
   destructive?: boolean;
   onConfirm: () => void;
@@ -36,6 +42,7 @@ export function ConfirmDialog({
   confirmAccessibilityLabel,
   cancelLabel,
   cancelAccessibilityLabel,
+  children,
   destructive,
   onConfirm,
   onCancel,
@@ -57,6 +64,7 @@ export function ConfirmDialog({
         <Pressable style={[styles.card, { backgroundColor: t.screen }]}>
           <Text style={[Typography.h3, { color: t.text }]}>{title}</Text>
           <Text style={[Typography.body, styles.body, { color: t.textMuted }]}>{body}</Text>
+          {children}
           <View style={styles.btns}>
             {cancelLabel !== null ? (
               <Pressable

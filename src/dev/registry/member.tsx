@@ -18,6 +18,7 @@ import type {
   FeedRoutineCompletion,
 } from '@/components/screens/feed/types';
 import { FeedRoutinePicker } from '@/components/feed/feed-routine';
+import { FeedbackScreen } from '@/components/screens/feedback-screen';
 import { MyPageScreen } from '@/components/screens/my-page-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
 import { OnboardingHouseScreen } from '@/components/screens/onboarding-house-screen';
@@ -299,6 +300,28 @@ function AppUpdateSheetDemo() {
 
 export const memberEntries: GalleryEntry[] = [
   {
+    name: 'Suggestions',
+    description: '내 정보 → 건의하기',
+    render: () => <FeedbackScreen kind="suggestions" onSubmit={async () => {}} />,
+  },
+  {
+    name: 'Updates',
+    description: '내 정보 → 업데이트',
+    render: () => (
+      <FeedbackScreen
+        kind="updates"
+        entries={[
+          {
+            id: 1,
+            title: '사진으로 더 가까워진 우리 집',
+            content: '채팅에서 사진을 보내고 함께 이야기를 나눠보세요.',
+            createdAt: '2026-11-11T11:00:00Z',
+          },
+        ]}
+      />
+    ),
+  },
+  {
     name: 'LoginScreen',
     description:
       'Ported from the prototype AuthScreen (#2). Preview at fixed height, 최근 로그인 배지는 카카오에.',
@@ -428,7 +451,8 @@ export const memberEntries: GalleryEntry[] = [
   },
   {
     name: 'FontScreen',
-    description: '설정 → 폰트 (#750): 라이브 미리보기 + 글자 스와치로 폰트 5종 선택.',
+    description:
+      '설정 → 글씨 (#750): 라이브 미리보기 + 글자 크기 3단계(작게·보통·크게) + 글자 스와치로 폰트 5종 선택.',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <FontScreen />

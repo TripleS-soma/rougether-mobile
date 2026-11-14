@@ -31,14 +31,31 @@ describe('backTargetFor (#564)', () => {
     expect(backTargetFor('houseSearch', 'routineManage', false)).toBe('house');
   });
 
+  it('집 피드는 집 탭으로, 그 상세·작성은 집 피드 목록으로 (공개 피드와 따로)', () => {
+    expect(backTargetFor('houseFeed', 'routineManage', false)).toBe('house');
+    expect(backTargetFor('houseFeedPost', 'routineManage', false)).toBe('houseFeed');
+    expect(backTargetFor('houseFeedCompose', 'routineManage', false)).toBe('houseFeed');
+    // 공개 피드의 상세·작성은 종전대로 피드 탭으로.
+    expect(backTargetFor('feedPost', 'routineManage', false)).toBe('feed');
+    expect(backTargetFor('feedCompose', 'routineManage', false)).toBe('feed');
+  });
+
   it('루트(나의 방)는 목적지 없음', () => {
     expect(backTargetFor('myRoom', 'routineManage', false)).toBeNull();
   });
 
   it('전폭 스와이프 백 제외 화면 — 가로 제스처를 쓰는 곳만 (#1135)', () => {
     expect([...FULL_SWIPE_BACK_EXCLUDED].sort()).toEqual(
-      // calendarWeek: 좌우 스와이프가 주 이동 (#1327). feedPost: 사진 가로 넘김 (#1409).
-      ['addRoutine', 'decor', 'friendRoom', 'gacha', 'calendarWeek', 'feedPost'].sort(),
+      // calendarWeek: 좌우 스와이프가 주 이동 (#1327). feedPost·houseFeedPost: 사진 가로 넘김.
+      [
+        'addRoutine',
+        'decor',
+        'friendRoom',
+        'gacha',
+        'calendarWeek',
+        'feedPost',
+        'houseFeedPost',
+      ].sort(),
     );
     // 설정·도움말 같은 세로 화면은 어디서나 우향 스와이프로 뒤로.
     expect(FULL_SWIPE_BACK_EXCLUDED.has('settings')).toBe(false);

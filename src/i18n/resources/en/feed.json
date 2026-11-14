@@ -55,7 +55,15 @@
       "moreReplies": "More replies",
       "repliesLoadError": "Could not load replies.",
       "noReplies": "No replies yet.",
-      "deletedComment": "This comment was deleted."
+      "deletedComment": "This comment was deleted.",
+      "ownerDeletePost": "Delete post",
+      "ownerDeletePostA11y": "Delete post as house owner",
+      "ownerDeletePostTitle": "Delete this post?",
+      "ownerDeletePostBody": "As the house owner you're deleting {{name}}'s post. Its photos and comments will be gone for good.",
+      "ownerDeleteComment": "Delete comment",
+      "ownerDeleteCommentA11y": "Delete comment as house owner",
+      "ownerDeleteCommentTitle": "Delete this comment?",
+      "ownerDeleteCommentBody": "As the house owner you're deleting {{name}}'s comment. This can't be undone."
     },
     "compose": {
       "title": "New post",
@@ -83,7 +91,8 @@
     "toast": {
       "posted": "Your post is up.",
       "deleted": "Post deleted.",
-      "postGone": "This post was deleted. Back to the feed."
+      "postGone": "This post was deleted. Back to the feed.",
+      "postedToHouse": "Posted to the {{name}} feed. Only house members can see it."
     },
     "error": {
       "FEED_INPUT_INVALID": "Please check what you entered.",
@@ -100,7 +109,9 @@
       "generic": "Something went wrong. Please try again later.",
       "FEED_ROUTINE_COMPLETION_REQUIRED": "Pick a routine to verify.",
       "FEED_ROUTINE_COMPLETION_INVALID": "We couldn't confirm that routine completion. Pick a routine you completed in the last 7 days.",
-      "FEED_MINIGAME_RECORD_INVALID": "This record card can't be attached. Please post without it."
+      "FEED_MINIGAME_RECORD_INVALID": "This record card can't be attached. Please post without it.",
+      "HOUSE_NOT_MEMBER": "Only members of this house can post and view here.",
+      "HOUSE_NOT_FOUND": "We couldn't find that house. Please check your houses again."
     },
     "emptyFree": "No free board posts yet.\nStart a conversation!",
     "emptyMine": "You haven't posted yet.\nShare a routine or a moment from your day!",
@@ -168,6 +179,27 @@
       },
       "instantHint": "Your request moves you in right away",
       "approvalHint": "You can move in once the owner approves"
+    },
+    "scope": {
+      "public": "Public",
+      "publicDesc": "Anyone can see it",
+      "house": "Only to {{name}}",
+      "lockedHouse": "Posting to {{name}}",
+      "houseDesc": "Only members of this house can see it. It won't appear in the public feed.",
+      "optionHouseDesc": "Only members of this house can see it",
+      "change": "Change",
+      "changeA11y": "Change where to post, currently {{current}}",
+      "sheetTitle": "Where do you want to post?",
+      "unknownHouse": "My house"
+    },
+    "houseFeed": {
+      "title": "{{name}} feed",
+      "scopeNote": "Only members of this house can see these posts",
+      "empty": "No posts in this house yet.\nBe the first to post!",
+      "emptyFree": "No free posts yet.\nShare the first story!",
+      "emptyVerification": "No proof posts yet.\nShare a routine you finished today!",
+      "closed": "You can't view this house's feed anymore.",
+      "postGone": "This post was deleted or isn't available. Back to the house feed."
     }
   }
 }

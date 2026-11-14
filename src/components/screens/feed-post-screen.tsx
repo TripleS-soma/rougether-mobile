@@ -35,6 +35,7 @@ import type {
   FeedRepliesRenderer,
   FeedRoutineCompletion,
 } from '@/components/screens/feed/types';
+import { Badge } from '@/components/ui/badge';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -59,9 +60,15 @@ const SEND_SIZE = 40;
 const MENU_ICON_SIZE = 40;
 const VERIFICATION_ONLY: readonly FeedBoardType[] = ['VERIFICATION'];
 
-/** 남의 글·댓글 더보기 메뉴의 대상 (#1428). */
-type ModerationTarget =
-  { kind: 'post'; authorId: number } | { kind: 'comment'; commentId: number; authorId: number };
+/**
+ * 남의 글·댓글 더보기 메뉴의 대상 (#1428). `canDelete`는 집 글의 방장이 보는 남의 글·댓글
+ * (서버 `deletable`) — 메뉴 맨 위에 삭제가 생긴다. `authorName`은 그 삭제 확인 문구용.
+ */
+type ModerationTarget = ({ kind: 'post' } | { kind: 'comment'; commentId: number }) & {
+  authorId: number;
+  canDelete?: boolean;
+  authorName?: string;
+};
 
 type ReportResult = Promise<boolean> | boolean;
 
@@ -84,7 +91,10 @@ export type FeedPostScreenProps = {
   onAddComment?: (content: string, replyToCommentId?: number) => Promise<boolean> | boolean;
   onDeleteComment?: (commentId: number) => void;
   onToggleLike?: (postId: number) => void;
-  /** 내 글 삭제(확인 다이얼로그 뒤). */
+  /**
+   * 글 삭제(확인 다이얼로그 뒤) — 내 글, 그리고 집 글의 방장이 보는 남의 글(`post.deletable`).
+   * 방장의 삭제는 더보기 메뉴에서 시작하고 확인 문구가 다르다.
+   */
   onDeletePost?: (postId: number) => void;
   /**
    * 내 글 수정 — 본문과, 바뀐 경우 게시판·연결 루틴(서버 #430). true면 편집 창을 닫는다.
@@ -391,10 +401,15 @@ export function FeedPostScreen({
   const [reportTarget, setReportTarget] = useState<ModerationTarget | null>(null);
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [blockTarget, setBlockTarget] = useState<ModerationTarget | null>(null);
+  // 방장의 삭제 (집 피드) — 더보기 메뉴 → 확인. 내 글·내 댓글의 삭제 경로와는 따로 둔다.
+  const [ownerDeleteTarget, setOwnerDeleteTarget] = useState<ModerationTarget | null>(null);
   const canReportPost = !!onReportPost;
   const canReportComment = !!onReportComment;
   const canBlock = !!onBlockUser;
   const menuCanReport = menuTarget?.kind === 'post' ? canReportPost : canReportComment;
+  const ownerCanDeletePost = !!post && !post.mine && !!post.deletable && !!onDeletePost;
+  const ownerCanDeleteComment = (comment: FeedComment) =>
+    !comment.mine && !!comment.deletable && !!onDeleteComment;
 
   const submitReport = async (reason: ReportReason, detail?: string) => {
     if (!post || !reportTarget || reportSubmitting) return;
@@ -466,9 +481,16 @@ export function FeedPostScreen({
               </Pressable>
             ) : null}
           </View>
-        ) : post && (canReportPost || canBlock) ? (
+        ) : post && (canReportPost || canBlock || ownerCanDeletePost) ? (
           <Pressable
-            onPress={() => setMenuTarget({ kind: 'post', authorId: post.author.userId })}
+            onPress={() =>
+              setMenuTarget({
+                kind: 'post',
+                authorId: post.author.userId,
+                canDelete: ownerCanDeletePost,
+                authorName: feedAuthorName(post.author, tr('feed.anonymous')),
+              })
+            }
             accessibilityRole="button"
             accessibilityLabel={tr('member.moderation.postMenuA11y')}
             hitSlop={Spacing.one}
@@ -608,15 +630,19 @@ export function FeedPostScreen({
               }
               onDelete={onDeleteComment ? setConfirmComment : undefined}
               onMenu={
-                canReportComment || canBlock
+                canReportComment || canBlock || onDeleteComment
                   ? (comment) =>
                       setMenuTarget({
                         kind: 'comment',
                         commentId: comment.commentId,
                         authorId: comment.author.userId,
+                        canDelete: ownerCanDeleteComment(comment),
+                        authorName: feedAuthorName(comment.author, tr('feed.anonymous')),
                       })
                   : undefined
               }
+              // 신고·차단이 없는 곳에서는 방장이 지울 수 있는 댓글에만 ⋮를 보인다(빈 메뉴 방지).
+              showMenu={(comment) => canReportComment || canBlock || ownerCanDeleteComment(comment)}
             />
           )}
         />
@@ -721,6 +747,38 @@ export function FeedPostScreen({
         nativeDrag
         cardStyle={[styles.menuSheet, { backgroundColor: t.screen }]}>
         <SheetHandle />
+        {menuTarget?.canDelete ? (
+          <Pressable
+            onPress={() => {
+              const target = menuTarget;
+              setMenuTarget(null);
+              if (target) setOwnerDeleteTarget(target);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={tr(
+              menuTarget.kind === 'post'
+                ? 'feed.post.ownerDeletePostA11y'
+                : 'feed.post.ownerDeleteCommentA11y',
+            )}
+            testID="feed-owner-delete"
+            style={({ pressed }) => [styles.menuItem, pressed && pressedStyle('row', t)]}>
+            <View style={[styles.menuIcon, { backgroundColor: t.surfaceMuted }]}>
+              <Icon name="trash" size={18} color={t.danger} />
+            </View>
+            <Text style={[Typography.bodyCompact, { color: t.danger }]}>
+              {tr(
+                menuTarget.kind === 'post'
+                  ? 'feed.post.ownerDeletePost'
+                  : 'feed.post.ownerDeleteComment',
+              )}
+            </Text>
+            <Badge
+              label={tr('house.members.owner')}
+              background={t.primarySoft}
+              color={t.primaryText}
+            />
+          </Pressable>
+        ) : null}
         {menuCanReport ? (
           <Pressable
             onPress={() => {
@@ -781,6 +839,35 @@ export function FeedPostScreen({
           const target = blockTarget;
           setBlockTarget(null);
           if (target) onBlockUser?.(target.authorId, target.kind);
+        }}
+      />
+      <ConfirmDialog
+        visible={ownerDeleteTarget !== null}
+        title={tr(
+          ownerDeleteTarget?.kind === 'comment'
+            ? 'feed.post.ownerDeleteCommentTitle'
+            : 'feed.post.ownerDeletePostTitle',
+        )}
+        body={tr(
+          ownerDeleteTarget?.kind === 'comment'
+            ? 'feed.post.ownerDeleteCommentBody'
+            : 'feed.post.ownerDeletePostBody',
+          { name: ownerDeleteTarget?.authorName ?? tr('feed.anonymous') },
+        )}
+        confirmLabel={tr('feed.post.deletePost')}
+        confirmAccessibilityLabel={tr(
+          ownerDeleteTarget?.kind === 'comment'
+            ? 'feed.post.ownerDeleteCommentA11y'
+            : 'feed.post.ownerDeletePostA11y',
+        )}
+        destructive
+        onCancel={() => setOwnerDeleteTarget(null)}
+        onConfirm={() => {
+          const target = ownerDeleteTarget;
+          setOwnerDeleteTarget(null);
+          if (!target) return;
+          if (target.kind === 'comment') onDeleteComment?.(target.commentId);
+          else onDeletePost?.(post.postId);
         }}
       />
       {onEditPost ? (

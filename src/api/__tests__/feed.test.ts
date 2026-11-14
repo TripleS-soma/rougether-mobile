@@ -6,7 +6,9 @@ import {
   fetchFeedReplies,
   fetchFeedPost,
   fetchFeedPosts,
+  fetchHouseFeedNotification,
   updateFeedPost,
+  updateHouseFeedNotification,
 } from '@/api/feed';
 
 const realFetch = global.fetch;
@@ -258,5 +260,85 @@ describe('미니게임 기록 카드 (서버 feat/feed-minigame-record)', () => 
       `${API_BASE}/feed/posts`,
       expect.objectContaining({ method: 'POST', body: JSON.stringify(body) }),
     );
+  });
+});
+
+describe('집 피드 (houseId)', () => {
+  it('집 글 등록은 houseId를 함께 보내고, 응답의 houseId를 읽는다', async () => {
+    const fetchMock = mockResponse({ ...textPost, houseId: 3 }, 201);
+    const body = {
+      clientPostId: '481e86b3-09bd-46ab-82fd-d834a1f3e7fc',
+      boardType: 'FREE' as const,
+      content: '우리 집에만',
+      imageIds: [],
+      houseId: 3,
+    };
+    const post = await createFeedPost(body);
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${API_BASE}/feed/posts`,
+      expect.objectContaining({ method: 'POST', body: JSON.stringify(body) }),
+    );
+    expect(post.houseId).toBe(3);
+  });
+
+  it('집 피드 목록은 houseId 쿼리로, 공개 목록은 houseId 없이', async () => {
+    const fetchMock = mockResponse({ items: [{ ...textPost, houseId: 3 }], hasNext: false });
+    const page = await fetchFeedPosts({ size: 20, boardType: 'FREE', houseId: 3 });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${API_BASE}/feed/posts?size=20&boardType=FREE&houseId=3`,
+      expect.anything(),
+    );
+    expect(page.items[0].houseId).toBe(3);
+
+    await fetchFeedPosts({ size: 20 });
+    expect(fetchMock).toHaveBeenLastCalledWith(`${API_BASE}/feed/posts?size=20`, expect.anything());
+  });
+
+  it('houseId·deletable이 없는(배포 전) 응답은 공개 글·삭제 불가로 읽는다', async () => {
+    mockResponse(textPost);
+    expect(await fetchFeedPost(40)).toMatchObject({ houseId: null, deletable: false });
+    mockResponse({ ...textPost, houseId: null, deletable: true, mine: false });
+    expect(await fetchFeedPost(40)).toMatchObject({ houseId: null, deletable: true });
+  });
+
+  it('댓글의 deletable도 없으면 false', async () => {
+    const comment = { commentId: 9, postId: 40, author: { userId: 8, nickname: '솜이' } };
+    mockResponse({ items: [comment, { ...comment, commentId: 10, deletable: true }] });
+    const page = await fetchFeedComments(40);
+    expect(page.items.map((c) => c.deletable)).toEqual([false, true]);
+  });
+});
+
+describe('집별 새 글 푸시 설정', () => {
+  it('GET은 서버 값을, 빠진 필드는 서버 기본값(자유글 켬·인증글 끔)으로 읽는다', async () => {
+    const fetchMock = mockResponse({ houseId: 3, freePostPush: false, verificationPostPush: true });
+    expect(await fetchHouseFeedNotification(3)).toEqual({
+      houseId: 3,
+      freePostPush: false,
+      verificationPostPush: true,
+    });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${API_BASE}/houses/3/feed/notification`,
+      expect.anything(),
+    );
+    mockResponse({ houseId: 3 });
+    expect(await fetchHouseFeedNotification(3)).toEqual({
+      houseId: 3,
+      freePostPush: true,
+      verificationPostPush: false,
+    });
+  });
+
+  it('PUT은 바꿀 필드만 보낸다', async () => {
+    const fetchMock = mockResponse({ houseId: 3, freePostPush: true, verificationPostPush: true });
+    const saved = await updateHouseFeedNotification(3, { verificationPostPush: true });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${API_BASE}/houses/3/feed/notification`,
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ verificationPostPush: true }),
+      }),
+    );
+    expect(saved.verificationPostPush).toBe(true);
   });
 });

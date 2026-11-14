@@ -213,3 +213,66 @@ describe('useFeed (#1409)', () => {
     });
   });
 });
+
+describe('useFeed — 집 피드 (houseId)', () => {
+  it('집 id로 묻고, 공개 목록과 캐시를 섞지 않는다', async () => {
+    const housePost = { ...DEMO_FEED_POSTS[0], postId: 900, houseId: 3 };
+    jest
+      .mocked(fetchFeedPosts)
+      .mockImplementation(async (query) =>
+        query?.houseId === 3 ? page([housePost]) : page(DEMO_FEED_POSTS),
+      );
+    const wrapper = queryWrapper();
+    const house = await renderHook(() => useFeed({ houseId: 3, board: 'FREE' }), { wrapper });
+    const open = await renderHook(() => useFeed(), { wrapper });
+    await waitFor(() => expect(house.result.current.posts).toHaveLength(1));
+    await waitFor(() => expect(open.result.current.posts).toHaveLength(3));
+
+    expect(fetchFeedPosts).toHaveBeenCalledWith(
+      expect.objectContaining({ houseId: 3, boardType: 'FREE' }),
+    );
+    // 공개 목록 요청에는 houseId가 실리지 않는다.
+    const openCall = jest.mocked(fetchFeedPosts).mock.calls.find(([q]) => q?.houseId == null);
+    expect(openCall?.[0]).not.toHaveProperty('houseId');
+    expect(house.result.current.posts.map((p) => p.postId)).toEqual([900]);
+    expect(open.result.current.posts.some((p) => p.postId === 900)).toBe(false);
+  });
+
+  it('houseId를 모르는 서버가 공개 글을 돌려줘도 집 피드에 섞지 않는다', async () => {
+    const housePost = { ...DEMO_FEED_POSTS[0], postId: 900, houseId: 3 };
+    // DEMO_FEED_POSTS에는 houseId가 없다(공개 글) — 다른 집 글도 걸러진다.
+    const otherHouse = { ...DEMO_FEED_POSTS[1], postId: 901, houseId: 8 };
+    jest
+      .mocked(fetchFeedPosts)
+      .mockResolvedValue(page([housePost, otherHouse, DEMO_FEED_POSTS[2]]));
+    const { result } = await renderHook(() => useFeed({ houseId: 3 }), {
+      wrapper: queryWrapper(),
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.posts.map((p) => p.postId)).toEqual([900]);
+  });
+
+  it('구성원이 아니거나 집이 없으면 closed — 다시 묻지 않는다', async () => {
+    jest
+      .mocked(fetchFeedPosts)
+      .mockRejectedValue(
+        new ApiError(403, 'GET', '/feed/posts', JSON.stringify({ code: 'HOUSE_NOT_MEMBER' })),
+      );
+    const { result } = await renderHook(() => useFeed({ houseId: 3 }), {
+      wrapper: queryWrapper(),
+    });
+    await waitFor(() => expect(result.current.closed).toBe(true));
+    expect(fetchFeedPosts).toHaveBeenCalledTimes(1);
+  });
+
+  it('공개 피드는 같은 오류에도 closed가 아니다', async () => {
+    jest
+      .mocked(fetchFeedPosts)
+      .mockRejectedValue(
+        new ApiError(404, 'GET', '/feed/posts', JSON.stringify({ code: 'HOUSE_NOT_FOUND' })),
+      );
+    const { result } = await renderHook(() => useFeed(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.error).toBe(true));
+    expect(result.current.closed).toBe(false);
+  });
+});

@@ -1,26 +1,28 @@
-import { memo, useCallback, useRef, useState } from 'react';
+import { memo, type ReactNode, useCallback, useContext, useRef } from 'react';
 import {
   FlatList,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Pressable,
-  RefreshControl,
+  type ScrollViewProps,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { FEED_BOARD_FILTERS, FeedBoardTabs } from '@/components/feed/feed-board';
 import { FeedRecordThumb, feedRecordDraftText } from '@/components/feed/feed-minigame-record';
-import { feedAuthorName, feedTimeLabel } from '@/components/feed/feed-parts';
+import { FeedAvatar, feedAuthorName, feedTimeLabel } from '@/components/feed/feed-parts';
 import { FeedRoutineBadge } from '@/components/feed/feed-routine';
 import { FeedPhoto } from '@/components/feed/feed-photo';
 import type { FeedBoardFilter, FeedImageLoader, FeedPost } from '@/components/screens/feed/types';
+import { Badge } from '@/components/ui/badge';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon } from '@/components/ui/icon';
 import { Loading } from '@/components/ui/loading';
 import { pressedStyle } from '@/components/ui/press-feedback';
-import { PagerScrollView } from '@/components/ui/pager-scroll-view';
+import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Radius, Spacing } from '@/constants/theme';
@@ -38,6 +40,9 @@ const COMPOSE_SIZE = 56;
 const ROW_LINES = 3;
 /** 오른쪽 썸네일 한 변 — 본문 세 줄 + 메타 줄 높이에 맞춘다. */
 const THUMB_SIZE = Spacing.six * 2;
+/** 작성자를 앞세운 줄(집 피드)의 썸네일·아바타 — 작성자 줄이 한 줄 더 있어 사진은 한 단계 작게. */
+const AUTHOR_THUMB_SIZE = Spacing.six + Spacing.five;
+const AUTHOR_AVATAR_SIZE = 28;
 
 export type FeedScreenProps = {
   posts?: FeedPost[];
@@ -62,12 +67,38 @@ export type FeedScreenProps = {
   loadImage?: FeedImageLoader;
   /** 테스트·갤러리용 기준 시각. */
   now?: Date;
+  /** 헤더 제목 — 기본 '피드'. 집 피드는 "{집 이름} 피드". */
+  title?: string;
+  /**
+   * 주면 뒤로 버튼이 생기고 **서브화면**으로 그린다 — 하단 탭이 없으니 목록·쓰기 버튼의 아래
+   * 여백을 탭 높이 대신 안전영역으로 잡는다. 없으면 종전대로 하단 탭 페이지.
+   */
+  onBack?: () => void;
+  /** 헤더 오른쪽 슬롯 — 집 피드의 "이 집 알림" 종 버튼. */
+  headerRight?: ReactNode;
+  /** 게시판 탭 선택지 — 기본은 전체/자유/인증/내 글. 집 피드는 '내 글'을 뺀 셋. */
+  boardOptions?: readonly FeedBoardFilter[];
+  /** 탭 아래 한 줄 안내 — 집 피드의 "이 집 구성원만 볼 수 있어요". */
+  scopeNote?: string;
+  /** 게시판별 빈 상태 문구 — 준 게시판만 기본 문구를 대신한다. */
+  emptyMessages?: Partial<Record<FeedBoardFilter, string>>;
+  /**
+   * 작성자를 앞세운 줄 (집 피드) — 아바타·이름·방장 배지·시각을 줄 맨 위에 둔다. 서로 아는
+   * 구성원끼리라 "누가 썼는지"가 먼저 읽혀야 한다. 기본(false)은 공개 피드의 종전 줄.
+   */
+  authorFirst?: boolean;
+  /** 이 집 방장의 userId — `authorFirst` 줄에서 그 사람 글에 '방장' 배지를 단다. */
+  ownerUserId?: number;
 } & ScrollRestoreProps;
 
 type RowProps = {
   post: FeedPost;
   loadImage?: FeedImageLoader;
   onOpenPost?: (postId: number) => void;
+  /** 작성자 줄을 맨 위에 — 집 피드. */
+  authorFirst: boolean;
+  /** 작성자가 이 집 방장 — `authorFirst`일 때만 배지로 쓴다. */
+  owner: boolean;
   /** 목록의 첫·마지막 줄 — 묶음의 위·아래 모서리만 둥글게. */
   first: boolean;
   last: boolean;
@@ -83,6 +114,8 @@ const FeedPostRow = memo(function FeedPostRow({
   post,
   loadImage,
   onOpenPost,
+  authorFirst,
+  owner,
   first,
   last,
   now,
@@ -96,6 +129,8 @@ const FeedPostRow = memo(function FeedPostRow({
   // 본문이 비어 있는 옛 기록 글도 줄이 비지 않게 — 기록 요약을 본문 자리에.
   const text =
     post.content || (post.minigameRecord ? feedRecordDraftText(post.minigameRecord) : '');
+  const thumbSize = authorFirst ? AUTHOR_THUMB_SIZE : THUMB_SIZE;
+  const hasCounts = post.likeCount > 0 || post.commentCount > 0;
   return (
     <Pressable
       onPress={onOpenPost ? () => onOpenPost(post.postId) : undefined}
@@ -110,6 +145,30 @@ const FeedPostRow = memo(function FeedPostRow({
         !last && styles.rowDivider,
       ]}>
       <View style={styles.rowText}>
+        {authorFirst ? (
+          <View style={styles.rowAuthor} testID={`feed-post-author-${post.postId}`}>
+            <FeedAvatar author={post.author} size={AUTHOR_AVATAR_SIZE} />
+            <Text
+              style={[Typography.labelCompact, styles.metaName, { color: t.text }]}
+              numberOfLines={1}>
+              {name}
+            </Text>
+            {owner ? (
+              <Badge
+                label={tr('house.members.owner')}
+                background={t.primarySoft}
+                color={t.primaryText}
+              />
+            ) : null}
+            {time ? (
+              <Text
+                style={[Typography.caption, styles.metaTime, { color: t.textMuted }]}
+                numberOfLines={1}>
+                {time}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
         {text ? (
           <Text style={[Typography.bodyCompact, { color: t.text }]} numberOfLines={ROW_LINES}>
             {text}
@@ -118,42 +177,49 @@ const FeedPostRow = memo(function FeedPostRow({
         {post.boardType === 'VERIFICATION' && post.routine ? (
           <FeedRoutineBadge routine={post.routine} />
         ) : null}
-        <View style={styles.meta}>
-          {time ? (
-            <Text
-              style={[Typography.caption, styles.metaTime, { color: t.textMuted }]}
-              numberOfLines={1}>
-              {time}
-            </Text>
-          ) : null}
-          <Text
-            style={[Typography.caption, styles.metaName, { color: t.textMuted }]}
-            numberOfLines={1}>
-            {name}
-          </Text>
-          {post.likeCount > 0 ? (
-            <View
-              style={styles.count}
-              accessible
-              accessibilityLabel={tr('feed.likeCount', { count: post.likeCount })}>
-              <Icon
-                name={post.likedByMe ? 'heart' : 'heart-outline'}
-                size={13}
-                color={post.likedByMe ? t.danger : t.textMuted}
-              />
-              <Text style={[Typography.caption, { color: t.textMuted }]}>{post.likeCount}</Text>
-            </View>
-          ) : null}
-          {post.commentCount > 0 ? (
-            <View
-              style={styles.count}
-              accessible
-              accessibilityLabel={tr('feed.commentCount', { count: post.commentCount })}>
-              <Icon name="comment" size={13} color={t.textMuted} />
-              <Text style={[Typography.caption, { color: t.textMuted }]}>{post.commentCount}</Text>
-            </View>
-          ) : null}
-        </View>
+        {/* 작성자를 앞세운 줄은 시각·이름이 위에 있다 — 여기는 좋아요·댓글 수만(없으면 줄째 뺀다). */}
+        {authorFirst && !hasCounts ? null : (
+          <View style={styles.meta}>
+            {!authorFirst && time ? (
+              <Text
+                style={[Typography.caption, styles.metaTime, { color: t.textMuted }]}
+                numberOfLines={1}>
+                {time}
+              </Text>
+            ) : null}
+            {authorFirst ? null : (
+              <Text
+                style={[Typography.caption, styles.metaName, { color: t.textMuted }]}
+                numberOfLines={1}>
+                {name}
+              </Text>
+            )}
+            {post.likeCount > 0 ? (
+              <View
+                style={styles.count}
+                accessible
+                accessibilityLabel={tr('feed.likeCount', { count: post.likeCount })}>
+                <Icon
+                  name={post.likedByMe ? 'heart' : 'heart-outline'}
+                  size={13}
+                  color={post.likedByMe ? t.danger : t.textMuted}
+                />
+                <Text style={[Typography.caption, { color: t.textMuted }]}>{post.likeCount}</Text>
+              </View>
+            ) : null}
+            {post.commentCount > 0 ? (
+              <View
+                style={styles.count}
+                accessible
+                accessibilityLabel={tr('feed.commentCount', { count: post.commentCount })}>
+                <Icon name="comment" size={13} color={t.textMuted} />
+                <Text style={[Typography.caption, { color: t.textMuted }]}>
+                  {post.commentCount}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        )}
       </View>
       {photo ? (
         <View>
@@ -162,7 +228,7 @@ const FeedPostRow = memo(function FeedPostRow({
             loader={loadImage}
             contentFit="cover"
             accessibilityLabel={tr('feed.imageA11y', { index: 1, total: post.images.length })}
-            style={[styles.thumb, { width: THUMB_SIZE, height: THUMB_SIZE }]}
+            style={[styles.thumb, { width: thumbSize, height: thumbSize }]}
           />
           {post.images.length > 1 ? (
             <View style={[styles.countBadge, { backgroundColor: t.surface }]}>
@@ -173,7 +239,7 @@ const FeedPostRow = memo(function FeedPostRow({
           ) : null}
         </View>
       ) : post.minigameRecord ? (
-        <FeedRecordThumb record={post.minigameRecord} size={THUMB_SIZE} />
+        <FeedRecordThumb record={post.minigameRecord} size={thumbSize} />
       ) : null}
     </Pressable>
   );
@@ -181,7 +247,7 @@ const FeedPostRow = memo(function FeedPostRow({
 
 /**
  * 공개 피드 탭 (#1409) — 전체 공개 게시물 최신순. 순수·prop 기반: 데이터·좋아요·이동은
- * 셸(`use-feed-pages`)이 넘긴다. 하단 탭 페이저 안에 살아서 스크롤은 PagerScrollView로
+ * 셸(`use-feed-pages`)이 넘긴다. 하단 탭 페이저 안에 살아서 스크롤은 PawRefreshScroll(안에서 PagerScrollView 규약을 따른다)로
  * 페이저와 방향을 나눈다(iOS).
  */
 export function FeedScreen({
@@ -199,6 +265,14 @@ export function FeedScreen({
   onCompose,
   loadImage,
   now,
+  title,
+  onBack,
+  headerRight,
+  boardOptions = FEED_BOARD_FILTERS,
+  scopeNote,
+  emptyMessages,
+  authorFirst = false,
+  ownerUserId,
   getInitialScrollY,
   onScrollY,
 }: FeedScreenProps) {
@@ -207,8 +281,10 @@ export function FeedScreen({
   const tr = useT();
   const column = useResponsiveColumn();
   const headerInset = useHeaderContentInset();
-  const navInset = useBottomNavInset();
-  const [refreshing, setRefreshing] = useState(false);
+  const tabNavInset = useBottomNavInset();
+  const safeBottom = useContext(SafeAreaInsetsContext)?.bottom ?? 0;
+  // 서브화면(집 피드)에는 하단 탭이 없다 — 탭 높이 대신 홈 인디케이터만 비킨다.
+  const navInset = onBack ? safeBottom : tabNavInset;
 
   // 서브화면(상세·작성)에 다녀오면 페이저가 다시 마운트된다 — 셸이 기억한 위치로 (#763).
   const listRef = useRef<FlatList<FeedPost>>(null);
@@ -237,15 +313,15 @@ export function FeedScreen({
     [board, onChangeBoard],
   );
 
-  const handleRefresh = useCallback(async () => {
-    if (!onRefresh) return;
-    setRefreshing(true);
-    try {
-      await onRefresh();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [onRefresh]);
+  // 당겨서 새로고침은 방·집·거래소와 같은 발바닥 당김 (2026-11-11) — 종전 시스템 RefreshControl은
+  // 인디케이터가 헤더 밑에 가려 당겨도 반응이 없는 것처럼 보였고, 다른 탭과 모양도 달랐다.
+  // 목록 스크롤 뷰 자체를 PawRefreshScroll로 바꿔 끼운다(onRefresh가 없으면 평범한 스크롤).
+  const renderScroll = useCallback(
+    (props: ScrollViewProps) => (
+      <PawRefreshScroll {...props} onRefresh={onRefresh} refreshTestID="feed-refresh" />
+    ),
+    [onRefresh],
+  );
 
   const lastIndex = posts.length - 1;
   const renderItem = useCallback(
@@ -254,24 +330,26 @@ export function FeedScreen({
         post={item}
         loadImage={loadImage}
         onOpenPost={onOpenPost}
+        authorFirst={authorFirst}
+        owner={ownerUserId != null && item.author.userId === ownerUserId}
         first={index === 0}
         last={index === lastIndex}
         now={now}
       />
     ),
-    [loadImage, onOpenPost, lastIndex, now],
+    [loadImage, onOpenPost, authorFirst, ownerUserId, lastIndex, now],
   );
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <ScreenHeader title={tr('feed.title')} />
+      <ScreenHeader title={title ?? tr('feed.title')} onBack={onBack} right={headerRight} />
       <FlatList
         ref={listRef}
         testID="feed-list"
         data={posts}
         keyExtractor={(p) => String(p.postId)}
         renderItem={renderItem}
-        renderScrollComponent={(props) => <PagerScrollView {...props} />}
+        renderScrollComponent={renderScroll}
         contentOffset={{ x: 0, y: initialY }}
         onContentSizeChange={handleContentSize}
         onScroll={handleScroll}
@@ -279,17 +357,6 @@ export function FeedScreen({
         showsVerticalScrollIndicator={false}
         onEndReached={hasNext ? onLoadMore : undefined}
         onEndReachedThreshold={0.6}
-        refreshControl={
-          onRefresh ? (
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => void handleRefresh()}
-              tintColor={t.primary}
-              colors={[t.primary]}
-              progressViewOffset={headerInset}
-            />
-          ) : undefined
-        }
         contentContainerStyle={[
           styles.body,
           column,
@@ -301,11 +368,17 @@ export function FeedScreen({
             // 줄 묶음과 붙지 않게 — 줄 사이 간격을 없애면서(#1559) 탭 아래 간격도 사라졌다.
             <View style={styles.listHeader}>
               <FeedBoardTabs
-                options={FEED_BOARD_FILTERS}
+                options={boardOptions}
                 value={board}
                 onChange={handleChangeBoard}
                 testID="feed-board-filter"
               />
+              {scopeNote ? (
+                <View style={styles.scopeNote} testID="feed-scope-note">
+                  <Icon name="lock" size={13} color={t.textMuted} />
+                  <Text style={[Typography.caption, { color: t.textMuted }]}>{scopeNote}</Text>
+                </View>
+              ) : null}
             </View>
           ) : null
         }
@@ -321,11 +394,12 @@ export function FeedScreen({
           ) : (
             <Text
               style={[Typography.bodyCompact, styles.state, styles.empty, { color: t.textMuted }]}>
-              {board === 'FREE'
-                ? tr('feed.emptyFree')
-                : board === 'MINE'
-                  ? tr('feed.emptyMine')
-                  : tr('feed.empty')}
+              {emptyMessages?.[board] ??
+                (board === 'FREE'
+                  ? tr('feed.emptyFree')
+                  : board === 'MINE'
+                    ? tr('feed.emptyMine')
+                    : tr('feed.empty'))}
             </Text>
           )
         }
@@ -366,6 +440,19 @@ const styles = StyleSheet.create({
   },
   listHeader: {
     marginBottom: Spacing.three,
+    gap: Spacing.one,
+  },
+  scopeNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.one,
+  },
+  rowAuthor: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    marginBottom: Spacing.one,
   },
   row: {
     flexDirection: 'row',

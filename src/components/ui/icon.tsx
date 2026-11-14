@@ -43,6 +43,12 @@ const ICONS = {
   'heart-outline': 'heart-outline',
   comment: 'chatbubble-outline',
   image: 'image-outline',
+  // 집 채팅 — 담아 둔 사진 자르기
+  // 메신저식 보내기 — 위로 솟는 화살표
+  'send-up': 'arrow-up',
+  // 말풍선 길게 누르기 메뉴 — 다른 앱으로 공유
+  share: 'share-outline',
+  crop: 'crop-outline',
   // 방 꾸미기 선택 툴바 (#333)
   flip: 'swap-horizontal',
   'rotate-ccw': 'arrow-undo-outline',
@@ -74,6 +80,9 @@ const ICONS = {
   // 집 채팅 (#1408)
   chat: 'chatbubbles-outline',
   send: 'send',
+  // 집 피드 — 레일 버튼, 작성 화면의 올릴 곳(전체 공개)
+  'house-feed': 'reader-outline',
+  globe: 'globe-outline',
   // 미니게임 규칙 표식 (#1613)
   tap: 'hand-left-outline',
   finish: 'flag',

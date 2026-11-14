@@ -11,12 +11,14 @@ import {
 import { AppTextInput as TextInput } from '@/components/ui/app-text-input';
 
 import { FEED_BOARD_TYPES, FeedBoardTabs } from '@/components/feed/feed-board';
+import { FeedComposeScopeRow } from '@/components/feed/feed-compose-scope';
 import { FeedMinigameRecordCard } from '@/components/feed/feed-minigame-record';
 import { FeedRoutinePicker } from '@/components/feed/feed-routine';
 import { feedComposeBlocker } from '@/components/screens/feed/board-rules';
 import type {
   FeedBoardType,
   FeedCompletionPicker,
+  FeedComposeScope,
   FeedDraftImage,
   FeedMinigameRecordDraft,
   FeedRoutineCompletion,
@@ -63,6 +65,11 @@ export type FeedComposeScreenProps = {
    */
   record?: FeedMinigameRecordDraft | null;
   onRemoveRecord?: () => void;
+  /**
+   * 올릴 곳 (집 피드) — 전체 공개인지 어느 집인지. 없으면 종전대로 전체 공개이고 줄을 그리지
+   * 않는다(내 집이 없는 사람, 기록 카드가 붙은 글). 집 피드에서 연 작성은 그 집으로 고정(`locked`).
+   */
+  scope?: FeedComposeScope;
   onBack?: () => void;
 };
 
@@ -70,7 +77,8 @@ export type FeedComposeScreenProps = {
  * 피드 게시물 작성 (#1409) — 위에서 게시판(자유/인증, 서버 #428)을 고르고, 사진(고르는 즉시
  * 올리며 장마다 진행 상태)과 본문 2,000자. 자유는 사진 0–10장이되 사진이 없으면 본문 필수,
  * 인증은 사진 선택 + 최근 7일 안에 완료한 루틴 하나 필수. 고른 사진이 전부
- * 올라가야 [올리기]가 켜진다. 순서 바꾸기는 없다.
+ * 올라가야 [올리기]가 켜진다. 순서 바꾸기는 없다. 맨 위 "올릴 곳"(집 피드)이 전체 공개인지
+ * 우리 집인지를 늘 보여 준다.
  */
 export function FeedComposeScreen({
   board = FEED_DEFAULT_BOARD,
@@ -89,6 +97,7 @@ export function FeedComposeScreen({
   submitting = false,
   record = null,
   onRemoveRecord,
+  scope,
   onBack,
 }: FeedComposeScreenProps) {
   const t = useTokens();
@@ -140,6 +149,7 @@ export function FeedComposeScreen({
             headerInset ? { paddingTop: headerInset } : null,
             androidKeyboard ? { paddingBottom: Spacing.four + androidKeyboard } : null,
           ]}>
+          {scope ? <FeedComposeScopeRow scope={scope} disabled={submitting} /> : null}
           <View style={styles.boardRow}>
             <FeedBoardTabs
               options={FEED_BOARD_TYPES}

@@ -415,3 +415,94 @@ describe('FeedPostScreen (#1409)', () => {
     });
   });
 });
+
+describe('방장의 삭제 (집 피드)', () => {
+  const OWNER_VIEW = { ...OTHER_POST, houseId: 3, deletable: true };
+
+  it('방장이 보는 남의 글 — 더보기 맨 위에 게시물 삭제, 확인 뒤 글 id로', async () => {
+    const onDeletePost = jest.fn();
+    const ui = await render(
+      <FeedPostScreen
+        post={OWNER_VIEW}
+        onDeletePost={onDeletePost}
+        onReportPost={jest.fn()}
+        onBlockUser={jest.fn()}
+      />,
+    );
+    // 내 글이 아니므로 헤더에 [수정]·[삭제] 버튼은 없다.
+    expect(ui.queryByLabelText('게시물 삭제')).toBeNull();
+    await fireEvent.press(ui.getByLabelText('게시물 더보기'));
+    const onMenuDismissed = ui.getByTestId('bottom-sheet-modal').props.onDismiss;
+    expect(await ui.findByLabelText('신고하기')).toBeTruthy();
+    expect(ui.getByLabelText('이 사용자 차단')).toBeTruthy();
+    await fireEvent.press(ui.getByLabelText('방장 권한으로 게시물 삭제'));
+    await finishNativeSheetDismissal(onMenuDismissed);
+    expect(await ui.findByText('이 게시물을 삭제할까요?')).toBeTruthy();
+    expect(ui.getByText(/방장 권한으로 루틴친구님의 게시물을 삭제해요/)).toBeTruthy();
+    expect(onDeletePost).not.toHaveBeenCalled();
+    await fireEvent.press(ui.getByLabelText('방장 권한으로 게시물 삭제'));
+    expect(onDeletePost).toHaveBeenCalledWith(OWNER_VIEW.postId);
+  });
+
+  it('일반 구성원이 보는 남의 글 — 신고·차단만', async () => {
+    const ui = await render(
+      <FeedPostScreen
+        post={{ ...OTHER_POST, houseId: 3, deletable: false }}
+        onDeletePost={jest.fn()}
+        onReportPost={jest.fn()}
+        onBlockUser={jest.fn()}
+      />,
+    );
+    await fireEvent.press(ui.getByLabelText('게시물 더보기'));
+    expect(await ui.findByLabelText('신고하기')).toBeTruthy();
+    expect(ui.getByLabelText('이 사용자 차단')).toBeTruthy();
+    expect(ui.queryByLabelText('방장 권한으로 게시물 삭제')).toBeNull();
+  });
+
+  it('deletable이 없는 응답(배포 전 서버)은 종전 메뉴 그대로', async () => {
+    const ui = await render(
+      <FeedPostScreen post={OTHER_POST} onDeletePost={jest.fn()} onReportPost={jest.fn()} />,
+    );
+    await fireEvent.press(ui.getByLabelText('게시물 더보기'));
+    expect(await ui.findByLabelText('신고하기')).toBeTruthy();
+    expect(ui.queryByLabelText('방장 권한으로 게시물 삭제')).toBeNull();
+  });
+
+  it('방장이 보는 남의 댓글 — 더보기에서 댓글 삭제, 확인 뒤 댓글 id로', async () => {
+    const onDeleteComment = jest.fn();
+    const comments = DEMO_FEED_COMMENTS.map((c) => (c.mine ? c : { ...c, deletable: true }));
+    const ui = await render(
+      <FeedPostScreen
+        post={OWNER_VIEW}
+        comments={comments}
+        onDeleteComment={onDeleteComment}
+        onReportComment={jest.fn()}
+      />,
+    );
+    await fireEvent.press(ui.getByLabelText('댓글 더보기'));
+    const onMenuDismissed = ui.getByTestId('bottom-sheet-modal').props.onDismiss;
+    await fireEvent.press(await ui.findByLabelText('방장 권한으로 댓글 삭제'));
+    await finishNativeSheetDismissal(onMenuDismissed);
+    expect(await ui.findByText('이 댓글을 삭제할까요?')).toBeTruthy();
+    expect(ui.getByText(/방장 권한으로 이웃님의 댓글을 삭제해요/)).toBeTruthy();
+    await fireEvent.press(ui.getByLabelText('방장 권한으로 댓글 삭제'));
+    expect(onDeleteComment).toHaveBeenCalledWith(301);
+  });
+
+  it('신고·차단이 없는 곳에서는 지울 수 있는 댓글에만 더보기가 뜬다', async () => {
+    const onDeleteComment = jest.fn();
+    const plain = await render(
+      <FeedPostScreen
+        post={OWNER_VIEW}
+        comments={DEMO_FEED_COMMENTS}
+        onDeleteComment={onDeleteComment}
+      />,
+    );
+    expect(plain.queryByLabelText('댓글 더보기')).toBeNull();
+    const deletable = DEMO_FEED_COMMENTS.map((c) => (c.mine ? c : { ...c, deletable: true }));
+    await plain.rerender(
+      <FeedPostScreen post={OWNER_VIEW} comments={deletable} onDeleteComment={onDeleteComment} />,
+    );
+    expect(plain.getAllByLabelText('댓글 더보기')).toHaveLength(1);
+  });
+});

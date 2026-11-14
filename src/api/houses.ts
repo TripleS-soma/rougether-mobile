@@ -177,9 +177,23 @@ export function transferHouseOwnership(houseId: number, targetMembershipId: numb
   });
 }
 
-/** DELETE /houses/{id}/members/me — leave the house. */
-export function leaveHouse(houseId: number) {
-  return apiDelete<void>(`/houses/${houseId}/members/me`);
+/** 집을 나가며 고르는 것 (집 피드). */
+export type LeaveHouseOptions = {
+  /**
+   * 이 집 피드에 남긴 내 글과 댓글도 지운다 — 나간 뒤에는 집 글에 접근할 수 없어 직접 지울 수
+   * 없다. 내 글은 삭제(사진·좋아요·달린 댓글도 정리), 남의 글에 단 내 댓글·답글은 본문만 비운다.
+   * 다른 집 글과 공개 글은 건드리지 않는다.
+   */
+  deleteFeedContent?: boolean;
+};
+
+/**
+ * DELETE /houses/{id}/members/me — leave the house. `deleteFeedContent`는 true일 때만
+ * 쿼리로 붙인다(기본 false = 글이 남는다). 이 파라미터를 모르는 서버는 무시한다.
+ */
+export function leaveHouse(houseId: number, options: LeaveHouseOptions = {}) {
+  const query = options.deleteFeedContent ? '?deleteFeedContent=true' : '';
+  return apiDelete<void>(`/houses/${houseId}/members/me${query}`);
 }
 
 /** DELETE /houses/{id}/members/{membershipId} — kick a member (owner). */

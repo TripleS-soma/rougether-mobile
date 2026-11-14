@@ -118,7 +118,9 @@
         "leave": "Leave",
         "deleteA11y": "Confirm delete house",
         "leaveA11y": "Confirm leave",
-        "cancelA11y": "Cancel leave"
+        "cancelA11y": "Cancel leave",
+        "deleteFeed": "Also delete my posts and comments here",
+        "deleteFeedHint": "If you don't, members of this house will still see them. You can't delete them yourself after you leave."
       },
       "kickConfirm": {
         "title": "Remove this member?",
@@ -508,11 +510,8 @@
       "pickPhoto": "Choose photo",
       "openPhoto": "View photo",
       "retryPhoto": "Reload photo",
-      "photoFailed": "Could not load photo. Tap to try again.",
       "closePhoto": "Close",
-      "previewPhoto": "Send photo",
-      "cancelPhoto": "Cancel",
-      "sendPhoto": "Send photo",
+      "sharePhotoToFeed": "Post to feed",
       "photoInvalid": "Choose a JPG or PNG photo no larger than 10MB.",
       "photoLimit": "You have reached the photo upload limit.",
       "photoUnavailable": "This photo cannot be sent. Please select it again.",
@@ -520,7 +519,36 @@
       "reportMessage": "Report",
       "messageLabel": "chat message",
       "reportSent": "Report submitted.",
-      "reportFailed": "Could not submit report. Please try again."
+      "reportFailed": "Could not submit report. Please try again.",
+      "photoCount": "{{n}}/{{max}} photos · sent together with your text",
+      "photoMax": "You can send up to {{max}} photos at once.",
+      "photoSomeInvalid": "{{n}} photo(s) couldn't be added. (JPG or PNG, 10MB or less)",
+      "editPhoto": "Crop photo {{n}}",
+      "removePhoto": "Remove photo {{n}}",
+      "cropTitle": "Crop photo",
+      "cropCancel": "Cancel",
+      "cropDone": "Done",
+      "cropReset": "Original",
+      "cropRatioA11y": "Crop to {{ratio}}",
+      "cropFrameA11y": "Crop area",
+      "longPressHint": "Long press for reactions and more",
+      "menuClose": "Close menu",
+      "copy": "Copy",
+      "copied": "Copied.",
+      "copyFailed": "Couldn't copy.",
+      "reactionsA11y": "Choose a reaction",
+      "reactA11y": "React with {{label}}",
+      "reactionChipA11y": "{{label}}, {{n}} people",
+      "reactionFailed": "Couldn't add your reaction. Please try again.",
+      "reaction": {
+        "HEART": "Heart",
+        "LIKE": "Like",
+        "CHECK": "Check",
+        "LAUGH": "Laugh",
+        "SURPRISE": "Surprised",
+        "SAD": "Sad"
+      },
+      "share": "Share"
     },
     "friendWeek": {
       "range": "{{sm}}/{{sd}} – {{em}}/{{ed}}",
@@ -533,6 +561,23 @@
       "more": "{{count}} more in other houses",
       "pageA11y": "View {{name}}",
       "navigation": "Main house and annexes"
+    },
+    "feed": {
+      "rail": "House feed",
+      "railA11y": "House feed"
+    },
+    "notification": {
+      "title": "Notifications for this house",
+      "openA11y": "Notification settings for this house",
+      "chat": "Chat",
+      "chatDesc": "Get notified about new messages",
+      "freePost": "Free posts",
+      "freePostDesc": "Get notified when a member posts to the house feed",
+      "verificationPost": "Proof posts",
+      "verificationPostDesc": "Get notified when a member shares a routine proof post",
+      "footer": "Applies to this house only. Change all push notifications in Settings > Push notifications.",
+      "feedPending": "Post notification settings aren't ready on the server yet. You can change them here once they are.",
+      "saveFailed": "Couldn't change the notification setting. Please try again shortly."
     }
   }
 }

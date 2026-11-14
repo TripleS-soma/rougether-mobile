@@ -1,6 +1,13 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
-import { ensureHouseChatRoom, fetchChatMessages, markChatRead, sendChatMessage } from '@/api/chat';
+import {
+  clearChatReaction,
+  ensureHouseChatRoom,
+  fetchChatMessages,
+  markChatRead,
+  sendChatMessage,
+  setChatReaction,
+} from '@/api/chat';
 import { uploadChatImage, cancelChatImage } from '@/api/chat-images';
 import { ApiError } from '@/api/http';
 import type { ChatMessageResponse } from '@/api/chat-types';
@@ -19,6 +26,8 @@ jest.mock('@/api/chat', () => ({
   fetchChatMessages: jest.fn(),
   sendChatMessage: jest.fn(),
   markChatRead: jest.fn(),
+  setChatReaction: jest.fn(),
+  clearChatReaction: jest.fn(),
 }));
 
 jest.mock('@/api/chat-images', () => ({
@@ -49,7 +58,14 @@ class FakeSocket {
   close() {
     this.closed = true;
   }
-  server(frame: { type: string; room?: ChatRoomResponse; message?: ChatMessageResponse }) {
+  server(frame: {
+    type: string;
+    room?: ChatRoomResponse;
+    message?: ChatMessageResponse;
+    messageId?: number;
+    sequence?: number;
+    reactions?: ChatMessageResponse['reactions'];
+  }) {
     this.onmessage?.({ data: JSON.stringify(frame) });
   }
 }
@@ -115,6 +131,7 @@ describe('useHouseChat (#1408)', () => {
       roomId: ROOM_ID,
       accessToken: 'token-1',
       includeMessages: true,
+      includeReactions: true,
     });
   });
 
@@ -241,7 +258,7 @@ describe('사진 전송', () => {
       .mockRejectedValueOnce(new Error('offline'))
       .mockImplementationOnce(async (_room, body) => ({ ...msg(4, 1), ...body }));
     const { result } = await setup();
-    await act(async () => result.current.sendPhoto(photo));
+    await act(async () => result.current.sendPhotos([photo]));
     await waitFor(() => expect(result.current.messages.at(-1)?.status).toBe('failed'));
     const key = result.current.messages.at(-1)!.clientMessageId!;
     await act(async () => result.current.retryLoad());
@@ -269,10 +286,10 @@ describe('사진 전송', () => {
         messageType: 'IMAGE',
       }));
     const { result } = await setup();
-    await act(async () => result.current.sendPhoto(photo));
+    await act(async () => result.current.sendPhotos([photo]));
     await waitFor(() => expect(result.current.messages.at(-1)?.status).toBe('failed'));
     const key = result.current.messages.at(-1)!.clientMessageId!;
-    expect(mockSend).toHaveBeenCalledWith(ROOM_ID, { clientMessageId: key, imageId: 91 });
+    expect(mockSend).toHaveBeenCalledWith(ROOM_ID, { clientMessageId: key, imageIds: [91] });
     await act(async () => {
       result.current.retrySend(key);
       result.current.retrySend(key);
@@ -281,13 +298,13 @@ describe('사진 전송', () => {
     expect(uploadChatImage).toHaveBeenCalledTimes(1);
     expect(mockSend).toHaveBeenCalledTimes(2);
     expect(mockSend.mock.calls[0]).toEqual(mockSend.mock.calls[1]);
-    expect(result.current.messages.at(-1)?.image?.imageId).toBe(91);
+    expect(result.current.messages.at(-1)?.images?.[0]?.imageId).toBe(91);
   });
   it('업로드가 실패하면 전송하지 않고 실패한 업로드만 재시도한다', async () => {
     (uploadChatImage as jest.Mock).mockRejectedValueOnce(new Error('offline'));
     mockSend.mockResolvedValue({ ...msg(4, 1), image: { imageId: 91, width: 800, height: 600 } });
     const { result } = await setup();
-    await act(async () => result.current.sendPhoto(photo));
+    await act(async () => result.current.sendPhotos([photo]));
     await waitFor(() => expect(result.current.messages.at(-1)?.status).toBe('failed'));
     expect(mockSend).not.toHaveBeenCalled();
     await act(async () =>
@@ -299,8 +316,8 @@ describe('사진 전송', () => {
   it('지원하지 않는 형식과 10MiB 초과 사진은 업로드하지 않는다', async () => {
     const { result, onError } = await setup();
     await act(async () => {
-      result.current.sendPhoto({ ...photo, type: 'image/gif' });
-      result.current.sendPhoto({ ...photo, fileSize: 10 * 1024 * 1024 + 1 });
+      result.current.sendPhotos([{ ...photo, type: 'image/gif' }]);
+      result.current.sendPhotos([{ ...photo, fileSize: 10 * 1024 * 1024 + 1 }]);
     });
     expect(uploadChatImage).not.toHaveBeenCalled();
     expect(onError).toHaveBeenCalledWith('photoInvalid');
@@ -316,9 +333,161 @@ it('업로드 중 채팅을 닫으면 늦게 받은 사진으로 메시지를 �
       }),
   );
   const { result, unmount } = await setup();
-  await act(async () => result.current.sendPhoto(photo));
+  await act(async () => result.current.sendPhotos([photo]));
   await unmount();
   await act(async () => resolve({ imageId: 91, width: 800, height: 600 }));
   expect(mockSend).not.toHaveBeenCalled();
   expect(cancelChatImage).toHaveBeenCalledWith(91);
+});
+
+describe('사진 묶음·공감 (2026-11-13)', () => {
+  const second = { ...photo, uri: 'file:///second.jpg', name: 'second.jpg' };
+  const upload = uploadChatImage as jest.Mock;
+
+  it('사진 여러 장과 글을 메시지 하나로 보낸다 — 고른 순서대로, 자르기 영역은 올릴 때 넘긴다', async () => {
+    upload
+      .mockResolvedValueOnce({ imageId: 91, width: 800, height: 600 })
+      .mockResolvedValueOnce({ imageId: 92, width: 400, height: 400 });
+    mockSend.mockImplementation(async (_room, body) => ({ ...msg(4, 1), ...body }));
+    const crop = { x: 0.25, y: 0, width: 0.5, height: 1 };
+    const { result } = await setup();
+    await act(async () => result.current.sendPhotos([photo, { ...second, crop }], '  어제 산책 '));
+    // 올리는 동안에는 고른 사진과 글이 보내는 중 말풍선에 보인다.
+    await waitFor(() => expect(mockSend).toHaveBeenCalledTimes(1));
+    expect(upload).toHaveBeenNthCalledWith(1, ROOM_ID, photo, undefined);
+    expect(upload).toHaveBeenNthCalledWith(2, ROOM_ID, { ...second, crop }, crop);
+    expect(mockSend.mock.calls[0][1]).toEqual({
+      clientMessageId: expect.any(String),
+      imageIds: [91, 92],
+      content: '어제 산책',
+    });
+  });
+
+  it('글 없이 사진만 보내면 content를 싣지 않는다', async () => {
+    mockSend.mockImplementation(async (_room, body) => ({ ...msg(4, 1), ...body }));
+    const { result } = await setup();
+    await act(async () => result.current.sendPhotos([photo]));
+    await waitFor(() => expect(mockSend).toHaveBeenCalledTimes(1));
+    expect(mockSend.mock.calls[0][1]).toEqual({
+      clientMessageId: expect.any(String),
+      imageIds: [91],
+    });
+  });
+
+  it('둘째 사진 올리기가 실패하면, 다시 보낼 때 이미 올린 사진은 다시 올리지 않는다', async () => {
+    upload
+      .mockResolvedValueOnce({ imageId: 91, width: 800, height: 600 })
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce({ imageId: 92, width: 800, height: 600 });
+    mockSend.mockImplementation(async (_room, body) => ({ ...msg(4, 1), ...body }));
+    const { result } = await setup();
+    await act(async () => result.current.sendPhotos([photo, second]));
+    await waitFor(() => expect(result.current.messages.at(-1)?.status).toBe('failed'));
+    expect(mockSend).not.toHaveBeenCalled();
+    await act(async () =>
+      result.current.retrySend(result.current.messages.at(-1)!.clientMessageId!),
+    );
+    await waitFor(() => expect(mockSend).toHaveBeenCalledTimes(1));
+    expect(upload).toHaveBeenCalledTimes(3);
+    expect(upload.mock.calls.map((call) => call[1].name)).toEqual([
+      'photo.jpg',
+      'second.jpg',
+      'second.jpg',
+    ]);
+    expect(mockSend.mock.calls[0][1].imageIds).toEqual([91, 92]);
+  });
+
+  it('서버가 거부한 묶음은 이미 올린 사진을 취소한다', async () => {
+    mockSend.mockRejectedValueOnce(new ApiError(400, 'POST', '/chat/rooms/5/messages'));
+    const { result, onError } = await setup();
+    await act(async () => result.current.sendPhotos([photo]));
+    await waitFor(() => expect(onError).toHaveBeenCalledWith('invalid'));
+    expect(cancelChatImage).toHaveBeenCalledWith(91);
+  });
+
+  it('11장 이상은 올리지 않는다', async () => {
+    const { result, onError } = await setup();
+    await act(async () => result.current.sendPhotos(Array.from({ length: 11 }, () => photo)));
+    expect(upload).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledWith('photoInvalid');
+  });
+
+  it('공감은 먼저 화면에 반영하고 서버 응답으로 맞춘다', async () => {
+    let finish!: (value: unknown) => void;
+    (setChatReaction as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const { result } = await setup();
+    const target = () => result.current.messages.find((m) => m.messageId === 102);
+    await act(async () => void result.current.react(102, 'HEART'));
+    expect(target()?.reactions).toEqual([{ type: 'HEART', userIds: [1] }]);
+    await act(async () =>
+      finish({ messageId: 102, sequence: 2, reactions: [{ type: 'HEART', userIds: [2, 1] }] }),
+    );
+    expect(setChatReaction).toHaveBeenCalledWith(ROOM_ID, 102, 'HEART');
+    expect(target()?.reactions).toEqual([{ type: 'HEART', userIds: [2, 1] }]);
+  });
+
+  it('공감이 실패하면 되돌리고 안내한다', async () => {
+    (clearChatReaction as jest.Mock).mockRejectedValueOnce(new Error('offline'));
+    mockFetch.mockImplementation(async (_id: number, q: { after?: number } = {}) => ({
+      items:
+        q.after == null
+          ? [msg(3), { ...msg(2), reactions: [{ type: 'LIKE', userIds: [1] }] }, msg(1)]
+          : [],
+      hasNext: false,
+      room: room(3),
+    }));
+    const { result, onError } = await setup();
+    await act(async () => result.current.react(102, null));
+    expect(clearChatReaction).toHaveBeenCalledWith(ROOM_ID, 102);
+    expect(result.current.messages.find((m) => m.messageId === 102)?.reactions).toEqual([
+      { type: 'LIKE', userIds: [1] },
+    ]);
+    expect(onError).toHaveBeenCalledWith('reactionFailed');
+  });
+
+  it('소켓이 다시 붙으면 최신 페이지를 다시 받아 끊긴 동안 바뀐 공감을 맞춘다', async () => {
+    const { result, socket } = await setup();
+    const calls = mockFetch.mock.calls.length;
+    mockFetch.mockImplementation(async (_id: number, q: { after?: number } = {}) => ({
+      items:
+        q.after == null
+          ? [msg(3), { ...msg(2), reactions: [{ type: 'HEART', userIds: [2] }] }, msg(1)]
+          : [],
+      hasNext: false,
+      room: room(3),
+    }));
+    await act(async () => socket.server({ type: 'READY', room: room(3) }));
+    await waitFor(() =>
+      expect(result.current.messages.find((m) => m.messageId === 102)?.reactions).toEqual([
+        { type: 'HEART', userIds: [2] },
+      ]),
+    );
+    expect(mockFetch.mock.calls.length).toBe(calls + 1);
+    expect(result.current.messages.map((m) => m.sequence)).toEqual([1, 2, 3]);
+  });
+
+  it('소켓의 MESSAGE_REACTIONS는 그 메시지의 공감을 통째로 바꾼다', async () => {
+    const { result, socket } = await setup();
+    await act(async () =>
+      socket.server({
+        type: 'MESSAGE_REACTIONS',
+        messageId: 103,
+        sequence: 3,
+        reactions: [{ type: 'LAUGH', userIds: [2] }],
+      }),
+    );
+    expect(result.current.messages.find((m) => m.messageId === 103)?.reactions).toEqual([
+      { type: 'LAUGH', userIds: [2] },
+    ]);
+    // 아직 받지 않은 메시지의 공감은 무시한다.
+    await act(async () =>
+      socket.server({ type: 'MESSAGE_REACTIONS', messageId: 999, reactions: [] }),
+    );
+    expect(result.current.messages).toHaveLength(3);
+  });
 });
