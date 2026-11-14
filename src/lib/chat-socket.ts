@@ -14,7 +14,8 @@
  */
 import { API_BASE } from '@/api/config';
 import { getAccessToken, refreshSession } from '@/api/auth';
-import type { ChatMessageResponse, ChatRoomResponse } from '@/api/types';
+import type { ChatMessageResponse, ChatReactionUpdate } from '@/api/chat-types';
+import type { ChatRoomResponse } from '@/api/types';
 
 /** `https://host/api/v1` → `wss://host/api/v1/chat/ws` (개발 http는 ws). */
 export function chatSocketUrl(apiBase: string = API_BASE): string {
@@ -32,6 +33,9 @@ type ServerFrame = {
   type?: string;
   room?: ChatRoomResponse;
   message?: ChatMessageResponse;
+  messageId?: number;
+  sequence?: number;
+  reactions?: ChatReactionUpdate['reactions'];
 };
 
 export type ChatSocketHandlers = {
@@ -44,6 +48,11 @@ export type ChatSocketHandlers = {
    * 이 모드를 지원할 때만 온다. 순서·중복 처리는 받는 쪽이 한다(HTTP 응답·복구와 겹칠 수 있다).
    */
   onMessage?: (message: ChatMessageResponse) => void;
+  /**
+   * 공감 변경 — `MESSAGE_REACTIONS`. 그 메시지의 공감 전체를 통째로 받는다(증분이 아니다).
+   * 구독 때 `includeReactions`를 보낸 연결에만 오며, 놓친 변경은 기록을 다시 받을 때 맞춰진다.
+   */
+  onReactions?: (update: ChatReactionUpdate) => void;
 };
 
 export type ChatSocket = { close: () => void };
@@ -91,8 +100,15 @@ export function connectChatSocket(roomId: number, handlers: ChatSocketHandlers):
       }
       // includeMessages — 지원하는 서버는 새 메시지 본문을 바로 보내 HTTP 재조회가 필요 없다.
       // 모르는 서버는 이 필드를 무시하고 종전 상태 알림 모드로 READY를 보낸다(2026-10-04 운영 실측).
+      // includeReactions도 같은 방식의 옵트인 — 모르는 서버는 무시한다.
       socket.send(
-        JSON.stringify({ type: 'SUBSCRIBE', roomId, accessToken, includeMessages: true }),
+        JSON.stringify({
+          type: 'SUBSCRIBE',
+          roomId,
+          accessToken,
+          includeMessages: true,
+          includeReactions: true,
+        }),
       );
     };
     socket.onmessage = (event: { data?: unknown }) => {
@@ -105,6 +121,15 @@ export function connectChatSocket(roomId: number, handlers: ChatSocketHandlers):
       }
       if (frame.type === 'MESSAGE_CREATED') {
         if (frame.message) handlers.onMessage?.(frame.message);
+        return;
+      }
+      if (frame.type === 'MESSAGE_REACTIONS') {
+        if (frame.messageId != null && Array.isArray(frame.reactions))
+          handlers.onReactions?.({
+            messageId: frame.messageId,
+            sequence: frame.sequence,
+            reactions: frame.reactions,
+          });
         return;
       }
       if (!frame.room) return;

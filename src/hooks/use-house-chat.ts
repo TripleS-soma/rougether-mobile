@@ -3,12 +3,27 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { getSessionUserId, onSessionCleared } from '@/api/auth';
-import { ensureHouseChatRoom, fetchChatMessages, markChatRead, sendChatMessage } from '@/api/chat';
+import {
+  clearChatReaction,
+  ensureHouseChatRoom,
+  fetchChatMessages,
+  markChatRead,
+  sendChatMessage,
+  setChatReaction,
+} from '@/api/chat';
 import { cancelChatImage, uploadChatImage } from '@/api/chat-images';
-import type { PickedLibraryImageWithSize } from '@/lib/pick-image';
 import { ErrorCode } from '@/api/error-codes';
 import { ApiError } from '@/api/http';
-import type { ChatMessageResponse, ChatSendRequest } from '@/api/chat-types';
+import {
+  chatImagesOf,
+  type ChatMessageResponse,
+  type ChatReactionType,
+  type ChatReactionUpdate,
+  type ChatSendRequest,
+} from '@/api/chat-types';
+import { withMyReaction } from '@/components/chat/chat-reactions';
+import { cropForUpload } from '@/lib/chat-crop';
+import { CHAT_PHOTO_MAX, type ChatPhotoDraft, isSendableChatPhoto } from '@/lib/pick-chat-photo';
 import type { ChatReader, ChatRoomResponse } from '@/api/types';
 import type { ChatMessageView } from '@/components/screens/house-chat-screen';
 import { useLatestRef } from '@/hooks/use-stable-value';
@@ -25,13 +40,22 @@ const RECOVERY_MAX_PAGES = 20;
 
 /** 전송 실패 중 화면이 안내할 것 — 나머지(네트워크 등)는 말풍선의 '다시 보내기'로. */
 export type HouseChatError =
-  'banned' | 'forbidden' | 'invalid' | 'photoInvalid' | 'photoLimit' | 'photoUnavailable';
+  | 'banned'
+  | 'forbidden'
+  | 'invalid'
+  | 'photoInvalid'
+  | 'photoLimit'
+  | 'photoUnavailable'
+  | 'reactionFailed';
 
 type Outgoing = {
   clientMessageId: string;
+  /** 글 메시지의 본문, 사진 메시지에서는 함께 보내는 글(없으면 빈 문자열). */
   content: string;
-  file?: PickedLibraryImageWithSize;
-  imageId?: number;
+  /** 한 메시지로 묶어 보낼 사진 — 고른 순서대로. */
+  files?: ChatPhotoDraft[];
+  /** 올리기를 마친 사진 ID — `files`와 같은 자리. 아직 못 올린 칸은 비어 있다. */
+  imageIds?: (number | undefined)[];
   createdAt: string;
   status: 'pending' | 'failed';
 };
@@ -177,8 +201,15 @@ export function useHouseChat({
     mutationFn: (vars: { roomId: number; sequence: number }) =>
       markChatRead(vars.roomId, vars.sequence),
   });
+  const { mutateAsync: reactAsync } = useMutation({
+    mutationFn: (vars: { roomId: number; messageId: number; type: ChatReactionType | null }) =>
+      vars.type
+        ? setChatReaction(vars.roomId, vars.messageId, vars.type)
+        : clearChatReaction(vars.roomId, vars.messageId),
+  });
   const sendRef = useLatestRef(sendAsync);
   const readRef = useLatestRef(readAsync);
+  const reactRef = useLatestRef(reactAsync);
 
   const merge = useCallback(
     (items: ChatMessageResponse[]) => {
@@ -202,6 +233,18 @@ export function useHouseChat({
     },
     [userIdRef],
   );
+
+  /** 한 메시지의 공감 전체를 갈아 끼운다 — 아직 받지 않은 메시지면 무시(기록을 받을 때 딸려 온다). */
+  const applyReactions = useCallback((update: ChatReactionUpdate) => {
+    for (const [sequence, message] of bySeq.current) {
+      if (message.messageId !== update.messageId) continue;
+      bySeq.current.set(sequence, { ...message, reactions: update.reactions });
+      setConfirmed(
+        [...bySeq.current.values()].sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0)),
+      );
+      return;
+    }
+  }, []);
 
   /** 방 상태 반영 — 읽음 위치·레일 배지 캐시·복구 목표. */
   const applyRoom = useCallback(
@@ -298,21 +341,40 @@ export function useHouseChat({
     };
   }, [roomId, reloadKey, merge, applyRoom, recover]);
 
+  /** 최신 쪽 한 페이지를 다시 받아 덮어쓴다 — 이미 가진 메시지의 공감·삭제 상태를 맞춘다. */
+  const refreshLatest = useCallback(async () => {
+    const id = roomIdRef.current;
+    if (id == null) return;
+    const gen = generation.current;
+    try {
+      const res = await fetchChatMessages(id);
+      if (gen !== generation.current) return;
+      // 방 상태는 방금 READY로 받은 것이 더 새롭다 — 여기서는 메시지만 덮어쓴다.
+      merge(res.items ?? []);
+    } catch {
+      // 다음 재연결이나 화면 재진입 때 다시 맞춰진다.
+    }
+  }, [roomIdRef, merge]);
+
   // 실시간 — 포그라운드이고 방이 있을 때만 붙는다.
   useEffect(() => {
     if (roomId == null || !appActive) return;
     const socket = connectChatSocket(roomId, {
-      onRoom: (room) => {
+      onRoom: (room, ready) => {
         applyRoom(room);
         void recover();
+        // 다시 붙었을 때 — 끊긴 동안 바뀐 공감은 `after` 복구(새 메시지만)로는 오지 않는다.
+        // 최신 쪽 한 페이지를 다시 받아 공감을 맞춘다. 첫 연결은 첫 목록이 같은 일을 한다.
+        if (ready && loaded.current) void refreshLatest();
       },
       // 본문 직접 수신 (서버 #429) — 순서 맵에 넣으면 연속 구간만큼 커서가 오르고, 뒤따르는
       // ROOM_UPDATED의 lastSequence가 이미 커서 이하라 HTTP 복구가 생략된다. 틈이 있으면
       // (앞 구간이 아직 없으면) 커서는 멈춰 있고 복구가 그 틈을 채운다.
       onMessage: (message) => merge([message]),
+      onReactions: applyReactions,
     });
     return () => socket.close();
-  }, [roomId, appActive, applyRoom, recover, merge]);
+  }, [roomId, appActive, applyRoom, recover, merge, applyReactions, refreshLatest]);
 
   const flushRead = useCallback(async () => {
     readTimer.current = null;
@@ -369,23 +431,33 @@ export function useHouseChat({
       deliveryInFlight.current.add(clientMessageId);
       const drop = () =>
         setOutbox((prev) => prev.filter((o) => o.clientMessageId !== clientMessageId));
+      // 올려 둔 사진을 메시지로 못 쓰게 됐을 때 — 미전송 한도(30장)를 잡아먹지 않게 바로 취소한다.
+      const discard = (ids: (number | undefined)[] = []) => {
+        for (const imageId of ids)
+          if (imageId != null) void cancelChatImage(imageId).catch(() => {});
+      };
+      let imageIds = item.imageIds ?? item.files?.map(() => undefined);
       try {
-        let imageId = item.imageId;
-        if (item.file && imageId == null) {
-          const uploaded = await uploadChatImage(id, item.file);
-          imageId = uploaded.imageId;
+        const files = item.files ?? [];
+        for (let i = 0; i < files.length; i += 1) {
+          if (imageIds?.[i] != null) continue;
+          const uploaded = await uploadChatImage(id, files[i], cropForUpload(files[i].crop));
+          imageIds = (imageIds ?? []).map((value, at) => (at === i ? uploaded.imageId : value));
           if (!current()) {
-            if (getSessionUserId() === ownerId) void cancelChatImage(imageId).catch(() => {});
+            if (getSessionUserId() === ownerId) discard(imageIds);
             return;
           }
           // POST 응답 유실 뒤에는 업로드를 반복하지 않고 같은 사진과 UUID를 다시 보낸다.
+          const done = imageIds;
           setOutbox((prev) =>
-            prev.map((o) => (o.clientMessageId === clientMessageId ? { ...o, imageId } : o)),
+            prev.map((o) => (o.clientMessageId === clientMessageId ? { ...o, imageIds: done } : o)),
           );
         }
         if (!current()) return;
-        const body: ChatSendRequest =
-          imageId == null ? { clientMessageId, content } : { clientMessageId, imageId };
+        const sentIds = (imageIds ?? []).filter((value): value is number => value != null);
+        const body: ChatSendRequest = sentIds.length
+          ? { clientMessageId, imageIds: sentIds, ...(content ? { content } : {}) }
+          : { clientMessageId, content };
         const msg = await sendRef.current({ roomId: id, body });
         if (!current()) return;
         drop();
@@ -397,14 +469,16 @@ export function useHouseChat({
         if (!current()) return;
         if (err instanceof ApiError && err.code === 'CHAT_IMAGE_UNAVAILABLE') {
           drop();
+          discard(imageIds);
           onErrorRef.current?.('photoUnavailable');
           return;
         }
-        if (err instanceof ApiError && err.status === 429 && (item.file || item.imageId != null)) {
+        if (err instanceof ApiError && err.status === 429 && item.files?.length) {
           onErrorRef.current?.('photoLimit');
         }
         if (err instanceof ApiError && (err.code === 'CHAT_IMAGE_INVALID' || err.status === 413)) {
           drop();
+          discard(imageIds);
           onErrorRef.current?.('photoInvalid');
           return;
         }
@@ -417,16 +491,19 @@ export function useHouseChat({
         }
         if (err instanceof ApiError && err.code === ErrorCode.CHAT_CONTENT_BANNED) {
           drop();
+          discard(imageIds);
           onErrorRef.current?.('banned');
           return;
         }
         if (err instanceof ApiError && err.status === 403) {
           drop();
+          discard(imageIds);
           onErrorRef.current?.('forbidden');
           return;
         }
         if (err instanceof ApiError && err.status === 400) {
           drop();
+          discard(imageIds);
           onErrorRef.current?.('invalid');
           return;
         }
@@ -457,20 +534,18 @@ export function useHouseChat({
     [roomIdRef, deliver],
   );
 
-  const sendPhoto = useCallback(
-    (file: PickedLibraryImageWithSize) => {
-      if (roomIdRef.current == null) return;
-      if (
-        !['image/jpeg', 'image/png'].includes(file.type.toLowerCase()) ||
-        (file.fileSize ?? 0) > 10 * 1024 * 1024
-      ) {
+  /** 사진 여러 장(최대 10장)과 함께 쓴 글을 **메시지 하나**로 보낸다. */
+  const sendPhotos = useCallback(
+    (files: ChatPhotoDraft[], caption = '') => {
+      if (roomIdRef.current == null || files.length === 0) return;
+      if (files.length > CHAT_PHOTO_MAX || !files.every(isSendableChatPhoto)) {
         onErrorRef.current?.('photoInvalid');
         return;
       }
       const item: Outgoing = {
         clientMessageId: newClientMessageId(),
-        content: '',
-        file,
+        content: caption.trim(),
+        files,
         createdAt: new Date().toISOString(),
         status: 'pending',
       };
@@ -478,6 +553,32 @@ export function useHouseChat({
       void deliver(item);
     },
     [roomIdRef, onErrorRef, deliver],
+  );
+
+  /**
+   * 내 공감을 `type`으로 정한다(없애려면 null). 먼저 화면에 반영하고, 실패하면 되돌린다.
+   * 같은 메시지를 연달아 눌러도 마지막에 받은 서버 응답이 정본이다.
+   */
+  const react = useCallback(
+    async (messageId: number, type: ChatReactionType | null) => {
+      const id = roomIdRef.current;
+      const me = userIdRef.current;
+      if (id == null || me == null) return;
+      const target = [...bySeq.current.values()].find((m) => m.messageId === messageId);
+      if (!target) return;
+      const before = target.reactions ?? [];
+      const gen = generation.current;
+      applyReactions({ messageId, reactions: withMyReaction(before, me, type) });
+      try {
+        const updated = await reactRef.current({ roomId: id, messageId, type });
+        if (gen === generation.current && updated?.reactions) applyReactions(updated);
+      } catch {
+        if (gen !== generation.current) return;
+        applyReactions({ messageId, reactions: before });
+        onErrorRef.current?.('reactionFailed');
+      }
+    },
+    [roomIdRef, userIdRef, reactRef, onErrorRef, applyReactions],
   );
 
   const retrySend = useCallback(
@@ -537,8 +638,10 @@ export function useHouseChat({
     const sent: ChatMessageView[] = confirmed.map((m) => ({
       key: `s${m.sequence}`,
       messageId: m.messageId,
-      image: m.image,
+      images: chatImagesOf(m),
       messageType: m.messageType,
+      caption: m.caption ?? undefined,
+      reactions: m.reactions ?? undefined,
       sequence: m.sequence,
       clientMessageId: m.clientMessageId,
       senderUserId: m.senderUserId,
@@ -553,8 +656,10 @@ export function useHouseChat({
       key: `c${o.clientMessageId}`,
       clientMessageId: o.clientMessageId,
       senderUserId: userId,
-      content: o.content,
-      localImageUri: o.file?.uri,
+      messageType: o.files?.length ? 'IMAGE' : 'TEXT',
+      content: o.files?.length ? '' : o.content,
+      caption: o.files?.length && o.content ? o.content : undefined,
+      localImages: o.files,
       createdAt: o.createdAt,
       unreadCount: 0,
       status: o.status,
@@ -576,7 +681,8 @@ export function useHouseChat({
       hasOlder,
       loadingOlder,
       send,
-      sendPhoto,
+      sendPhotos,
+      react,
       retrySend,
       loadOlder,
       reportVisible,
@@ -591,7 +697,8 @@ export function useHouseChat({
       hasOlder,
       loadingOlder,
       send,
-      sendPhoto,
+      sendPhotos,
+      react,
       retrySend,
       loadOlder,
       reportVisible,
