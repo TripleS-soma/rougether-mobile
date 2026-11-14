@@ -520,7 +520,6 @@
       "messageLabel": "chat message",
       "reportSent": "Report submitted.",
       "reportFailed": "Could not submit report. Please try again.",
-      "photoCount": "{{n}}/{{max}} photos · sent together with your text",
       "photoMax": "You can send up to {{max}} photos at once.",
       "photoSomeInvalid": "{{n}} photo(s) couldn't be added. (JPG or PNG, 10MB or less)",
       "editPhoto": "Crop photo {{n}}",
