@@ -122,6 +122,77 @@ describe('HouseChatScreen 키보드 — Android', () => {
   });
 });
 
+describe('HouseChatScreen 키보드 — iOS', () => {
+  const HOME_INDICATOR = 34;
+  const KEYBOARD = 336; // 홈 인디케이터 자리까지 포함한 키보드 높이
+
+  const keyboardEvent = (height: number) => ({
+    startCoordinates: { screenX: 0, screenY: 852, width: 393, height: 0 },
+    endCoordinates: { screenX: 0, screenY: 852 - height, width: 393, height },
+    easing: 'keyboard',
+    duration: 0,
+  });
+
+  // 앞선 테스트가 띄운 키보드가 남아 있으면 첫 렌더부터 "떠 있음"으로 읽힌다.
+  beforeEach(() => {
+    DeviceEventEmitter.emit('keyboardDidHide', keyboardEvent(0));
+  });
+
+  it('키보드가 올라오면 홈 인디케이터 여백을 빼서 입력줄이 키보드에 붙는다', async () => {
+    const screen = await render(
+      <SafeAreaInsetsContext.Provider
+        value={{ top: 59, bottom: HOME_INDICATOR, left: 0, right: 0 }}>
+        <HouseChatScreen messages={[]} myUserId={1} />
+      </SafeAreaInsetsContext.Provider>,
+    );
+    const bottom = () => {
+      let node = screen.getByLabelText('메시지 입력').parent;
+      while (node) {
+        const pb = StyleSheet.flatten(node.props.style)?.paddingBottom;
+        if (typeof pb === 'number') return pb;
+        node = node.parent;
+      }
+      return undefined;
+    };
+    const closed = bottom()!;
+    expect(closed).toBeGreaterThanOrEqual(HOME_INDICATOR);
+
+    await act(async () => {
+      DeviceEventEmitter.emit('keyboardWillShow', keyboardEvent(KEYBOARD));
+    });
+    // 키보드가 홈 인디케이터 자리를 이미 덮는다 — 그 여백을 또 두면 입력줄이 떠 보인다.
+    expect(bottom()).toBe(closed - HOME_INDICATOR);
+
+    await act(async () => {
+      DeviceEventEmitter.emit('keyboardWillHide', keyboardEvent(0));
+    });
+    expect(bottom()).toBe(closed);
+  });
+
+  it('하드웨어 키보드처럼 화면을 거의 안 가리는 키보드에는 여백을 그대로 둔다', async () => {
+    const screen = await render(
+      <SafeAreaInsetsContext.Provider
+        value={{ top: 59, bottom: HOME_INDICATOR, left: 0, right: 0 }}>
+        <HouseChatScreen messages={[]} myUserId={1} />
+      </SafeAreaInsetsContext.Provider>,
+    );
+    const row = () => {
+      let node = screen.getByLabelText('메시지 입력').parent;
+      while (node) {
+        const pb = StyleSheet.flatten(node.props.style)?.paddingBottom;
+        if (typeof pb === 'number') return pb;
+        node = node.parent;
+      }
+      return undefined;
+    };
+    const closed = row()!;
+    await act(async () => {
+      DeviceEventEmitter.emit('keyboardWillShow', keyboardEvent(0));
+    });
+    expect(row()).toBe(closed);
+  });
+});
+
 describe('HouseChatScreen — 날짜 구분선', () => {
   // UTC 03:00 = KST 정오 — 단말 시간대(KST/UTC)와 무관하게 같은 날짜로 묶인다.
   const msg = (seq: number, sender: number, day: string, content: string): ChatMessageView => ({
@@ -345,7 +416,9 @@ describe('HouseChatScreen — 사진 묶음 (2026-11-13)', () => {
     const screen = await render(
       <HouseChatScreen messages={[]} onSend={onSend} photos={[photo('a.jpg'), photo('b.jpg')]} />,
     );
-    expect(screen.getByText('사진 2/10장 · 글과 함께 한 번에 보내요')).toBeTruthy();
+    // 담긴 사진은 미리보기 줄에 보이고, 그 아래에 설명 문구는 두지 않는다.
+    expect(screen.getByTestId('chat-composer-tray')).toBeTruthy();
+    expect(screen.queryByText(/한 번에 보내요/)).toBeNull();
     await fireEvent.press(screen.getByLabelText('보내기'));
     expect(onSend).toHaveBeenLastCalledWith('');
     await fireEvent.changeText(screen.getByLabelText('메시지 입력'), '  어제 산책  ');
