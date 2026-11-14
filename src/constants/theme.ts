@@ -641,6 +641,18 @@ export const SplashBackgroundDark = '#243273';
  */
 export const ContentMaxWidth = 560;
 
+/**
+ * 사진 전체 화면 보기 (2026-11-11) — 사진이 주인공이라 테마와 무관하게 검정 바탕에 흰 글자,
+ * 반투명 버튼을 쓴다. 밝은 테마 바탕에 사진을 띄우면 사진 주변이 떠 보인다.
+ */
+export const MediaViewer = {
+  backdrop: '#000000',
+  text: '#FFFFFF',
+  textMuted: 'rgba(255,255,255,0.72)',
+  /** 사진 위에 얹히는 둥근 버튼·안내 필 배경. */
+  control: 'rgba(255,255,255,0.16)',
+} as const;
+
 export const Overlay = {
   /** Light scrim for anchored popovers — keeps the page readable behind. */
   subtle: 'rgba(0,0,0,0.2)',
