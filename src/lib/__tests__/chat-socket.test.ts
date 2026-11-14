@@ -52,6 +52,7 @@ describe('chat-socket (#1408)', () => {
       roomId: 5,
       accessToken: 'token-1',
       includeMessages: true,
+      includeReactions: true,
     });
     ws.onmessage?.({
       data: JSON.stringify({ type: 'READY', room: { roomId: 5, lastSequence: 3 } }),
@@ -73,6 +74,28 @@ describe('chat-socket (#1408)', () => {
     const message = { messageId: 121, roomId: 5, sequence: 32, content: '안녕' };
     ws.onmessage?.({ data: JSON.stringify({ type: 'MESSAGE_CREATED', message }) });
     expect(onMessage).toHaveBeenCalledWith(message);
+    expect(onRoom).not.toHaveBeenCalled();
+    socket.close();
+  });
+
+  it('MESSAGE_REACTIONS의 공감 전체를 넘긴다 — 모양이 어긋난 프레임은 버린다', () => {
+    const onRoom = jest.fn();
+    const onReactions = jest.fn();
+    const socket = connectChatSocket(5, { onRoom, onReactions });
+    const ws = FakeSocket.instances[0];
+    ws.onopen?.();
+    const reactions = [{ type: 'HEART', userIds: [7, 8] }];
+    ws.onmessage?.({
+      data: JSON.stringify({
+        type: 'MESSAGE_REACTIONS',
+        roomId: 5,
+        messageId: 120,
+        sequence: 31,
+        reactions,
+      }),
+    });
+    ws.onmessage?.({ data: JSON.stringify({ type: 'MESSAGE_REACTIONS', messageId: 121 }) });
+    expect(onReactions.mock.calls).toEqual([[{ messageId: 120, sequence: 31, reactions }]]);
     expect(onRoom).not.toHaveBeenCalled();
     socket.close();
   });

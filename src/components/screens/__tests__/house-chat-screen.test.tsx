@@ -227,8 +227,8 @@ it('사진 선택 버튼을 누르면 선택 콜백을 부른다', async () => {
 it('[피드에 올리기]는 내가 보낸 사진에만 붙는다 (2026-11-11)', async () => {
   const onSharePhoto = jest.fn();
   const photos: ChatMessageView[] = [
-    { key: 'p1', sequence: 1, senderUserId: 2, senderNickname: '이웃', content: '', messageType: 'IMAGE', localImageUri: 'file:///tmp/theirs.jpg', createdAt: '2026-11-11T11:30:00Z', unreadCount: 0, status: 'sent' }, // prettier-ignore
-    { key: 'p2', sequence: 2, senderUserId: 1, senderNickname: '나', content: '', messageType: 'IMAGE', localImageUri: 'file:///tmp/mine.jpg', createdAt: '2026-11-11T11:31:00Z', unreadCount: 0, status: 'sent' }, // prettier-ignore
+    { key: 'p1', sequence: 1, senderUserId: 2, senderNickname: '이웃', content: '', messageType: 'IMAGE', localImages: [{ uri: 'file:///tmp/theirs.jpg', name: 'theirs.jpg', type: 'image/jpeg' }], createdAt: '2026-11-11T11:30:00Z', unreadCount: 0, status: 'sent' }, // prettier-ignore
+    { key: 'p2', sequence: 2, senderUserId: 1, senderNickname: '나', content: '', messageType: 'IMAGE', localImages: [{ uri: 'file:///tmp/mine.jpg', name: 'mine.jpg', type: 'image/jpeg' }], createdAt: '2026-11-11T11:31:00Z', unreadCount: 0, status: 'sent' }, // prettier-ignore
   ];
   const screen = await render(
     <HouseChatScreen messages={photos} myUserId={1} onSharePhoto={onSharePhoto} />,
@@ -264,5 +264,148 @@ describe('HouseChatScreen — 이 집 알림 시트 (집 피드)', () => {
     await fireEvent.press(bell);
     expect(onOpenNotifications).toHaveBeenCalledTimes(1);
     expect(onToggleMute).not.toHaveBeenCalled();
+  });
+});
+
+describe('HouseChatScreen — 길게 눌러 여는 메뉴 (2026-11-13)', () => {
+  const SENT: ChatMessageView[] = [
+    { key: 's1', messageId: 11, sequence: 1, senderUserId: 2, senderNickname: '이웃', content: '안녕하세요', createdAt: '2026-09-21T12:58:00Z', unreadCount: 0, status: 'sent' }, // prettier-ignore
+    { key: 's2', messageId: 12, sequence: 2, senderUserId: 1, senderNickname: '나', content: '반가워요', createdAt: '2026-09-21T13:00:00Z', unreadCount: 0, status: 'sent' }, // prettier-ignore
+  ];
+
+  it('신고는 평소에 보이지 않고, 남의 말풍선을 길게 눌러야 나온다', async () => {
+    const onReport = jest.fn();
+    const screen = await render(
+      <HouseChatScreen messages={SENT} myUserId={1} onReport={onReport} onReact={jest.fn()} />,
+    );
+    expect(screen.queryByLabelText('신고')).toBeNull();
+    await fireEvent(screen.getByText('안녕하세요'), 'longPress');
+    await fireEvent.press(screen.getByLabelText('신고'));
+    expect(onReport).toHaveBeenCalledWith(11);
+    // 고르면 메뉴가 닫힌다.
+    expect(screen.queryByLabelText('신고')).toBeNull();
+  });
+
+  it('내 말풍선의 메뉴에는 신고가 없고 복사는 있다', async () => {
+    const onCopy = jest.fn();
+    const screen = await render(
+      <HouseChatScreen messages={SENT} myUserId={1} onReport={jest.fn()} onCopy={onCopy} />,
+    );
+    await fireEvent(screen.getByText('반가워요'), 'longPress');
+    expect(screen.queryByLabelText('신고')).toBeNull();
+    await fireEvent.press(screen.getByLabelText('복사'));
+    expect(onCopy).toHaveBeenCalledWith('반가워요');
+  });
+
+  it('메뉴에서 공감을 고르면 그 메시지와 유형으로 부르고, 이미 고른 공감을 다시 누르면 취소한다', async () => {
+    const onReact = jest.fn();
+    const reacted: ChatMessageView[] = [
+      { ...SENT[0], reactions: [{ type: 'LIKE', userIds: [1, 3] }] },
+    ];
+    const screen = await render(
+      <HouseChatScreen messages={reacted} myUserId={1} onReact={onReact} />,
+    );
+    await fireEvent(screen.getByText('안녕하세요'), 'longPress');
+    await fireEvent.press(screen.getByLabelText('하트 공감'));
+    expect(onReact).toHaveBeenLastCalledWith(11, 'HEART');
+    await fireEvent(screen.getByText('안녕하세요'), 'longPress');
+    await fireEvent.press(screen.getByLabelText('좋아요 공감'));
+    expect(onReact).toHaveBeenLastCalledWith(11, null);
+  });
+
+  it('말풍선 아래 공감 칩은 사람 수를 보여 주고, 누르면 그 유형으로 공감한다', async () => {
+    const onReact = jest.fn();
+    const reacted: ChatMessageView[] = [
+      { ...SENT[0], reactions: [{ type: 'HEART', userIds: [3, 4] }] },
+    ];
+    const screen = await render(
+      <HouseChatScreen messages={reacted} myUserId={1} onReact={onReact} />,
+    );
+    await fireEvent.press(screen.getByLabelText('하트 공감 2명'));
+    expect(onReact).toHaveBeenCalledWith(11, 'HEART');
+  });
+
+  it('보내는 중인 메시지는 길게 눌러도 메뉴가 열리지 않는다', async () => {
+    const pending: ChatMessageView[] = [
+      { key: 'cA', clientMessageId: 'A', senderUserId: 1, content: '가는 중', unreadCount: 0, status: 'pending' }, // prettier-ignore
+    ];
+    const screen = await render(
+      <HouseChatScreen messages={pending} myUserId={1} onReact={jest.fn()} onCopy={jest.fn()} />,
+    );
+    await fireEvent(screen.getByText('가는 중'), 'longPress');
+    expect(screen.queryByTestId('chat-message-menu')).toBeNull();
+  });
+});
+
+describe('HouseChatScreen — 사진 묶음 (2026-11-13)', () => {
+  const photo = (name: string) => ({ uri: `file:///tmp/${name}`, name, type: 'image/jpeg' });
+
+  it('담아 둔 사진이 있으면 글이 비어도 보내고, 글은 함께 넘긴다', async () => {
+    const onSend = jest.fn();
+    const screen = await render(
+      <HouseChatScreen messages={[]} onSend={onSend} photos={[photo('a.jpg'), photo('b.jpg')]} />,
+    );
+    expect(screen.getByText('사진 2/10장 · 글과 함께 한 번에 보내요')).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText('보내기'));
+    expect(onSend).toHaveBeenLastCalledWith('');
+    await fireEvent.changeText(screen.getByLabelText('메시지 입력'), '  어제 산책  ');
+    await fireEvent.press(screen.getByLabelText('보내기'));
+    expect(onSend).toHaveBeenLastCalledWith('어제 산책');
+  });
+
+  it('담아 둔 사진은 눌러서 자르기를 열고 따로 뺄 수 있다', async () => {
+    const onEditPhoto = jest.fn();
+    const onRemovePhoto = jest.fn();
+    const screen = await render(
+      <HouseChatScreen
+        messages={[]}
+        photos={[photo('a.jpg'), photo('b.jpg')]}
+        onEditPhoto={onEditPhoto}
+        onRemovePhoto={onRemovePhoto}
+      />,
+    );
+    await fireEvent.press(screen.getByLabelText('2번째 사진 자르기'));
+    expect(onEditPhoto).toHaveBeenCalledWith(1);
+    await fireEvent.press(screen.getByLabelText('1번째 사진 빼기'));
+    expect(onRemovePhoto).toHaveBeenCalledWith(0);
+  });
+
+  it('사진을 10장 담으면 사진 버튼이 잠긴다', async () => {
+    const pick = jest.fn();
+    const full = Array.from({ length: 10 }, (_, i) => photo(`${i}.jpg`));
+    const screen = await render(<HouseChatScreen messages={[]} photos={full} onPickPhoto={pick} />);
+    await fireEvent.press(screen.getByLabelText('사진 선택'));
+    expect(pick).not.toHaveBeenCalled();
+  });
+
+  it('이모티콘 메시지는 서버의 대체 문구로 보이고, 그 문구는 복사 메뉴에 올리지 않는다', async () => {
+    const onCopy = jest.fn();
+    const messages: ChatMessageView[] = [
+      { key: 's1', messageId: 1, sequence: 1, senderUserId: 2, senderNickname: '이웃', content: '이모티콘을 보냈어요', messageType: 'EMOTICON', createdAt: '2026-09-21T12:58:00Z', unreadCount: 0, status: 'sent' }, // prettier-ignore
+    ];
+    const screen = await render(
+      <HouseChatScreen messages={messages} myUserId={1} onCopy={onCopy} onReact={jest.fn()} />,
+    );
+    await fireEvent(screen.getByText('이모티콘을 보냈어요'), 'longPress');
+    expect(screen.getByLabelText('하트 공감')).toBeTruthy();
+    expect(screen.queryByLabelText('복사')).toBeNull();
+  });
+
+  it('사진 여러 장은 묶음으로, 함께 보낸 글은 그 아래 말풍선으로 그린다', async () => {
+    const messages: ChatMessageView[] = [
+      { key: 's1', messageId: 1, sequence: 1, senderUserId: 1, senderNickname: '나', content: '어제 산책', caption: '어제 산책', messageType: 'IMAGE', localImages: [photo('a.jpg'), photo('b.jpg'), photo('c.jpg')], createdAt: '2026-09-21T12:58:00Z', unreadCount: 0, status: 'sent' }, // prettier-ignore
+    ];
+    const screen = await render(<HouseChatScreen messages={messages} myUserId={1} />);
+    expect(screen.getByTestId('chat-photo-grid')).toBeTruthy();
+    expect(screen.getAllByLabelText('사진 크게 보기')).toHaveLength(3);
+    expect(screen.getByText('어제 산책')).toBeTruthy();
+  });
+
+  it('사진만 보낸 메시지는 옛 앱용 대체 문구를 그리지 않는다', async () => {
+    const messages: ChatMessageView[] = [
+      { key: 's1', messageId: 1, sequence: 1, senderUserId: 2, senderNickname: '이웃', content: '사진을 보냈어요', messageType: 'IMAGE', localImages: [photo('a.jpg')], createdAt: '2026-09-21T12:58:00Z', unreadCount: 0, status: 'sent' }, // prettier-ignore
+    ];
+    const screen = await render(<HouseChatScreen messages={messages} myUserId={1} />);
+    expect(screen.queryByText('사진을 보냈어요')).toBeNull();
   });
 });
