@@ -46,6 +46,7 @@ const ICONS = {
   // 집 채팅 — 담아 둔 사진 자르기
   // 메신저식 보내기 — 위로 솟는 화살표
   'send-up': 'arrow-up',
+  emoticon: 'happy-outline',
   // 말풍선 길게 누르기 메뉴 — 다른 앱으로 공유
   share: 'share-outline',
   crop: 'crop-outline',

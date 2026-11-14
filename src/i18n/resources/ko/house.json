@@ -547,7 +547,27 @@
         "SURPRISE": "놀람",
         "SAD": "슬픔"
       },
-      "share": "공유"
+      "share": "공유",
+      "emoticons": {
+        "pack": "루양이의 하루",
+        "open": "이모티콘 선택",
+        "close": "이모티콘 닫기",
+        "choose": "{{name}} 선택",
+        "preview": "선택한 이모티콘: {{name}}",
+        "message": "이모티콘: {{name}}",
+        "cancel": "이모티콘 선택 취소",
+        "sendHint": "보내기를 눌러 전송하세요",
+        "labels": {
+          "hi": "안녕!",
+          "like": "좋아!",
+          "cheer": "파이팅!",
+          "done": "해냈다!",
+          "thanks": "고마워",
+          "goodjob": "수고했어",
+          "sad": "힝...",
+          "goodnight": "잘 자"
+        }
+      }
     },
     "friendWeek": {
       "range": "{{sm}}월 {{sd}}일 – {{em}}월 {{ed}}일",

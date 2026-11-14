@@ -30,6 +30,7 @@ import { useLatestRef } from '@/hooks/use-stable-value';
 import { track } from '@/lib/analytics';
 import { connectChatSocket } from '@/lib/chat-socket';
 import { queryKeys } from '@/lib/query-keys';
+import { chatEmoticonOf, type ChatEmoticonKey } from '@/resources/chat-emoticons';
 
 /** 읽음 전송을 모으는 창 — 스크롤 중 보이는 순서가 오를 때마다 PUT하지 않는다. */
 export const CHAT_READ_DEBOUNCE_MS = 500;
@@ -52,6 +53,7 @@ type Outgoing = {
   clientMessageId: string;
   /** 글 메시지의 본문, 사진 메시지에서는 함께 보내는 글(없으면 빈 문자열). */
   content: string;
+  emoticonKey?: ChatEmoticonKey;
   /** 한 메시지로 묶어 보낼 사진 — 고른 순서대로. */
   files?: ChatPhotoDraft[];
   /** 올리기를 마친 사진 ID — `files`와 같은 자리. 아직 못 올린 칸은 비어 있다. */
@@ -455,9 +457,11 @@ export function useHouseChat({
         }
         if (!current()) return;
         const sentIds = (imageIds ?? []).filter((value): value is number => value != null);
-        const body: ChatSendRequest = sentIds.length
-          ? { clientMessageId, imageIds: sentIds, ...(content ? { content } : {}) }
-          : { clientMessageId, content };
+        const body: ChatSendRequest = item.emoticonKey
+          ? { clientMessageId, emoticonKey: item.emoticonKey, ...(content ? { content } : {}) }
+          : sentIds.length
+            ? { clientMessageId, imageIds: sentIds, ...(content ? { content } : {}) }
+            : { clientMessageId, content };
         const msg = await sendRef.current({ roomId: id, body });
         if (!current()) return;
         drop();
@@ -525,6 +529,22 @@ export function useHouseChat({
       const item: Outgoing = {
         clientMessageId,
         content: text,
+        createdAt: new Date().toISOString(),
+        status: 'pending',
+      };
+      setOutbox((prev) => [...prev, item]);
+      void deliver(item);
+    },
+    [roomIdRef, deliver],
+  );
+
+  const sendEmoticon = useCallback(
+    (key: ChatEmoticonKey, text = '') => {
+      if (roomIdRef.current == null || !chatEmoticonOf(key)) return;
+      const item: Outgoing = {
+        clientMessageId: newClientMessageId(),
+        content: text.trim(),
+        emoticonKey: key,
         createdAt: new Date().toISOString(),
         status: 'pending',
       };
@@ -640,6 +660,7 @@ export function useHouseChat({
       messageId: m.messageId,
       images: chatImagesOf(m),
       messageType: m.messageType,
+      emoticonKey: m.emoticonKey ?? undefined,
       caption: m.caption ?? undefined,
       reactions: m.reactions ?? undefined,
       sequence: m.sequence,
@@ -656,9 +677,10 @@ export function useHouseChat({
       key: `c${o.clientMessageId}`,
       clientMessageId: o.clientMessageId,
       senderUserId: userId,
-      messageType: o.files?.length ? 'IMAGE' : 'TEXT',
+      messageType: o.emoticonKey ? 'EMOTICON' : o.files?.length ? 'IMAGE' : 'TEXT',
+      emoticonKey: o.emoticonKey,
       content: o.files?.length ? '' : o.content,
-      caption: o.files?.length && o.content ? o.content : undefined,
+      caption: (o.files?.length || o.emoticonKey) && o.content ? o.content : undefined,
       localImages: o.files,
       createdAt: o.createdAt,
       unreadCount: 0,
@@ -682,6 +704,7 @@ export function useHouseChat({
       loadingOlder,
       send,
       sendPhotos,
+      sendEmoticon,
       react,
       retrySend,
       loadOlder,
@@ -698,6 +721,7 @@ export function useHouseChat({
       loadingOlder,
       send,
       sendPhotos,
+      sendEmoticon,
       react,
       retrySend,
       loadOlder,
