@@ -520,7 +520,6 @@
       "messageLabel": "채팅 메시지",
       "reportSent": "신고가 접수됐어요.",
       "reportFailed": "신고를 보내지 못했어요. 다시 시도해 주세요.",
-      "photoCount": "사진 {{n}}/{{max}}장 · 글과 함께 한 번에 보내요",
       "photoMax": "사진은 한 번에 {{max}}장까지 보낼 수 있어요.",
       "photoSomeInvalid": "보낼 수 없는 사진 {{n}}장은 빼고 담았어요. (10MB 이하 JPG·PNG)",
       "editPhoto": "{{n}}번째 사진 자르기",

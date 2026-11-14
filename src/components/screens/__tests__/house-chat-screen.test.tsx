@@ -416,7 +416,9 @@ describe('HouseChatScreen — 사진 묶음 (2026-11-13)', () => {
     const screen = await render(
       <HouseChatScreen messages={[]} onSend={onSend} photos={[photo('a.jpg'), photo('b.jpg')]} />,
     );
-    expect(screen.getByText('사진 2/10장 · 글과 함께 한 번에 보내요')).toBeTruthy();
+    // 담긴 사진은 미리보기 줄에 보이고, 그 아래에 설명 문구는 두지 않는다.
+    expect(screen.getByTestId('chat-composer-tray')).toBeTruthy();
+    expect(screen.queryByText(/한 번에 보내요/)).toBeNull();
     await fireEvent.press(screen.getByLabelText('보내기'));
     expect(onSend).toHaveBeenLastCalledWith('');
     await fireEvent.changeText(screen.getByLabelText('메시지 입력'), '  어제 산책  ');

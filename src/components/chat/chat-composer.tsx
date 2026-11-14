@@ -6,7 +6,6 @@ import {
   ScrollView,
   type StyleProp,
   StyleSheet,
-  Text,
   View,
   type ViewStyle,
 } from 'react-native';
@@ -149,9 +148,6 @@ export function ChatComposer({
               </View>
             ))}
           </ScrollView>
-          <Text style={[Typography.caption, emph('normal'), styles.count, { color: t.textMuted }]}>
-            {tr('house.chat.photoCount', { n: photoCount, max: CHAT_PHOTO_MAX })}
-          </Text>
         </View>
       ) : null}
       <View style={[styles.inputRow, { paddingBottom: bottomInset }]}>
@@ -257,7 +253,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  count: { paddingHorizontal: Spacing.three, paddingTop: Spacing.one },
   inputRow: { paddingHorizontal: BAR_MARGIN, paddingTop: Spacing.two },
   pill: {
     flexDirection: 'row',
