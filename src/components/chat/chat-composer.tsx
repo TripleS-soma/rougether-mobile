@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   Platform,
   Pressable,
   ScrollView,
@@ -11,14 +12,16 @@ import {
 } from 'react-native';
 
 import { CroppedImage } from '@/components/chat/cropped-image';
+import { ChatEmoticonPicker } from '@/components/chat/chat-emoticon-picker';
 import { AppTextInput as TextInput } from '@/components/ui/app-text-input';
 import { Icon } from '@/components/ui/icon';
 import { pressedStyle } from '@/components/ui/press-feedback';
-import { Radius, Spacing } from '@/constants/theme';
+import { ChatEmoticonLayout, Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
 import { croppedAspect } from '@/lib/chat-crop';
 import { CHAT_PHOTO_MAX, type ChatPhotoDraft } from '@/lib/pick-chat-photo';
+import { chatEmoticonOf, type ChatEmoticonKey } from '@/resources/chat-emoticons';
 
 /** 입력칸이 여러 줄로 늘어나도 목록을 다 먹지 않는 높이 — 본문 약 5줄. */
 const INPUT_MAX_HEIGHT = 116;
@@ -46,6 +49,9 @@ export type ChatComposerProps = {
   disabled?: boolean;
   /** 글·사진 보내기 — 다듬은(trim) 글로 부른다. 사진만 보낼 땐 빈 문자열. */
   onSend?: (text: string) => void;
+  onSendEmoticon?: (key: ChatEmoticonKey, text: string) => void;
+  selectedEmoticon?: ChatEmoticonKey;
+  onSelectEmoticon: (key: ChatEmoticonKey | undefined) => void;
   /** 보내려고 담아 둔 사진 — 입력줄 위에 작게 보인다. */
   photos?: ChatPhotoDraft[];
   onPickPhoto?: () => void;
@@ -60,13 +66,16 @@ export type ChatComposerProps = {
 };
 
 /**
- * 채팅 입력줄 — 한 줄 알약 안에 [사진] 글 [보내기]. 고른 사진은 입력줄 위 미리보기 줄에
- * 쌓였다가 보내기 한 번에 글과 함께 **메시지 하나**로 나간다.
+ * 채팅 입력줄 — 한 줄 알약 안에 [사진] 글 [이모티콘] [보내기]. 선택한 이모티콘이나 사진은
+ * 보내기 한 번에 입력한 글과 함께 메시지 하나로 나간다.
  */
 export function ChatComposer({
   maxLength,
   disabled = false,
   onSend,
+  onSendEmoticon,
+  selectedEmoticon: selectedKey,
+  onSelectEmoticon,
   photos,
   onPickPhoto,
   pickingPhoto = false,
@@ -80,6 +89,16 @@ export function ChatComposer({
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const [draft, setDraft] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const selectedRef = useRef<ChatEmoticonKey | undefined>(undefined);
+  useEffect(() => {
+    selectedRef.current = selectedKey;
+  }, [selectedKey]);
+  const selectEmoticon = (key: ChatEmoticonKey | undefined) => {
+    selectedRef.current = key;
+    onSelectEmoticon(key);
+  };
+  const selected = chatEmoticonOf(selectedKey);
   // 같은 렌더에서 보내기가 두 번 눌려도 같은 글이 두 번 나가지 않게, 보낼 때는 state가 아니라
   // ref를 읽고 그 자리에서 비운다.
   const draftRef = useRef('');
@@ -90,9 +109,29 @@ export function ChatComposer({
 
   const trimmed = draft.trim();
   const photoCount = photos?.length ?? 0;
-  const canSend = (trimmed.length > 0 || photoCount > 0) && !!onSend;
+  const canSend =
+    !disabled &&
+    (selected
+      ? !!onSendEmoticon
+      : !pickerOpen && (trimmed.length > 0 || photoCount > 0) && !!onSend);
+  // 같은 렌더에서 연속으로 눌러도 글이나 사진이 중복 전송되지 않게 막음.
+  const consumedSelection = useRef(false);
+  useEffect(() => {
+    consumedSelection.current = false;
+  }, [selectedKey, draft, photoCount]);
   const send = () => {
-    if (!canSend) return;
+    if (!canSend || disabled || consumedSelection.current) return;
+    const key = selectedRef.current;
+    if (key) {
+      consumedSelection.current = true;
+      const text = draftRef.current.trim();
+      changeDraft('');
+      selectEmoticon(undefined);
+      // 사진 초안이 남아 있어도 연속 탭으로 보내지 않도록 선택 패널을 유지함.
+      setPickerOpen(true);
+      onSendEmoticon?.(key, text);
+      return;
+    }
     const text = draftRef.current.trim();
     changeDraft('');
     // 담아 둔 사진은 부모가 들고 있다 — 사진이 있으면 글이 비어도 넘긴다.
@@ -150,8 +189,8 @@ export function ChatComposer({
           </ScrollView>
         </View>
       ) : null}
-      <View style={[styles.inputRow, { paddingBottom: bottomInset }]}>
-        {/* 카카오톡식 한 줄 알약 — [사진] 글 [보내기]가 한 칸 안에 들어간다. */}
+      <View style={[styles.inputRow, { paddingBottom: pickerOpen ? Spacing.two : bottomInset }]}>
+        {/* 카카오톡식 한 줄 알약 — [사진] 글 [이모티콘] [보내기]가 한 칸 안에 들어간다. */}
         <View style={[styles.pill, { backgroundColor: t.surfaceMuted }, columnStyle]}>
           {onPickPhoto ? (
             <Pressable
@@ -159,7 +198,11 @@ export function ChatComposer({
               accessibilityLabel={tr('house.chat.pickPhoto')}
               accessibilityState={{ disabled: pickingPhoto || disabled || photoFull }}
               disabled={pickingPhoto || disabled || photoFull}
-              onPress={onPickPhoto}
+              onPress={() => {
+                setPickerOpen(false);
+                selectEmoticon(undefined);
+                onPickPhoto();
+              }}
               hitSlop={Spacing.two}
               style={({ pressed }) => [
                 styles.round,
@@ -181,6 +224,10 @@ export function ChatComposer({
           <TextInput
             value={draft}
             onChangeText={changeDraft}
+            onFocus={() => {
+              consumedSelection.current = false;
+              setPickerOpen(false);
+            }}
             placeholder={tr('house.chat.placeholder')}
             placeholderTextColor={t.textMuted}
             accessibilityLabel={tr('house.chat.inputA11y')}
@@ -198,6 +245,31 @@ export function ChatComposer({
               { color: t.text },
             ]}
           />
+          {onSendEmoticon ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={tr(
+                pickerOpen ? 'house.chat.emoticons.close' : 'house.chat.emoticons.open',
+              )}
+              accessibilityState={{ expanded: pickerOpen, disabled }}
+              disabled={disabled}
+              onPress={() => {
+                Keyboard.dismiss();
+                setPickerOpen((open) => !open);
+              }}
+              style={({ pressed }) => [
+                styles.round,
+                styles.emoticonToggle,
+                pressed && pressedStyle('dim', t),
+              ]}
+              testID="chat-emoticon-toggle">
+              <Icon
+                name="emoticon"
+                size={ChatEmoticonLayout.toggleIcon}
+                color={pickerOpen ? t.primaryText : t.textMuted}
+              />
+            </Pressable>
+          ) : null}
           <Pressable
             onPress={send}
             disabled={!canSend}
@@ -214,11 +286,22 @@ export function ChatComposer({
           </Pressable>
         </View>
       </View>
+      {pickerOpen && !disabled ? (
+        <ChatEmoticonPicker
+          selected={selectedKey}
+          onSelect={(key) => {
+            consumedSelection.current = false;
+            selectEmoticon(key);
+          }}
+          bottomInset={bottomInset}
+        />
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  emoticonToggle: { marginRight: Spacing.one },
   tray: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: Spacing.two },
   trayContent: { paddingHorizontal: Spacing.three, gap: Spacing.two },
   tile: { width: TRAY_TILE + REMOVE_SIZE / 2, height: TRAY_TILE + REMOVE_SIZE / 2 },

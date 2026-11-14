@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { memo, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -12,10 +13,11 @@ import { ChatPhotoGrid } from '@/components/chat/chat-photo-grid';
 import { ChatReactionChips } from '@/components/chat/chat-reaction-chips';
 import { LinkifiedText } from '@/components/ui/linkified-text';
 import { pressedStyle } from '@/components/ui/press-feedback';
-import { Radius, Spacing } from '@/constants/theme';
+import { ChatEmoticonLayout, Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
 import type { ChatPhotoDraft } from '@/lib/pick-chat-photo';
+import { chatEmoticonOf } from '@/resources/chat-emoticons';
 
 /**
  * 뷰의 화면(창) 좌표 — 새 아키텍처와 웹은 `getBoundingClientRect`를 동기로 준다. 없는
@@ -36,6 +38,7 @@ export type ChatMessageRowProps = {
   rowKey: string;
   messageId?: number;
   messageType?: ChatMessageType;
+  emoticonKey?: string;
   images?: ChatImageResponse[];
   localImages?: ChatPhotoDraft[];
   /** 사진과 함께 보낸 글. */
@@ -73,6 +76,7 @@ export const ChatMessageRow = memo(function ChatMessageRow({
   rowKey,
   messageId,
   messageType,
+  emoticonKey,
   images,
   localImages,
   caption,
@@ -105,13 +109,15 @@ export const ChatMessageRow = memo(function ChatMessageRow({
   const hasPhotos = !!images?.length || !!localImages?.length;
   // 사진이 없는 사진 메시지 — 탈퇴한 회원의 사진이거나 운영자가 지운 메시지.
   const imageMissing = messageType === 'IMAGE' && !hasPhotos;
-  // 말풍선에 넣을 글: 사진 메시지는 함께 보낸 글만(대체 문구 "사진을 보냈어요"는 옛 앱용).
-  // 이 앱은 아직 이모티콘을 그리지 않는다 — 이모티콘 메시지는 서버의 대체 문구로 보인다.
-  const text = hasPhotos
+  const emoticon = messageType === 'EMOTICON' ? chatEmoticonOf(emoticonKey) : undefined;
+  // 아는 이모티콘과 사진에는 함께 보낸 글만 표시하고, 모르는 key는 서버의 대체 문구를 표시함.
+  const text = emoticon
     ? (caption ?? '')
-    : imageMissing && !content
-      ? tr('house.chat.photoUnavailable')
-      : content;
+    : hasPhotos
+      ? (caption ?? '')
+      : imageMissing && !content
+        ? tr('house.chat.photoUnavailable')
+        : content;
 
   const meta =
     status === 'pending' ? (
@@ -168,6 +174,18 @@ export const ChatMessageRow = memo(function ChatMessageRow({
             mine ? styles.rowMine : styles.rowOther,
             status === 'pending' ? styles.pending : null,
           ]}>
+          {emoticon ? (
+            <Pressable {...longPress}>
+              <Image
+                source={emoticon.source}
+                contentFit="contain"
+                style={styles.emoticon}
+                accessibilityLabel={tr('house.chat.emoticons.message', {
+                  name: tr(`house.chat.emoticons.labels.${emoticon.labelKey}`),
+                })}
+              />
+            </Pressable>
+          ) : null}
           {hasPhotos ? (
             <ChatPhotoGrid
               images={images}
@@ -223,6 +241,7 @@ export const ChatMessageRow = memo(function ChatMessageRow({
 });
 
 const styles = StyleSheet.create({
+  emoticon: { width: ChatEmoticonLayout.message, height: ChatEmoticonLayout.message },
   dayDivider: {
     flexDirection: 'row',
     alignItems: 'center',

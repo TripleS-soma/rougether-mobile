@@ -31,6 +31,16 @@ export const Spacing = {
   six: 64,
 } as const;
 
+/** Shared geometry for bundled chat emoticons. */
+export const ChatEmoticonLayout = {
+  toggleIcon: 22,
+  packIcon: 28,
+  preview: 140,
+  previewCard: 188,
+  message: 160,
+  pickerMaxHeight: 192,
+} as const;
+
 /**
  * 소셜 로그인 버튼의 벤더 지정색 — 각 브랜드 가이드가 정한 값이라 테마를 타지 않는다
  * (카카오 노랑, 애플 검정, 구글 흰 바탕 + 4색 G). 토큰이 아니라 "규정색"이다.

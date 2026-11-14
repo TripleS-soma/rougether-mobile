@@ -43,6 +43,8 @@ Claude(또는 작업자)가 대화·작업 중 아래에 해당한다고 **스�
 
 ## 목록
 
+- [2026-11-15, 채팅 이모티콘의 웹 미리보기와 iOS 이미지 지원 확인](2026-11-15-chat-emoticon-image-compatibility.md)
+
 - [2026-11-11, OTA 발행 성공과 실제 스토어 설치본의 기능 도달 구분](2026-11-11-ios-store-ota-feature-gap.md)
 
 - [2026-11-11, 한글 조합 글자가 사라진 문제와 비어 있는 폰트 윤곽](2026-11-11-korean-input-empty-glyph.md)
