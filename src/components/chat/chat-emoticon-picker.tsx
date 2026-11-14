@@ -1,4 +1,5 @@
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { pressedStyle } from '@/components/ui/press-feedback';
 import { ChatEmoticonLayout, Radius, Spacing } from '@/constants/theme';
@@ -23,7 +24,7 @@ export function ChatEmoticonPicker({
       testID="chat-emoticon-picker"
       style={[styles.panel, { borderTopColor: t.border, paddingBottom: bottomInset }]}>
       <View style={styles.heading}>
-        <Image source={CHAT_EMOTICONS[0].source} style={styles.packIcon} resizeMode="contain" />
+        <Image source={CHAT_EMOTICONS[0].source} style={styles.packIcon} contentFit="contain" />
         <Text style={[Typography.label, { color: t.text }]}>{tr('house.chat.emoticons.pack')}</Text>
       </View>
       <ScrollView keyboardShouldPersistTaps="always" style={styles.scroll}>
@@ -42,7 +43,7 @@ export function ChatEmoticonPicker({
                 { backgroundColor: selected === item.key ? t.surfaceMuted : undefined },
                 pressed && pressedStyle('dim', t),
               ]}>
-              <Image source={item.source} style={styles.image} resizeMode="contain" />
+              <Image source={item.source} style={styles.image} contentFit="contain" />
             </Pressable>
           ))}
         </View>
