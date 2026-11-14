@@ -1,4 +1,5 @@
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
 import { ChatEmoticonLayout, Radius, Spacing, withAlpha } from '@/constants/theme';
@@ -23,7 +24,7 @@ export function ChatEmoticonPreview({
       <View style={[styles.card, { backgroundColor: withAlpha(t.surface, 'A6') }]}>
         <Image
           source={emoticon.source}
-          resizeMode="contain"
+          contentFit="contain"
           style={styles.image}
           accessibilityLabel={tr('house.chat.emoticons.preview', {
             name: tr(`house.chat.emoticons.labels.${emoticon.labelKey}`),

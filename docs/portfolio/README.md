@@ -43,6 +43,8 @@ Claude(또는 작업자)가 대화·작업 중 아래에 해당한다고 **스�
 
 ## 목록
 
+- [2026-11-15, 채팅 이모티콘의 웹 미리보기와 iOS 이미지 지원 확인](2026-11-15-chat-emoticon-image-compatibility.md)
+
 - [2026-11-11, 한글 조합 글자가 사라진 문제와 비어 있는 폰트 윤곽](2026-11-11-korean-input-empty-glyph.md)
 
 - [2026-11-09, 이벤트 모달의 닫힘 완료와 계정 전환 경계를 분리한 사례](2026-11-09-event-modal-dismissal-session-boundary.md)
