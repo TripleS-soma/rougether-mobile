@@ -749,27 +749,127 @@ export type TypeStyle = {
  * a color via tokens, e.g. `<Text style={[Typography.body, { color: t.text }]}>`.
  * 전 롤 +2px 상향 (#659) — "전체적으로 작다" 피드백; fontSize·lineHeight 세트.
  */
-export const Typography: Record<TypeRole, TypeStyle> = {
-  bodyCompact: { fontSize: 16, lineHeight: 23, fontWeight: FontWeight.normal },
-  labelCompact: { fontSize: 14, lineHeight: 20, fontWeight: FontWeight.semibold },
-  display1: { fontSize: 36, lineHeight: 42, fontWeight: FontWeight.bold },
-  display2: { fontSize: 30, lineHeight: 36, fontWeight: FontWeight.bold },
-  h1: { fontSize: 26, lineHeight: 32, fontWeight: FontWeight.bold },
-  h2: { fontSize: 22, lineHeight: 28, fontWeight: FontWeight.bold },
-  h3: { fontSize: 20, lineHeight: 26, fontWeight: FontWeight.semibold },
-  large: { fontSize: 20, lineHeight: 28, fontWeight: FontWeight.medium },
-  body: { fontSize: 18, lineHeight: 26, fontWeight: FontWeight.normal },
-  label: { fontSize: 16, lineHeight: 22, fontWeight: FontWeight.semibold },
-  supporting: { fontSize: 14, lineHeight: 18, fontWeight: FontWeight.normal },
-  /**
-   * 배지·메타·힌트 같은 가장 작은 본문 (2026-11-10). supporting(14) 아래 단계가 없어 화면
-   * 10곳이 각자 `fontSize: 13`을 적어 썼다 — Radius.xl(#1015)과 같은 "토큰이 없어서 생긴
-   * 드리프트"라 롤을 늘려 흡수한다. 12·11은 좌석 타일·가구 이름표처럼 칸 크기에 맞춰 고정한
-   * 값이라 롤로 올리지 않고 그 자리에 둔다.
-   */
-  caption: { fontSize: 13, lineHeight: 17, fontWeight: FontWeight.normal },
-  code: { fontSize: 15, lineHeight: 20, fontWeight: FontWeight.medium },
+/** 설정에서 고르는 글자 크기 단계 (2026-11-14). 저장값이라 id는 불변. */
+export type FontSizeId = 'small' | 'medium' | 'large';
+
+export const DEFAULT_FONT_SIZE_ID: FontSizeId = 'medium';
+
+/**
+ * 설정 → 글씨의 크기 선택지, 표시 순서대로. `name`은 읽는 시점 언어의 표시명 getter
+ * (`settings.fontSizeName.<id>`).
+ */
+function fontSizeOption(id: FontSizeId): { id: FontSizeId; name: string } {
+  return {
+    id,
+    get name() {
+      return i18n.t(`settings.fontSizeName.${id}`);
+    },
+  };
+}
+
+export const FONT_SIZE_OPTIONS: { id: FontSizeId; name: string }[] = [
+  fontSizeOption('small'),
+  fontSizeOption('medium'),
+  fontSizeOption('large'),
+];
+
+type TypeSize = [fontSize: number, lineHeight: number];
+
+/**
+ * 단계별 글자 크기표 — 한 배율로 곱하지 않고 롤마다 손으로 맞춘다(작은 롤이 읽을 수 없게
+ * 줄지 않도록).
+ *
+ * - `medium`(기본): 본문 15. 메신저·피드를 카카오톡 수준의 밀도로 맞춘 값이다
+ *   (2026-11-14 제품 오너 "글씨가 다 이 크기였으면").
+ * - `large`: 2026-11-14 이전의 크기 그대로(본문 18, #659에서 "전체적으로 작다"는 피드백으로
+ *   +2 올린 값). 큰 글씨가 편한 사람은 설정에서 이 단계를 고른다. 모든 화면이 이 크기로
+ *   만들어졌으므로 레이아웃이 검증된 상한이다.
+ * - `small`: 기본보다 한 단계 작게(본문 14).
+ */
+const TYPE_SIZES: Record<FontSizeId, Record<TypeRole, TypeSize>> = {
+  small: {
+    display1: [28, 34],
+    display2: [24, 30],
+    h1: [20, 26],
+    h2: [18, 23],
+    h3: [16, 21],
+    large: [16, 22],
+    body: [14, 20],
+    bodyCompact: [13, 18],
+    label: [13, 18],
+    labelCompact: [12, 16],
+    supporting: [11, 15],
+    caption: [10, 13],
+    code: [12, 16],
+  },
+  medium: {
+    display1: [30, 36],
+    display2: [26, 32],
+    h1: [22, 28],
+    h2: [19, 25],
+    h3: [17, 23],
+    large: [17, 24],
+    body: [15, 21],
+    bodyCompact: [14, 20],
+    label: [14, 19],
+    labelCompact: [13, 18],
+    supporting: [12, 16],
+    caption: [11, 14],
+    code: [13, 18],
+  },
+  large: {
+    display1: [36, 42],
+    display2: [30, 36],
+    h1: [26, 32],
+    h2: [22, 28],
+    h3: [20, 26],
+    large: [20, 28],
+    body: [18, 26],
+    bodyCompact: [16, 23],
+    label: [16, 22],
+    labelCompact: [14, 20],
+    supporting: [14, 18],
+    caption: [13, 17],
+    code: [15, 20],
+  },
 };
+
+/** 롤별 굵기 — 크기 단계와 무관하다. */
+const TYPE_WEIGHTS: Record<TypeRole, NonNullable<TypeStyle['fontWeight']>> = {
+  bodyCompact: FontWeight.normal,
+  labelCompact: FontWeight.semibold,
+  display1: FontWeight.bold,
+  display2: FontWeight.bold,
+  h1: FontWeight.bold,
+  h2: FontWeight.bold,
+  h3: FontWeight.semibold,
+  large: FontWeight.medium,
+  body: FontWeight.normal,
+  label: FontWeight.semibold,
+  supporting: FontWeight.normal,
+  // 배지·메타·힌트 같은 가장 작은 본문 (2026-11-10). 12·11처럼 칸 크기에 맞춰 고정한 값은
+  // 롤로 올리지 않고 그 자리에 둔다.
+  caption: FontWeight.normal,
+  code: FontWeight.medium,
+};
+
+function staticScale(sizeId: FontSizeId): Record<TypeRole, TypeStyle> {
+  const out = {} as Record<TypeRole, TypeStyle>;
+  for (const role of Object.keys(TYPE_WEIGHTS) as TypeRole[]) {
+    const [fontSize, lineHeight] = TYPE_SIZES[sizeId][role];
+    out[role] = { fontSize, lineHeight, fontWeight: TYPE_WEIGHTS[role] };
+  }
+  return out;
+}
+
+const STATIC_SCALES: Record<FontSizeId, Record<TypeRole, TypeStyle>> = {
+  small: staticScale('small'),
+  medium: staticScale('medium'),
+  large: staticScale('large'),
+};
+
+/** 기본 크기 단계의 시스템 폰트 스케일 — 훅 밖(테스트·스토리)에서 기준값으로 쓴다. */
+export const Typography: Record<TypeRole, TypeStyle> = STATIC_SCALES[DEFAULT_FONT_SIZE_ID];
 
 // ---------- 앱 폰트 선택 (#382) ----------
 
@@ -848,13 +948,17 @@ const WEIGHT_KEY_BY_VALUE = Object.fromEntries(
  * 스케일 객체를 다시 만들었다. 폰트는 5종뿐이니 1회 계산·전역 공유가 맞고,
  * 스타일 참조 동일성이 앱 전역에서 유지된다(입력이 모두 모듈 상수라 안전).
  */
-const typographyCache = new Map<BrandFontId, Record<TypeRole, TypeStyle>>();
+const typographyCache = new Map<string, Record<TypeRole, TypeStyle>>();
 
-export function typographyFor(fontId: BrandFontId): Record<TypeRole, TypeStyle> {
-  const hit = typographyCache.get(fontId);
+export function typographyFor(
+  fontId: BrandFontId,
+  sizeId: FontSizeId = DEFAULT_FONT_SIZE_ID,
+): Record<TypeRole, TypeStyle> {
+  const key = `${fontId}:${sizeId}`;
+  const hit = typographyCache.get(key);
   if (hit) return hit;
-  const built = buildTypography(fontId);
-  typographyCache.set(fontId, built);
+  const built = buildTypography(fontId, sizeId);
+  typographyCache.set(key, built);
   return built;
 }
 
@@ -869,10 +973,11 @@ export function displayFaceFor(fontId: BrandFontId): Pick<TypeStyle, 'fontFamily
   return { fontFamily, fontWeight };
 }
 
-function buildTypography(fontId: BrandFontId): Record<TypeRole, TypeStyle> {
-  if (fontId === 'system') return Typography;
+function buildTypography(fontId: BrandFontId, sizeId: FontSizeId): Record<TypeRole, TypeStyle> {
+  const scale = STATIC_SCALES[sizeId];
+  if (fontId === 'system') return scale;
   const out = {} as Record<TypeRole, TypeStyle>;
-  for (const [role, style] of Object.entries(Typography) as [TypeRole, TypeStyle][]) {
+  for (const [role, style] of Object.entries(scale) as [TypeRole, TypeStyle][]) {
     if (fontId === 'jua' && JUA_HEADING_ROLES.has(role)) {
       out[role] = {
         fontSize: style.fontSize,

@@ -14,7 +14,7 @@
     "startTabHint": "The tab shown when the app opens · from next launch",
     "startTabOption": "Start screen {{name}}",
     "themeColor": "Theme color",
-    "font": "Font",
+    "font": "Text",
     "language": "Language",
     "pushNotifications": "Push notifications",
     "sound": "Sound effects",
@@ -44,6 +44,12 @@
       "jua": "Jua Mix",
       "suit": "SUIT",
       "system": "System default"
+    },
+    "fontValue": "{{font}} · {{size}}",
+    "fontSizeName": {
+      "small": "Small",
+      "medium": "Default",
+      "large": "Large"
     }
   },
   "language": {
