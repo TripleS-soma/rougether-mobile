@@ -45,7 +45,9 @@ afterEach(async () => {
 });
 
 it('normalizes a malformed list and bounds polling when no receipt ever arrives', async () => {
-  jest.useFakeTimers();
+  // 가짜 타이머는 Date도 갈아 끼워 beforeEach의 Date.now 스파이를 덮는다 — 시작 시각을 주지 않으면
+  // 실제 오늘 날짜로 돌아서, 이벤트 날(11/11)이 지난 뒤에는 조회 자체가 꺼져 이 테스트가 깨진다.
+  jest.useFakeTimers({ now: PEPERO_START + 60_000 });
   global.fetch = jest.fn(async () => jsonRes({})) as unknown as typeof fetch;
   const e = env();
   const { result } = await renderHook(() => usePeperoGift({ enabled: true }), {

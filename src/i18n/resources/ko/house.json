@@ -118,7 +118,9 @@
         "leave": "나가기",
         "deleteA11y": "집 삭제 확인",
         "leaveA11y": "나가기 확인",
-        "cancelA11y": "나가기 취소"
+        "cancelA11y": "나가기 취소",
+        "deleteFeed": "이 집의 내 글·댓글도 지우기",
+        "deleteFeedHint": "지우지 않으면 내 글은 이 집 구성원에게 계속 보여요. 나간 뒤에는 직접 지울 수 없어요."
       },
       "kickConfirm": {
         "title": "정말 강퇴할까요?",
@@ -510,6 +512,7 @@
       "retryPhoto": "사진 다시 불러오기",
       "photoFailed": "사진을 불러오지 못했어요. 눌러서 다시 시도해 주세요.",
       "closePhoto": "닫기",
+      "sharePhotoToFeed": "피드에 올리기",
       "previewPhoto": "사진 보내기",
       "cancelPhoto": "취소",
       "sendPhoto": "사진 보내기",
@@ -533,6 +536,23 @@
       "more": "다른 별채에 {{count}}명",
       "pageA11y": "{{name}} 보기",
       "navigation": "우리 집과 별채"
+    },
+    "feed": {
+      "rail": "집 피드",
+      "railA11y": "집 피드"
+    },
+    "notification": {
+      "title": "이 집 알림",
+      "openA11y": "이 집 알림 설정",
+      "chat": "채팅 알림",
+      "chatDesc": "새 메시지가 오면 알려드려요",
+      "freePost": "자유글 알림",
+      "freePostDesc": "구성원이 집 피드에 글을 올리면 알려드려요",
+      "verificationPost": "인증글 알림",
+      "verificationPostDesc": "구성원이 루틴 인증글을 올리면 알려드려요",
+      "footer": "이 집에만 적용돼요. 전체 푸시 알림은 설정 > 푸시 알림에서 바꿀 수 있어요.",
+      "feedPending": "글 알림 설정은 서버 준비 중이에요. 준비되면 여기서 바꿀 수 있어요.",
+      "saveFailed": "알림 설정을 바꾸지 못했어요. 잠시 후 다시 시도해 주세요."
     }
   }
 }

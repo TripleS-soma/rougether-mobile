@@ -37,3 +37,24 @@ describe('HouseScreen — 레일 채팅', () => {
     });
   });
 });
+
+describe('HouseScreen — 레일 집 피드', () => {
+  it('onOpenFeed가 있으면 채팅 아래·집 추가 위에 집 피드가 뜨고, 누르면 연다', async () => {
+    const onOpenFeed = jest.fn();
+    const ui = await render(
+      <HouseScreen houses={[MISSION_HOUSE]} onOpenChat={() => {}} onOpenFeed={onOpenFeed} />,
+    );
+    const labels = ui
+      .getAllByRole('button')
+      .map((b) => b.props.accessibilityLabel as string | undefined)
+      .filter((l): l is string => !!l && /^(집 채팅|집 피드|집 추가)/.test(l));
+    expect(labels).toEqual(['집 채팅', '집 피드', '집 추가']);
+    await fireEvent.press(ui.getByLabelText('집 피드'));
+    expect(onOpenFeed).toHaveBeenCalledTimes(1);
+  });
+
+  it('onOpenFeed가 없으면(피드가 꺼진 설치본·houseId 없는 집) 그리지 않는다', async () => {
+    const ui = await render(<HouseScreen houses={[MISSION_HOUSE]} onOpenChat={() => {}} />);
+    expect(ui.queryByLabelText('집 피드')).toBeNull();
+  });
+});

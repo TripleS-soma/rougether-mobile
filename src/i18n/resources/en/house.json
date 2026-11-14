@@ -118,7 +118,9 @@
         "leave": "Leave",
         "deleteA11y": "Confirm delete house",
         "leaveA11y": "Confirm leave",
-        "cancelA11y": "Cancel leave"
+        "cancelA11y": "Cancel leave",
+        "deleteFeed": "Also delete my posts and comments here",
+        "deleteFeedHint": "If you don't, members of this house will still see them. You can't delete them yourself after you leave."
       },
       "kickConfirm": {
         "title": "Remove this member?",
@@ -510,6 +512,7 @@
       "retryPhoto": "Reload photo",
       "photoFailed": "Could not load photo. Tap to try again.",
       "closePhoto": "Close",
+      "sharePhotoToFeed": "Post to feed",
       "previewPhoto": "Send photo",
       "cancelPhoto": "Cancel",
       "sendPhoto": "Send photo",
@@ -533,6 +536,23 @@
       "more": "{{count}} more in other houses",
       "pageA11y": "View {{name}}",
       "navigation": "Main house and annexes"
+    },
+    "feed": {
+      "rail": "House feed",
+      "railA11y": "House feed"
+    },
+    "notification": {
+      "title": "Notifications for this house",
+      "openA11y": "Notification settings for this house",
+      "chat": "Chat",
+      "chatDesc": "Get notified about new messages",
+      "freePost": "Free posts",
+      "freePostDesc": "Get notified when a member posts to the house feed",
+      "verificationPost": "Proof posts",
+      "verificationPostDesc": "Get notified when a member shares a routine proof post",
+      "footer": "Applies to this house only. Change all push notifications in Settings > Push notifications.",
+      "feedPending": "Post notification settings aren't ready on the server yet. You can change them here once they are.",
+      "saveFailed": "Couldn't change the notification setting. Please try again shortly."
     }
   }
 }

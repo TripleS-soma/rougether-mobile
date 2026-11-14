@@ -30,6 +30,17 @@ import type {
   FeedUpdateRequest,
 } from './types';
 
+/**
+ * 집 피드 (서버 집 피드 계약) — 생성 타입(`./types`)은 서버 배포 뒤 `npm run gen:api-types`로만
+ * 고치므로, 아직 스웨거에 없는 필드는 여기서 덧붙인다. 배포되면 이 타입들을 지우고 생성 타입을 쓴다.
+ * - `houseId`: 집 글이면 그 집, 공개 글은 null(배포 전 서버는 필드 자체가 없다).
+ * - `deletable`: 본인이거나 집 글의 방장이면 true. 없으면 false로 본다.
+ */
+export type FeedPostWire = FeedPostResponse & { houseId?: number | null; deletable?: boolean };
+export type FeedCommentWire = FeedCommentResponse & { deletable?: boolean };
+/** `houseId`를 주면 그 집 구성원만 보는 집 글로 올라간다. 비구성원 403 `HOUSE_NOT_MEMBER`. */
+export type FeedCreateInput = FeedCreateRequest & { houseId?: number };
+
 /** 업로드할 사진 — RN FormData 파일 디스크립터와 같은 모양(`lib/pick-image`). */
 export type FeedUploadFile = { uri: string; name: string; type: string };
 
@@ -178,7 +189,7 @@ export function fetchFeedImage(imageId: number): Promise<string | null> {
 
 // --- 게시물 ---------------------------------------------------------------------
 
-function adaptPost(res: FeedPostResponse): FeedPost {
+function adaptPost(res: FeedPostWire): FeedPost {
   const post = toFeedPost(res);
   if (!post) throw new Error('feed post without id');
   return post;
@@ -193,35 +204,42 @@ function adaptPage<T, R>(page: Page<T>, adapt: (item: T) => R | null): Page<R> {
  * `minigameRecord`(기록 카드)는 자유게시판에만, 루틴 연결과 함께 보낼 수 없다. 내 랭킹전 판이
  * 아니면 400 FEED_MINIGAME_RECORD_INVALID.
  */
-export async function createFeedPost(input: FeedCreateRequest): Promise<FeedPost> {
-  return adaptPost(await apiPost<FeedPostResponse>('/feed/posts', input));
+export async function createFeedPost(input: FeedCreateInput): Promise<FeedPost> {
+  return adaptPost(await apiPost<FeedPostWire>('/feed/posts', input));
 }
 
 /**
  * GET /feed/posts — 최신 ID 내림차순. `authorId`를 주면 그 사람 글만, `boardType`을 주면
  * 그 게시판만(생략 = 통합 피드). 게시판을 바꾸면 cursor 없이 첫 페이지부터(spec).
+ *
+ * `houseId`를 주면 그 집의 글만(집 피드) — 생략한 목록에는 집 글이 섞이지 않는다. 비구성원은
+ * 403 `HOUSE_NOT_MEMBER`, 없는·해체된 집은 404 `HOUSE_NOT_FOUND`(호출부가 안내로 접는다).
  */
 export async function fetchFeedPosts({
   cursor,
   size,
   authorId,
   boardType,
+  houseId,
 }: {
   cursor?: number;
   size?: number;
   authorId?: number;
   boardType?: FeedBoardType;
+  houseId?: number;
 } = {}): Promise<Page<FeedPost>> {
-  const page = await apiGetPage<FeedPostResponse>(
-    `/feed/posts${buildQuery({ cursor, size, authorId, boardType })}`,
-  );
+  const path = `/feed/posts${buildQuery({ cursor, size, authorId, boardType, houseId })}`;
+  const page =
+    houseId != null
+      ? await apiGetPage<FeedPostWire>(path, { expectedStatuses: [403, 404] })
+      : await apiGetPage<FeedPostWire>(path);
   return adaptPage(page, toFeedPost);
 }
 
 /** GET /feed/posts/{postId} — 삭제·탈퇴로 숨은 글은 404 FEED_POST_NOT_FOUND. */
 export async function fetchFeedPost(postId: number): Promise<FeedPost> {
   return adaptPost(
-    await apiGet<FeedPostResponse>(`/feed/posts/${postId}`, { expectedStatuses: [404] }),
+    await apiGet<FeedPostWire>(`/feed/posts/${postId}`, { expectedStatuses: [404] }),
   );
 }
 
@@ -231,7 +249,7 @@ export async function fetchFeedPost(postId: number): Promise<FeedPost> {
  * FEED_INPUT_INVALID). #430 배포 전 서버는 `boardType`·`routineCompletion`을 무시한다.
  */
 export async function updateFeedPost(postId: number, body: FeedUpdateRequest): Promise<FeedPost> {
-  return adaptPost(await apiPatch<FeedPostResponse>(`/feed/posts/${postId}`, body));
+  return adaptPost(await apiPatch<FeedPostWire>(`/feed/posts/${postId}`, body));
 }
 
 /** DELETE /feed/posts/{postId} — 본인 글. 반복 호출해도 204. */
@@ -261,7 +279,7 @@ export async function fetchFeedComments(
     size,
     topLevelOnly: topLevelOnly == null ? undefined : String(topLevelOnly),
   });
-  const page = await apiGetPage<FeedCommentResponse>(`/feed/posts/${postId}/comments${query}`);
+  const page = await apiGetPage<FeedCommentWire>(`/feed/posts/${postId}/comments${query}`);
   return adaptPage(page, toFeedComment);
 }
 
@@ -271,7 +289,7 @@ export async function fetchFeedReplies(
   rootCommentId: number,
   { cursor, size }: { cursor?: number; size?: number } = {},
 ): Promise<Page<FeedComment>> {
-  const page = await apiGetPage<FeedCommentResponse>(
+  const page = await apiGetPage<FeedCommentWire>(
     `/feed/posts/${postId}/comments/${rootCommentId}/replies${buildQuery({ cursor, size })}`,
     { expectedStatuses: [404] },
   );
@@ -284,7 +302,7 @@ export async function createFeedComment(
   input: FeedCommentRequest,
 ): Promise<FeedComment> {
   const comment = toFeedComment(
-    await apiPost<FeedCommentResponse>(`/feed/posts/${postId}/comments`, input),
+    await apiPost<FeedCommentWire>(`/feed/posts/${postId}/comments`, input),
   );
   if (!comment) throw new Error('feed comment without id');
   return comment;
@@ -293,4 +311,55 @@ export async function createFeedComment(
 /** DELETE /feed/posts/{postId}/comments/{commentId} — 본인 댓글. 멱등. */
 export function deleteFeedComment(postId: number, commentId: number): Promise<void> {
   return apiDelete<void>(`/feed/posts/${postId}/comments/${commentId}`);
+}
+
+// --- 집 피드 새 글 푸시 설정 ------------------------------------------------------
+
+/** 집별 새 글 푸시 설정 — 사용자·집마다 따로. 기본값은 자유글 켬, 인증글 끔(서버 기본). */
+export type HouseFeedNotification = {
+  houseId: number;
+  freePostPush: boolean;
+  verificationPostPush: boolean;
+};
+/** PUT 본문 — 바꿀 필드만 싣는다(둘 다 생략하면 서버가 400). */
+export type HouseFeedNotificationPatch = Partial<
+  Pick<HouseFeedNotification, 'freePostPush' | 'verificationPostPush'>
+>;
+type HouseFeedNotificationWire = Partial<HouseFeedNotification>;
+
+function adaptHouseFeedNotification(
+  houseId: number,
+  res: HouseFeedNotificationWire | undefined,
+): HouseFeedNotification {
+  return {
+    houseId,
+    freePostPush: res?.freePostPush ?? true,
+    verificationPostPush: res?.verificationPostPush ?? false,
+  };
+}
+
+/**
+ * GET /houses/{houseId}/feed/notification. 구성원이 아니면 403 `HOUSE_NOT_MEMBER`. 이 API가
+ * 아직 없는 서버는 404 — 호출부(시트)가 토글을 잠그고 안내하므로 예상 상태로 둔다.
+ */
+export async function fetchHouseFeedNotification(houseId: number): Promise<HouseFeedNotification> {
+  return adaptHouseFeedNotification(
+    houseId,
+    await apiGet<HouseFeedNotificationWire>(`/houses/${houseId}/feed/notification`, {
+      expectedStatuses: [403, 404],
+    }),
+  );
+}
+
+/** PUT /houses/{houseId}/feed/notification — 부분 변경. 응답은 바뀐 뒤의 전체 설정. */
+export async function updateHouseFeedNotification(
+  houseId: number,
+  patch: HouseFeedNotificationPatch,
+): Promise<HouseFeedNotification> {
+  return adaptHouseFeedNotification(
+    houseId,
+    await apiPut<HouseFeedNotificationWire>(`/houses/${houseId}/feed/notification`, patch, {
+      expectedStatuses: [403, 404],
+    }),
+  );
 }

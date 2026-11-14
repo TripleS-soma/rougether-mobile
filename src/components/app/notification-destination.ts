@@ -1,4 +1,5 @@
 import type { Screen } from '@/components/app/navigation';
+import { FEED_ENABLED } from '@/constants/feed';
 import { MARKET_ENABLED } from '@/constants/market';
 
 /**
@@ -19,7 +20,12 @@ export type NotificationDestination =
   /** 거래소 구매 대기 등록 — refId = 종목 id. */
   | { kind: 'marketAsset'; assetId: number }
   /** 집 채팅 새 메시지 (서버 #435, 푸시 전용) — 그 집을 골라 채팅방으로. */
-  | { kind: 'houseChat'; houseId?: number };
+  | { kind: 'houseChat'; houseId?: number }
+  /**
+   * 집 피드 새 글 (HOUSE_FEED_POST, 푸시 전용) — FCM data의 `houseId`·`postId`. 그 집을 골라
+   * 글 상세로, 글 id가 없으면 그 집 피드 목록으로.
+   */
+  | { kind: 'houseFeedPost'; houseId?: number; postId?: number };
 
 export function notificationDestination(
   type: string | undefined,
@@ -36,6 +42,11 @@ export function notificationDestination(
       return refId ? { kind: 'marketAsset', assetId: refId } : { kind: 'screen', screen: 'market' };
     case 'CHAT_MESSAGE':
       return { kind: 'houseChat', houseId };
+    case 'HOUSE_FEED_POST':
+      // 피드가 숨어 있는 설치본이면 집 피드 화면이 없다 — 집 탭으로.
+      return FEED_ENABLED
+        ? { kind: 'houseFeedPost', houseId, postId: refId }
+        : { kind: 'screen', screen: 'house' };
     case 'FEED_COMMENT':
       return refId ? { kind: 'feedPost', postId: refId } : { kind: 'screen', screen: 'feed' };
     case 'ROUTINE_REMINDER':

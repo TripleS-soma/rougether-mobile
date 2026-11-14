@@ -243,7 +243,9 @@
       "coin": "Coins",
       "diamond": "Diamonds",
       "bioPlaceholder": "Write a one-line bio",
-      "editProfile": "Edit profile"
+      "editProfile": "Edit profile",
+      "suggestions": "Suggestions",
+      "updates": "Updates"
     },
     "profileEdit": {
       "title": "Edit profile",
@@ -565,6 +567,22 @@
         "unblockBody": "You'll see {{name}}'s posts and comments again.",
         "anonymous": "Unknown user"
       }
+    },
+    "feedback": {
+      "title": "Title",
+      "content": "Suggestion",
+      "placeholder": "What could we improve?",
+      "send": "Send suggestion",
+      "sending": "Sending…",
+      "submitted": "Your suggestion has been sent. Thank you!",
+      "submitFailed": "Could not send your suggestion. Please try again.",
+      "mySuggestions": "My suggestions",
+      "loading": "Loading…",
+      "loadFailed": "Could not load the list.",
+      "retry": "Try again",
+      "noSuggestions": "You haven’t sent any suggestions yet.",
+      "noUpdates": "No updates have been posted yet.",
+      "more": "Load more"
     }
   }
 }

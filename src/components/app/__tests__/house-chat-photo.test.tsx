@@ -10,6 +10,15 @@ jest.mock('@/hooks/use-house-chat', () => ({
   useHouseChat: () => ({ messages: [], myUserId: 1, roomId: 5, sendPhoto: mockSendPhoto }),
 }));
 jest.mock('@/hooks/use-chat-mute', () => ({ useChatMute: () => ({ loaded: false }) }));
+// 이 집 알림 시트(집 피드)는 전용 테스트가 맡는다 — 여기서는 사진 흐름만 본다.
+jest.mock('@/components/app/use-house-notifications', () => ({
+  useHouseNotifications: () => ({
+    open: jest.fn(),
+    close: jest.fn(),
+    allMuted: false,
+    sheet: null,
+  }),
+}));
 jest.mock('@/lib/pick-chat-photo', () => ({ pickChatPhoto: jest.fn() }));
 jest.mock('@/lib/push-events', () => ({
   setForegroundPushFilter: jest.fn(),

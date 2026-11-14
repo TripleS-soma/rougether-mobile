@@ -19,10 +19,12 @@ import { type House, type HouseEditInput } from '@/components/screens/house/type
 import { HouseMissionsScreen } from '@/components/screens/house-missions-screen';
 import { HouseMembersScreen } from '@/components/screens/house-members-screen';
 import { HouseChatPage } from '@/components/app/house-chat-page';
+import { useHouseFeedPages } from '@/components/app/use-house-feed-pages';
 import { useToast } from '@/components/ui/toast';
 import { manageableMembers } from '@/components/screens/house/members';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { type CharacterId } from '@/constants/characters';
+import { FEED_ENABLED } from '@/constants/feed';
 import { useHouseChatUnread } from '@/hooks/use-house-chat';
 import { useHouseCovers } from '@/hooks/use-house-covers';
 import type { useHouses } from '@/hooks/use-houses';
@@ -92,6 +94,7 @@ export function useHousePages({
   wornCharacterId,
   onPagerLockChange,
   roomPreviewStore,
+  onShareChatPhoto,
 }: {
   /** 셸 내비 상태 — screen 상태는 셸 소유(useState setter 계약, #692). */
   nav: {
@@ -180,6 +183,8 @@ export function useHousePages({
    * 그보다 먼저 서는 use-friend-visit이 같은 인스턴스에 닿지 못한다.
    */
   roomPreviewStore: ReturnType<typeof useMemberRoomPreviews>;
+  /** 채팅 사진 크게 보기의 [피드에 올리기] — 피드가 꺼져 있으면 없다. */
+  onShareChatPhoto?: (uri: string) => void;
 }) {
   const scheme = useResolvedScheme();
   const { screen, setScreen, goBack } = nav;
@@ -391,6 +396,17 @@ export function useHousePages({
     openChatFor(pendingChatHouseId);
   }, [pendingChatHouseId, housesLoading, openChatFor]);
   const closeChat = useCallback(() => setScreen('house'), [setScreen]);
+  // 집 피드 — 레일 '집 피드'와 서브화면 3종(목록·상세·작성), 새 글 푸시 진입. 배선은
+  // use-house-feed-pages가 소유하고 여기서는 집 스위처 상태만 넘긴다.
+  const refreshAfterFeedClosed = useCallback(() => void refreshHouses(), [refreshHouses]);
+  const houseFeed = useHouseFeedPages({
+    nav,
+    currentHouse,
+    houses: arrangedHouses,
+    housesLoading,
+    setHouseIndex,
+    onClosed: refreshAfterFeedClosed,
+  });
   const chatUnread = useHouseChatUnread(
     currentHouse?.houseId,
     screen === 'house' || screen === 'houseChat',
@@ -490,105 +506,111 @@ export function useHousePages({
     // houseId가 있는 내 집에서만 레일에 '채팅'이 뜬다.
     onOpenChat: currentHouse?.houseId ? openChat : undefined,
     chatUnread,
+    // 피드가 켜진 설치본의, houseId가 있는 내 집에서만 레일에 '집 피드'가 뜬다.
+    onOpenFeed: houseFeed.open,
     onUpdateHouse: handleUpdateHouse,
     onTransferOwnership: handleTransferOwnership,
     onReissueInviteCode: handleReissueInviteCode,
     onPagerLockChange,
   };
 
-  /** 현재 화면이 집 서브화면 3종이면 그 JSX, 아니면 null — 셸이 그대로 렌더. */
-  const subScreen =
-    screen === 'houseChat' && currentHouse?.houseId ? (
-      <HouseChatPage
-        houseId={currentHouse.houseId}
-        houseName={currentHouse.name}
-        onBack={closeChat}
-      />
-    ) : screen === 'houseMissions' && currentHouse ? (
-      <HouseMissionsScreen
-        house={currentHouse}
-        missions={currentHouse.missions ?? []}
-        isOwner={currentHouse.myRole === 'OWNER' && !!currentHouse.houseId}
-        linkedRoutines={houseLinkedRoutines}
-        contributedMissionIds={contributedMissionIdList}
-        onBack={closeMissions}
-        onCreateMission={createMission}
-        onDeleteMission={deleteMissionWithLinked}
-        onClaimMission={claimMission}
-        onAddMissionRoutine={addMissionRoutine}
-        onRemoveMissionRoutine={handleRemoveMissionRoutine}
-        onUnlinkMissionRoutine={handleUnlinkMissionRoutine}
-      />
-    ) : screen === 'houseMembers' && currentHouse ? (
-      <HouseMembersScreen
-        house={currentHouse}
-        members={manageableMembers(currentHouse)}
-        isOwner={currentHouse.myRole === 'OWNER' && !!currentHouse.houseId}
-        covers={houseCovers}
-        isKicked={isKickedMember}
-        memberCharacterId={(m) => characterIdForMember(m, roomPreviews, wornCharacterId)}
-        onBack={closeMembers}
-        onInviteShared={handleInviteShared}
-        inviteVia={inviteMissionActive ? 'mission' : 'manage'}
-        onInviteLater={inviteMissionActive ? completeInviteLater : undefined}
-        onKickMember={kickMember}
-        onAcceptJoinRequest={acceptJoinRequest}
-        onRejectJoinRequest={rejectJoinRequest}
-        onLocalKick={localKick}
-        onTransferOwnership={handleTransferOwnership}
-        onReissueInviteCode={handleReissueInviteCode}
-        onUpdateHouse={handleUpdateHouse}
-        autoJoinEnabled={autoJoinQuery.data?.enabled}
-        onLeaveHouse={leaveHouseWithLinked}
-        onLeaveDone={closeMembers}
-      />
-    ) : screen === 'houseSearch' ? (
-      <HouseSearchScreen
-        initialCode={pendingJoinCode ?? undefined}
-        onInitialCodeConsumed={() => {
-          setPendingJoinCode(null);
-          // 모듈 보관분도 여기서 비운다 — 그 전까지는 셸이 다시 구독해도
-          // 코드가 살아남아 유실을 복구한다 (#896).
-          clearPendingInviteCode();
-        }}
-        houses={searchHouses}
-        hasNext={searchHasNext}
-        loadingMore={searchLoadingMore}
-        onLoadMore={() => {
-          void loadMoreSearch();
-        }}
-        loading={searchLoading}
-        loadError={searchError}
-        onRetry={retrySearch}
-        onBack={goBack}
-        onJoinByCode={async (code) => {
-          const ok = await joinByCode(code);
-          if (ok === true) setScreen('house');
-          return ok;
-        }}
-        onPreviewCode={(code) => previewByCode(code)}
-        // 카탈로그를 얹어 미리보기 창문에 실제 방을 그린다 (#386).
-        onPreviewHouse={(houseId) => previewHouse(houseId, catalogue)}
-        furniture={catalogue.furniture}
-        wallpapers={catalogue.wallpapers}
-        floors={catalogue.floors}
-        backgrounds={catalogue.backgrounds}
-        onJoinHouse={(houseId) => {
-          void joinSearchHouse(houseId).then((ok) => {
-            if (ok) setScreen('house');
-          });
-        }}
-        onCreate={() => setScreen('createHouse')}
-      />
-    ) : screen === 'createHouse' ? (
-      <CreateHouseScreen
-        covers={houseCovers}
-        onBack={goBack}
-        onCreate={(input) => {
-          void createHouse(input).then((ok) => ok && setScreen('house'));
-        }}
-      />
-    ) : null;
+  /** 현재 화면이 집 서브화면이면 그 JSX, 아니면 null — 셸이 그대로 렌더. */
+  const subScreen = houseFeed.subScreen ? (
+    houseFeed.subScreen
+  ) : screen === 'houseChat' && currentHouse?.houseId ? (
+    <HouseChatPage
+      houseId={currentHouse.houseId}
+      houseName={currentHouse.name}
+      onBack={closeChat}
+      onSharePhoto={onShareChatPhoto}
+    />
+  ) : screen === 'houseMissions' && currentHouse ? (
+    <HouseMissionsScreen
+      house={currentHouse}
+      missions={currentHouse.missions ?? []}
+      isOwner={currentHouse.myRole === 'OWNER' && !!currentHouse.houseId}
+      linkedRoutines={houseLinkedRoutines}
+      contributedMissionIds={contributedMissionIdList}
+      onBack={closeMissions}
+      onCreateMission={createMission}
+      onDeleteMission={deleteMissionWithLinked}
+      onClaimMission={claimMission}
+      onAddMissionRoutine={addMissionRoutine}
+      onRemoveMissionRoutine={handleRemoveMissionRoutine}
+      onUnlinkMissionRoutine={handleUnlinkMissionRoutine}
+    />
+  ) : screen === 'houseMembers' && currentHouse ? (
+    <HouseMembersScreen
+      house={currentHouse}
+      members={manageableMembers(currentHouse)}
+      isOwner={currentHouse.myRole === 'OWNER' && !!currentHouse.houseId}
+      covers={houseCovers}
+      isKicked={isKickedMember}
+      memberCharacterId={(m) => characterIdForMember(m, roomPreviews, wornCharacterId)}
+      onBack={closeMembers}
+      onInviteShared={handleInviteShared}
+      inviteVia={inviteMissionActive ? 'mission' : 'manage'}
+      onInviteLater={inviteMissionActive ? completeInviteLater : undefined}
+      onKickMember={kickMember}
+      onAcceptJoinRequest={acceptJoinRequest}
+      onRejectJoinRequest={rejectJoinRequest}
+      onLocalKick={localKick}
+      onTransferOwnership={handleTransferOwnership}
+      onReissueInviteCode={handleReissueInviteCode}
+      onUpdateHouse={handleUpdateHouse}
+      autoJoinEnabled={autoJoinQuery.data?.enabled}
+      onLeaveHouse={leaveHouseWithLinked}
+      // 피드가 켜진 설치본에서만 "내 글과 댓글도 지우기"를 고르게 한다 (집 피드).
+      feedCleanupOption={FEED_ENABLED}
+      onLeaveDone={closeMembers}
+    />
+  ) : screen === 'houseSearch' ? (
+    <HouseSearchScreen
+      initialCode={pendingJoinCode ?? undefined}
+      onInitialCodeConsumed={() => {
+        setPendingJoinCode(null);
+        // 모듈 보관분도 여기서 비운다 — 그 전까지는 셸이 다시 구독해도
+        // 코드가 살아남아 유실을 복구한다 (#896).
+        clearPendingInviteCode();
+      }}
+      houses={searchHouses}
+      hasNext={searchHasNext}
+      loadingMore={searchLoadingMore}
+      onLoadMore={() => {
+        void loadMoreSearch();
+      }}
+      loading={searchLoading}
+      loadError={searchError}
+      onRetry={retrySearch}
+      onBack={goBack}
+      onJoinByCode={async (code) => {
+        const ok = await joinByCode(code);
+        if (ok === true) setScreen('house');
+        return ok;
+      }}
+      onPreviewCode={(code) => previewByCode(code)}
+      // 카탈로그를 얹어 미리보기 창문에 실제 방을 그린다 (#386).
+      onPreviewHouse={(houseId) => previewHouse(houseId, catalogue)}
+      furniture={catalogue.furniture}
+      wallpapers={catalogue.wallpapers}
+      floors={catalogue.floors}
+      backgrounds={catalogue.backgrounds}
+      onJoinHouse={(houseId) => {
+        void joinSearchHouse(houseId).then((ok) => {
+          if (ok) setScreen('house');
+        });
+      }}
+      onCreate={() => setScreen('createHouse')}
+    />
+  ) : screen === 'createHouse' ? (
+    <CreateHouseScreen
+      covers={houseCovers}
+      onBack={goBack}
+      onCreate={(input) => {
+        void createHouse(input).then((ok) => ok && setScreen('house'));
+      }}
+    />
+  ) : null;
 
   return {
     tabProps,
@@ -599,5 +621,7 @@ export function useHousePages({
     openMembers,
     /** 집 채팅 푸시 탭 (서버 #435) — 그 집을 골라 채팅방으로. */
     openChatFor,
+    /** 집 피드 새 글 푸시 탭 — 그 집을 골라 글 상세로. */
+    openFeedPostFor: houseFeed.openPostFor,
   };
 }

@@ -1,6 +1,14 @@
 import { HouseDioramaDemo } from '@/dev/house-diorama-demo';
+import {
+  HouseFeedComposeDemo,
+  HouseFeedListDemo,
+  HouseFeedOwnerPostDemo,
+  HouseFeedRailDemo,
+  HouseNotificationSheetDemo,
+} from '@/dev/house-feed-demo';
 import { FeedAuthorHouseSheet } from '@/components/feed/feed-author-house-sheet';
 import type { FeedAuthorHouse } from '@/api/feed-houses';
+import { Asset } from 'expo-asset';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
@@ -11,6 +19,8 @@ import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { HouseScreen, type House } from '@/components/screens/house-screen';
 import { HouseMissionsScreen } from '@/components/screens/house-missions-screen';
 import { HouseChatScreen } from '@/components/screens/house-chat-screen';
+import { ChatPhotoViewer } from '@/components/chat/chat-photo-viewer';
+import samplePhoto from '@/assets/images/splash-light.png';
 import { HouseMembersScreen } from '@/components/screens/house-members-screen';
 import { manageableMembers } from '@/components/screens/house/members';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
@@ -21,6 +31,26 @@ import { parseInviteText } from '@/lib/invite-code';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { RECOMMENDED_HOUSES } from '@/mocks/fixtures';
 import type { GalleryEntry } from '@/dev/registry/types';
+
+function ChatPhotoViewerDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <View>
+      <ScalePressable onPress={() => setOpen(true)} accessibilityRole="button">
+        <Text>사진 크게 보기 열기</Text>
+      </ScalePressable>
+      <ChatPhotoViewer
+        visible={open}
+        // 번들 그림의 주소 — 웹에는 Image.resolveAssetSource가 없다.
+        uri={Asset.fromModule(samplePhoto).uri}
+        senderName="김다현"
+        sentLabel="11월 11일 수요일 오후 8:30"
+        onShareToFeed={() => setOpen(false)}
+        onClose={() => setOpen(false)}
+      />
+    </View>
+  );
+}
 
 function FeedAuthorHouseDemo() {
   const [open, setOpen] = useState(false);
@@ -154,6 +184,93 @@ function HouseCoverPickerDemo() {
 }
 
 export const houseEntries: GalleryEntry[] = [
+  {
+    name: 'ChatPhotoViewer',
+    description: '채팅 사진 크게 보기 — 검정 바탕 · 뒤로가기 · 보낸 사람과 시각 · 피드에 올리기',
+    render: () => <ChatPhotoViewerDemo />,
+  },
+  {
+    name: 'HouseFeedRail',
+    description: "집 피드 진입점 — 집 화면 레일의 채팅 아래 '집 피드'. 새 글 배지는 없다.",
+    render: () => <HouseFeedRailDemo />,
+  },
+  {
+    name: 'HouseFeedList',
+    description:
+      '집 피드 목록 — 작성자를 앞세운 줄(아바타·이름·방장 배지), 전체·자유·인증 탭, 종 버튼으로 이 집 알림 시트. 픽스처라 서버에 쓰지 않는다.',
+    render: () => <HouseFeedListDemo />,
+  },
+  {
+    name: 'HouseFeedListEmpty',
+    description: '집 피드 빈 상태(인증 탭) — 게시판별 문구.',
+    render: () => <HouseFeedListDemo empty />,
+  },
+  {
+    name: 'FeedComposeScope',
+    description:
+      '공개 피드 글쓰기의 올릴 곳 — 기본 전체 공개, 줄을 눌러 내 집 중 하나를 고르면 그 집 구성원만 본다.',
+    render: () => <HouseFeedComposeDemo />,
+  },
+  {
+    name: 'HouseFeedCompose',
+    description: '집 피드에서 연 글쓰기 — 올릴 곳이 그 집으로 고정되고 안내만 보인다.',
+    render: () => <HouseFeedComposeDemo locked />,
+  },
+  {
+    name: 'HouseFeedOwnerPost',
+    description:
+      '방장이 보는 남의 글 — 더보기(⋮)에 게시물 삭제·신고·차단, 남의 댓글 더보기에 댓글 삭제(서버 deletable).',
+    render: () => <HouseFeedOwnerPostDemo />,
+  },
+  {
+    name: 'HouseFeedMemberPost',
+    description: '일반 구성원이 보는 남의 글 — 더보기에 신고·차단만.',
+    render: () => <HouseFeedOwnerPostDemo owner={false} />,
+  },
+  {
+    name: 'HouseLeaveConfirm',
+    description:
+      "집 나가기 확인 — 피드가 켜진 설치본은 '이 집의 내 글·댓글도 지우기'를 고를 수 있다(기본 꺼짐). 아래 '집 나가기'를 눌러 연다. 더미 집이라 서버에 쓰지 않는다.",
+    render: () => {
+      const demoHouse: House = {
+        houseId: 3,
+        name: '아침을 여는 집',
+        myRole: 'MEMBER',
+        maxMembers: 4,
+        floors: [
+          {
+            level: '1층',
+            rooms: [
+              { name: '솜이', color: '#F5E1D8', membershipId: 42, isOwner: true },
+              { name: '나', color: '#E8E0D0', isMine: true, membershipId: 43 },
+            ],
+          },
+        ],
+      };
+      return (
+        <View style={{ height: 760, alignSelf: 'stretch' }}>
+          <HouseMembersScreen
+            house={demoHouse}
+            members={manageableMembers(demoHouse)}
+            isOwner={false}
+            isKicked={() => false}
+            memberCharacterId={(m) => (m.isMine ? 'tiger' : 'cat')}
+            onBack={() => {}}
+            onLocalKick={() => {}}
+            onLeaveHouse={() => {}}
+            feedCleanupOption
+            onLeaveDone={() => {}}
+          />
+        </View>
+      );
+    },
+  },
+  {
+    name: 'HouseNotificationSheet',
+    description:
+      '이 집 알림 시트 — 채팅·자유글·인증글 푸시. 서버에 글 알림 설정이 아직 없으면 두 줄을 잠그고 안내한다.',
+    render: () => <HouseNotificationSheetDemo />,
+  },
   {
     name: 'FeedAuthorHouseSheet',
     description: '게시물 작성자의 집 선택, 입주 신청과 바로 입주 설정 구분',
