@@ -74,6 +74,11 @@ export type HouseChatScreenProps = {
   onPickPhoto?: () => void;
   pickingPhoto?: boolean;
   onReport?: (messageId: number) => void;
+  /**
+   * 사진 크게 보기의 [피드에 올리기] — **내가 보낸 사진에만** 붙는다. 채팅 사진은 그 집
+   * 구성원에게만 보이는 사진이라, 남이 올린 사진을 피드로 옮길 수 없게 한다.
+   */
+  onSharePhoto?: (uri: string) => void;
   /** 실패한 내 메시지 다시 보내기 — 같은 clientMessageId로. */
   onRetrySend?: (clientMessageId: string) => void;
   /** 실제로 화면에 보인 메시지 중 가장 큰 순서 — 읽음 처리에 쓴다. */
@@ -149,6 +154,7 @@ export function HouseChatScreen({
   onPickPhoto,
   pickingPhoto = false,
   onReport,
+  onSharePhoto,
   onRetrySend,
   onVisible,
   muted = false,
@@ -213,6 +219,7 @@ export function HouseChatScreen({
           imageMissing={item.messageType === 'IMAGE' && item.image?.imageId == null}
           localImageUri={item.localImageUri}
           onReport={onReport}
+          onSharePhoto={onSharePhoto}
           senderNickname={item.senderNickname}
           createdAt={item.createdAt}
           unreadCount={item.unreadCount}
@@ -222,7 +229,7 @@ export function HouseChatScreen({
         />
       );
     },
-    [data, myUserId, onRetrySend, onReport],
+    [data, myUserId, onRetrySend, onReport, onSharePhoto],
   );
 
   const body = loading ? (
@@ -396,6 +403,7 @@ type ChatRowProps = {
   imageMissing?: boolean;
   localImageUri?: string;
   onReport?: (messageId: number) => void;
+  onSharePhoto?: (uri: string) => void;
   mine: boolean;
   /** 이 메시지가 그날의 첫 메시지면 위에 그릴 날짜 구분선 문구. */
   dayLabel?: string;
@@ -415,6 +423,7 @@ const ChatRow = memo(function ChatRow({
   imageMissing,
   localImageUri,
   onReport,
+  onSharePhoto,
   mine,
   dayLabel,
   showName,
@@ -431,6 +440,9 @@ const ChatRow = memo(function ChatRow({
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const time = timeLabel(createdAt);
+  // 사진 크게 보기에 띄울 보낸 시각 — "11월 11일 수요일 오후 8:30". 보내는 중이면 아직 없다.
+  const day = chatDayKey(createdAt);
+  const photoSentLabel = day && time ? `${chatDayLabel(day)} ${time}` : undefined;
   const meta =
     status === 'pending' ? (
       <Text style={[Typography.supporting, { color: t.textMuted }]}>
@@ -479,7 +491,13 @@ const ChatRow = memo(function ChatRow({
             status === 'pending' ? styles.pending : null,
           ]}>
           {imageId != null || localImageUri ? (
-            <ChatPhoto imageId={imageId} localUri={localImageUri} />
+            <ChatPhoto
+              imageId={imageId}
+              localUri={localImageUri}
+              senderName={senderNickname || tr('house.chat.unknownSender')}
+              sentLabel={photoSentLabel}
+              onShareToFeed={mine ? onSharePhoto : undefined}
+            />
           ) : (
             <LinkifiedText
               style={[Typography.body, emph('normal'), { color: mine ? t.onPrimary : t.text }]}
