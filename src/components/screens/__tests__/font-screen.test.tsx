@@ -5,7 +5,7 @@ import { FontScreen } from '@/components/screens/font-screen';
 describe('FontScreen', () => {
   it('renders the title and all five font options', async () => {
     const { getByText } = await render(<FontScreen fontId="nanum" />);
-    expect(getByText('폰트')).toBeTruthy();
+    expect(getByText('글씨')).toBeTruthy();
     for (const name of ['나눔스퀘어라운드', '프리텐다드', '주아 혼합', 'SUIT', '시스템 기본']) {
       expect(getByText(name)).toBeTruthy();
     }
@@ -25,6 +25,36 @@ describe('FontScreen', () => {
 
     await fireEvent.press(getByLabelText('적용하기'));
     expect(onApplyFont).toHaveBeenCalledWith('system');
+  });
+
+  it('글자 크기는 고르기만 해서는 안 바뀌고, 적용하기를 눌러야 콜백', async () => {
+    const onApplyFont = jest.fn();
+    const onApplyFontSize = jest.fn();
+    const { getByLabelText } = await render(
+      <FontScreen
+        fontId="nanum"
+        fontSizeId="medium"
+        onApplyFont={onApplyFont}
+        onApplyFontSize={onApplyFontSize}
+      />,
+    );
+    expect(getByLabelText('글자 크기 보통').props.accessibilityState.selected).toBe(true);
+    await fireEvent.press(getByLabelText('글자 크기 크게'));
+    expect(onApplyFontSize).not.toHaveBeenCalled();
+    expect(getByLabelText('글자 크기 크게').props.accessibilityState.selected).toBe(true);
+
+    await fireEvent.press(getByLabelText('적용하기'));
+    expect(onApplyFontSize).toHaveBeenCalledWith('large');
+    // 폰트는 그대로라 폰트 콜백은 부르지 않는다.
+    expect(onApplyFont).not.toHaveBeenCalled();
+  });
+
+  it('크기를 골랐다가 원래 값으로 돌리면 적용하기가 다시 잠긴다', async () => {
+    const { getByLabelText } = await render(<FontScreen fontId="nanum" fontSizeId="medium" />);
+    await fireEvent.press(getByLabelText('글자 크기 작게'));
+    expect(getByLabelText('적용하기').props.accessibilityState.disabled).toBe(false);
+    await fireEvent.press(getByLabelText('글자 크기 보통'));
+    expect(getByLabelText('적용하기').props.accessibilityState.disabled).toBe(true);
   });
 
   it('marks the active font as selected', async () => {

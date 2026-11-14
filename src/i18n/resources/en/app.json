@@ -58,7 +58,8 @@
       "linkFailed": "Couldn't open the link. Please try again later.",
       "importedFailed": "Imported {{imported}}. {{failed}} failed.",
       "importedSkipped": "Imported {{imported}}. {{skipped}} were already imported.",
-      "imported": "Imported {{imported}}."
+      "imported": "Imported {{imported}}.",
+      "fontSizeApplied": "Text size set to “{{name}}”"
     },
     "invite": {
       "alreadyRedeemed": "An invite code can only be used once",

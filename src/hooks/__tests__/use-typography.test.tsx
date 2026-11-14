@@ -33,6 +33,34 @@ describe('typographyFor (#382)', () => {
     expect(pretendard.h2.fontFamily).toBe('Pretendard-Bold');
   });
 
+  it('글자 크기 단계: 보통이 기본이고, 크게는 2026-11-14 이전 크기 그대로다', () => {
+    expect(typographyFor('nanum')).toBe(typographyFor('nanum', 'medium'));
+    expect(Typography.body).toMatchObject({ fontSize: 15, lineHeight: 21 });
+    const large = typographyFor('system', 'large');
+    expect(large.body).toMatchObject({ fontSize: 18, lineHeight: 26 });
+    expect(large.supporting).toMatchObject({ fontSize: 14, lineHeight: 18 });
+    expect(large.caption).toMatchObject({ fontSize: 13, lineHeight: 17 });
+    expect(large.display1).toMatchObject({ fontSize: 36, lineHeight: 42 });
+  });
+
+  it('글자 크기 단계는 롤마다 작게 < 보통 < 크게 순서를 지키고 줄 높이가 글자보다 크다', () => {
+    const [small, medium, large] = (['small', 'medium', 'large'] as const).map((id) =>
+      typographyFor('system', id),
+    );
+    for (const role of Object.keys(medium) as (keyof typeof medium)[]) {
+      expect(small[role].fontSize).toBeLessThan(medium[role].fontSize);
+      expect(medium[role].fontSize).toBeLessThan(large[role].fontSize);
+      for (const scale of [small, medium, large])
+        expect(scale[role].lineHeight).toBeGreaterThan(scale[role].fontSize);
+    }
+  });
+
+  it('크기 단계가 달라도 폰트 얼굴은 같다', () => {
+    expect(typographyFor('nanum', 'large').label.fontFamily).toBe('NanumSquareRoundB');
+    expect(typographyFor('nanum', 'small').label.fontFamily).toBe('NanumSquareRoundB');
+    expect(typographyFor('nanum', 'large').body.fontSize).toBe(18);
+  });
+
   it('주아 혼합: headings take Jua, running text stays Pretendard', () => {
     const jua = typographyFor('jua');
     expect(jua.display1.fontFamily).toBe('Jua-Regular');
@@ -79,6 +107,33 @@ describe('useTypography / useFontEmphasis via BrandThemeProvider', () => {
 
     const second = await renderHook(() => useTypography(), { wrapper });
     await waitFor(() => expect(second.result.current.body.fontFamily).toBe('Pretendard-Regular'));
+  });
+
+  it('글자 크기를 저장하고 다음 실행에 되살린다', async () => {
+    const first = await renderHook(() => useBrandTheme(), { wrapper });
+    expect(first.result.current.fontSizeId).toBe('medium');
+    await act(() => first.result.current.setFontSizeId('large'));
+    await waitFor(async () =>
+      expect(JSON.parse((await AsyncStorage.getItem('rougether.theme'))!)).toMatchObject({
+        fontSizeId: 'large',
+      }),
+    );
+    const second = await renderHook(() => useTypography(), { wrapper });
+    await waitFor(() => expect(second.result.current.body.fontSize).toBe(18));
+  });
+
+  it('크기를 고른 적 없는 기존 저장값과 모르는 크기 값은 기본(보통)으로 둔다', async () => {
+    await AsyncStorage.setItem(
+      'rougether.theme',
+      JSON.stringify({ themeId: 'cozy', mode: 'system', fontId: 'suit', fontSizeId: 'huge' }),
+    );
+    const { result } = await renderHook(
+      () => ({ control: useBrandTheme(), type: useTypography() }),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.control.fontId).toBe('suit'));
+    expect(result.current.control.fontSizeId).toBe('medium');
+    expect(result.current.type.body.fontSize).toBe(15);
   });
 
   it('ignores an unknown saved fontId (falls back to the default)', async () => {

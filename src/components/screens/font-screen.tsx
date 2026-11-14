@@ -11,13 +11,17 @@ import type { CharacterId } from '@/constants/characters';
 import {
   type BrandFontId,
   DEFAULT_FONT_ID,
+  DEFAULT_FONT_SIZE_ID,
   displayFaceFor,
   FONT_OPTIONS,
+  FONT_SIZE_OPTIONS,
+  type FontSizeId,
   Radius,
+  Spacing,
 } from '@/constants/theme';
 import { useActionBarInset, useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
-import { BrandThemePreview, useTokens, useTypography } from '@/hooks/use-tokens';
+import { BrandThemePreview, useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { useWebFontPreviews } from '@/hooks/use-web-fonts';
 import { useT } from '@/i18n';
 
@@ -30,14 +34,19 @@ export type FontScreenProps = {
   characterId?: CharacterId;
   /** 현재 적용된 폰트 — 초기 선택이자 적용하기 버튼의 활성 기준. */
   fontId?: BrandFontId;
-  /** 적용하기 — 고른 값이 현재와 다를 때만 눌린다 (#1096). */
+  /** 현재 적용된 글자 크기 단계. */
+  fontSizeId?: FontSizeId;
+  /** 적용하기 — 고른 폰트가 현재와 다를 때만 부른다 (#1096). */
   onApplyFont?: (id: BrandFontId) => void;
+  /** 적용하기 — 고른 글자 크기가 현재와 다를 때만 부른다. */
+  onApplyFontSize?: (id: FontSizeId) => void;
   onBack?: () => void;
 };
 
 /**
- * "폰트" picker reached from 설정 → 폰트 (#750, 구 인라인 칩 그리드 #382).
- * 테마 색상 화면(#459)과 같은 짜임 — 고르면 **미리보기 카드만** 그 폰트로 바뀌고
+ * "글씨" picker reached from 설정 → 글씨 (#750, 구 인라인 칩 그리드 #382) — 글자 크기와
+ * 폰트를 함께 고른다. 크기는 위쪽 세 칸(작게·보통·크게), 폰트는 아래 목록이다.
+ * 테마 색상 화면(#459)과 같은 짜임 — 고르면 **미리보기 카드만** 그 글씨로 바뀌고
  * (BrandThemePreview), 하단 적용하기를 눌러야 전역에 적용된다 (#1096). 적용하지
  * 않고 뒤로 가면 선택을 버린다. 순수/prop 기반이고 영속화는 셸이 맡는다.
  */
@@ -45,7 +54,9 @@ export function FontScreen({
   userName,
   characterId,
   fontId = DEFAULT_FONT_ID,
+  fontSizeId = DEFAULT_FONT_SIZE_ID,
   onApplyFont,
+  onApplyFontSize,
   onBack,
 }: FontScreenProps) {
   const t = useTokens();
@@ -53,13 +64,20 @@ export function FontScreen({
   useWebFontPreviews();
   const tr = useT();
   const Typography = useTypography();
+  const emph = useFontEmphasis();
   const column = useResponsiveColumn();
   // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
   const headerInset = useHeaderContentInset();
   const actionBarInset = useActionBarInset();
   // 고른 값 — 적용 전까지는 이 화면 안에만 산다.
   const [pending, setPending] = useState<BrandFontId>(fontId);
-  const canApply = pending !== fontId;
+  const [pendingSize, setPendingSize] = useState<FontSizeId>(fontSizeId);
+  const canApply = pending !== fontId || pendingSize !== fontSizeId;
+  const apply = () => {
+    if (!canApply) return;
+    if (pendingSize !== fontSizeId) onApplyFontSize?.(pendingSize);
+    if (pending !== fontId) onApplyFont?.(pending);
+  };
 
   return (
     <View style={[pickerStyles.screen, useScreenStyle([])]}>
@@ -72,9 +90,44 @@ export function FontScreen({
           headerInset ? { paddingTop: headerInset } : null,
           { paddingBottom: actionBarInset },
         ]}>
-        <BrandThemePreview fontId={pending}>
+        <BrandThemePreview fontId={pending} fontSizeId={pendingSize}>
           <AppearancePreview userName={userName} characterId={characterId} />
         </BrandThemePreview>
+
+        <View style={styles.sizeSection}>
+          <Text style={[Typography.supporting, emph('semibold'), { color: t.textMuted }]}>
+            {tr('member.font.sizeTitle')}
+          </Text>
+          <View
+            style={[styles.sizeRow, { backgroundColor: t.surfaceMuted }]}
+            accessibilityRole="radiogroup">
+            {FONT_SIZE_OPTIONS.map((opt) => {
+              const selected = opt.id === pendingSize;
+              return (
+                <Pressable
+                  key={opt.id}
+                  onPress={() => setPendingSize(opt.id)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={tr('member.font.sizeOptionA11y', { name: opt.name })}
+                  style={({ pressed }) => [
+                    styles.sizeOption,
+                    selected && { backgroundColor: t.surface },
+                    pressed && pressedStyle('dim', t),
+                  ]}>
+                  <Text
+                    style={[
+                      Typography.label,
+                      emph(selected ? 'bold' : 'normal'),
+                      { color: selected ? t.text : t.textMuted },
+                    ]}>
+                    {opt.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
 
         <View style={pickerStyles.list}>
           {FONT_OPTIONS.map((opt) => (
@@ -104,7 +157,7 @@ export function FontScreen({
       {/* 적용하기 — 테마 색상 화면과 같은 떠 있는 액션 바 (#1069). */}
       <ActionBar>
         <Pressable
-          onPress={() => canApply && onApplyFont?.(pending)}
+          onPress={apply}
           disabled={!canApply}
           accessibilityRole="button"
           accessibilityLabel={tr('common.apply')}
@@ -130,6 +183,21 @@ const styles = StyleSheet.create({
   applyFace: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: Radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sizeSection: { gap: Spacing.two },
+  sizeRow: {
+    flexDirection: 'row',
+    padding: Spacing.one,
+    gap: Spacing.one,
+    borderRadius: Radius.md,
+    borderCurve: 'continuous',
+  },
+  sizeOption: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },

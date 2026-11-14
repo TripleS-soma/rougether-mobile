@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { render } from '@testing-library/react-native';
 
 import { navUnderlapInset } from '@/components/ui/bottom-nav-geometry';
+import { Typography } from '@/constants/theme';
 import { useBottomNavInset, useScreenStyle } from '@/hooks/use-screen-style';
 
 const METRICS = {
@@ -54,14 +55,14 @@ describe('useBottomNavInset (#1049)', () => {
   it('글래스가 불가해도 같은 인셋 — 알약은 전 플랫폼 오버레이다 (#1074)', async () => {
     const { getByTestId } = await render(wrap(<InsetProbe />));
     expect(getByTestId('inset').props.children).toBe(
-      String(navUnderlapInset(METRICS.insets.bottom, 18)),
+      String(navUnderlapInset(METRICS.insets.bottom, Typography.supporting.lineHeight)),
     );
   });
 
   it('글래스 알약이 떠 있으면 바닥 여백 + 알약 높이 + 숨 — 바텀바와 같은 식을 쓴다', async () => {
     jest.mocked(isLiquidGlassAvailable).mockReturnValue(true);
     const { getByTestId } = await render(wrap(<InsetProbe />));
-    const expected = navUnderlapInset(METRICS.insets.bottom, 18); // supporting 줄높이 18
+    const expected = navUnderlapInset(METRICS.insets.bottom, Typography.supporting.lineHeight); // supporting 줄높이 18
     expect(expected).toBeGreaterThan(METRICS.insets.bottom);
     expect(getByTestId('inset').props.children).toBe(String(expected));
   });
