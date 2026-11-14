@@ -547,7 +547,27 @@
         "SURPRISE": "Surprised",
         "SAD": "Sad"
       },
-      "share": "Share"
+      "share": "Share",
+      "emoticons": {
+        "pack": "Ruyang's day",
+        "open": "Choose an emoticon",
+        "close": "Close emoticons",
+        "choose": "Select {{name}}",
+        "preview": "Selected emoticon: {{name}}",
+        "message": "Emoticon: {{name}}",
+        "cancel": "Cancel emoticon selection",
+        "sendHint": "Tap Send to send",
+        "labels": {
+          "hi": "Hello!",
+          "like": "Love it!",
+          "cheer": "You can do it!",
+          "done": "I did it!",
+          "thanks": "Thank you",
+          "goodjob": "Great job",
+          "sad": "Aww...",
+          "goodnight": "Good night"
+        }
+      }
     },
     "friendWeek": {
       "range": "{{sm}}/{{sd}} – {{em}}/{{ed}}",

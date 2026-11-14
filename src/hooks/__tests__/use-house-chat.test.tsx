@@ -491,3 +491,93 @@ describe('사진 묶음·공감 (2026-11-13)', () => {
     expect(result.current.messages).toHaveLength(3);
   });
 });
+
+describe('useHouseChat emoticons', () => {
+  it('sends only the key and UUID, shows the pending sticker, and retries the identical payload after response loss', async () => {
+    const { result } = await setup();
+    mockSend.mockRejectedValueOnce(new Error('response lost'));
+    await act(async () => result.current.sendEmoticon('ruyang_hi'));
+    await waitFor(() =>
+      expect(
+        result.current.messages.some((m) => m.status === 'failed' && m.emoticonKey === 'ruyang_hi'),
+      ).toBe(true),
+    );
+    const request = mockSend.mock.calls[0][1];
+    expect(request).toEqual({ clientMessageId: expect.any(String), emoticonKey: 'ruyang_hi' });
+    expect(result.current.messages.find((m) => m.status === 'failed')?.messageType).toBe(
+      'EMOTICON',
+    );
+    mockSend.mockResolvedValueOnce({
+      ...msg(4, 1),
+      clientMessageId: request.clientMessageId,
+      messageType: 'EMOTICON',
+      emoticonKey: 'ruyang_hi',
+      content: '이모티콘을 보냈어요',
+    });
+    await act(async () => result.current.retrySend(request.clientMessageId));
+    expect(mockSend.mock.calls[1][1]).toEqual(request);
+    await waitFor(() =>
+      expect(result.current.messages.filter((m) => m.emoticonKey === 'ruyang_hi')).toHaveLength(1),
+    );
+    expect(result.current.messages.find((m) => m.emoticonKey === 'ruyang_hi')?.status).toBe('sent');
+    expect(uploadChatImage).not.toHaveBeenCalled();
+  });
+
+  it('keeps sticker text in the outbox, retry request, and confirmed message', async () => {
+    const { result } = await setup();
+    mockSend.mockRejectedValueOnce(new Error('response lost'));
+    await act(async () => result.current.sendEmoticon('ruyang_cheer', ' 같이 힘내요! '));
+    await waitFor(() =>
+      expect(result.current.messages.find((m) => m.status === 'failed')?.caption).toBe(
+        '같이 힘내요!',
+      ),
+    );
+    const request = mockSend.mock.calls[0][1];
+    expect(request).toEqual({
+      clientMessageId: expect.any(String),
+      emoticonKey: 'ruyang_cheer',
+      content: '같이 힘내요!',
+    });
+    mockSend.mockResolvedValueOnce({
+      ...msg(4, 1),
+      clientMessageId: request.clientMessageId,
+      messageType: 'EMOTICON',
+      emoticonKey: 'ruyang_cheer',
+      content: '같이 힘내요!',
+      caption: '같이 힘내요!',
+    });
+    await act(async () => result.current.retrySend(request.clientMessageId));
+    expect(mockSend.mock.calls[1][1]).toEqual(request);
+    await waitFor(() =>
+      expect(result.current.messages.filter((m) => m.emoticonKey === 'ruyang_cheer')).toHaveLength(
+        1,
+      ),
+    );
+    expect(result.current.messages.find((m) => m.emoticonKey === 'ruyang_cheer')?.caption).toBe(
+      '같이 힘내요!',
+    );
+  });
+
+  it('preserves emoticon keys from history and socket delivery', async () => {
+    const { result, socket } = await setup();
+    await act(async () =>
+      socket.server({
+        type: 'MESSAGE_CREATED',
+        message: {
+          ...msg(4),
+          messageType: 'EMOTICON',
+          emoticonKey: 'ruyang_done',
+          content: '함께 해냈다!',
+          caption: '함께 해냈다!',
+        },
+      }),
+    );
+    await waitFor(() =>
+      expect(result.current.messages.find((m) => m.sequence === 4)?.emoticonKey).toBe(
+        'ruyang_done',
+      ),
+    );
+    expect(result.current.messages.find((m) => m.sequence === 4)?.messageType).toBe('EMOTICON');
+    expect(result.current.messages.find((m) => m.sequence === 4)?.caption).toBe('함께 해냈다!');
+  });
+});

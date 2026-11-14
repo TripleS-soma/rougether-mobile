@@ -20,6 +20,7 @@ import type {
   ChatReactionType,
 } from '@/api/chat-types';
 import { ChatComposer } from '@/components/chat/chat-composer';
+import { ChatEmoticonPreview } from '@/components/chat/chat-emoticon-preview';
 import type { MenuAnchor } from '@/components/chat/chat-menu-placement';
 import { ChatMessageMenu } from '@/components/chat/chat-message-menu';
 import { ChatMessageRow } from '@/components/chat/chat-message-row';
@@ -38,6 +39,7 @@ import { i18n, useT } from '@/i18n';
 import type { ChatPhotoDraft } from '@/lib/pick-chat-photo';
 import { formatTime, localDate, monthDayLabel, toIsoDate } from '@/utils/datetime';
 import { hapticSelection } from '@/utils/haptics';
+import type { ChatEmoticonKey } from '@/resources/chat-emoticons';
 
 /** 서버 본문 상한 (spec chat/api.md) — 2,000 UTF-16 code unit = JS `length`. */
 export const CHAT_MAX_LENGTH = 2000;
@@ -48,11 +50,12 @@ export type ChatMessageView = {
   key: string;
   messageId?: number;
   messageType?: ChatMessageType;
+  emoticonKey?: string;
   /** 서버에 있는 사진 — 보낸 순서대로. */
   images?: ChatImageResponse[];
   /** 아직 올리는 중인 내 사진(자르기 영역 포함). */
   localImages?: ChatPhotoDraft[];
-  /** 사진과 함께 보낸 글. */
+  /** 사진이나 이모티콘과 함께 보낸 글. */
   caption?: string;
   reactions?: ChatReaction[];
   /** 서버가 매긴 방별 순서 — 보내는 중·실패한 메시지에는 없다. */
@@ -89,6 +92,7 @@ export type HouseChatScreenProps = {
    * 글은 사진과 한 메시지로 나간다. 글도 사진도 없으면 부르지 않는다.
    */
   onSend?: (text: string) => void;
+  onSendEmoticon?: (key: ChatEmoticonKey, text: string) => void;
   /** 보내려고 담아 둔 사진 — 입력줄 위 미리보기 줄에 보인다. */
   photos?: ChatPhotoDraft[];
   onPickPhoto?: () => void;
@@ -183,6 +187,7 @@ export function HouseChatScreen({
   loadingOlder = false,
   onLoadOlder,
   onSend,
+  onSendEmoticon,
   photos,
   onPickPhoto,
   pickingPhoto = false,
@@ -214,6 +219,7 @@ export function HouseChatScreen({
   const bottomSafeInset = iosKeyboard > insets.bottom ? 0 : insets.bottom;
   // 길게 눌러 메뉴를 연 메시지의 목록 키와 그 말풍선의 화면 자리.
   const [menu, setMenu] = useState<{ key: string; anchor?: MenuAnchor } | null>(null);
+  const [selectedEmoticon, setSelectedEmoticon] = useState<ChatEmoticonKey>();
   const menuKey = menu?.key ?? null;
   const openMenu = useCallback((key: string, anchor?: MenuAnchor) => {
     hapticSelection();
@@ -230,7 +236,7 @@ export function HouseChatScreen({
     : menuMessage.images?.length
       ? (menuMessage.caption ?? '')
       : menuMessage.messageType === 'EMOTICON'
-        ? ''
+        ? (menuMessage.caption ?? '')
         : menuMessage.content;
 
   // onViewableItemsChanged는 FlatList가 첫 값만 쓴다 — 최신 콜백은 ref로.
@@ -271,6 +277,7 @@ export function HouseChatScreen({
           content={item.content}
           messageId={item.messageId}
           messageType={item.messageType}
+          emoticonKey={item.emoticonKey}
           images={item.images}
           localImages={item.localImages}
           caption={item.caption}
@@ -346,11 +353,22 @@ export function HouseChatScreen({
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        {body}
+        <View style={styles.flex} collapsable={false}>
+          {body}
+          {selectedEmoticon && !loading && !loadError ? (
+            <ChatEmoticonPreview
+              selected={selectedEmoticon}
+              onCancel={() => setSelectedEmoticon(undefined)}
+            />
+          ) : null}
+        </View>
         <ChatComposer
           maxLength={CHAT_MAX_LENGTH}
           disabled={loading || loadError}
           onSend={onSend}
+          onSendEmoticon={onSendEmoticon}
+          selectedEmoticon={selectedEmoticon}
+          onSelectEmoticon={setSelectedEmoticon}
           photos={photos}
           onPickPhoto={onPickPhoto}
           pickingPhoto={pickingPhoto}

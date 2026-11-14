@@ -1,4 +1,5 @@
 import { HouseDioramaDemo } from '@/dev/house-diorama-demo';
+import { ChatEmoticonsPreview } from '@/dev/chat-emoticons-preview';
 import {
   HouseFeedComposeDemo,
   HouseFeedListDemo,
@@ -408,6 +409,12 @@ export const houseEntries: GalleryEntry[] = [
         </View>
       );
     },
+  },
+  {
+    name: 'HouseChatEmoticonsPreview',
+    description:
+      '루양이 이모티콘 선택과 전송을 실제 채팅 컴포넌트로 확인하는 로컬 픽스처. 서버에는 보내지 않는다.',
+    render: () => <ChatEmoticonsPreview />,
   },
   {
     name: 'HouseChatScreen',
