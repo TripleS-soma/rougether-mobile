@@ -509,6 +509,7 @@
       "muteFailed": "채팅 알림 설정을 바꾸지 못했어요",
       "pickPhoto": "사진 선택",
       "openPhoto": "사진 크게 보기",
+      "photoExpired": "보관 기간이 만료된 사진",
       "retryPhoto": "사진 다시 불러오기",
       "closePhoto": "닫기",
       "sharePhotoToFeed": "피드에 올리기",

@@ -509,6 +509,7 @@
       "muteFailed": "Couldn't change chat notifications",
       "pickPhoto": "Choose photo",
       "openPhoto": "View photo",
+      "photoExpired": "This photo has expired",
       "retryPhoto": "Reload photo",
       "closePhoto": "Close",
       "sharePhotoToFeed": "Post to feed",
