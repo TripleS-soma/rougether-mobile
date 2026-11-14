@@ -4,10 +4,16 @@
  * 상태 변경(전송·읽음)은 전부 HTTP로 하고, 실시간 수신은 `lib/chat-socket`의
  * WebSocket이 방 상태(`ROOM_UPDATED`)만 알려준다 — 본문은 여기 목록 API로 가져온다.
  */
-import { apiGet, apiPost, apiPut } from './client';
+import { apiDelete, apiGet, apiPost, apiPut } from './client';
 import { inChatSession } from '@/api/chat-session';
 import { buildQuery } from './http';
-import type { ChatMessagePage, ChatMessageResponse, ChatSendRequest } from '@/api/chat-types';
+import type {
+  ChatMessagePage,
+  ChatMessageResponse,
+  ChatReactionType,
+  ChatReactionUpdate,
+  ChatSendRequest,
+} from '@/api/chat-types';
 import type { ChatRoomResponse, ReportReason } from './types';
 
 /** POST /houses/{houseId}/chat-room — 집 채팅방 생성 또는 기존 방 반환(멱등). */
@@ -87,6 +93,31 @@ export function reportChatMessage(
       `/chat/rooms/${roomId}/messages/${messageId}/reports`,
       { reason, detail },
       { refreshOnUnauthorized: false },
+    ),
+  );
+}
+
+/** PUT …/messages/{id}/reaction — 내 공감을 정하거나 다른 유형으로 바꾼다(메시지당 하나, 멱등). */
+export function setChatReaction(roomId: number, messageId: number, type: ChatReactionType) {
+  return inChatSession(() =>
+    apiPut<ChatReactionUpdate>(
+      `/chat/rooms/${roomId}/messages/${messageId}/reaction`,
+      { type },
+      { expectedStatuses: [403, 404], refreshOnUnauthorized: false },
+    ),
+  );
+}
+
+/** DELETE …/messages/{id}/reaction — 내 공감 취소(없어도 성공). */
+export function clearChatReaction(roomId: number, messageId: number) {
+  return inChatSession(() =>
+    apiDelete<ChatReactionUpdate>(
+      `/chat/rooms/${roomId}/messages/${messageId}/reaction`,
+      undefined,
+      {
+        expectedStatuses: [403, 404],
+        refreshOnUnauthorized: false,
+      },
     ),
   );
 }

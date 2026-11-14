@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useMutation } from '@tanstack/react-query';
-import { Image } from 'expo-image';
-import { AppState, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AppState, Platform, Share } from 'react-native';
 import { reportChatMessage } from '@/api/chat';
+import type { ChatCrop, ChatReactionType } from '@/api/chat-types';
 import type { ReportReason } from '@/api/types';
+import { ChatPhotoCrop } from '@/components/chat/chat-photo-crop';
 import { ReportSheet } from '@/components/ui/report-sheet';
-import { Radius, Spacing } from '@/constants/theme';
-import { useTokens, useTypography } from '@/hooks/use-tokens';
-import type { PickedLibraryImageWithSize } from '@/lib/pick-image';
-import { pickChatPhoto } from '@/lib/pick-chat-photo';
+import {
+  CHAT_PHOTO_MAX,
+  type ChatPhotoDraft,
+  isSendableChatPhoto,
+  pickChatPhotos,
+} from '@/lib/pick-chat-photo';
 import { useHouseNotifications } from '@/components/app/use-house-notifications';
 import { HouseChatScreen } from '@/components/screens/house-chat-screen';
 import { useToast } from '@/components/ui/toast';
@@ -46,19 +49,33 @@ function HouseChatRoomPage({
   onSharePhoto?: (uri: string) => void;
 }) {
   const tr = useT();
-  const t = useTokens();
-  const Typography = useTypography();
-  const [photo, setPhoto] = useState<PickedLibraryImageWithSize | null>(null);
-  const photoRef = useRef<PickedLibraryImageWithSize | null>(null);
-  const clearPhoto = () => {
-    photoRef.current = null;
-    setPhoto(null);
+  // 보내려고 담아 둔 사진 — 입력줄 위에 쌓였다가 보내기 한 번에 메시지 하나로 나간다.
+  const [photos, setPhotos] = useState<ChatPhotoDraft[]>([]);
+  // 연속 탭이 같은 사진을 두 번 보내지 않게, 보낼 때는 state가 아니라 ref를 읽고 바로 비운다.
+  const photosRef = useRef<ChatPhotoDraft[]>([]);
+  const updatePhotos = (next: ChatPhotoDraft[]) => {
+    photosRef.current = next;
+    setPhotos(next);
   };
-  const sendPhoto = () => {
-    const selected = photoRef.current;
-    if (!selected || !mounted.current) return;
-    clearPhoto();
-    chat.sendPhoto(selected);
+  // 자르기 화면에 올린 사진의 자리 — null이면 닫힘.
+  const [cropIndex, setCropIndex] = useState<number | null>(null);
+  const sendMessage = (text: string) => {
+    if (!mounted.current) return;
+    const selected = photosRef.current;
+    if (selected.length === 0) {
+      chat.send(text);
+      return;
+    }
+    updatePhotos([]);
+    chat.sendPhotos(selected, text);
+  };
+  const removePhoto = (index: number) =>
+    updatePhotos(photosRef.current.filter((_, at) => at !== index));
+  const applyCrop = (crop: ChatCrop | undefined) => {
+    const index = cropIndex;
+    setCropIndex(null);
+    if (index == null) return;
+    updatePhotos(photosRef.current.map((photo, at) => (at === index ? { ...photo, crop } : photo)));
   };
   const [picking, setPicking] = useState(false);
   const pickingRef = useRef(false);
@@ -82,25 +99,56 @@ function HouseChatRoomPage({
   const chat = useHouseChat({ houseId, onError: handleError });
   const pickPhoto = async () => {
     if (pickingRef.current) return;
+    const room = CHAT_PHOTO_MAX - photosRef.current.length;
+    if (room <= 0) {
+      toast(tr('house.chat.photoMax', { max: CHAT_PHOTO_MAX }), 'error');
+      return;
+    }
     pickingRef.current = true;
     setPicking(true);
     try {
-      const picked = await pickChatPhoto();
-      if (!mounted.current || !picked) return;
-      if (
-        !['image/jpeg', 'image/png'].includes(picked.type.toLowerCase()) ||
-        (picked.fileSize ?? 0) > 10 * 1024 * 1024
-      ) {
-        toast(tr('house.chat.photoInvalid'), 'error');
-        return;
-      }
-      photoRef.current = picked;
-      setPhoto(picked);
+      const picked = await pickChatPhotos(room);
+      if (!mounted.current || picked.length === 0) return;
+      // 서버가 받지 않는 형식·크기는 여기서 걸러 안내한다 — 나머지는 그대로 담는다.
+      const sendable = picked.filter(isSendableChatPhoto);
+      if (sendable.length < picked.length)
+        toast(
+          sendable.length === 0
+            ? tr('house.chat.photoInvalid')
+            : tr('house.chat.photoSomeInvalid', { n: picked.length - sendable.length }),
+          'error',
+        );
+      if (sendable.length === 0) return;
+      // 고르는 사이 담긴 사진이 바뀌었을 수 있다 — 한도는 지금 기준으로 다시 자른다.
+      const current = photosRef.current;
+      updatePhotos([...current, ...sendable].slice(0, CHAT_PHOTO_MAX));
     } catch {
       if (mounted.current) toast(tr('house.chat.photoPickFailed'), 'error');
     } finally {
       pickingRef.current = false;
       if (mounted.current) setPicking(false);
+    }
+  };
+  // 행(memo)에 내려가는 콜백이라 참조를 고정한다 — 새 메시지마다 목록 전체가 다시 그려지지 않게.
+  const chatReact = chat.react;
+  const react = useCallback(
+    (messageId: number, type: ChatReactionType | null) => void chatReact(messageId, type),
+    [chatReact],
+  );
+  const copyText = async (text: string) => {
+    try {
+      const Clipboard = await import('expo-clipboard');
+      await Clipboard.setStringAsync(text);
+      if (mounted.current) toast(tr('house.chat.copied'));
+    } catch {
+      if (mounted.current) toast(tr('house.chat.copyFailed'), 'error');
+    }
+  };
+  const shareText = async (text: string) => {
+    try {
+      await Share.share({ message: text });
+    } catch {
+      // 사용자가 닫았거나 시트를 못 열었다 — 다시 누르면 된다.
     }
   };
   const { mutate: report, isPending: reporting } = useMutation({
@@ -163,10 +211,17 @@ function HouseChatRoomPage({
         hasOlder={chat.hasOlder}
         loadingOlder={chat.loadingOlder}
         onLoadOlder={chat.loadOlder}
-        onSend={chat.send}
+        onSend={sendMessage}
+        photos={photos}
         onPickPhoto={() => void pickPhoto()}
         pickingPhoto={picking}
+        onRemovePhoto={removePhoto}
+        onEditPhoto={setCropIndex}
         onReport={setReportId}
+        onReact={react}
+        onCopy={(text) => void copyText(text)}
+        // 웹에는 시스템 공유 시트가 없다.
+        onShare={Platform.OS === 'web' ? undefined : (text) => void shareText(text)}
         onSharePhoto={onSharePhoto}
         onRetrySend={chat.retrySend}
         onVisible={chat.reportVisible}
@@ -175,35 +230,11 @@ function HouseChatRoomPage({
         onOpenNotifications={FEED_ENABLED ? notifications.open : undefined}
         onBack={onBack}
       />
-      <Modal visible={photo != null} transparent animationType="fade" onRequestClose={clearPhoto}>
-        <View style={[styles.previewBackdrop, { backgroundColor: t.screen }]}>
-          <Text style={[Typography.h3, { color: t.text }]}>{tr('house.chat.previewPhoto')}</Text>
-          {photo ? (
-            <Image
-              source={{ uri: photo.uri }}
-              style={styles.preview}
-              contentFit="contain"
-              cachePolicy="none"
-            />
-          ) : null}
-          <View style={styles.previewActions}>
-            <Pressable onPress={clearPhoto} accessibilityRole="button" style={styles.action}>
-              <Text style={[Typography.label, { color: t.textMuted }]}>
-                {tr('house.chat.cancelPhoto')}
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={sendPhoto}
-              accessibilityRole="button"
-              accessibilityLabel={tr('house.chat.sendPhoto')}
-              style={[styles.action, { backgroundColor: t.primary }]}>
-              <Text style={[Typography.label, { color: t.onPrimary }]}>
-                {tr('house.chat.sendPhoto')}
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+      <ChatPhotoCrop
+        photo={cropIndex != null ? (photos[cropIndex] ?? null) : null}
+        onDone={applyCrop}
+        onCancel={() => setCropIndex(null)}
+      />
       <ReportSheet
         visible={reportId != null}
         targetLabel={tr('house.chat.messageLabel')}
@@ -217,20 +248,3 @@ function HouseChatRoomPage({
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  previewBackdrop: {
-    flex: 1,
-    padding: Spacing.four,
-    paddingTop: Spacing.six * 2,
-    paddingBottom: Spacing.six * 2,
-    gap: Spacing.four,
-  },
-  preview: { flex: 1, width: '100%' },
-  previewActions: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.three },
-  action: {
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.three,
-    borderRadius: Radius.pill,
-  },
-});

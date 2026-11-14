@@ -4,11 +4,18 @@ import { getAccessToken, getSessionUserId, refreshSession } from '@/api/auth';
 import { apiDelete, apiUpload } from '@/api/client';
 import { inChatSession } from '@/api/chat-session';
 import { API_BASE } from '@/api/config';
-import type { ChatImageResponse } from '@/api/chat-types';
+import type { ChatCrop, ChatImageResponse } from '@/api/chat-types';
 import type { PickedLibraryImageWithSize } from '@/lib/pick-image';
 
-/** 업로드 응답을 잃은 객체는 서버의 만료 정리가 처리한다. 메시지 재시도는 받은 ID를 재사용한다. */
-export async function uploadChatImage(roomId: number, file: PickedLibraryImageWithSize) {
+/**
+ * 업로드 응답을 잃은 객체는 서버의 만료 정리가 처리한다. 메시지 재시도는 받은 ID를 재사용한다.
+ * `crop`을 주면 서버가 그 영역만 남겨 저장한다(네 값을 함께 보내야 한다).
+ */
+export async function uploadChatImage(
+  roomId: number,
+  file: PickedLibraryImageWithSize,
+  crop?: ChatCrop,
+) {
   return inChatSession(async (assertCurrent) => {
     const form = new FormData();
     if (Platform.OS === 'web') {
@@ -16,6 +23,12 @@ export async function uploadChatImage(roomId: number, file: PickedLibraryImageWi
       form.append('file', blob, file.name);
     } else {
       form.append('file', { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
+    }
+    if (crop) {
+      form.append('cropX', String(crop.x));
+      form.append('cropY', String(crop.y));
+      form.append('cropWidth', String(crop.width));
+      form.append('cropHeight', String(crop.height));
     }
     assertCurrent();
     return apiUpload<ChatImageResponse>(`/chat/rooms/${roomId}/images`, form, {
