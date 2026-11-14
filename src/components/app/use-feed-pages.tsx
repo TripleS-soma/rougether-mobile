@@ -15,6 +15,7 @@ import { type Screen } from '@/components/app/navigation';
 import { feedRecordDraftText } from '@/components/feed/feed-minigame-record';
 import { FeedAuthorHouseSheet } from '@/components/feed/feed-author-house-sheet';
 import { FeedComposeScreen } from '@/components/screens/feed-compose-screen';
+import { chatPhotoUploadFile } from '@/lib/chat-photo-file';
 import { FeedPostScreen } from '@/components/screens/feed-post-screen';
 import type {
   FeedComposeScope,
@@ -184,6 +185,17 @@ export function useFeedPages({
       setScreen('feedCompose');
     },
     [startRecordPost, setScreen],
+  );
+
+  // 채팅 사진 크게 보기의 [피드에 올리기] (2026-11-11) — 그 사진을 붙인 작성 화면을 연다.
+  const startPhotoPost = compose.startPhotoPost;
+  const sharePhoto = useCallback(
+    (uri: string) => {
+      if (!FEED_ENABLED) return;
+      startPhotoPost(chatPhotoUploadFile(uri));
+      setScreen('feedCompose');
+    },
+    [startPhotoPost, setScreen],
   );
 
   // 작성 화면을 어떤 경로로든(뒤로 버튼·하드웨어 백·엣지 백) 떠나면 초안을 버린다 — 올려 둔
@@ -380,5 +392,5 @@ export function useFeedPages({
       />
     ) : null;
 
-  return { tabProps, subScreen, openPost, shareRecord };
+  return { tabProps, subScreen, openPost, shareRecord, sharePhoto };
 }

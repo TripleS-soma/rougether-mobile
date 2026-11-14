@@ -1,25 +1,32 @@
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  AppState,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, AppState, Pressable, StyleSheet, Text } from 'react-native';
 
 import { onSessionCleared } from '@/api/auth';
 import { fetchChatImage } from '@/api/chat-images';
-import { Radius, Spacing } from '@/constants/theme';
+import { ChatPhotoViewer } from '@/components/chat/chat-photo-viewer';
+import { Radius } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
 
 const CHAT_PHOTO_SIZE = 184;
 
 /** 사진은 화면이 떠나거나 백그라운드로 가면 버리고, 복귀 시 권한을 다시 확인한다. */
-export function ChatPhoto({ imageId, localUri }: { imageId?: number; localUri?: string }) {
+export function ChatPhoto({
+  imageId,
+  localUri,
+  senderName,
+  sentLabel,
+  onShareToFeed,
+}: {
+  imageId?: number;
+  localUri?: string;
+  /** 크게 보기 화면에 띄울 보낸 사람·보낸 시각. */
+  senderName?: string;
+  sentLabel?: string;
+  /** 크게 보기의 [피드에 올리기] — 없으면 버튼을 그리지 않는다. 지금 보이는 사진의 주소로 부른다. */
+  onShareToFeed?: (uri: string) => void;
+}) {
   const t = useTokens();
   const Typography = useTypography();
   const tr = useT();
@@ -89,27 +96,22 @@ export function ChatPhoto({ imageId, localUri }: { imageId?: number; localUri?: 
           </Text>
         )}
       </Pressable>
-      <Modal
-        visible={expanded && !!source}
-        animationType="fade"
-        onRequestClose={() => setExpanded(false)}>
-        <View style={[styles.viewer, { backgroundColor: t.screen }]}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setExpanded(false)}
-            style={styles.close}>
-            <Text style={[Typography.label, { color: t.text }]}>{tr('house.chat.closePhoto')}</Text>
-          </Pressable>
-          {source ? (
-            <Image
-              source={{ uri: source }}
-              style={styles.fill}
-              contentFit="contain"
-              cachePolicy="none"
-            />
-          ) : null}
-        </View>
-      </Modal>
+      <ChatPhotoViewer
+        visible={expanded}
+        uri={source}
+        senderName={senderName}
+        sentLabel={sentLabel}
+        onShareToFeed={
+          onShareToFeed && source
+            ? () => {
+                // 뷰어(모달)를 먼저 닫는다 — 열린 채 화면이 바뀌면 작성 화면을 덮는다.
+                setExpanded(false);
+                onShareToFeed(source);
+              }
+            : undefined
+        }
+        onClose={() => setExpanded(false)}
+      />
     </>
   );
 }
@@ -124,6 +126,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   fill: { width: '100%', flex: 1 },
-  viewer: { flex: 1, paddingTop: Spacing.six * 2, paddingBottom: Spacing.six },
-  close: { alignSelf: 'flex-end', padding: Spacing.four },
 });
