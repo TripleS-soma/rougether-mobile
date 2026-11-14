@@ -8,14 +8,17 @@ import { ListRow } from '@/components/ui/list-row';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import {
   DEFAULT_FONT_ID,
+  DEFAULT_FONT_SIZE_ID,
   DEFAULT_THEME_ID,
   DEFAULT_THEME_MODE,
   FONT_OPTIONS,
+  FONT_SIZE_OPTIONS,
   THEME_OPTIONS,
   Radius,
   Spacing,
   displayFaceFor,
   type BrandFontId,
+  type FontSizeId,
   type ThemeId,
   type ThemeMode,
   typographyFor,
@@ -37,8 +40,8 @@ const MODE_OPTIONS: ThemeMode[] = ['system', 'light', 'dark'];
  * label 롤에서, 얼굴은 displayFaceFor에서 — 주아 혼합은 제목만 Jua라 label
  * 롤의 얼굴만으로는 무엇이 다른지 안 보인다 (#750).
  */
-function fontPreviewStyle(id: BrandFontId) {
-  return { ...typographyFor(id).label, ...displayFaceFor(id) };
+function fontPreviewStyle(id: BrandFontId, sizeId: FontSizeId) {
+  return { ...typographyFor(id, sizeId).label, ...displayFaceFor(id) };
 }
 
 type Row = { icon: IconName; label: string; onPress?: () => void };
@@ -56,6 +59,8 @@ export type SettingsScreenProps = ScrollRestoreProps & {
   /** 현재 브랜드 테마 — 행 오른쪽에 이름·색을 보인다 (#972). */
   themeId?: ThemeId;
   fontId?: BrandFontId;
+  /** 글자 크기 단계 — 글씨 행 오른쪽 현재값 표시용. */
+  fontSizeId?: FontSizeId;
   /** Opens the 폰트 picker screen (#750). */
   onOpenFont?: () => void;
   /** Opens the 테마 색상 picker screen (#459). */
@@ -113,6 +118,7 @@ export const SettingsScreen = memo(function SettingsScreen({
   onChangeThemeMode,
   themeId = DEFAULT_THEME_ID,
   fontId = DEFAULT_FONT_ID,
+  fontSizeId = DEFAULT_FONT_SIZE_ID,
   onOpenFont,
   onOpenTheme,
   language = DEFAULT_LANGUAGE,
@@ -143,6 +149,7 @@ export const SettingsScreen = memo(function SettingsScreen({
   // 회원탈퇴는 복구 불가 — 파괴 확인 다이얼로그 뒤에만 (#547).
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
   const currentFontName = FONT_OPTIONS.find((o) => o.id === fontId)?.name ?? '';
+  const currentFontSizeName = FONT_SIZE_OPTIONS.find((o) => o.id === fontSizeId)?.name ?? '';
   const currentTheme = THEME_OPTIONS.find((o) => o.id === themeId);
   const currentLanguageName = LANGUAGE_OPTIONS.find((o) => o.id === language)?.name ?? '';
   // 서브화면(도움말·버그 제보 …)에 다녀와도 보던 자리로 (#763).
@@ -389,8 +396,14 @@ export const SettingsScreen = memo(function SettingsScreen({
                   <Text style={[Typography.body, { color: t.text }]}>{tr('settings.font')}</Text>
                 </View>
                 {/* 현재 폰트 이름은 그 폰트의 얼굴로 — 행 자체가 작은 견본이 된다. */}
-                <Text style={[fontPreviewStyle(fontId), styles.rowValue, { color: t.textMuted }]}>
-                  {currentFontName}
+                <Text
+                  style={[
+                    fontPreviewStyle(fontId, fontSizeId),
+                    styles.rowValue,
+                    { color: t.textMuted },
+                  ]}
+                  numberOfLines={1}>
+                  {tr('settings.fontValue', { font: currentFontName, size: currentFontSizeName })}
                 </Text>
                 <Icon name="forward" size={16} color={t.textDisabled} />
               </Pressable>

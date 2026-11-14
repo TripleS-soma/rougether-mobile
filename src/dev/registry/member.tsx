@@ -451,7 +451,8 @@ export const memberEntries: GalleryEntry[] = [
   },
   {
     name: 'FontScreen',
-    description: '설정 → 폰트 (#750): 라이브 미리보기 + 글자 스와치로 폰트 5종 선택.',
+    description:
+      '설정 → 글씨 (#750): 라이브 미리보기 + 글자 크기 3단계(작게·보통·크게) + 글자 스와치로 폰트 5종 선택.',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <FontScreen />
