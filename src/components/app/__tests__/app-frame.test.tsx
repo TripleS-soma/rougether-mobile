@@ -61,17 +61,61 @@ describe('AppFrame / ModalFrame (#1227)', () => {
     mockFrame = NARROW;
   });
 
-  it('네이티브에서는 래퍼 View 없이 자식을 그대로 돌려준다', async () => {
-    const os = jest.replaceProperty(Platform, 'OS', 'ios');
+  // 폴드를 접었다 펴면 폭이 411 ↔ 750으로 바뀐다. 루트 타입이 바뀌면 라우터 Stack이
+  // 통째로 리마운트돼 보던 화면이 처음으로 돌아간다.
+  it('네이티브에서 폴드를 접었다 펴도(480 경계) 자식이 리마운트되지 않는다', async () => {
+    const os = jest.replaceProperty(Platform, 'OS', 'android');
     try {
-      mockFrame = WIDE;
-      const { queryByTestId, getByText } = await render(
+      const onMount = jest.fn();
+      mockFrame = NARROW;
+      const view = await render(
         <AppFrame>
-          <Text>child</Text>
+          <Probe onMount={onMount} />
         </AppFrame>,
       );
-      expect(getByText('child')).toBeTruthy();
-      expect(queryByTestId('app-frame')).toBeNull();
+      const narrowInner = flattenStyle(view.getByTestId('app-frame-inner').props.style);
+      expect(narrowInner.width).toBe('100%');
+      expect(narrowInner.maxWidth).toBeUndefined();
+
+      mockFrame = WIDE;
+      await view.rerender(
+        <AppFrame>
+          <Probe onMount={onMount} />
+        </AppFrame>,
+      );
+      expect(onMount).toHaveBeenCalledTimes(1);
+      const wideInner = flattenStyle(view.getByTestId('app-frame-inner').props.style);
+      expect(wideInner.maxWidth).toBe(APP_FRAME_MAX_WIDTH);
+    } finally {
+      os.restore();
+    }
+  });
+
+  it('네이티브 넓은 창에서 시트는 폰 컬럼 폭으로, 좁은 창에서는 창 폭 그대로', async () => {
+    const os = jest.replaceProperty(Platform, 'OS', 'android');
+    try {
+      const onMount = jest.fn();
+      mockFrame = NARROW;
+      const view = await render(
+        <ModalFrame>
+          <Probe onMount={onMount} />
+        </ModalFrame>,
+      );
+      const narrow = flattenStyle(view.getByTestId('modal-frame-inner').props.style);
+      expect(narrow.width).toBe('100%');
+      expect(narrow.justifyContent).toBe('flex-end');
+
+      mockFrame = WIDE;
+      await view.rerender(
+        <ModalFrame>
+          <Probe onMount={onMount} />
+        </ModalFrame>,
+      );
+      // 시트를 연 채 펴도 시트 안 입력이 날아가지 않는다.
+      expect(onMount).toHaveBeenCalledTimes(1);
+      const wide = flattenStyle(view.getByTestId('modal-frame-inner').props.style);
+      expect(wide.width).toBe(APP_FRAME_MAX_WIDTH);
+      expect(view.getByTestId('modal-frame').props.pointerEvents).toBe('box-none');
     } finally {
       os.restore();
     }

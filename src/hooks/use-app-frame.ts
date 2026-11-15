@@ -3,9 +3,13 @@ import { Platform, useWindowDimensions } from 'react-native';
 import { useHydrated } from '@/hooks/use-hydrated';
 
 /**
- * 데스크톱 브라우저의 앱 프레임 폭 — 화면은 전부 폰 기준으로 설계됐으므로 넓은
- * 창에서는 이 폭의 중앙 컬럼 안에서 그린다(#1215 후속, 웹앱 데스크톱 1단계).
- * 방 캔버스·시트·탭바가 1500px로 늘어나는 대신 폰과 같은 비례를 유지한다.
+ * 앱 프레임 폭 — 화면은 전부 폰 기준으로 설계됐으므로 그보다 넓은 창에서는 이 폭의
+ * 중앙 컬럼 안에서 그린다(#1215 후속, 웹앱 데스크톱 1단계). 방 캔버스·시트·탭바가
+ * 창 폭만큼 늘어나는 대신 폰과 같은 비례를 유지한다.
+ *
+ * 네이티브도 같다(2026-11-15 제보 "갤럭시 폴드에서 비율이 안 맞는다"). 폴드를 펴면 창이
+ * 약 700~750dp, 태블릿은 800dp 이상인데 방은 폭을 따라 정사각으로 커져 화면을 다 덮고
+ * 할 일 목록이 밖으로 밀렸다. 폰은 가장 넓어도 450dp 안쪽이라 이 값에 걸리지 않는다.
  */
 export const APP_FRAME_MAX_WIDTH = 480;
 /**
@@ -23,9 +27,9 @@ export const SPLIT_FRAME_MAX_WIDTH = 1200;
 export const SHEET_FRAME_MAX_WIDTH = 640;
 
 export type AppFrame = ReturnType<typeof useWindowDimensions> & {
-  /** 프레임이 창보다 좁아 중앙 컬럼으로 그리는 중인가(웹 데스크톱). */
+  /** 프레임이 창보다 좁아 중앙 컬럼으로 그리는 중인가(웹 데스크톱·폴드 펼침·태블릿). */
   framed: boolean;
-  /** 2단 레이아웃인가 — framed이면서 창이 `SPLIT_MIN_WINDOW_WIDTH` 이상. */
+  /** 2단 레이아웃인가 — 웹에서 framed이면서 창이 `SPLIT_MIN_WINDOW_WIDTH` 이상. */
   split: boolean;
 };
 
@@ -42,17 +46,17 @@ export function resolveAppFrame(
   window: ReturnType<typeof useWindowDimensions>,
   hydrated = true,
 ): AppFrame {
-  const framed = hydrated && os === 'web' && window.width > APP_FRAME_MAX_WIDTH;
+  const framed = hydrated && window.width > APP_FRAME_MAX_WIDTH;
   if (!framed) return { ...window, framed, split: false };
-  const split = window.width >= SPLIT_MIN_WINDOW_WIDTH;
+  // 2단은 마우스·넓은 모니터를 전제로 만든 웹 전용 배치다 — 네이티브 가로 태블릿은 폰 컬럼.
+  const split = os === 'web' && window.width >= SPLIT_MIN_WINDOW_WIDTH;
   const width = split ? Math.min(window.width, SPLIT_FRAME_MAX_WIDTH) : APP_FRAME_MAX_WIDTH;
   return { ...window, width, framed, split };
 }
 
 /**
- * `useWindowDimensions`의 프레임 인지 버전. 네이티브와 좁은 웹 창에서는 창 크기
- * 그대로, 넓은 웹 창에서는 `width`만 프레임 폭(폰 컬럼 480 또는 2단 최대 1200)으로
- * 바뀐다. 폭으로 레이아웃을 계산하는 곳(탭바·온보딩 카드·화면 전환 슬라이드)은
+ * `useWindowDimensions`의 프레임 인지 버전. 폰 폭 창에서는 창 크기 그대로, 넓은
+ * 창에서는 `width`만 프레임 폭(폰 컬럼 480 또는 웹 2단 최대 1200)으로 바뀐다. 폭으로 레이아웃을 계산하는 곳(탭바·온보딩 카드·화면 전환 슬라이드)은
  * 이 훅을 쓴다.
  */
 export function useAppFrame(): AppFrame {
