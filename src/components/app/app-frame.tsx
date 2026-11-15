@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import {
   APP_FRAME_MAX_WIDTH,
@@ -10,13 +10,12 @@ import {
 import { useTokens } from '@/hooks/use-tokens';
 
 /**
- * 웹 데스크톱에서 자식을 중앙 480px 컬럼에 가두는 프레임. 네이티브에서는 자식을
- * 그대로 돌려준다(추가 View 없음 — 레이아웃 스냅샷 불변).
+ * 폰보다 넓은 창(웹 데스크톱·폴드 펼침·태블릿)에서 자식을 중앙 480px 컬럼에 가두는 프레임.
  *
- * 웹에서는 **framed 여부와 무관하게 같은 엘리먼트 트리**를 그린다(#1227 리뷰).
+ * **framed 여부와 무관하게 같은 엘리먼트 트리**를 그린다(#1227 리뷰).
  * Fragment ↔ View로 루트 타입이 바뀌면 React가 하위 트리를 통째로 리마운트해,
- * 창을 480px 경계 앞뒤로 리사이즈할 때 라우터 Stack(또는 열린 시트)이 초기화된다.
- * 좁은 창에서는 래퍼가 폭 100%라 레이아웃이 종전과 같다.
+ * 창이 480px 경계를 넘나들 때(웹 리사이즈, 폴드를 접었다 펼 때) 라우터 Stack(또는 열린
+ * 시트)이 초기화된다. 좁은 창에서는 래퍼가 폭 100%라 레이아웃이 종전과 같다.
  *
  * 루트 Stack과 Modal 안(시트) 두 곳에서 쓴다 — RN Modal은 프레임 밖 body에 붙기
  * 때문에 시트도 따로 감싸야 폭이 맞는다.
@@ -25,7 +24,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const t = useTokens();
   // 2단(#1230)이면 프레임이 1200까지 넓어진다 — 폭은 훅이 정한다.
   const { framed, split } = useAppFrame();
-  if (Platform.OS !== 'web') return <>{children}</>;
   // 2단은 투두메이트처럼 창 전체가 한 면이고 내용 블록만 가운데 — 폰 컬럼일 때만
   // 테두리와 앱셸 색 여백으로 폰 프레임을 드러낸다.
   const phoneFrame = framed && !split;
@@ -67,7 +65,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
  */
 export function ModalFrame({ children }: { children: ReactNode }) {
   const { framed, split } = useAppFrame();
-  if (Platform.OS !== 'web') return <>{children}</>;
   return (
     <View style={styles.modalOuter} pointerEvents="box-none" testID="modal-frame">
       <View

@@ -1,5 +1,6 @@
 /**
- * 앱 프레임 폭 계산 — 웹 데스크톱에서만 폭을 480으로 가두고, 그 외엔 창 그대로.
+ * 앱 프레임 폭 계산 — 창이 폰보다 넓으면(웹 데스크톱·폴드 펼침·태블릿) 폭을 480으로
+ * 가두고, 폰 폭이면 창 그대로. 2단은 웹만.
  */
 import {
   APP_FRAME_MAX_WIDTH,
@@ -10,13 +11,32 @@ import {
 
 const win = (width: number) => ({ width, height: 900, scale: 2, fontScale: 1 });
 
-test('네이티브는 창 폭을 그대로 쓰고 framed가 아니다', () => {
-  expect(resolveAppFrame('ios', win(1440))).toEqual({ ...win(1440), framed: false, split: false });
+test('네이티브 폰 폭은 창 폭 그대로 쓰고 framed가 아니다', () => {
+  expect(resolveAppFrame('ios', win(430))).toEqual({ ...win(430), framed: false, split: false });
   expect(resolveAppFrame('android', win(360))).toEqual({
     ...win(360),
     framed: false,
     split: false,
   });
+});
+
+test('네이티브 넓은 창(폴드 펼침 750·태블릿)은 폰 컬럼 480 — 방 캔버스가 창 폭만큼 커지지 않게', () => {
+  expect(resolveAppFrame('android', win(750))).toEqual({
+    ...win(750),
+    width: APP_FRAME_MAX_WIDTH,
+    framed: true,
+    split: false,
+  });
+});
+
+test('네이티브는 2단을 쓰지 않는다 — 가로 태블릿(1280)도 폰 컬럼', () => {
+  expect(resolveAppFrame('android', win(1280))).toEqual({
+    ...win(1280),
+    width: APP_FRAME_MAX_WIDTH,
+    framed: true,
+    split: false,
+  });
+  expect(resolveAppFrame('ios', win(SPLIT_MIN_WINDOW_WIDTH)).split).toBe(false);
 });
 
 test('웹 넓은 창은 폭만 프레임 폭으로 바뀌고 나머지(높이·fontScale)는 유지', () => {
