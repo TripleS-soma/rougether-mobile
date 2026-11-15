@@ -41,6 +41,8 @@ const TRAY_TILE = 72;
 const REMOVE_SIZE = 22;
 /** 사진 버튼과 글 사이 틈 — 글이 알약 왼쪽에서 48 떨어진 자리에서 시작하게 한다. */
 const INPUT_PADDING_LEFT = 10;
+/** 같은 이모티콘을 연속 선택했을 때 즉시 전송으로 보는 간격. */
+const EMOTICON_DOUBLE_TAP_MS = 300;
 
 export type ChatComposerProps = {
   /** 서버 본문 상한. */
@@ -90,12 +92,17 @@ export function ChatComposer({
   const emph = useFontEmphasis();
   const [draft, setDraft] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [photoDraftPaused, setPhotoDraftPaused] = useState(false);
+  const resumePhotoDraft = () => setPhotoDraftPaused(false);
   const selectedRef = useRef<ChatEmoticonKey | undefined>(undefined);
+  const lastEmoticonTap = useRef<{ key: ChatEmoticonKey; at: number } | null>(null);
   useEffect(() => {
     selectedRef.current = selectedKey;
+    if (selectedKey == null) lastEmoticonTap.current = null;
   }, [selectedKey]);
   const selectEmoticon = (key: ChatEmoticonKey | undefined) => {
     selectedRef.current = key;
+    if (key == null) lastEmoticonTap.current = null;
     onSelectEmoticon(key);
   };
   const selected = chatEmoticonOf(selectedKey);
@@ -113,23 +120,48 @@ export function ChatComposer({
     !disabled &&
     (selected
       ? !!onSendEmoticon
-      : !pickerOpen && (trimmed.length > 0 || photoCount > 0) && !!onSend);
+      : !pickerOpen && !photoDraftPaused && (trimmed.length > 0 || photoCount > 0) && !!onSend);
   // 같은 렌더에서 연속으로 눌러도 글이나 사진이 중복 전송되지 않게 막음.
   const consumedSelection = useRef(false);
   useEffect(() => {
     consumedSelection.current = false;
   }, [selectedKey, draft, photoCount]);
+  const sendEmoticonDraft = (key: ChatEmoticonKey) => {
+    if (disabled || !onSendEmoticon || consumedSelection.current) return;
+    consumedSelection.current = true;
+    const text = draftRef.current.trim();
+    changeDraft('');
+    selectEmoticon(undefined);
+    // 글을 함께 보냈으면 패널을 닫고, 이모티콘만 보냈으면 다음 선택을 위해 유지함.
+    setPickerOpen(text.length === 0);
+    // 패널이 닫힌 뒤 연속 탭으로 남은 사진이 전송되지 않게, 사용자의 다음 조작까지 보류함.
+    setPhotoDraftPaused(text.length > 0 && photoCount > 0);
+    onSendEmoticon(key, text);
+  };
+  const chooseEmoticon = (key: ChatEmoticonKey) => {
+    if (disabled) return;
+    const now = Date.now();
+    const previous = lastEmoticonTap.current;
+    const elapsed = previous ? now - previous.at : -1;
+    if (
+      selectedRef.current === key &&
+      previous?.key === key &&
+      elapsed >= 0 &&
+      elapsed <= EMOTICON_DOUBLE_TAP_MS
+    ) {
+      sendEmoticonDraft(key);
+      return;
+    }
+    consumedSelection.current = false;
+    resumePhotoDraft();
+    selectEmoticon(key);
+    lastEmoticonTap.current = { key, at: now };
+  };
   const send = () => {
     if (!canSend || disabled || consumedSelection.current) return;
     const key = selectedRef.current;
     if (key) {
-      consumedSelection.current = true;
-      const text = draftRef.current.trim();
-      changeDraft('');
-      selectEmoticon(undefined);
-      // 사진 초안이 남아 있어도 연속 탭으로 보내지 않도록 선택 패널을 유지함.
-      setPickerOpen(true);
-      onSendEmoticon?.(key, text);
+      sendEmoticonDraft(key);
       return;
     }
     const text = draftRef.current.trim();
@@ -162,7 +194,10 @@ export function ChatComposer({
             {photos?.map((photo, index) => (
               <View key={`${photo.uri}-${index}`} style={styles.tile}>
                 <Pressable
-                  onPress={() => onEditPhoto?.(index)}
+                  onPress={() => {
+                    resumePhotoDraft();
+                    onEditPhoto?.(index);
+                  }}
                   disabled={!onEditPhoto}
                   accessibilityRole="button"
                   accessibilityLabel={tr('house.chat.editPhoto', { n: index + 1 })}
@@ -180,9 +215,10 @@ export function ChatComposer({
                   ) : null}
                 </Pressable>
                 {onRemovePhoto
-                  ? removeButton(tr('house.chat.removePhoto', { n: index + 1 }), () =>
-                      onRemovePhoto(index),
-                    )
+                  ? removeButton(tr('house.chat.removePhoto', { n: index + 1 }), () => {
+                      resumePhotoDraft();
+                      onRemovePhoto(index);
+                    })
                   : null}
               </View>
             ))}
@@ -199,6 +235,7 @@ export function ChatComposer({
               accessibilityState={{ disabled: pickingPhoto || disabled || photoFull }}
               disabled={pickingPhoto || disabled || photoFull}
               onPress={() => {
+                resumePhotoDraft();
                 setPickerOpen(false);
                 selectEmoticon(undefined);
                 onPickPhoto();
@@ -223,9 +260,14 @@ export function ChatComposer({
           ) : null}
           <TextInput
             value={draft}
-            onChangeText={changeDraft}
+            onPressIn={resumePhotoDraft}
+            onChangeText={(text) => {
+              resumePhotoDraft();
+              changeDraft(text);
+            }}
             onFocus={() => {
               consumedSelection.current = false;
+              resumePhotoDraft();
               setPickerOpen(false);
             }}
             placeholder={tr('house.chat.placeholder')}
@@ -254,6 +296,8 @@ export function ChatComposer({
               accessibilityState={{ expanded: pickerOpen, disabled }}
               disabled={disabled}
               onPress={() => {
+                resumePhotoDraft();
+                lastEmoticonTap.current = null;
                 Keyboard.dismiss();
                 setPickerOpen((open) => !open);
               }}
@@ -289,10 +333,7 @@ export function ChatComposer({
       {pickerOpen && !disabled ? (
         <ChatEmoticonPicker
           selected={selectedKey}
-          onSelect={(key) => {
-            consumedSelection.current = false;
-            selectEmoticon(key);
-          }}
+          onSelect={chooseEmoticon}
           bottomInset={bottomInset}
         />
       ) : null}
