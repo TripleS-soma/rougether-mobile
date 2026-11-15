@@ -43,6 +43,8 @@ Claude(또는 작업자)가 대화·작업 중 아래에 해당한다고 **스�
 
 ## 목록
 
+- [2026-11-15, 이모티콘 즉시 전송과 남은 사진 초안의 오발송 방어](2026-11-15-chat-emoticon-double-tap.md)
+
 - [2026-11-15, 채팅 이모티콘의 웹 미리보기와 iOS 이미지 지원 확인](2026-11-15-chat-emoticon-image-compatibility.md)
 
 - [2026-11-11, OTA 발행 성공과 실제 스토어 설치본의 기능 도달 구분](2026-11-11-ios-store-ota-feature-gap.md)
