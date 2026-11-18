@@ -3,7 +3,9 @@ import { notifyAppIconEvent } from '@/lib/app-icon-events';
 import { apiDelete, apiGetList, apiPost, apiPut } from './client';
 import { buildQuery } from './http';
 import type {
+  RoutineResponse,
   TodoCompleteResponse,
+  TodoConvertRequest,
   TodoCreateRequest,
   TodoResponse,
   TodoUpdateRequest,
@@ -29,6 +31,15 @@ export function createTodo(body: TodoCreateRequest) {
 /** PUT /todos/{id}. */
 export function updateTodo(id: number, body: TodoUpdateRequest) {
   return apiPut<TodoResponse>(`/todos/${id}`, body);
+}
+
+/**
+ * POST /todos/{id}/convert-to-routine — 미완료 투두를 반복 루틴으로 바꾼다. 서버가 루틴 생성과
+ * 투두 삭제를 한 트랜잭션으로 처리하고 새 루틴을 돌려준다. 완료한 투두는 409
+ * `TODO_COMPLETED_NOT_CONVERTIBLE`.
+ */
+export function convertTodoToRoutine(id: number, body: TodoConvertRequest) {
+  return apiPost<RoutineResponse>(`/todos/${id}/convert-to-routine`, body);
 }
 
 /** DELETE /todos/{id}. */

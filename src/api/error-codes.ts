@@ -70,6 +70,10 @@ export const ErrorCode = {
   ATTENDANCE_EVENT_NOT_FOUND: 'ATTENDANCE_EVENT_NOT_FOUND',
   /** 409 — 이미 가져온 캘린더 일정 (#844). 지운 조합도 재등록되지 않는다. */
   TODO_EXTERNAL_DUPLICATE: 'TODO_EXTERNAL_DUPLICATE',
+  /** 409 — 완료한 투두는 반복 루틴으로 바꿀 수 없다. 완료 취소 뒤 다시 (POST /todos/{id}/convert-to-routine). */
+  TODO_COMPLETED_NOT_CONVERTIBLE: 'TODO_COMPLETED_NOT_CONVERTIBLE',
+  /** 404 — 없거나 이미 지운 투두. 전환 응답이 유실된 뒤 재시도해도 이 코드다 — 목록을 다시 읽는다. */
+  TODO_NOT_FOUND: 'TODO_NOT_FOUND',
   // --- 공개 SNS 피드 (#1409, spec domains/feed/api.md "오류") ---
   /** 400 — 본문/사진 수(게시판별)/사진 없는 자유글의 빈 본문/중복 사진/커서/목록 크기/게시판 값 오류. */
   FEED_INPUT_INVALID: 'FEED_INPUT_INVALID',
