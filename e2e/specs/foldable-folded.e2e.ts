@@ -74,10 +74,15 @@ test('방 탭에서 할 일 첫 항목이 탭 바 위로 보인다', async ({ ap
 
 test('집 그림 전체가 첫 화면에 보인다', async ({ app, page }) => {
   await app.open({ tab: 'house' });
-  // 집은 화면·머리·알약 줄을 잰 뒤 한 번 더 그려 크기를 맞춘다 — 그 뒤에 잰다.
+  // 집은 화면·머리·알약 줄을 잰 뒤 한 번 더 그려 크기를 맞춘다 — 맞춘 폭(max-width)이 실린 뒤에 잰다.
   await app.dismissModals();
   const houseFrame = page.getByTestId('house-frame');
   await expect(houseFrame).toBeVisible();
+  await expect
+    .poll(() =>
+      page.getByTestId('house-frame-viewport').evaluate((el) => getComputedStyle(el).maxWidth),
+    )
+    .not.toBe('none');
   const rect = await stableRect(houseFrame);
   const inset = await tabBarInset(page, app.device.viewport.height);
   await expectInFirstScreen(page, rect, inset);

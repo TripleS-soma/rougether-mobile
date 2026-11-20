@@ -96,6 +96,22 @@ export const test = base.extend<{ app: App; networkGuard: string[] }>({
         if (session) {
           await expect(page.getByRole('button', { name: '나의 방', exact: true })).toBeVisible();
         }
+        // 웹의 SafeAreaProvider는 env(safe-area-inset-*)를 그린 뒤에 재서 한 박자 늦게 알린다 —
+        // 느린 CI에서는 그 전에 재면 인셋이 0인 배치를 읽는다. 앱 프레임이 가로 인셋만큼 비울
+        // 때까지 기다린다(가로 인셋이 있는 기기만).
+        const { left, right } = device.insets;
+        if (left > 0 || right > 0) {
+          await expect
+            .poll(
+              () =>
+                page.getByTestId('app-frame').evaluate((el) => {
+                  const style = getComputedStyle(el);
+                  return [parseFloat(style.paddingLeft), parseFloat(style.paddingRight)];
+                }),
+              { message: `앱 프레임이 안전 영역 인셋(${left}, ${right})을 반영하기를 기다림` },
+            )
+            .toEqual([left, right]);
+        }
       },
       async dismissModals() {
         // 자동 모달은 데이터가 도착한 뒤 열린다 — 요청이 잦아든 뒤에 본다.
