@@ -33,11 +33,13 @@
 ### Task 1: Playwright E2E 설정과 화면 크기 프로젝트
 
 **Files:**
+
 - Create: `playwright.e2e.config.ts`
 - Create: `e2e/devices.ts`
 - Create: `e2e/specs/boot.e2e.ts`
 
 **Interfaces:**
+
 - Produces:
   ```ts
   // e2e/devices.ts
@@ -78,6 +80,7 @@ Expected: 설정 파일이 없다는 오류로 실패.
 - [ ] **Step 3: `e2e/devices.ts`와 `playwright.e2e.config.ts` 작성**
 
 `playwright.visual.config.ts`와 같은 모양으로 쓴다. 정할 값:
+
 - `testDir: 'e2e/specs'`, `testMatch: '**/*.e2e.ts'`, `outputDir: 'web-build/e2e-results'`, HTML 리포트 `web-build/e2e-report`.
 - `fullyParallel: true`, `retries: process.env.CI ? 1 : 0`, `use.trace: 'retain-on-failure'`.
 - `use`: `baseURL: 'http://127.0.0.1:6010'`, `locale: 'ko-KR'`, `timezoneId: 'Asia/Seoul'`.
@@ -108,12 +111,14 @@ git commit -m "test(infra): Playwright 웹 E2E 설정과 화면 크기 프로젝
 ### Task 2: API 가로채기와 로그인 상태 픽스처
 
 **Files:**
+
 - Create: `e2e/support/api-mock.ts`
 - Create: `e2e/support/app.ts`
 - Create: `e2e/fixtures/*.ts` (엔드포인트 묶음별 고정 응답)
 - Create: `e2e/specs/tabs.e2e.ts`
 
 **Interfaces:**
+
 - Consumes: Task 1의 `DEVICES`, 프로젝트 이름.
 - Produces:
   ```ts
@@ -124,35 +129,42 @@ git commit -m "test(infra): Playwright 웹 E2E 설정과 화면 크기 프로젝
 
   // e2e/support/app.ts
   export type StartTab = 'myRoom' | 'calendar' | 'house' | 'feed' | 'myPage';
-  export const test: TestType<{ app: {
-    device: E2eDevice;
-    /** 세션을 심고 앱을 연다. 열린 뒤 자동으로 뜨는 모달은 그대로 둔다. */
-    open(opts?: { tab?: StartTab; overrides?: MockOverrides }): Promise<void>;
-    /** 화면에 떠 있는 모달을 닫기 버튼으로 전부 닫는다. */
-    dismissModals(): Promise<void>;
-  } }, object>;
+  export const test: TestType<
+    {
+      app: {
+        device: E2eDevice;
+        /** 세션을 심고 앱을 연다. 열린 뒤 자동으로 뜨는 모달은 그대로 둔다. */
+        open(opts?: { tab?: StartTab; overrides?: MockOverrides }): Promise<void>;
+        /** 화면에 떠 있는 모달을 닫기 버튼으로 전부 닫는다. */
+        dismissModals(): Promise<void>;
+      };
+    },
+    object
+  >;
   export { expect } from '@playwright/test';
   ```
 - `app` 픽스처는 테스트가 끝날 때 가로채지 못한 요청 목록이 비어 있는지 단언한다(Review Focus 2).
 
 가로챌 요청(2026-11-19 실제 앱에서 수집한 목록, 전부 `/api/v1` 아래):
 
-| 묶음 | 경로 |
-| --- | --- |
-| 회원 | `GET /me`, `PATCH /me`, `GET /me/wallets`, `GET /me/characters`, `GET /me/items`, `GET /me/houses`, `GET /me/join-requests`, `GET /onboarding`, `GET /goals`, `GET /characters` |
-| 루틴·할 일 | `GET /categories`, `GET /routines`, `GET /todos`, `GET /today`, `GET /calendar/month`, `GET /recommendations`, `GET /reports/weekly` |
-| 방 | `GET /rooms/me`, `GET /items` |
-| 집 | `GET /houses/:id`, `GET /houses/:id/members`, `GET /houses/:id/missions`, `GET /houses/:id/join-requests`, `GET /houses/:id/members/:id/room`, `GET /houses/cover-images`, `POST /houses/:id/chat-room` |
-| 피드 | `GET /feed/posts`, `GET /feed/images/:id` |
-| 이벤트·알림 | `GET /events/attendance`, `GET /events/attendance/:id`, `GET /events/christmas`, `GET /notifications` |
+| 묶음        | 경로                                                                                                                                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 회원        | `GET /me`, `PATCH /me`, `GET /me/wallets`, `GET /me/characters`, `GET /me/items`, `GET /me/houses`, `GET /me/join-requests`, `GET /onboarding`, `GET /goals`, `GET /characters`                         |
+| 루틴·할 일  | `GET /categories`, `GET /routines`, `GET /todos`, `GET /today`, `GET /calendar/month`, `GET /recommendations`, `GET /reports/weekly`                                                                    |
+| 방          | `GET /rooms/me`, `GET /items`                                                                                                                                                                           |
+| 집          | `GET /houses/:id`, `GET /houses/:id/members`, `GET /houses/:id/missions`, `GET /houses/:id/join-requests`, `GET /houses/:id/members/:id/room`, `GET /houses/cover-images`, `POST /houses/:id/chat-room` |
+| 피드        | `GET /feed/posts`, `GET /feed/images/:id`                                                                                                                                                               |
+| 이벤트·알림 | `GET /events/attendance`, `GET /events/attendance/:id`, `GET /events/christmas`, `GET /notifications`                                                                                                   |
 
 고정 응답의 내용:
+
 - 사용자 1명(닉네임 `테스트`), 집 1채(구성원 4명, 2층), 방에 가구 3개, 카테고리 3개와 루틴·할 일 합쳐 6개, 피드 글 4개(사진 있는 글 2개), 오늘 출석 가능(자동으로 출석 모달이 뜬다).
 - 응답 모양은 `src/api/*.ts`의 응답 타입을 가져와 `satisfies`로 검사한다(Review Focus 1). 목록 응답은 `{ items: [...] }` 봉투.
 - 실제 사용자의 데이터나 토큰을 넣지 않는다. 토큰 값은 `e2e-access`·`e2e-refresh` 같은 가짜 문자열(앱은 토큰을 해석하지 않는다. 해석하는 코드가 있으면 만료가 먼 가짜 JWT로 바꾼다).
 - 이미지 CDN(`d1eazfl0tw7r0v.cloudfront.net`)과 그 밖의 외부 호스트 요청은 1×1 투명 PNG 또는 빈 204로 답한다.
 
 세션과 시계:
+
 - `open()`은 `context.addInitScript`로 `localStorage`에 `rougether.auth.accessToken`, `rougether.auth.refreshToken`, `rougether.auth.userId`를 심고, `tab`이 있으면 `rougether.start-tab`도 심는다(키 이름은 `src/lib/start-tab.ts`의 `START_TAB_KEY`).
 - `page.clock.install({ time: new Date('2026-11-19T03:00:00Z') })`를 `goto` 전에 건다(Review Focus 3).
 
@@ -173,7 +185,10 @@ for (const { tab, name, role } of LANDMARKS) {
   test(`${tab} 탭이 고정 응답만으로 그려진다`, async ({ app, page }) => {
     await app.open({ tab });
     await app.dismissModals();
-    const target = role === 'button' ? page.getByRole('button', { name, exact: true }) : page.getByText(name, { exact: true });
+    const target =
+      role === 'button'
+        ? page.getByRole('button', { name, exact: true })
+        : page.getByText(name, { exact: true });
     await expect(target.first()).toBeVisible();
   });
 }
@@ -225,11 +240,13 @@ git commit -m "test(infra): E2E용 API 가로채기와 로그인 상태 픽스�
 ### Task 3: 배치 규칙 도우미와 기준 폰 테스트
 
 **Files:**
+
 - Create: `e2e/support/layout.ts`
 - Create: `e2e/specs/layout-rules.e2e.ts`
 - Modify(필요할 때만): 테스트가 찾아야 하는 요소에 `testID` 추가 — `src/components/screens/**`
 
 **Interfaces:**
+
 - Consumes: Task 1의 `Rect`·`E2eDevice`, Task 2의 `test`·`app`.
 - Produces (`e2e/support/layout.ts`):
   ```ts
@@ -238,9 +255,17 @@ git commit -m "test(infra): E2E용 API 가로채기와 로그인 상태 픽스�
   /** 규칙 1: target이 zones 어느 것과도 겹치지 않는다. */
   export function expectClearOf(target: Locator, zones: Rect[]): Promise<void>;
   /** 규칙 2·5: target 전체가 뷰포트 안에 있고, bottomInset(탭 바 높이)만큼 아래는 제외한다. */
-  export function expectInFirstScreen(page: Page, target: Locator, bottomInset?: number): Promise<void>;
+  export function expectInFirstScreen(
+    page: Page,
+    target: Locator,
+    bottomInset?: number,
+  ): Promise<void>;
   /** 규칙 3: 폭/높이가 ratio와 tolerance(기본 0.01) 안에서 같다. */
-  export function expectAspectRatio(target: Locator, ratio: number, tolerance?: number): Promise<void>;
+  export function expectAspectRatio(
+    target: Locator,
+    ratio: number,
+    tolerance?: number,
+  ): Promise<void>;
   /** 규칙 4: panes가 왼쪽부터 나란히 있고, 합친 폭이 뷰포트 폭과 2px 안에서 같다. */
   export function expectFillsWidth(page: Page, panes: Locator[]): Promise<void>;
   /** 규칙 6: 문서의 scrollWidth가 뷰포트 폭을 넘지 않는다. */
@@ -291,9 +316,11 @@ git commit -m "test(infra): 배치 규칙 도우미와 기준 폰·데스크톱 
 ### Task 4: 접힌 Duo의 알려진 결함을 "실패 예상"으로 잠그기
 
 **Files:**
+
 - Create: `e2e/specs/foldable-known-gaps.e2e.ts`
 
 **Interfaces:**
+
 - Consumes: Task 2의 `app`, Task 3의 규칙 도우미, `DEVICES['duo-folded'].obstructions`.
 - Produces: 2단계 계획이 `test.fail()`을 하나씩 지워 가며 고칠 목록.
 
@@ -336,12 +363,14 @@ git commit -m "test(infra): 접힌 Duo의 알려진 배치 결함을 실패 예�
 ### Task 5: CI 작업과 문서
 
 **Files:**
+
 - Create: `.github/workflows/e2e-web.yml`
 - Create: `docs/e2e.md`
 - Modify: `AGENTS.md` (작업 흐름 절에 한 줄)
 - Modify: `README.md` (스크립트·CI 표에 한 줄. 표가 없으면 생략)
 
 **Interfaces:**
+
 - Consumes: Task 1의 실행 명령.
 
 - [ ] **Step 1: 워크플로 작성**
