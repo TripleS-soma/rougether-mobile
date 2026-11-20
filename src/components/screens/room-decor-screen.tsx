@@ -58,6 +58,7 @@ import { useActionBarInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/
 import { useStableCallback } from '@/hooks/use-stable-value';
 import { track } from '@/lib/analytics';
 import { APP_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
+import { shortScreenHeroWidth } from '@/utils/short-screen';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
@@ -239,7 +240,16 @@ export function RoomDecorScreen({
   // 떠 있는 적용하기 바(#1069) 밑으로 카탈로그가 지나가도록 하단 패딩.
   const actionBarInset = useActionBarInset();
   // 웹 데스크톱 2단 (#1230 후속) — 창 ≥ 960px에서만 true.
-  const { split } = useAppFrame();
+  const { split, width: frameWidth, height: frameHeight } = useAppFrame();
+  // 넓고 짧은 화면(접힌 아이폰 Duo·iPhone SE) — 캔버스가 폭을 다 쓰면 가구 목록이 적용하기
+  // 밑으로 숨는다. 캔버스 높이를 화면 절반에 맞춰 가운데 둔다(미리보기 좌우 여백을 뺀 폭 기준).
+  const shortCanvasWidth = split
+    ? undefined
+    : shortScreenHeroWidth(
+        frameWidth - Spacing.three * 2,
+        frameHeight,
+        ROOM_RENDER_CONTRACT.room.aspectRatio,
+      );
 
   // Owned items are placeable; everything else in the catalog is buyable.
   // (The demo default owns the whole catalogue, surfaces included.)
@@ -808,13 +818,24 @@ export function RoomDecorScreen({
   // 밖으로 밀린다. 카탈로그는 반대로 폭을 다 써서 열을 늘린다(DecorGrid) — 한 번에 보이는
   // 가구가 많을수록 좋다 (#725).
   const canvasView = (
-    <View style={[styles.preview, column]}>
+    <View
+      testID="decor-preview"
+      style={[
+        styles.preview,
+        column,
+        shortCanvasWidth !== undefined ? { paddingTop: Spacing.three } : null,
+      ]}>
       {/* 캔버스 = 방과 정확히 같은 박스 — 오버레이 좌표·정규화의 기준.
         (preview의 padding 박스 기준으로 재면 저장 좌표가 어긋난다.) */}
       <GestureDetector gesture={canvasPinch}>
         <View
           testID="decor-canvas"
-          style={styles.canvas}
+          style={[
+            styles.canvas,
+            shortCanvasWidth !== undefined
+              ? { width: shortCanvasWidth, alignSelf: 'center' }
+              : null,
+          ]}
           onLayout={(e) =>
             setRoomSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
           }>

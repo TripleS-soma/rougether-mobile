@@ -53,7 +53,8 @@ import type { FlyOrigin } from '@/components/screens/my-room/use-reward-fly';
 import { MountOnce } from '@/components/screens/my-room/mount-once';
 import { useRoomImageSave } from '@/components/screens/my-room/use-room-image-save';
 import { useWidgetRoomCapture } from '@/components/screens/my-room/use-widget-room-capture';
-import { Room, type RoomSceneProps } from '@/components/room/room';
+import { Room, RoomBackdrop, type RoomSceneProps } from '@/components/room/room';
+import { ROOM_RENDER_CONTRACT } from '@/components/room/room-render-contract';
 import {
   CharacterPickerSheet,
   type OwnedCharacter,
@@ -109,6 +110,7 @@ import { readableTextColor } from '@/utils/color';
 import { formatDate, localDate, monthDayLabel } from '@/utils/datetime';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 import { holidayName } from '@/utils/holidays';
+import { shortScreenHeroWidth } from '@/utils/short-screen';
 import { useT } from '@/i18n';
 import { supportsRoomImageSave } from '@/config/features';
 
@@ -421,7 +423,12 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const tr = useT();
   const column = useResponsiveColumn();
   // 웹 데스크톱 2단 (#1230) — 창 ≥ 960px에서만 true.
-  const { split } = useAppFrame();
+  const { split, width: frameWidth, height: frameHeight } = useAppFrame();
+  // 넓고 짧은 화면(접힌 아이폰 Duo·iPhone SE)에서는 방 높이를 화면 절반에 맞춘다 — 폭을 다
+  // 쓰면 세로의 2/3를 먹어 할 일이 첫 화면 밖으로 밀린다. 2단은 칸 안 카드라 해당 없음.
+  const shortHeroWidth = split
+    ? undefined
+    : shortScreenHeroWidth(frameWidth, frameHeight, ROOM_RENDER_CONTRACT.room.aspectRatio);
   const Typography = useTypography();
   // 글래스 알약 바텀바가 떠 있으면 마지막 루틴이 그 밑에 안 숨게 (#1049).
   const navInset = useBottomNavInset();
@@ -1122,7 +1129,24 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                     전체화면(#1055): 방이 화면 폭을 다 쓰고 상태바 밑까지 올라간다 —
                     집 탭의 하늘처럼. 네 모서리 전부 각지게(아래도).
                   */}
-        <View ref={roomShotRef} collapsable={false}>
+        {shortHeroWidth !== undefined ? (
+          // 양옆은 같은 벽지·바닥 그림을 흐리게 — 잘린 방처럼 보이지 않게. 캡처(roomShotRef)엔 안 들어간다.
+          <RoomBackdrop
+            wallpaperId={wallpaperId}
+            floorId={floorId}
+            wallpapers={wallpapers}
+            floors={floors}
+          />
+        ) : null}
+        <View
+          ref={roomShotRef}
+          collapsable={false}
+          testID="my-room-hero-room"
+          style={
+            shortHeroWidth !== undefined
+              ? { width: shortHeroWidth, alignSelf: 'center' }
+              : undefined
+          }>
           {/* 2단에서는 방이 칸 안의 카드라 계약 반경(16)을 되살린다. */}
           <Room
             {...roomScene}
@@ -1460,7 +1484,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     );
 
   return (
-    <View ref={rootRef} style={[styles.screen, useScreenStyle([])]}>
+    <View ref={rootRef} style={[styles.screen, useScreenStyle([])]} testID="my-room-screen">
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>

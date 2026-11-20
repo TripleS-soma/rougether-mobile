@@ -80,3 +80,44 @@ test('hydrated=false(서버 렌더·클라이언트 첫 렌더)면 웹 넓은 �
     split: false,
   });
 });
+
+// 가로 안전 영역 인셋 — 아이폰 Duo는 접힘·펼침 모두 오른쪽 84pt가 시스템 표시 영역이다
+// (iOS 27.2 시뮬레이터 실측: window.safeAreaInsets right 84). 배치에 쓸 폭은 그만큼 좁다.
+describe('가로 안전 영역 인셋', () => {
+  const DUO = { left: 0, right: 84 };
+
+  test('접힌 Duo(466)는 인셋을 뺀 382가 폭이고, 480 아래라 framed가 아니다', () => {
+    expect(resolveAppFrame('ios', win(466), true, DUO)).toEqual({
+      ...win(466),
+      width: 382,
+      framed: false,
+      split: false,
+      insetLeft: 0,
+      insetRight: 84,
+    });
+  });
+
+  test('펼친 Duo(951)는 인셋을 뺀 867을 기준으로 프레임을 정한다', () => {
+    const frame = resolveAppFrame('ios', win(951), true, DUO);
+    expect(frame).toMatchObject({ framed: true, width: APP_FRAME_MAX_WIDTH, insetRight: 84 });
+  });
+
+  test('인셋을 뺀 폭이 480 이하면 창이 480보다 넓어도 framed가 아니다', () => {
+    expect(resolveAppFrame('ios', win(500), true, { left: 20, right: 20 })).toMatchObject({
+      width: 460,
+      framed: false,
+    });
+  });
+
+  test('인셋이 없으면 종전과 같은 값이고 인셋 필드를 싣지 않는다', () => {
+    expect(resolveAppFrame('ios', win(430), true, { left: 0, right: 0 })).toEqual(
+      resolveAppFrame('ios', win(430)),
+    );
+    expect(resolveAppFrame('ios', win(430))).not.toHaveProperty('insetRight');
+  });
+
+  test('웹 2단 판정도 인셋을 뺀 폭으로 한다', () => {
+    expect(resolveAppFrame('web', win(SPLIT_MIN_WINDOW_WIDTH + 50), true, DUO).split).toBe(false);
+    expect(resolveAppFrame('web', win(SPLIT_MIN_WINDOW_WIDTH + 84), true, DUO).split).toBe(true);
+  });
+});

@@ -26,6 +26,15 @@ export type PressRole = 'fill' | 'row' | 'card' | 'dim';
 /** `dim` 역할의 눌림 투명도. */
 export const PRESSED_OPACITY = 0.6;
 
+/**
+ * 스크롤 목록 안 줄의 눌림 지연(ms) — Pressable `unstable_pressDelay`에 넘긴다 (2026-11-17).
+ * 기본(0)이면 손가락이 닿는 즉시 줄이 눌림 색으로 바뀌어, 스크롤하려고 댄 손가락에도 줄이
+ * 깜빡여 "눌린" 것처럼 보였다. 스크롤이 시작되면 그 사이 터치가 취소돼 색이 들지 않는다.
+ * 짧게 톡 친 탭은 손을 뗄 때 바로 눌림이 시작돼 그대로 열린다. iOS 목록(UIScrollView)의
+ * 터치 지연과 비슷한 길이.
+ */
+export const SCROLL_ROW_PRESS_DELAY_MS = 130;
+
 export function pressedStyle(role: PressRole, t: SemanticColors): ViewStyle {
   switch (role) {
     case 'fill':

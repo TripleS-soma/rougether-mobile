@@ -4,7 +4,7 @@ import { getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 import { type PanGesture, PointerType, State } from 'react-native-gesture-handler';
 import { cameraClaimsMove, HouseScreen } from '@/components/screens/house-screen';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { resolveHouseFrame } from '@/resources/house-frame';
+import { DEFAULT_HOUSE_COVER_KEY, resolveHouseFrame } from '@/resources/house-frame';
 import { Spacing } from '@/constants/theme';
 import { CAM_PAN_SLOP } from '@/components/screens/house/camera';
 import { SWIPE_CLAIM_DX } from '@/utils/gesture';
@@ -240,4 +240,57 @@ beforeEach(() => {
 });
 afterEach(() => {
   delete process.env.EXPO_PUBLIC_HOUSE_DIORAMA;
+});
+
+// 넓고 짧은 화면(접힌 아이폰 Duo 382×678): 디오라마 집(2:3)이 폭을 다 쓰면 높이 573으로
+// 아래층이 탭 바 뒤로 잘린다. 짧은 화면에서만 집을 머리 아래·탭 바 위 공간에 맞춘다.
+describe('HouseScreen — 짧은 화면의 디오라마 집', () => {
+  // 이 파일의 다른 테스트는 고전 프레임을 보려고 디오라마를 끈다 — 여기서는 켠다.
+  beforeEach(() => {
+    delete process.env.EXPO_PUBLIC_HOUSE_DIORAMA;
+  });
+  const DIORAMA_HOUSE = {
+    ...MISSION_HOUSE,
+    displayMode: 'DIORAMA' as const,
+    coverImageKey: DEFAULT_HOUSE_COVER_KEY,
+  };
+  const layoutHouse = async (
+    ui: Awaited<ReturnType<typeof render>>,
+    width: number,
+    height: number,
+  ) => {
+    await fireEvent(ui.getByTestId('house-scroll'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 0, width, height } },
+    });
+    await fireEvent(ui.getByTestId('house-header-end'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 87, width, height: 0 } },
+    });
+    // 레벨·인원 알약 줄이 끝나는 곳 — 집은 그 아래부터 탭 바 위까지에 들어가야 한다.
+    await fireEvent(ui.getByTestId('house-sky-spacer'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: PILLS_BOTTOM, width, height: 0 } },
+    });
+    return StyleSheet.flatten(ui.getByTestId('house-frame-viewport').props.style);
+  };
+  const PILLS_BOTTOM = 195;
+  const NAV_INSET = 90; // 테스트 환경의 useBottomNavInset
+
+  it('짧은 화면이면 집 전체가 머리 아래 남는 높이에 들어가게 폭을 줄인다', async () => {
+    const ui = await render(<HouseScreen houses={[DIORAMA_HOUSE]} />);
+    const style = await layoutHouse(ui, 382, 678);
+    expect(style.maxWidth).toBeGreaterThan(0);
+    expect(style.maxWidth).toBeLessThan(382);
+    expect(style.alignSelf).toBe('center');
+    // 2:3 그림의 높이가 알약 줄 아래·탭 바(+간격) 위에 들어간다.
+    expect(style.maxWidth / (2 / 3)).toBeCloseTo(678 - PILLS_BOTTOM - NAV_INSET - Spacing.two, 3);
+    // 탭바 밑 땅 띠가 간격만큼 길어져 스크롤이 화면 끝에서 정확히 끝난다.
+    expect(StyleSheet.flatten(ui.getByTestId('diorama-ground').props.style).height).toBe(
+      NAV_INSET + Spacing.two,
+    );
+  });
+
+  it('일반 폰의 디오라마 집은 폭을 다 쓴다(종전과 같다)', async () => {
+    const ui = await render(<HouseScreen houses={[DIORAMA_HOUSE]} />);
+    const style = await layoutHouse(ui, 393, 852);
+    expect(style.maxWidth).toBeUndefined();
+  });
 });

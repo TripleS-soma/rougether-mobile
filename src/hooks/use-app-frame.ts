@@ -1,4 +1,5 @@
 import { Platform, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useHydrated } from '@/hooks/use-hydrated';
 
@@ -31,7 +32,18 @@ export type AppFrame = ReturnType<typeof useWindowDimensions> & {
   framed: boolean;
   /** 2단 레이아웃인가 — 웹에서 framed이면서 창이 `SPLIT_MIN_WINDOW_WIDTH` 이상. */
   split: boolean;
+  /**
+   * 가로 안전 영역 인셋 — 0이 아닐 때만 실린다. 아이폰 Duo는 접힘·펼침 모두 오른쪽 84pt가
+   * 시스템 표시 영역이다(iOS 27.2 실측). `width`는 이미 이만큼 빠진 값이고, 프레임
+   * (`AppFrame`·`ModalFrame`)이 같은 값으로 양옆을 비운다.
+   */
+  insetLeft?: number;
+  insetRight?: number;
 };
+
+/** 가로 안전 영역 인셋. */
+export type InsetX = { left: number; right: number };
+const NO_INSET_X: InsetX = { left: 0, right: 0 };
 
 /**
  * 순수 계산 — 훅 밖에서 테스트한다.
@@ -45,13 +57,20 @@ export function resolveAppFrame(
   os: string,
   window: ReturnType<typeof useWindowDimensions>,
   hydrated = true,
+  insetX: InsetX = NO_INSET_X,
 ): AppFrame {
-  const framed = hydrated && window.width > APP_FRAME_MAX_WIDTH;
-  if (!framed) return { ...window, framed, split: false };
+  // 서버 렌더·첫 렌더는 창 그대로(마크업 일치) — 인셋도 마운트 뒤에 반영한다.
+  if (!hydrated) return { ...window, framed: false, split: false };
+  const hasInset = insetX.left > 0 || insetX.right > 0;
+  const inset = hasInset ? { insetLeft: insetX.left, insetRight: insetX.right } : null;
+  // 배치에 쓸 수 있는 폭 — 프레임·2단 판정도 이 폭으로 한다.
+  const usable = window.width - insetX.left - insetX.right;
+  const framed = usable > APP_FRAME_MAX_WIDTH;
+  if (!framed) return { ...window, width: usable, framed, split: false, ...inset };
   // 2단은 마우스·넓은 모니터를 전제로 만든 웹 전용 배치다 — 네이티브 가로 태블릿은 폰 컬럼.
-  const split = os === 'web' && window.width >= SPLIT_MIN_WINDOW_WIDTH;
-  const width = split ? Math.min(window.width, SPLIT_FRAME_MAX_WIDTH) : APP_FRAME_MAX_WIDTH;
-  return { ...window, width, framed, split };
+  const split = os === 'web' && usable >= SPLIT_MIN_WINDOW_WIDTH;
+  const width = split ? Math.min(usable, SPLIT_FRAME_MAX_WIDTH) : APP_FRAME_MAX_WIDTH;
+  return { ...window, width, framed, split, ...inset };
 }
 
 /**
@@ -63,5 +82,6 @@ export function useAppFrame(): AppFrame {
   const window = useWindowDimensions();
   // 서버 렌더·클라이언트 첫 렌더는 프레임 없이(마크업 일치), 마운트 뒤에 프레임.
   const hydrated = useHydrated();
-  return resolveAppFrame(Platform.OS, window, hydrated);
+  const { left, right } = useSafeAreaInsets();
+  return resolveAppFrame(Platform.OS, window, hydrated, { left, right });
 }
