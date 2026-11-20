@@ -283,19 +283,19 @@ npx --no-install storybook dev -p 6006 --host 127.0.0.1 --no-open
 
 ### 스크립트
 
-| 명령                                                           | 하는 일                                                                                                           |
-| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `npm start`                                                    | Expo dev 서버                                                                                                     |
-| `npm run ios` / `android` / `web`                              | 플랫폼별 실행                                                                                                     |
-| `npm run typecheck`                                            | `tsc --noEmit`                                                                                                    |
-| `npm run lint`                                                 | `expo lint`                                                                                                       |
-| `npm run format` / `format:check`                              | Prettier write / check                                                                                            |
-| `npm test` / `test:watch`                                      | Jest (jest-expo + React Native Testing Library)                                                                   |
-| `npm run gen:api-types`                                        | 스웨거에서 API 타입 생성                                                                                          |
-| `npm run build:characters`                                     | 캐릭터 스프라이트 시트 빌드                                                                                       |
-| `npx --no-install playwright test -c playwright.e2e.config.ts` | 웹 E2E 화면 크기별 배치 규칙([가이드](docs/e2e.md), 먼저 `expo export --platform web --output-dir web-build/app`) |
-| `node scripts/run-date-boundary.js`                            | spec 날짜 경계 fixture로 실제 요청 생성 검증(단말 시간대 매트릭스)                                                |
-| `python3 scripts/character-art-audit.py`                       | 캐릭터 아트 일관성 감사([스타일 가이드](docs/design/character-style-guide.md))                                    |
+| 명령                                                           | 하는 일                                                                                                                            |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `npm start`                                                    | Expo dev 서버                                                                                                                      |
+| `npm run ios` / `android` / `web`                              | 플랫폼별 실행                                                                                                                      |
+| `npm run typecheck`                                            | `tsc --noEmit`                                                                                                                     |
+| `npm run lint`                                                 | `expo lint`                                                                                                                        |
+| `npm run format` / `format:check`                              | Prettier write / check                                                                                                             |
+| `npm test` / `test:watch`                                      | Jest (jest-expo + React Native Testing Library)                                                                                    |
+| `npm run gen:api-types`                                        | 스웨거에서 API 타입 생성                                                                                                           |
+| `npm run build:characters`                                     | 캐릭터 스프라이트 시트 빌드                                                                                                        |
+| `npx --no-install playwright test -c playwright.e2e.config.ts` | 웹 E2E 화면 크기별 배치 규칙([가이드](docs/e2e.md), 먼저 `npx --no-install expo export --platform web --output-dir web-build/app`) |
+| `node scripts/run-date-boundary.js`                            | spec 날짜 경계 fixture로 실제 요청 생성 검증(단말 시간대 매트릭스)                                                                 |
+| `python3 scripts/character-art-audit.py`                       | 캐릭터 아트 일관성 감사([스타일 가이드](docs/design/character-style-guide.md))                                                     |
 
 > `node scripts/…`처럼 일부 도구를 npm script로 등록하지 않은 이유: `package.json`의 scripts 한 줄도 런타임 지문을 바꿔 기존 설치본의 OTA를 끊습니다.
 

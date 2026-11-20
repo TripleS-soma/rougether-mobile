@@ -40,6 +40,16 @@ module.exports = defineConfig([
     rules: { 'no-restricted-imports': ['error', { paths: RESTRICTED_PATHS }] },
   },
   {
+    // 웹 E2E는 앱 번들 밖이라 `@/` 별칭이 없다 — 상위 상대경로를 허용한다. Playwright 픽스처의
+    // `use`는 React 훅이 아니다. `npm run lint`(expo lint)는 여기를 안 보므로 docs/e2e.md의
+    // `npx --no-install eslint e2e playwright.e2e.config.ts`로 따로 돈다.
+    files: ['e2e/**', 'playwright.*.config.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { paths: RESTRICTED_PATHS }],
+      'react-hooks/rules-of-hooks': 'off',
+    },
+  },
+  {
     ignores: ['dist/*', 'web-build/storybook/**', 'node_modules/*', '.expo/*'],
   },
 ]);

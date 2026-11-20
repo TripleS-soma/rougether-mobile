@@ -6,7 +6,7 @@ import { DEVICES } from './e2e/devices';
  * 웹 E2E — 내보낸 웹 앱을 화면 크기별 Chromium 프로젝트로 돌린다.
  * 모든 산출물은 web-build/ 아래(무시됨)에만 쓴다.
  *
- *   npx expo export --platform web --output-dir web-build/app
+ *   npx --no-install expo export --platform web --output-dir web-build/app
  *   npx --no-install playwright test -c playwright.e2e.config.ts
  */
 export default defineConfig({

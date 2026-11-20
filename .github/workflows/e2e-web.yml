@@ -9,9 +9,18 @@ on:
       - 'src/**'
       - 'e2e/**'
       - 'assets/**'
-      - 'playwright.e2e.config.ts'
+      - 'public/**'
+      - 'app.json'
+      - 'package.json'
       - 'package-lock.json'
+      - '.env'
+      - 'metro.config.js'
+      - 'eslint.config.js'
+      - 'playwright.e2e.config.ts'
       - '.github/workflows/e2e-web.yml'
+
+permissions:
+  contents: read
 
 concurrency:
   group: e2e-web-${{ github.event.pull_request.number }}
@@ -41,10 +50,14 @@ jobs:
       - name: Install Playwright Chromium
         run: npx --no-install playwright install --with-deps chromium
 
+      # npm run lint(expo lint)는 e2e/를 안 본다 — 여기서 따로 린트한다(docs/e2e.md).
+      - name: Lint E2E
+        run: npx --no-install eslint e2e playwright.e2e.config.ts
+
       # 저장소의 .env(EXPO_PUBLIC_API_URL·ASSET_URL)가 번들에 인라인된다. 테스트가 api/v1과
       # 바깥 호스트를 전부 가로채므로 주소 값은 결과에 영향이 없다(docs/e2e.md).
       - name: Export web app
-        run: npx expo export --platform web --output-dir web-build/app
+        run: npx --no-install expo export --platform web --output-dir web-build/app
 
       - name: E2E tests
         run: npx --no-install playwright test -c playwright.e2e.config.ts

@@ -44,16 +44,21 @@ export const test = base.extend<{ app: App; networkGuard: string[] }>({
   serviceWorkers: 'block',
   /**
    * 모든 테스트에 자동으로 걸리는 그물 — `mockApi`를 깜빡한 테스트도 로컬 정적 서버 밖으로는
-   * 한 건도 못 나간다. route는 나중에 건 것이 먼저 받으므로 `mockApi`를 건 페이지의 요청은
-   * 여기 오지 않는다.
+   * 한 건도 못 나간다. 컨텍스트에 걸어 `window.open`으로 뜬 팝업도 덮는다. 페이지의 route가
+   * 컨텍스트의 route보다 먼저 받으므로 `mockApi`(페이지)가 답하는 요청은 여기 오지 않는다.
+   * 웹소켓은 route가 못 보므로 따로 건다 — 서버에 잇지 않고(connectToServer 없음) 바로 닫는다.
    * 여기 걸린 요청은 끊고(abort) 테스트를 실패시킨다. 걸린 요청 목록을 `app`에 넘긴다.
    */
   networkGuard: [
-    async ({ page }, use) => {
+    async ({ context }, use) => {
       const escaped: string[] = [];
-      await page.route(isOutbound, (route) => {
+      await context.route(isOutbound, (route) => {
         escaped.push(`${route.request().method()} ${route.request().url()}`);
         return route.abort('blockedbyclient');
+      });
+      await context.routeWebSocket(isOutbound, (ws) => {
+        escaped.push(`WS ${ws.url()}`);
+        return ws.close();
       });
       await use(escaped);
       expect(escaped, ESCAPED_MESSAGE).toEqual([]);

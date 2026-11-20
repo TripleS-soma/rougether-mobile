@@ -42,9 +42,18 @@ export async function stableRect(target: Locator): Promise<Rect> {
   }
 }
 
+/**
+ * 규칙 도우미가 받는 대상 — 요소(여기서 잰다) 또는 이미 잰 위치·크기.
+ * 실패 예상 테스트는 `test.fail()` 앞에서 재고 잰 값을 넘긴다 — 재기 실패가 예상 실패에 묻히지 않게.
+ */
+type Target = Locator | Rect;
+const isRect = (t: Target): t is Rect => !('boundingBox' in t);
+const measure = (t: Target) => (isRect(t) ? t : stableRect(t));
+const label = (t: Target) => (isRect(t) ? '잰 영역' : String(t));
+
 /** 규칙 1: target이 zones 어느 것과도 겹치지 않는다. */
-export async function expectClearOf(target: Locator, zones: Rect[]): Promise<void> {
-  const rect = await stableRect(target);
+export async function expectClearOf(target: Target, zones: Rect[]): Promise<void> {
+  const rect = await measure(target);
   // 넓이가 있는 겹침만 센다 — 모서리가 맞닿는 건 겹침이 아니다.
   const overlapping = zones.filter(
     (z) =>
@@ -53,19 +62,19 @@ export async function expectClearOf(target: Locator, zones: Rect[]): Promise<voi
   );
   expect(
     overlapping,
-    `${target} ${fmtRect(rect)}가 시스템 영역 ${overlapping.map(fmtRect).join(', ')}과 겹친다, 기대 겹침 없음 (${deviceName()})`,
+    `${label(target)} ${fmtRect(rect)}가 시스템 영역 ${overlapping.map(fmtRect).join(', ')}과 겹친다, 기대 겹침 없음 (${deviceName()})`,
   ).toEqual([]);
 }
 
 /** 규칙 2·5: target 전체가 뷰포트 안에 있고, bottomInset(탭 바 높이)만큼 아래는 제외한다. */
 export async function expectInFirstScreen(
   page: Page,
-  target: Locator,
+  target: Target,
   bottomInset = 0,
 ): Promise<void> {
   const viewport = page.viewportSize();
   if (!viewport) throw new Error(`뷰포트 크기를 알 수 없다 (${deviceName()})`);
-  const rect = await stableRect(target);
+  const rect = await measure(target);
   const bottomLimit = viewport.height - bottomInset;
   const inside =
     rect.x >= 0 &&
@@ -74,36 +83,36 @@ export async function expectInFirstScreen(
     rect.y + rect.height <= bottomLimit;
   expect(
     inside,
-    `${target} ${fmtRect(rect)}, 기대 x 0~${fmt(viewport.width)} · y 0~${fmt(bottomLimit)} 안 (뷰포트 ${viewport.width}×${viewport.height}, 아래 ${fmt(bottomInset)} 제외) (${deviceName()})`,
+    `${label(target)} ${fmtRect(rect)}, 기대 x 0~${fmt(viewport.width)} · y 0~${fmt(bottomLimit)} 안 (뷰포트 ${viewport.width}×${viewport.height}, 아래 ${fmt(bottomInset)} 제외) (${deviceName()})`,
   ).toBe(true);
 }
 
 /** 규칙 3: 폭/높이가 ratio와 tolerance(기본 0.01) 안에서 같다. */
 export async function expectAspectRatio(
-  target: Locator,
+  target: Target,
   ratio: number,
   tolerance = 0.01,
 ): Promise<void> {
-  const rect = await stableRect(target);
+  const rect = await measure(target);
   const actual = rect.width / rect.height;
   expect(
     Math.abs(actual - ratio) <= tolerance,
-    `${target} 비율 ${fmt(actual, 3)} ${fmtRect(rect)}, 기대 ${fmt(ratio, 3)}±${tolerance} (${deviceName()})`,
+    `${label(target)} 비율 ${fmt(actual, 3)} ${fmtRect(rect)}, 기대 ${fmt(ratio, 3)}±${tolerance} (${deviceName()})`,
   ).toBe(true);
 }
 
 /** 규칙 4: panes가 왼쪽부터 나란히 있고, 합친 폭이 뷰포트 폭과 2px 안에서 같다. */
-export async function expectFillsWidth(page: Page, panes: Locator[]): Promise<void> {
+export async function expectFillsWidth(page: Page, panes: Target[]): Promise<void> {
   const viewport = page.viewportSize();
   if (!viewport) throw new Error(`뷰포트 크기를 알 수 없다 (${deviceName()})`);
   const rects: Rect[] = [];
-  for (const pane of panes) rects.push(await stableRect(pane));
+  for (const pane of panes) rects.push(await measure(pane));
   // 앞 칸의 오른쪽 끝(첫 칸은 화면 왼쪽 끝)에서 다음 칸이 시작해야 한다.
   let edge = 0;
   rects.forEach((r, i) => {
     expect(
       Math.abs(r.x - edge) <= WIDTH_SLACK_PX,
-      `${panes[i]} 시작 x ${fmt(r.x)}, 기대 ${fmt(edge)}±${WIDTH_SLACK_PX} (${deviceName()})`,
+      `${label(panes[i])} 시작 x ${fmt(r.x)}, 기대 ${fmt(edge)}±${WIDTH_SLACK_PX} (${deviceName()})`,
     ).toBe(true);
     edge = r.x + r.width;
   });
