@@ -213,6 +213,46 @@ describe('AppFrame / ModalFrame (#1227)', () => {
     }
   });
 
+  // 아이폰 Duo: 오른쪽 84pt가 시스템 표시 영역(가로 안전 영역 인셋). 프레임이 그만큼 비워야
+  // 머리 버튼·모달 닫기 버튼이 그 밑에 깔리지 않는다. 바탕색은 화면색으로 이어 칠한다.
+  it('가로 안전 영역 인셋만큼 앱 프레임 양옆을 비우고 화면색으로 칠한다', async () => {
+    mockFrame = { ...NARROW, width: 382, insetLeft: 0, insetRight: 84 };
+    const view = await render(
+      <AppFrame>
+        <Text>내용</Text>
+      </AppFrame>,
+    );
+    const outer = flattenStyle(view.getByTestId('app-frame').props.style);
+    expect(outer.paddingRight).toBe(84);
+    expect(outer.paddingLeft).toBe(0);
+    expect(outer.backgroundColor).toBeDefined();
+  });
+
+  it('인셋이 없으면 앱 프레임에 여백도 바탕색도 넣지 않는다 (폰 화면 불변)', async () => {
+    mockFrame = NARROW;
+    const view = await render(
+      <AppFrame>
+        <Text>내용</Text>
+      </AppFrame>,
+    );
+    const outer = flattenStyle(view.getByTestId('app-frame').props.style);
+    expect(outer.paddingRight).toBeUndefined();
+    expect(outer.paddingLeft).toBeUndefined();
+    expect(outer.backgroundColor).toBeUndefined();
+  });
+
+  it('모달 프레임도 같은 인셋만큼 내용을 안으로 들인다 — 딤은 프레임 밖이라 창 전체를 덮는다', async () => {
+    mockFrame = { ...NARROW, width: 382, insetLeft: 0, insetRight: 84 };
+    const view = await render(
+      <ModalFrame>
+        <Text>시트</Text>
+      </ModalFrame>,
+    );
+    const outer = flattenStyle(view.getByTestId('modal-frame').props.style);
+    expect(outer.paddingRight).toBe(84);
+    expect(outer.paddingLeft).toBe(0);
+  });
+
   it('PhoneColumn은 2단이 아니면 래퍼 없이 자식 그대로', async () => {
     mockFrame = WIDE;
     const { queryByTestId, getByText } = await render(

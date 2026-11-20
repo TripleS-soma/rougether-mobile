@@ -45,6 +45,20 @@ export type NavMenuPopoverProps = {
  *
  * 방 작업만 남긴다 (#1089) — 재화 내역·출석 이벤트는 내 정보 바로가기로 갔다.
  */
+/**
+ * 창 오른쪽 끝에서 프레임 오른쪽 끝까지의 거리 — 팝오버를 프레임 안쪽에 붙이는 데 쓴다.
+ * 프레임은 안전 영역 안에서 가운데 놓이므로, 오른쪽 인셋 + 남는 폭의 절반이다.
+ */
+export function navMenuFrameInset(
+  windowWidth: number,
+  frameWidth: number,
+  insetLeft = 0,
+  insetRight = 0,
+): number {
+  const spare = windowWidth - insetLeft - insetRight - frameWidth;
+  return insetRight + Math.max(0, spare / 2);
+}
+
 export function NavMenuPopover({
   visible,
   top,
@@ -63,9 +77,10 @@ export function NavMenuPopover({
   const Typography = useTypography();
   // 팝오버는 Modal(창 기준 좌표)에 뜬다. 웹 데스크톱의 중앙 컬럼 프레임(#1227)에서는
   // 창 오른쪽 끝이 아니라 프레임 오른쪽 끝에 붙어야 햄버거 버튼 아래에 놓인다.
-  const { width: frameWidth } = useAppFrame();
+  // 가로 안전 영역 인셋(아이폰 Duo의 오른쪽 84pt)이 있으면 프레임은 그 안쪽에서 가운데 놓인다.
+  const { width: frameWidth, insetLeft = 0, insetRight = 0 } = useAppFrame();
   const { width: windowWidth } = useWindowDimensions();
-  const frameInset = Math.max(0, (windowWidth - frameWidth) / 2);
+  const frameInset = navMenuFrameInset(windowWidth, frameWidth, insetLeft, insetRight);
 
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>

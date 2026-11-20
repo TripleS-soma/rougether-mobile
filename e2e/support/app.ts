@@ -85,6 +85,11 @@ export const test = base.extend<{ app: App; networkGuard: string[] }>({
           }, storage);
         }
         unmocked = await mockApi(page, overrides);
+        // 안전 영역 인셋 주입 — 웹에는 시스템 영역이 없으니 기기 값을 env(safe-area-inset-*)로 넣는다.
+        if (Object.values(device.insets).some((v) => v > 0)) {
+          const cdp = await page.context().newCDPSession(page);
+          await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: device.insets });
+        }
         await page.clock.install({ time: TEST_CLOCK });
         await page.goto('/');
         // 셸이 그려졌다 = 세션 복원·온보딩 관문을 지났다(하단 탭은 모든 탭 화면에 있다).

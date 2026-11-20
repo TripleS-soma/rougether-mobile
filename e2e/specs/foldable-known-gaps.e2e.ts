@@ -11,7 +11,8 @@
  * `test.fail()` 직전에 `app.expectNoUnmockedRequests()`로 한다 — 테스트 끝 검사의 실패는
  * 실패 예상 아래에서 삼켜진다.
  *
- * 웹에는 시스템 영역이 없으므로 규칙 1은 "앱이 그 자리를 피하는가"를 좌표로만 본다.
+ * 시스템 영역은 기기의 안전 영역 인셋으로 주입한다(`e2e/devices.ts`의 `insets`) — 규칙 1은
+ * 조작 요소가 안전 영역 밖의 띠와 겹치지 않는지를 좌표로 본다.
  */
 import { expect, test } from '../support/app';
 import { expectClearOf, expectInFirstScreen, stableRect } from '../support/layout';
@@ -37,17 +38,15 @@ test('출석 모달 닫기 버튼이 시스템 영역과 겹치지 않는다', a
     .getByRole('button', { name: '닫기', exact: true });
   await expect(close).toBeVisible();
   const rect = await stableRect(close);
-  await app.expectNoUnmockedRequests();
-  test.fail();
   await expectClearOf(rect, app.device.obstructions);
 });
 
 // 머리 버튼 — 접근성 이름으로 찾는다. 집의 채팅 버튼은 보이는 글자가 '채팅', 이름이 '집 채팅'.
 // 고친 버튼은 그 줄의 knownGap을 false로 바꾼다.
 const HEADER_BUTTONS = [
-  { title: '달력의 다음 달 버튼', tab: 'calendar', name: '다음 달', knownGap: true },
-  { title: '집의 채팅 버튼', tab: 'house', name: '집 채팅', knownGap: true },
-  { title: '내 정보의 설정 버튼', tab: 'myPage', name: '설정', knownGap: true },
+  { title: '달력의 다음 달 버튼', tab: 'calendar', name: '다음 달', knownGap: false },
+  { title: '집의 채팅 버튼', tab: 'house', name: '집 채팅', knownGap: false },
+  { title: '내 정보의 설정 버튼', tab: 'myPage', name: '설정', knownGap: false },
 ] as const;
 
 for (const { title, tab, name, knownGap } of HEADER_BUTTONS) {
