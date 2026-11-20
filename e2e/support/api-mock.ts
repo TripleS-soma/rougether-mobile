@@ -31,6 +31,11 @@ function isApi(url: URL): boolean {
   return url.pathname === API_PREFIX || url.pathname.startsWith(`${API_PREFIX}/`);
 }
 
+/** 로컬 정적 서버 밖으로 나가는 요청, 또는 어느 호스트든 api/v1 요청 — 가로챌 대상. */
+export function isOutbound(url: URL): boolean {
+  return isApi(url) || !LOCAL_HOSTS.has(url.hostname);
+}
+
 function fulfillJson(route: Route, status: number, body: unknown) {
   // 앱(웹)은 다른 출처의 API를 부르므로 CORS 헤더가 있어야 응답을 읽는다.
   if (Buffer.isBuffer(body)) {
@@ -75,32 +80,29 @@ export async function mockApi(page: Page, overrides: MockOverrides = {}): Promis
   ];
   const unmocked: string[] = [];
 
-  await page.route(
-    (url) => isApi(url) || !LOCAL_HOSTS.has(url.hostname),
-    (route) => {
-      const request = route.request();
-      const url = new URL(request.url());
-      if (!isApi(url)) return fulfillExternal(route, url);
+  await page.route(isOutbound, (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (!isApi(url)) return fulfillExternal(route, url);
 
-      const method = request.method().toUpperCase();
-      // 웹에서 Authorization 헤더가 붙은 요청은 사전 요청(OPTIONS)이 먼저 간다.
-      if (method === 'OPTIONS') {
-        return route.fulfill({
-          status: 204,
-          headers: {
-            'access-control-allow-origin': '*',
-            'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE',
-            'access-control-allow-headers': '*',
-          },
-        });
-      }
-      const path = url.pathname.slice(API_PREFIX.length) || '/';
-      const hit = matchers.find((m) => m.method === method && m.regex.test(path));
-      if (hit) return fulfillJson(route, 200, hit.body);
+    const method = request.method().toUpperCase();
+    // 웹에서 Authorization 헤더가 붙은 요청은 사전 요청(OPTIONS)이 먼저 간다.
+    if (method === 'OPTIONS') {
+      return route.fulfill({
+        status: 204,
+        headers: {
+          'access-control-allow-origin': '*',
+          'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE',
+          'access-control-allow-headers': '*',
+        },
+      });
+    }
+    const path = url.pathname.slice(API_PREFIX.length) || '/';
+    const hit = matchers.find((m) => m.method === method && m.regex.test(path));
+    if (hit) return fulfillJson(route, 200, hit.body);
 
-      unmocked.push(`${method} ${path}`);
-      return fulfillJson(route, 501, { code: 'E2E_UNMOCKED' });
-    },
-  );
+    unmocked.push(`${method} ${path}`);
+    return fulfillJson(route, 501, { code: 'E2E_UNMOCKED' });
+  });
   return unmocked;
 }

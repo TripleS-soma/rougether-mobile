@@ -2,14 +2,17 @@ import { expect, test as base } from '@playwright/test';
 
 import { E2E_USER_ID } from '../fixtures/common';
 import { DEVICES, type E2eDevice } from '../devices';
-import { mockApi, type MockOverrides } from './api-mock';
+import { isOutbound, mockApi, type MockOverrides } from './api-mock';
 
 export type StartTab = 'myRoom' | 'calendar' | 'house' | 'feed' | 'myPage';
 
 type App = {
   device: E2eDevice;
-  /** 세션을 심고 앱을 연다. 열린 뒤 자동으로 뜨는 모달은 그대로 둔다. */
-  open(opts?: { tab?: StartTab; overrides?: MockOverrides }): Promise<void>;
+  /**
+   * 세션을 심고 앱을 연다. 열린 뒤 자동으로 뜨는 모달은 그대로 둔다. 테스트당 한 번만.
+   * `session: false`면 세션 없이(로그아웃 상태로) 연다 — 셸을 기다리지 않는다.
+   */
+  open(opts?: { tab?: StartTab; overrides?: MockOverrides; session?: boolean }): Promise<void>;
   /** 화면에 떠 있는 모달을 닫기 버튼으로 전부 닫는다. */
   dismissModals(): Promise<void>;
 };
@@ -27,27 +30,56 @@ const SESSION = {
 /** 앱 공용 닫기 버튼의 접근성 이름(`common.close`). */
 const CLOSE_LABEL = '닫기';
 
-export const test = base.extend<{ app: App }>({
+export const test = base.extend<{ app: App; networkGuard: void }>({
   // 서비스워커가 요청을 가로채면 page.route가 못 본다 — 테스트에서는 등록하지 않는다.
   serviceWorkers: 'block',
+  /**
+   * 모든 테스트에 자동으로 걸리는 그물 — `mockApi`를 깜빡한 테스트도 로컬 정적 서버 밖으로는
+   * 한 건도 못 나간다. route는 나중에 건 것이 먼저 받으므로 `mockApi`를 건 페이지의 요청은
+   * 여기 오지 않는다.
+   * 여기 걸린 요청은 끊고(abort) 테스트를 실패시킨다.
+   */
+  networkGuard: [
+    async ({ page }, use) => {
+      const escaped: string[] = [];
+      await page.route(isOutbound, (route) => {
+        escaped.push(`${route.request().method()} ${route.request().url()}`);
+        return route.abort('blockedbyclient');
+      });
+      await use();
+      expect(
+        escaped,
+        'mockApi 없이 밖으로 나가려던 요청 — app.open() 또는 mockApi()를 거칠 것',
+      ).toEqual([]);
+    },
+    { auto: true },
+  ],
   app: async ({ page }, use, testInfo) => {
     const device = DEVICES[testInfo.project.name as E2eDevice['name']];
     if (!device) throw new Error(`DEVICES에 없는 프로젝트: ${testInfo.project.name}`);
     let unmocked: string[] = [];
+    let opened = false;
 
     const app: App = {
       device,
-      async open({ tab, overrides } = {}) {
-        const storage: Record<string, string> = { ...SESSION };
+      async open({ tab, overrides, session = true } = {}) {
+        // 두 번째 호출은 init script·route·시계가 겹쳐 쌓인다 — 조용히 섞이지 않게 막는다.
+        if (opened) throw new Error('app.open()은 테스트당 한 번만 부를 수 있다.');
+        opened = true;
+        const storage: Record<string, string> = session ? { ...SESSION } : {};
         if (tab) storage[START_TAB_KEY] = tab;
-        await page.context().addInitScript((entries) => {
-          for (const [key, value] of Object.entries(entries)) localStorage.setItem(key, value);
-        }, storage);
+        if (Object.keys(storage).length > 0) {
+          await page.context().addInitScript((entries) => {
+            for (const [key, value] of Object.entries(entries)) localStorage.setItem(key, value);
+          }, storage);
+        }
         unmocked = await mockApi(page, overrides);
         await page.clock.install({ time: TEST_CLOCK });
         await page.goto('/');
         // 셸이 그려졌다 = 세션 복원·온보딩 관문을 지났다(하단 탭은 모든 탭 화면에 있다).
-        await expect(page.getByRole('button', { name: '나의 방', exact: true })).toBeVisible();
+        if (session) {
+          await expect(page.getByRole('button', { name: '나의 방', exact: true })).toBeVisible();
+        }
       },
       async dismissModals() {
         // 자동 모달은 데이터가 도착한 뒤 열린다 — 요청이 잦아든 뒤에 본다.
