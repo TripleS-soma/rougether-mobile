@@ -12,11 +12,18 @@ import {
 /** 방 그림 비율 — 방 렌더 계약(`room.aspectRatio`)이 단일 출처. */
 const ROOM_RATIO = roomContract.room.aspectRatio;
 /**
- * 2층(4인) 집 그림 비율 — `src/resources/house-frame.ts`의 `stackedGeometry(4)`:
+ * 2층(4인) CLASSIC 집 그림 비율 — `src/resources/house-frame.ts`의
+ * `resolveHouseFrame(…, { maxMembers: 4 }).aspectRatio`(= `stackedGeometry(4)`, 86행):
  * 원본 1024 × (872 + 352), 창문에 맞춰 방 비율만큼 눌러 그린다.
- * 그 파일은 i18n·에셋을 끌어와 Node에서 import할 수 없어 산식을 옮겨 적는다.
+ * 그 모듈은 expo-asset·i18n을 끌어와 Playwright(Node)에서 import할 수 없어 산식을 옮겨 적는다
+ * — 그 산식을 바꾸면 여기도 고칠 것.
  */
 const HOUSE_RATIO_2F = (1024 / (872 + 352)) * ROOM_RATIO;
+/**
+ * 기본(DIORAMA) 집 그림 비율 — `src/resources/house-diorama.ts` 13행 `HOUSE_DIORAMA_ASPECT`.
+ * 층수와 무관한 한 장 그림이다. 그 모듈은 .webp 에셋을 import해 Node에서 읽을 수 없다.
+ */
+const HOUSE_RATIO_DIORAMA = 2 / 3;
 
 /** 기본 픽스처의 집은 DIORAMA(층수와 무관한 2:3 한 장 그림)라, 층수별 틀이 그려지는 CLASSIC으로 연다. */
 const CLASSIC_HOUSE = {
@@ -68,6 +75,13 @@ test('규칙 3: 집 그림이 층수별 비율이다', async ({ app, page }) => 
   const houseFrame = page.getByTestId('house-frame');
   await expect(houseFrame).toBeVisible();
   await expectAspectRatio(houseFrame, HOUSE_RATIO_2F);
+});
+
+test('규칙 3: 기본(디오라마) 집 그림이 2:3 비율이다', async ({ app, page }) => {
+  await app.open({ tab: 'house' });
+  const houseFrame = page.getByTestId('house-frame');
+  await expect(houseFrame).toBeVisible();
+  await expectAspectRatio(houseFrame, HOUSE_RATIO_DIORAMA);
 });
 
 test('규칙 2: 출석 모달의 닫기 버튼이 화면 안에 있고 누르면 닫힌다', async ({ app, page }) => {
