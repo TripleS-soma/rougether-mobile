@@ -82,3 +82,27 @@ describe('MyRoomScreen 2단 레이아웃 (#1230)', () => {
     expect(onOpenMinigames).toHaveBeenCalledTimes(1);
   });
 });
+
+// 넓고 짧은 화면(접힌 아이폰 Duo — 안전 영역을 뺀 382×678): 방이 폭을 다 쓰면 높이 458로
+// 화면의 2/3를 먹어 할 일이 첫 화면 밖으로 밀린다. 방 높이를 화면 절반에 맞추고 양옆은
+// 같은 벽지·바닥 그림으로 채운다. 일반 폰은 그대로.
+describe('MyRoomScreen 짧은 화면', () => {
+  afterEach(() => {
+    mockFrame = { ...mockFrame, split: false, framed: false, width: 390, height: 844 };
+  });
+
+  it('짧은 화면이면 방을 화면 높이 절반에 맞춰 가운데 그리고 양옆을 채운다', async () => {
+    mockFrame = { ...mockFrame, width: 382, height: 678 };
+    const ui = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} view="room" />);
+    expect(ui.getByTestId('room-backdrop')).toBeTruthy();
+    const box = flattenStyle(ui.getByTestId('my-room-hero-room').props.style);
+    expect(box.width).toBeCloseTo(339 * (5 / 6), 3);
+    expect(box.alignSelf).toBe('center');
+  });
+
+  it('일반 폰은 방이 폭을 다 쓰고 양옆 채움이 없다', async () => {
+    const ui = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} view="room" />);
+    expect(ui.queryByTestId('room-backdrop')).toBeNull();
+    expect(flattenStyle(ui.getByTestId('my-room-hero-room').props.style).width).toBeUndefined();
+  });
+});
