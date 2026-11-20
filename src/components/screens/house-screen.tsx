@@ -44,6 +44,7 @@ import { PendingHousePage } from '@/components/screens/house/pending-house-page'
 import { RailButton } from '@/components/screens/house/rail-button';
 import { SeatTile } from '@/components/screens/house/seat-tile';
 import { useFrameCamera } from '@/components/screens/house/use-frame-camera';
+import { useHouseGestureReading } from '@/components/screens/house/use-house-gesture-reading';
 import { useSeatDrag } from '@/components/screens/house/use-seat-drag';
 import { gridRoomPairs, seatRowsFor } from '@/components/screens/house/seat-geometry';
 import { Icon } from '@/components/ui/icon';
@@ -452,6 +453,12 @@ export const HouseScreen = memo(function HouseScreen({
   // --- 프레임 카메라 (핀치줌·팬, #290) — house/use-frame-camera (장부 15번) ---
   const { zoomed, camStyle, seatMetaOpacity, cameraGesture, resetCam, onFrameLayout } =
     useFrameCamera({ draggingSV });
+  // 먹통 드래그 진단 (2026-11-11) — 재발 순간의 자리 드래그·확대·스크롤 위치를 내놓는다.
+  const gestureReading = useHouseGestureReading({
+    dragSeat,
+    zoomed,
+    onScroll: scrollRestore.onScroll,
+  });
   const visitSeat = (room: RoomCell) => {
     if (room.isMine) return onVisitMyRoom?.();
     onVisitFriend?.({
@@ -617,6 +624,7 @@ export const HouseScreen = memo(function HouseScreen({
     <View
       style={[styles.screen, screenStyle, { backgroundColor: diorama?.skyColor ?? skyColor }]}
       onLayout={measureScreen}
+      onTouchStart={gestureReading.onTouchStart}
       testID="house-screen">
       {/* 하단 탭은 AppShell의 형제라 이 absoluteFill 배경에 포함되지 않는다.
           9:16 마스터를 cover/center로 그려 다양한 화면 높이에서도 가장자리만
@@ -647,6 +655,7 @@ export const HouseScreen = memo(function HouseScreen({
       <PawRefreshScroll
         scrollRef={scrollRef}
         {...scrollRestore}
+        onScroll={gestureReading.onScroll}
         onLayout={measureHouseViewport}
         onRefresh={onRefresh}
         // 자리 드래그 중 당김 잠금 — 놓는 순간 새로고침이 배치를 끊지 않게.

@@ -33,7 +33,9 @@ export type DiagnosticsEvent =
        */
       requestId?: string;
     }
-  | { kind: 'app'; at: number; state: string };
+  | { kind: 'app'; at: number; state: string }
+  /** 제스처 진단 (2026-11-11) — 집 화면 먹통 드래그 순간의 상태 요약. 좌표·식별자 없음. */
+  | { kind: 'gesture'; at: number; detail: string };
 
 let events: DiagnosticsEvent[] = [];
 
@@ -100,6 +102,10 @@ export function recordAppState(state: string, now = Date.now()) {
   push({ kind: 'app', at: now, state });
 }
 
+export function recordGesture(detail: string, now = Date.now()) {
+  push({ kind: 'gesture', at: now, detail });
+}
+
 /** 계정 전환·로그아웃 — 다른 사용자의 기록이 섞이지 않게. */
 export function clearDiagnostics() {
   events = [];
@@ -114,6 +120,7 @@ function line(e: DiagnosticsEvent, now: number): string {
   const ago = `-${Math.max(0, Math.round((now - e.at) / 1000))}s`;
   if (e.kind === 'screen') return `${ago} screen ${e.screen}`;
   if (e.kind === 'app') return `${ago} app ${e.state}`;
+  if (e.kind === 'gesture') return `${ago} gesture ${e.detail}`;
   const rid = e.requestId ? ` rid=${e.requestId}` : '';
   return `${ago} ${e.method} ${e.path} ${e.status} ${e.durationMs}ms${rid}`;
 }

@@ -158,6 +158,11 @@ export type AnalyticsEvent =
   /** 집 화면 진입점 탭 (#1660) — 11/5 레일 정리(#1647)로 목표·집 관리를 알약으로 옮긴 배치를 잰다. */
   | 'house_action_tap'
   /**
+   * 집 화면 먹통 드래그 진단 (2026-11-11) — 드래그했는데 스크롤도 탭 전환도 없던 순간의 제스처
+   * 상태. 원인을 고치면 걷어낸다(`lib/dead-drag-probe.ts`).
+   */
+  | 'house_dead_drag'
+  /**
    * 주문·취소 결과 — side(BUY|SELL|CANCEL), source(INVENTORY|ISSUANCE|none),
    * result(filled|open|cancelled|rejected|pending|error). rejected면 code에 거절 사유.
    */
@@ -369,6 +374,16 @@ export type AnalyticsParams = {
   market_view: { screen: 'list' | 'asset' | 'orders' };
   room_action_tap: { action: RoomAction };
   house_action_tap: { action: HouseAction };
+  house_dead_drag: {
+    axis: 'x' | 'y';
+    dx: number;
+    dy: number;
+    ms: number;
+    house_touch: boolean;
+    pager: string;
+    house: string;
+    layers: string;
+  };
   /** 기능 첫 진입 튜토리얼 — step은 끝낸(건너뛴) 단계 번호(1부터). */
   feature_tour: { tour: string; action: 'complete' | 'skip' | 'replay'; step: number };
   market_order: { side: string; source: string; result: string; code?: string };

@@ -5,7 +5,7 @@ import {
 import { useT, i18n } from '@/i18n';
 import { SpeakerSheet } from '@/components/room/speaker-sheet';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import { Animated, type GestureResponderEvent, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 
 import { livesInPager, NAV_ORDER, SCREEN_FOR_TAB, type Screen } from '@/components/app/navigation';
@@ -30,7 +30,7 @@ import { FEED_ENABLED } from '@/constants/feed';
 import { MARKET_ENABLED } from '@/constants/market';
 import { isScheduledOn, MyRoomScreen } from '@/components/screens/my-room-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
-import { useStableCallback } from '@/hooks/use-stable-value';
+import { useLatestRef, useStableCallback } from '@/hooks/use-stable-value';
 import { useDecorEntry } from '@/components/app/use-decor-entry';
 import { useSpeakerSurface } from '@/components/app/use-speaker-surface';
 import { useGachaSurface } from '@/components/app/use-gacha-surface';
@@ -41,6 +41,12 @@ import { BottomNav, type NavTab } from '@/components/ui/bottom-nav';
 import { NotificationBanner } from '@/components/ui/notification-banner';
 import { DEFAULT_CHARACTER_ID, type CharacterId } from '@/constants/characters';
 import { screenView, track } from '@/lib/analytics';
+import {
+  deadDragTouchCancel,
+  deadDragTouchEnd,
+  deadDragTouchStart,
+  registerGestureReader,
+} from '@/lib/dead-drag-probe';
 import { todayIso } from '@/utils/datetime';
 import { useAttendanceSurface } from '@/components/app/use-attendance-surface';
 import { useWidgetSync } from '@/components/app/use-widget-sync';
@@ -837,6 +843,38 @@ export function AppShell({
   );
   const layers = useScreenTransition({ screen, addReturnScreen, tabsNode, node: screenNode });
 
+  // 집 화면 먹통 드래그 진단 (2026-11-11) — 드래그했는데 스크롤도 탭 전환도 없던 순간의 제스처·층
+  // 상태를 남긴다. 터치는 루트까지 올라오므로 여기서 본다. 원인을 고치면 걷어낸다.
+  const probeRef = useLatestRef({ screen, layers });
+  useEffect(
+    () =>
+      registerGestureReader('layers', () => ({
+        state: probeRef.current.layers
+          .map(
+            (layer) =>
+              `${layer.key}:${layer.pointerEvents === 'auto' ? 'on' : 'off'}` +
+              `${layer.hidden ? '-hidden' : ''}${layer.node ? '' : '-empty'}`,
+          )
+          .join(' '),
+      })),
+    [probeRef],
+  );
+  const handleRootTouchStart = useStableCallback((e: GestureResponderEvent) => {
+    closeOpenSwipeRow();
+    deadDragTouchStart({
+      x: e.nativeEvent.pageX,
+      y: e.nativeEvent.pageY,
+      screen: probeRef.current.screen,
+    });
+  });
+  const handleRootTouchEnd = useStableCallback((e: GestureResponderEvent) => {
+    deadDragTouchEnd({
+      x: e.nativeEvent.pageX,
+      y: e.nativeEvent.pageY,
+      screen: probeRef.current.screen,
+    });
+  });
+
   // 셸 자식에 넘기는 콜백은 참조를 고정한다 — 인라인이면 셸이 렌더될 때마다
   // 하단 바·미션 시트가 같이 다시 그려진다(성능 장부 R9).
   const changeTab = useStableCallback((tab: NavTab) =>
@@ -848,7 +886,13 @@ export function AppShell({
     <View
       style={styles.root}
       // 열린 스와이프 삭제 버튼은 다른 어떤 터치에도 닫힌다 (#1676) — 터치는 루트까지 올라온다.
-      {...{ [PRESS_START_EVENT]: closeOpenSwipeRow }}
+      {...(PRESS_START_EVENT === 'onTouchStart'
+        ? {
+            onTouchStart: handleRootTouchStart,
+            onTouchEnd: handleRootTouchEnd,
+            onTouchCancel: deadDragTouchCancel,
+          }
+        : { [PRESS_START_EVENT]: closeOpenSwipeRow })}
       onLayout={(e) =>
         setCoachFrame({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
       }>
