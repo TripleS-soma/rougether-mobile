@@ -138,6 +138,7 @@
       "./plugins/with-firebase-analytics-linker.js",
       "./plugins/with-fbsdk-react-link.js",
       "./plugins/with-fcm-manifest.js",
+      "./plugins/with-ios-scene-lifecycle.js",
       [
         "@react-native-google-signin/google-signin",
         {
