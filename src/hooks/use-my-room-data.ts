@@ -23,6 +23,7 @@ import {
   ErrorCode,
   completeRoutine,
   completeTodo,
+  convertTodoToRoutine,
   createCategory,
   createRoutine,
   createTodo,
@@ -48,6 +49,7 @@ import {
   toRoutineCreate,
   toServerItemId,
   toRoutineUpdate,
+  toTodoConvert,
   toTodoCreate,
   toTodoUpdate,
   toWallet,
@@ -331,7 +333,13 @@ export function useMyRoomData() {
       const item = findItem(id);
       if (!item) return;
       try {
-        if (item.kind === 'todo') {
+        if (item.kind === 'todo' && n.repeat) {
+          // 투두에는 반복이 없다 — 반복을 고르면 서버가 루틴 생성 + 투두 삭제를 한 번에 한다.
+          // 투두는 미완료라(완료면 409) 옮길 완료 기록이 없다.
+          const created = await convertTodoToRoutine(toServerItemId(id), toTodoConvert(n));
+          const next = toAppRoutine(created);
+          setRoutines((prev) => prev.map((r) => (r.id === id ? next : r)));
+        } else if (item.kind === 'todo') {
           const updated = await updateTodo(toServerItemId(id), toTodoUpdate(item, n));
           setRoutines((prev) => prev.map((r) => (r.id === id ? toAppTodo(updated) : r)));
         } else {
@@ -353,11 +361,18 @@ export function useMyRoomData() {
         // 스케줄이 바뀌면 캐시된 달력 날짜의 수행 대상도 바뀐다 — 제목만
         // 고치는 renameRoutine도 재조회하는데 정작 여기가 빠져 있었다.
         invalidateCalendar();
-      } catch {
+      } catch (err) {
+        const code = err instanceof ApiError ? err.code : undefined;
+        if (code === ErrorCode.TODO_COMPLETED_NOT_CONVERTIBLE) {
+          toast(i18n.t('routineTodo.toast.convertCompleted'), 'error');
+          return;
+        }
         toast(i18n.t('routineTodo.toast.updateFailed'), 'error');
+        // 이미 없는 투두 — 다른 기기에서 지웠거나 전환 응답이 유실된 재시도다. 목록을 다시 읽는다.
+        if (code === ErrorCode.TODO_NOT_FOUND) void reload().catch(() => undefined);
       }
     },
-    [findItem, invalidateCalendar, toast],
+    [findItem, invalidateCalendar, toast, reload],
   );
 
   const renameRoutine = useCallback(

@@ -1172,3 +1172,116 @@ describe('useMyRoomData — 연동 해제 (루틴↔미션, 카테고리↔집)'
     expect(srv.calls.length).toBe(before);
   });
 });
+
+/**
+ * 투두에 반복을 붙이면 서버가 루틴 생성 + 투두 삭제를 한 트랜잭션으로 처리한다
+ * (POST /todos/{id}/convert-to-routine). 반복 없는 수정은 지금처럼 PUT /todos.
+ */
+describe('useMyRoomData — 투두를 반복 루틴으로 전환', () => {
+  const today = () => calendarToday();
+  const base = (over: Partial<NewRoutine>): NewRoutine => ({
+    title: '치과',
+    category: '1',
+    days: [],
+    startDate: today(),
+    alarmEnabled: false,
+    time: '07:00',
+    ...over,
+  });
+
+  const harness = (convert: () => ReturnType<typeof res>) => {
+    const calls: { url: string; method: string; body?: Record<string, unknown> }[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+      calls.push({ url, method, body });
+      if (url.includes('/categories')) return res({ items: [{ id: 1, name: '건강' }] });
+      if (method === 'POST' && url.endsWith('/todos/7/convert-to-routine')) return convert();
+      if (method === 'PUT' && url.endsWith('/todos/7'))
+        return res({
+          id: 7,
+          title: '치과 예약',
+          categoryId: 1,
+          dueDate: today(),
+          status: 'PENDING',
+        });
+      if (url.endsWith('/routines')) return res({ items: [] });
+      if (url.endsWith('/todos'))
+        return res({
+          items: [{ id: 7, title: '치과', categoryId: 1, dueDate: today(), status: 'PENDING' }],
+        });
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1, nickname: '테스터' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+    return calls;
+  };
+
+  it('반복을 고른 투두는 전환 API를 부르고 목록의 투두를 새 루틴으로 바꾼다', async () => {
+    const calls = harness(
+      () =>
+      res({ id: 31, title: '치과', categoryId: 1, repeatType: 'WEEKLY', repeatDays: { daysOfWeek: ['MON'] } }), // prettier-ignore
+    );
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.updateRoutine('t7', base({ repeat: 'weekly', days: [1] }));
+    });
+
+    const convert = calls.find((c) => c.url.endsWith('/todos/7/convert-to-routine'))!;
+    expect(convert.method).toBe('POST');
+    expect(convert.body).toMatchObject({
+      title: '치과',
+      categoryId: 1,
+      authType: 'CHECK',
+      repeatType: 'WEEKLY',
+      repeatDays: { daysOfWeek: ['MON'] },
+      startsOn: today(),
+    });
+    expect(convert.body).not.toHaveProperty('houseMissionId');
+    expect(calls.some((c) => c.method === 'PUT')).toBe(false);
+    expect(result.current.routines.map((r) => [r.id, r.kind])).toEqual([['r31', 'routine']]);
+  });
+
+  it('반복 없이 고친 투두는 지금처럼 PUT /todos 로 수정한다', async () => {
+    const calls = harness(() => res({}));
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.updateRoutine('t7', base({ title: '치과 예약' }));
+    });
+
+    expect(calls.some((c) => c.method === 'PUT' && c.url.endsWith('/todos/7'))).toBe(true);
+    expect(calls.some((c) => c.url.includes('convert-to-routine'))).toBe(false);
+    expect(result.current.routines.map((r) => r.title)).toEqual(['치과 예약']);
+  });
+
+  it('완료한 투두라 거절되면 목록을 그대로 둔다', async () => {
+    harness(() => res({ code: 'TODO_COMPLETED_NOT_CONVERTIBLE', message: '완료한 투두' }, 409));
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.updateRoutine('t7', base({ repeat: 'daily' }));
+    });
+
+    expect(result.current.routines.map((r) => [r.id, r.kind])).toEqual([['t7', 'todo']]);
+  });
+
+  it('이미 없는 투두라 404면 목록을 다시 불러온다', async () => {
+    const calls = harness(() => res({ code: 'TODO_NOT_FOUND', message: '없음' }, 404));
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    const todoLoads = () =>
+      calls.filter((c) => c.method === 'GET' && c.url.endsWith('/todos')).length;
+    const before = todoLoads();
+
+    await act(async () => {
+      await result.current.updateRoutine('t7', base({ repeat: 'daily' }));
+    });
+
+    await waitFor(() => expect(todoLoads()).toBeGreaterThan(before));
+  });
+});

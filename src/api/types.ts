@@ -1667,6 +1667,17 @@ export type TodoCompleteResponse = {
   rewardAmount?: number;
 };
 
+export type TodoConvertRequest = {
+  title: string;
+  categoryId?: number;
+  authType: 'CHECK' | 'PHOTO';
+  repeatType: string;
+  repeatDays?: RepeatDays;
+  scheduledTime?: string;
+  startsOn?: string;
+  endsOn?: string;
+};
+
 export type TodoCreateRequest = {
   title: string;
   description?: string;

@@ -30,6 +30,25 @@ import { formatDate, formatTime, todayIso } from '@/utils/datetime';
 import { WEEKDAY_KEYS, weekdayLabelKey } from '@/constants/routines';
 import { REPEAT_KINDS, repeatLabelKey } from '@/components/screens/sheets/compose-repeat-fields';
 import { useT } from '@/i18n';
+/** 반복 칸의 선택지 — 'none'은 투두 수정에만 있다. */
+type RepeatChoice = RepeatKind | 'none';
+
+const initialRepeat = (editRoutine?: Routine | null): RepeatChoice => {
+  if (!editRoutine) return 'daily';
+  if (editRoutine.kind === 'todo') return 'none';
+  return editRoutine.repeat ?? (editRoutine.days?.length ? 'weekly' : 'daily');
+};
+
+// 투두를 반복으로 바꿀 때는 마감일부터 — 마감이 지났으면 오늘(서버는 과거 시작일을 거절한다).
+const initialStart = (editRoutine?: Routine | null, initialStartDate?: string): string => {
+  const today = todayIso();
+  if (editRoutine?.kind === 'todo') {
+    const due = editRoutine.dueDate;
+    return due && due > today ? due : today;
+  }
+  return editRoutine?.startDate ?? initialStartDate ?? today;
+};
+
 const MONTH_DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
@@ -85,6 +104,10 @@ export function AddRoutineScreen({
   const actionBarBase = useActionBarInset();
   const { show: toast } = useToast();
   const isEdit = Boolean(editRoutine);
+  // 투두에는 반복이 없다(캘린더에서 가져온 단발 일정 포함) — '반복 안 함'으로 시작하고,
+  // 반복을 고르면 저장 시 루틴으로 전환된다(POST /todos/{id}/convert-to-routine).
+  const isTodo = editRoutine?.kind === 'todo';
+  const repeatChoices: RepeatChoice[] = isTodo ? ['none', ...REPEAT_KINDS] : REPEAT_KINDS;
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [title, setTitle] = useState(editRoutine?.title ?? '');
   const [category, setCategory] = useState<RoutineCategory>(editRoutine?.category ?? '');
@@ -92,9 +115,7 @@ export function AddRoutineScreen({
   // Repeat cadence — legacy routines without an explicit repeat derive it
   // from their days (with days = weekly, without = daily).
   // 새 루틴 기본은 매일 (#1126) — 대부분 그렇게 시작하고, 요일은 매주를 고를 때만 묻는다.
-  const [repeat, setRepeat] = useState<RepeatKind>(
-    editRoutine ? (editRoutine.repeat ?? (editRoutine.days?.length ? 'weekly' : 'daily')) : 'daily',
-  );
+  const [repeat, setRepeat] = useState<RepeatChoice>(() => initialRepeat(editRoutine));
   // 새 루틴의 반복 요일은 전부 해제가 기본 — 사용자가 직접 고르게 한다.
   const [days, setDays] = useState<number[]>(editRoutine?.days ?? []);
   // Sub-picks: 매월 → day of month (yearly reuses it), 매년 → month.
@@ -103,9 +124,7 @@ export function AddRoutineScreen({
   // 알림·지속 기간은 기본 꺼짐 (#1126) — 필요한 사람만 항목 토글로 켠다.
   const [alarmEnabled, setAlarmEnabled] = useState(editRoutine?.alarmEnabled ?? false);
   const [time, setTime] = useState(editRoutine?.time ?? '07:00');
-  const [startDate, setStartDate] = useState(
-    editRoutine?.startDate ?? initialStartDate ?? todayIso(),
-  );
+  const [startDate, setStartDate] = useState(() => initialStart(editRoutine, initialStartDate));
   const [endDate, setEndDate] = useState<string | undefined>(editRoutine?.endDate);
   // 지속 기간 토글 — 수정 화면은 종료일이 있을 때 켜진 채로 시작한다.
   const [durationOn, setDurationOn] = useState(
@@ -124,15 +143,13 @@ export function AddRoutineScreen({
   // 카테고리 async 도착에 맞춰 재시드되므로 동적 기준값과 비교한다.
   const initial = useRef({
     title: editRoutine?.title ?? '',
-    repeat: editRoutine
-      ? (editRoutine.repeat ?? (editRoutine.days?.length ? 'weekly' : 'daily'))
-      : 'daily',
+    repeat: initialRepeat(editRoutine),
     days: editRoutine?.days ?? [],
     monthDay: editRoutine?.dayOfMonth ?? 1,
     yearMonth: editRoutine?.month ?? 1,
     alarmEnabled: editRoutine?.alarmEnabled ?? false,
     time: editRoutine?.time ?? '07:00',
-    startDate: editRoutine?.startDate ?? initialStartDate ?? todayIso(),
+    startDate: initialStart(editRoutine, initialStartDate),
     endDate: editRoutine?.endDate,
   }).current;
   const initialCategory = editRoutine?.category ?? '';
@@ -188,7 +205,11 @@ export function AddRoutineScreen({
         setFormError(tr('routineTodo.addRoutine.errorCategory'));
         Keyboard.dismiss();
       } else if (title.trim().length === 0) {
-        setFormError(tr('routineTodo.addRoutine.errorTitle'));
+        setFormError(
+          tr(
+            isTodo ? 'routineTodo.addRoutine.errorTodoTitle' : 'routineTodo.addRoutine.errorTitle',
+          ),
+        );
       } else if (needsDays && days.length === 0) {
         // 매주/격주 with no day picked — the day picker is the fix, so point at
         // it with a toast rather than the footer error.
@@ -199,7 +220,8 @@ export function AddRoutineScreen({
     const payload: NewRoutine = {
       title: title.trim(),
       category,
-      repeat,
+      // 투두의 '반복 안 함'은 반복 없음 — 수정 훅이 이 값의 유무로 전환 여부를 정한다.
+      repeat: repeat === 'none' ? undefined : repeat,
       days: needsDays ? days : [],
       dayOfMonth: repeat === 'monthly' || repeat === 'yearly' ? monthDay : undefined,
       month: repeat === 'yearly' ? yearMonth : undefined,
@@ -220,7 +242,13 @@ export function AddRoutineScreen({
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader
-        title={isEdit ? tr('routineTodo.addRoutine.editTitle') : tr('routineTodo.addRoutine.title')}
+        title={tr(
+          isTodo
+            ? 'routineTodo.addRoutine.editTodoTitle'
+            : isEdit
+              ? 'routineTodo.addRoutine.editTitle'
+              : 'routineTodo.addRoutine.title',
+        )}
         onBack={requestBack}
         backLabel={tr('routineTodo.addRoutine.back')}
       />
@@ -238,7 +266,7 @@ export function AddRoutineScreen({
         {/* Title */}
         <View style={styles.field}>
           <Text style={[Typography.label, { color: t.text }]}>
-            {tr('routineTodo.addRoutine.name')}
+            {tr(isTodo ? 'routineTodo.addRoutine.todoName' : 'routineTodo.addRoutine.name')}
           </Text>
           <View style={[styles.titleRow, { backgroundColor: t.surface }]}>
             <TextInput
@@ -384,15 +412,17 @@ export function AddRoutineScreen({
             {tr('routineTodo.addRoutine.repeat')}
           </Text>
           <View style={styles.repeatRow}>
-            {REPEAT_KINDS.map((id) => {
+            {repeatChoices.map((id) => {
               const active = repeat === id;
-              const optLabel = tr(repeatLabelKey(id));
+              const optLabel = tr(id === 'none' ? 'routineTodo.repeat.none' : repeatLabelKey(id));
+              // 칩은 좁아 '안 함'만 보이고, 낭독은 '반복 안 함'으로 뜻을 다 전한다.
+              const a11yLabel = id === 'none' ? tr('routineTodo.repeat.noneA11y') : optLabel;
               return (
                 <Pressable
                   key={id}
                   onPress={() => setRepeat(id)}
                   accessibilityRole="button"
-                  accessibilityLabel={optLabel}
+                  accessibilityLabel={a11yLabel}
                   accessibilityState={{ selected: active }}
                   style={({ pressed }) => [
                     styles.repeatChip,
@@ -662,7 +692,11 @@ export function AddRoutineScreen({
           <Pressable
             onPress={() => setConfirmDelete(true)}
             accessibilityRole="button"
-            accessibilityLabel={tr('routineTodo.addRoutine.deleteA11y')}
+            accessibilityLabel={tr(
+              isTodo
+                ? 'routineTodo.addRoutine.deleteTodoA11y'
+                : 'routineTodo.addRoutine.deleteA11y',
+            )}
             style={({ pressed }) => [styles.deleteBtn, pressed && pressedStyle('dim', t)]}>
             <GlassSurface
               fallbackColor={t.screen}
@@ -678,8 +712,15 @@ export function AddRoutineScreen({
       {editRoutine ? (
         <ConfirmDialog
           visible={confirmDelete}
-          title={tr('routineTodo.addRoutine.deleteTitle')}
-          body={tr('routineTodo.addRoutine.deleteBody', { title: editRoutine.title })}
+          title={tr(
+            isTodo
+              ? 'routineTodo.addRoutine.deleteTodoTitle'
+              : 'routineTodo.addRoutine.deleteTitle',
+          )}
+          body={tr(
+            isTodo ? 'routineTodo.addRoutine.deleteTodoBody' : 'routineTodo.addRoutine.deleteBody',
+            { title: editRoutine.title },
+          )}
           confirmLabel={tr('routineTodo.addRoutine.deleteConfirm')}
           destructive
           onConfirm={() => {
