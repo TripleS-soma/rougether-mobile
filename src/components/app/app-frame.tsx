@@ -23,15 +23,19 @@ import { useTokens } from '@/hooks/use-tokens';
 export function AppFrame({ children }: { children: ReactNode }) {
   const t = useTokens();
   // 2단(#1230)이면 프레임이 1200까지 넓어진다 — 폭은 훅이 정한다.
-  const { framed, split } = useAppFrame();
+  const { framed, split, insetLeft, insetRight } = useAppFrame();
   // 2단은 투두메이트처럼 창 전체가 한 면이고 내용 블록만 가운데 — 폰 컬럼일 때만
   // 테두리와 앱셸 색 여백으로 폰 프레임을 드러낸다.
   const phoneFrame = framed && !split;
+  // 가로 안전 영역(아이폰 Duo의 오른쪽 시스템 표시 영역 등)은 프레임이 비운다 — 화면마다
+  // 따로 피하지 않게. 비운 자리는 화면색으로 이어 칠해 잘린 것처럼 보이지 않게 한다.
+  const safeX = insetX(insetLeft, insetRight);
   return (
     <View
       testID="app-frame"
       style={[
         styles.outer,
+        safeX ? { ...safeX, backgroundColor: t.screen } : null,
         framed ? { backgroundColor: phoneFrame ? t.appShell : t.screen } : null,
       ]}>
       <View
@@ -64,9 +68,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
  * 양옆에 그려졌다. 폭은 폰 컬럼이면 480, 2단이면 `SHEET_FRAME_MAX_WIDTH`.
  */
 export function ModalFrame({ children }: { children: ReactNode }) {
-  const { framed, split } = useAppFrame();
+  const { framed, split, insetLeft, insetRight } = useAppFrame();
   return (
-    <View style={styles.modalOuter} pointerEvents="box-none" testID="modal-frame">
+    <View
+      style={[styles.modalOuter, insetX(insetLeft, insetRight)]}
+      pointerEvents="box-none"
+      testID="modal-frame">
       <View
         style={[
           styles.modalInner,
@@ -92,6 +99,11 @@ export function PhoneColumn({ children }: { children: ReactNode }) {
       {children}
     </View>
   );
+}
+
+/** 가로 안전 영역 인셋을 여백 스타일로 — 인셋이 없으면 null(스타일 불변). */
+function insetX(left = 0, right = 0) {
+  return left > 0 || right > 0 ? { paddingLeft: left, paddingRight: right } : null;
 }
 
 const styles = StyleSheet.create({
