@@ -3,7 +3,14 @@ import { SpeakerSprite } from '@/components/room/speaker-sprite';
 import { isSpeakerFurniture } from '@/resources/speaker';
 import { Image } from 'expo-image';
 import { memo, useMemo, useState } from 'react';
-import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
+import {
+  type ImageStyle,
+  Pressable,
+  type StyleProp,
+  StyleSheet,
+  View,
+  type ViewStyle,
+} from 'react-native';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { CharacterIdle } from '@/components/room/character-idle';
@@ -447,6 +454,53 @@ export const Room = memo(function Room({
           />
         )
       ) : null}
+    </View>
+  );
+});
+
+/** 양옆 채움 그림의 흐림 정도 — 무늬는 뭉개고 색과 밝기만 이어지게. */
+const BACKDROP_BLUR_RADIUS = 24;
+
+export type RoomBackdropProps = Pick<
+  RoomProps,
+  'wallpaperId' | 'floorId' | 'wallpapers' | 'floors'
+>;
+
+/**
+ * 방 양옆 채움 — 넓고 짧은 화면(접힌 아이폰 Duo·iPhone SE)에서 방을 가운데 좁게 그릴 때,
+ * 방 뒤에 깔아 양옆을 **같은 벽지·바닥 그림**으로 흐리게 잇는다. 벽지·바닥에 고정 색만
+ * 두면 서버 카탈로그 색이 그림과 무관한 색조라 경계가 드러난다. 띠 높이는 방 계약의
+ * 벽(위 2/3)·바닥(아래 1/3)과 같아 방 가장자리에서 수평선이 이어진다.
+ */
+export const RoomBackdrop = memo(function RoomBackdrop({
+  wallpaperId,
+  floorId,
+  wallpapers = WALLPAPERS,
+  floors = [],
+}: RoomBackdropProps) {
+  const wallpaper = wallpapers.find((w) => w.id === wallpaperId) ?? wallpapers[0];
+  const floor = floorId ? floors.find((f) => f.id === floorId) : undefined;
+  const wallColor = wallpaper?.color ?? DEFAULT_WALLPAPER_COLOR;
+  const band = (item: Wallpaper | undefined, style: ImageStyle, testID: string) =>
+    item && isCdnKey(item.assetKey) ? (
+      <Image
+        testID={testID}
+        source={assetSource(item.assetKey)}
+        style={style}
+        contentFit="cover"
+        blurRadius={BACKDROP_BLUR_RADIUS}
+        cachePolicy="memory-disk"
+      />
+    ) : item ? (
+      <View testID={testID} style={[style, { backgroundColor: item.color }]} />
+    ) : null;
+  return (
+    <View
+      testID="room-backdrop"
+      pointerEvents="none"
+      style={[StyleSheet.absoluteFill, { backgroundColor: wallColor }]}>
+      {band(wallpaper, styles.wall, 'room-backdrop-wall')}
+      {band(floor, styles.floor, 'room-backdrop-floor')}
     </View>
   );
 });

@@ -4,6 +4,8 @@ import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-han
 
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import type { AppFrame } from '@/hooks/use-app-frame';
+import { flattenStyle } from '@/test-utils/style';
+import { Spacing } from '@/constants/theme';
 
 // 웹 데스크톱 2단 (#1230 후속) — 프레임 판정만 바꿔 가며 배치를 본다.
 const PHONE: AppFrame = { width: 390, height: 844, scale: 2, fontScale: 1, framed: false, split: false }; // prettier-ignore
@@ -132,5 +134,26 @@ describe('RoomDecorScreen 2단 레이아웃 — 동작', () => {
     const ui = await render(<RoomDecorScreen loadError onRetry={jest.fn()} />);
     expect(ui.getByTestId('decor-canvas')).toBeTruthy();
     expect(ui.getByText('카탈로그를 불러오지 못했어요.')).toBeTruthy();
+  });
+});
+
+// 넓고 짧은 화면(접힌 아이폰 Duo 382×678): 캔버스가 폭을 다 쓰면 높이 420으로 가구 목록이
+// 적용하기 버튼 밑으로 숨는다. 캔버스 높이를 화면 절반(339)에 맞춰 가운데 둔다.
+describe('RoomDecorScreen 짧은 화면', () => {
+  it('짧은 화면이면 캔버스를 화면 높이 절반에 맞춰 가운데 둔다', async () => {
+    mockFrame = { ...PHONE, width: 382, height: 678 };
+    const ui = await render(<RoomDecorScreen />);
+    const canvas = flattenStyle(ui.getByTestId('decor-canvas').props.style);
+    expect(canvas.width).toBeCloseTo(339 * (5 / 6), 3);
+    expect(canvas.alignSelf).toBe('center');
+    // 미리보기 위 여백도 줄여 가구 목록 첫 줄이 적용하기 위로 올라오게.
+    const preview = flattenStyle(ui.getByTestId('decor-preview').props.style);
+    expect(preview.paddingTop).toBe(Spacing.three);
+  });
+
+  it('일반 폰은 캔버스가 폭을 다 쓴다', async () => {
+    const ui = await render(<RoomDecorScreen />);
+    expect(flattenStyle(ui.getByTestId('decor-canvas').props.style).width).toBe('100%');
+    expect(flattenStyle(ui.getByTestId('decor-preview').props.style).paddingTop).toBe(Spacing.four);
   });
 });

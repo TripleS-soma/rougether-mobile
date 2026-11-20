@@ -53,6 +53,7 @@ import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { characterIdForMember } from '@/resources/member-character';
 import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useBottomNavInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { isShortScreen } from '@/utils/short-screen';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
@@ -285,6 +286,8 @@ export const HouseScreen = memo(function HouseScreen({
   const scrollRestore = useScrollRestore(scrollRef, { getInitialScrollY, onScrollY });
   const [houseViewport, setHouseViewport] = useState({ width: 0, height: 0 });
   const [headerBottom, setHeaderBottom] = useState(0);
+  // 레벨·인원 알약 줄이 끝나는 곳(스페이서 위쪽) — 짧은 화면의 디오라마 집 맞춤 기준.
+  const [pillsBottom, setPillsBottom] = useState(0);
   // 가운데 양쪽 화살표(#1575)가 레일과 겹치지 않게 — 화면 높이와 레일 끝을 잰다.
   const [screenHeight, setScreenHeight] = useState(0);
   const [railBottom, setRailBottom] = useState(0);
@@ -300,6 +303,9 @@ export const HouseScreen = memo(function HouseScreen({
     setHouseViewport((previous) =>
       previous.width === width && previous.height === height ? previous : { width, height },
     );
+  });
+  const measurePillsBottom = useStableCallback((event: LayoutChangeEvent) => {
+    setPillsBottom(event.nativeEvent.layout.y);
   });
   const measureHeaderBottom = useStableCallback((event: LayoutChangeEvent) => {
     const { y, height } = event.nativeEvent.layout;
@@ -396,12 +402,17 @@ export const HouseScreen = memo(function HouseScreen({
   // Three portrait floors can exceed the first viewport at full screen width.
   // Reserve the measured header, floating navigation and existing frame gaps.
   // Landscape/short embedded previews retain scrolling instead of collapsing.
+  // 넓고 짧은 화면(접힌 아이폰 Duo·iPhone SE)에서는 디오라마 집도 맞춘다 — 폭을 다 쓰면
+  // 2:3 그림의 아래층이 탭 바 뒤로 잘린다. 디오라마는 알약 줄이 흐름 안에 있어 그 아래부터,
+  // 탭 바(+간격) 위까지에 넣는다. 양옆은 집 하늘 배경이 그대로 이어진다.
+  const fitShortDiorama = !!diorama && isShortScreen(houseViewport.width, houseViewport.height);
+  const frameTop = fitShortDiorama ? pillsBottom : headerBottom;
   const availableFrameHeight =
-    houseViewport.height - headerBottom - navInset - frameBottomGap - Spacing.two;
+    houseViewport.height - frameTop - navInset - frameBottomGap - Spacing.two;
   const fittedFrameWidth =
-    isThreeStorey &&
+    (isThreeStorey || fitShortDiorama) &&
     houseViewport.height > houseViewport.width &&
-    headerBottom > 0 &&
+    frameTop > 0 &&
     availableFrameHeight > 0
       ? Math.min(houseViewport.width, availableFrameHeight * frame.aspectRatio)
       : undefined;
@@ -707,7 +718,7 @@ export const HouseScreen = memo(function HouseScreen({
           />
           {/* 남는 세로를 여기서 먹어 집을 잔디에 붙인다 (#986). CoachTarget이
               flex 자식이라 안쪽 View에 auto 마진을 줘도 안 먹는다 — 명시 스페이서. */}
-          <View style={styles.skySpacer} />
+          <View style={styles.skySpacer} onLayout={measurePillsBottom} testID="house-sky-spacer" />
           <CoachTarget id="house-frame">
             <Animated.View
               testID="house-frame-viewport"
@@ -828,7 +839,11 @@ export const HouseScreen = memo(function HouseScreen({
         {diorama && navInset ? (
           <View
             testID="diorama-ground"
-            style={{ height: navInset, backgroundColor: diorama.groundColor }}
+            // 짧은 화면 맞춤은 집 아래 간격(Spacing.two)까지 땅으로 이어 칠한다 — 스크롤이 화면 끝에서 끝나게.
+            style={{
+              height: navInset + (fittedFrameWidth != null && fitShortDiorama ? Spacing.two : 0),
+              backgroundColor: diorama.groundColor,
+            }}
           />
         ) : null}
         {/* 프레임 모드에선 방이 창문 안에 그려져 이 격자가 비는데, paddingTop이
