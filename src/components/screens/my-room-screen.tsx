@@ -1460,7 +1460,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     );
 
   return (
-    <View ref={rootRef} style={[styles.screen, useScreenStyle([])]}>
+    <View ref={rootRef} style={[styles.screen, useScreenStyle([])]} testID="my-room-screen">
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
