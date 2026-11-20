@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon } from '@/components/ui/icon';
 import { Loading } from '@/components/ui/loading';
-import { pressedStyle } from '@/components/ui/press-feedback';
+import { pressedStyle, SCROLL_ROW_PRESS_DELAY_MS } from '@/components/ui/press-feedback';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -134,6 +134,8 @@ const FeedPostRow = memo(function FeedPostRow({
   return (
     <Pressable
       onPress={onOpenPost ? () => onOpenPost(post.postId) : undefined}
+      // 스크롤하려고 댄 손가락에 줄이 바로 눌림 색으로 깜빡이지 않게.
+      unstable_pressDelay={SCROLL_ROW_PRESS_DELAY_MS}
       accessibilityRole="button"
       accessibilityLabel={tr('feed.openPostA11y', { name })}
       testID={`feed-post-${post.postId}`}
