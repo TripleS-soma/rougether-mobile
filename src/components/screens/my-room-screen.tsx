@@ -30,6 +30,7 @@ import {
 } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
+import { useFrameBackdrop } from '@/components/app/frame-backdrop';
 import { NavMenuPopover } from '@/components/app/nav-menu-popover';
 import {
   canQuickAddCategory,
@@ -423,7 +424,13 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const tr = useT();
   const column = useResponsiveColumn();
   // 웹 데스크톱 2단 (#1230) — 창 ≥ 960px에서만 true.
-  const { split, width: frameWidth, height: frameHeight } = useAppFrame();
+  const {
+    split,
+    width: frameWidth,
+    height: frameHeight,
+    insetLeft = 0,
+    insetRight = 0,
+  } = useAppFrame();
   // 넓고 짧은 화면(접힌 아이폰 Duo·iPhone SE)에서는 방 높이를 화면 절반에 맞춘다 — 폭을 다
   // 쓰면 세로의 2/3를 먹어 할 일이 첫 화면 밖으로 밀린다. 2단은 칸 안 카드라 해당 없음.
   const shortHeroWidth = split
@@ -1063,6 +1070,32 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     );
   };
 
+  // 가로 안전 영역 띠(접힌 아이폰 Duo)까지 방 양옆 채움을 잇는다 — 방과 같은 높이로 깔고
+  // 스크롤을 따라 올라간다. 띠가 없는 기기에서는 만들지 않는다.
+  const [heroScrollY] = useState(() => new Animated.Value(0));
+  const stripBackdropOn =
+    tab === 'room' && shortHeroWidth !== undefined && (insetLeft > 0 || insetRight > 0);
+  const stripBackdrop = useMemo(
+    () =>
+      stripBackdropOn && shortHeroWidth !== undefined ? (
+        <Animated.View
+          testID="room-frame-backdrop"
+          style={{
+            height: shortHeroWidth / ROOM_RENDER_CONTRACT.room.aspectRatio,
+            transform: [{ translateY: Animated.multiply(heroScrollY, -1) }],
+          }}>
+          <RoomBackdrop
+            wallpaperId={wallpaperId}
+            floorId={floorId}
+            wallpapers={wallpapers}
+            floors={floors}
+          />
+        </Animated.View>
+      ) : null,
+    [stripBackdropOn, shortHeroWidth, heroScrollY, wallpaperId, floorId, wallpapers, floors],
+  );
+  useFrameBackdrop(stripBackdrop);
+
   const renderScroll = (children: ReactNode) => (
     <PawRefreshScroll
       scrollRef={scrollRef}
@@ -1088,6 +1121,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       onScroll={(e) => {
         // 빠른 추가 입력행 스크롤인용 로컬 추적 + 셸의 탭별 기억(#763).
         scrollYRef.current = e.nativeEvent.contentOffset.y;
+        if (stripBackdropOn) heroScrollY.setValue(e.nativeEvent.contentOffset.y);
         scrollRestore.onScroll?.(e);
       }}
       keyboardShouldPersistTaps="handled">

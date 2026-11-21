@@ -60,6 +60,7 @@ import { useT } from '@/i18n';
 import { type HouseAction, track } from '@/lib/analytics';
 import { assetSource } from '@/resources/asset';
 import { houseBackgroundKey } from '@/resources/house-background';
+import { useFrameBackdrop } from '@/components/app/frame-backdrop';
 import { DEFAULT_HOUSES } from '@/mocks/fixtures';
 import { VACANT_FLOOR } from '@/resources/furniture';
 import { useAnimatedValue, useConstant, useStableCallback } from '@/hooks/use-stable-value';
@@ -525,6 +526,22 @@ export const HouseScreen = memo(function HouseScreen({
 
   // 승인 대기 페이지 (#648) — 잠금형 카드. 메인 프레임 트리와 독립 렌더라
   // 카메라·좌석 로직과 얽히지 않고, 스위처 산술(totalPages)만 공유한다.
+  // 가로 안전 영역 띠(접힌 아이폰 Duo)까지 하늘·땅을 잇는다 — 아래 배경 층과 같은 색·같은 비율.
+  const screenSky = diorama?.skyColor ?? skyColor;
+  const groundColor = diorama?.groundColor;
+  const frameBackdrop = useMemo(
+    () => (
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: screenSky }]}>
+        {groundColor ? (
+          <View style={[styles.groundHalf, { backgroundColor: groundColor }]} />
+        ) : null}
+      </View>
+    ),
+    [screenSky, groundColor],
+  );
+  // 승인 대기·빈 상태 페이지는 하늘이 없는 화면색이라 등록하지 않는다.
+  useFrameBackdrop(currentHouse && !pendingHouse ? frameBackdrop : null);
+
   if (pendingHouse) {
     return (
       <PendingHousePage
@@ -629,7 +646,7 @@ export const HouseScreen = memo(function HouseScreen({
 
   return (
     <View
-      style={[styles.screen, screenStyle, { backgroundColor: diorama?.skyColor ?? skyColor }]}
+      style={[styles.screen, screenStyle, { backgroundColor: screenSky }]}
       onLayout={measureScreen}
       testID="house-screen">
       {/* 하단 탭은 AppShell의 형제라 이 absoluteFill 배경에 포함되지 않는다.
