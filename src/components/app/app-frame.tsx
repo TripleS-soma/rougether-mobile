@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { FrameBackdropProvider, useFrameBackdropHost } from '@/components/app/frame-backdrop';
 import {
   APP_FRAME_MAX_WIDTH,
   SHEET_FRAME_MAX_WIDTH,
@@ -30,6 +31,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
   // 가로 안전 영역(아이폰 Duo의 오른쪽 시스템 표시 영역 등)은 프레임이 비운다 — 화면마다
   // 따로 피하지 않게. 비운 자리는 화면색으로 이어 칠해 잘린 것처럼 보이지 않게 한다.
   const safeX = insetX(insetLeft, insetRight);
+  // 띠는 기본이 화면색이고, 지금 보이는 화면이 배경을 등록했으면(집의 하늘·방의 벽지) 그걸로 잇는다.
+  // 창 전체 크기로 깔고 내용 칸이 위를 덮는다 — 폰 컬럼 프레임에서는 양옆 여백을 덮으므로 안 그린다.
+  const backdrop = useFrameBackdropHost();
   return (
     <View
       testID="app-frame"
@@ -38,6 +42,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
         safeX ? { ...safeX, backgroundColor: t.screen } : null,
         framed ? { backgroundColor: phoneFrame ? t.appShell : t.screen } : null,
       ]}>
+      {safeX && !framed && backdrop.node != null ? (
+        <View style={StyleSheet.absoluteFill} pointerEvents="none" testID="frame-backdrop">
+          {backdrop.node}
+        </View>
+      ) : null}
       <View
         testID="app-frame-inner"
         style={[
@@ -52,7 +61,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
               ]
             : styles.innerFull,
         ]}>
-        {children}
+        <FrameBackdropProvider value={backdrop.set}>{children}</FrameBackdropProvider>
       </View>
     </View>
   );

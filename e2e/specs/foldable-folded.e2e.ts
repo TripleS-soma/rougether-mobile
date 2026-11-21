@@ -127,6 +127,42 @@ test('집 좌석 이름표의 이름이 잘리지 않는다', async ({ app, page
   }
 });
 
+// 오른쪽 시스템 표시 띠(84pt)는 화면 배경이 이어져야 한다 — 앱 기본색 띠가 서면 여백으로 보인다.
+test('집의 하늘과 땅이 시스템 표시 띠까지 이어진다', async ({ app, page }) => {
+  await app.open({ tab: 'house' });
+  await app.dismissModals();
+  await expect(page.getByTestId('house-frame')).toBeVisible();
+  const { width, height } = app.device.viewport;
+  const bg = (el: Element) => getComputedStyle(el).backgroundColor;
+  // 띠의 배경 층은 창 전체를 덮고(화면이 그 위를 가린다), 하늘색이 화면과 같다.
+  const stripSky = page.getByTestId('frame-backdrop').locator('> div');
+  await expect(stripSky).toBeVisible();
+  expect(await stableRect(stripSky)).toMatchObject({ x: 0, y: 0, width, height });
+  expect(await stripSky.evaluate(bg)).toBe(await page.getByTestId('house-screen').evaluate(bg));
+  // 땅색 띠도 화면 안의 것과 같은 색·같은 높이에서 시작한다.
+  const ground = page.getByTestId('house-background-layer').locator('> div').first();
+  const stripGround = stripSky.locator('> div');
+  expect(await stripGround.evaluate(bg)).toBe(await ground.evaluate(bg));
+  expect(await stripGround.evaluate(bg)).not.toBe(await stripSky.evaluate(bg));
+  const groundRect = await stableRect(ground);
+  const stripGroundRect = await stableRect(stripGround);
+  expect(stripGroundRect.y).toBeCloseTo(groundRect.y, 0);
+  expect(stripGroundRect.x + stripGroundRect.width).toBeCloseTo(width, 0);
+});
+
+test('방 양옆 채움이 시스템 표시 띠까지 방과 같은 높이로 이어진다', async ({ app, page }) => {
+  await app.open({ tab: 'myRoom' });
+  await app.dismissModals();
+  const hero = await stableRect(roomScreen(page).getByTestId('my-room-hero-room'));
+  const strip = page.getByTestId('frame-backdrop').getByTestId('room-frame-backdrop');
+  await expect(strip).toBeVisible();
+  const rect = await stableRect(strip);
+  expect(rect.y).toBeCloseTo(hero.y, 0);
+  expect(rect.height).toBeCloseTo(hero.height, 0);
+  // 띠 끝(창 오른쪽 끝)까지 덮는다.
+  expect(rect.x + rect.width).toBeCloseTo(app.device.viewport.width, 0);
+});
+
 test('방 꾸미기에서 가구 목록 첫 줄이 적용하기 버튼 위로 보인다', async ({ app, page }) => {
   await app.open({ tab: 'myRoom' });
   await app.dismissModals();

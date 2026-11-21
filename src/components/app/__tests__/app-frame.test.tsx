@@ -1,13 +1,15 @@
-import { render } from '@testing-library/react-native';
-import { useEffect } from 'react';
+import { render, within } from '@testing-library/react-native';
+import { useEffect, useMemo } from 'react';
 import { Platform, Text, View } from 'react-native';
 
 import { AppFrame, ModalFrame, PhoneColumn } from '@/components/app/app-frame';
+import { useFrameBackdrop } from '@/components/app/frame-backdrop';
 import {
   APP_FRAME_MAX_WIDTH,
   SHEET_FRAME_MAX_WIDTH,
   type AppFrame as AppFrameSize,
 } from '@/hooks/use-app-frame';
+import { PageActiveContext } from '@/hooks/use-page-active';
 import { flattenStyle } from '@/test-utils/style';
 
 // 프레임 판정만 바꿔 가며 컴포넌트의 렌더 동작을 본다 — 순수 계산은 use-app-frame.test.
@@ -262,5 +264,84 @@ describe('AppFrame / ModalFrame (#1227)', () => {
     );
     expect(getByText('page')).toBeTruthy();
     expect(queryByTestId('phone-column')).toBeNull();
+  });
+});
+
+// 가로 안전 영역 띠(접힌 아이폰 Duo의 오른쪽 84pt)는 지금 보이는 화면의 배경으로 잇는다 —
+// 집의 하늘·방의 벽지 옆에 앱 기본색 띠가 서면 여백으로 보인다.
+describe('AppFrame — 안전 영역 띠의 화면 배경', () => {
+  const DUO: AppFrameSize = { ...NARROW, width: 382, height: 678, insetLeft: 0, insetRight: 84 };
+  afterEach(() => {
+    mockFrame = NARROW;
+  });
+  function Sky({ on = true }: { on?: boolean }) {
+    const node = useMemo(() => <View testID="sky" />, []);
+    useFrameBackdrop(on ? node : null);
+    return <Text>house</Text>;
+  }
+
+  it('화면이 등록한 배경을 프레임 뒤(띠 자리)에 그린다', async () => {
+    mockFrame = DUO;
+    const ui = await render(
+      <AppFrame>
+        <Sky />
+      </AppFrame>,
+    );
+    expect(within(ui.getByTestId('frame-backdrop')).getByTestId('sky')).toBeTruthy();
+    // 내용 칸 밖(앞 형제)이라 화면을 가리지 않는다.
+    const outer = ui.getByTestId('app-frame');
+    expect(outer.children[0]).toBe(ui.getByTestId('frame-backdrop'));
+  });
+
+  it('등록을 풀거나 화면이 사라지면 지운다', async () => {
+    mockFrame = DUO;
+    const ui = await render(
+      <AppFrame>
+        <Sky />
+      </AppFrame>,
+    );
+    await ui.rerender(
+      <AppFrame>
+        <Sky on={false} />
+      </AppFrame>,
+    );
+    expect(ui.queryByTestId('frame-backdrop')).toBeNull();
+    await ui.rerender(
+      <AppFrame>
+        <Sky />
+      </AppFrame>,
+    );
+    expect(ui.getByTestId('sky')).toBeTruthy();
+    await ui.rerender(
+      <AppFrame>
+        <Text>other</Text>
+      </AppFrame>,
+    );
+    expect(ui.queryByTestId('frame-backdrop')).toBeNull();
+  });
+
+  it('보이지 않는 탭 페이지의 배경은 그리지 않는다', async () => {
+    mockFrame = DUO;
+    const ui = await render(
+      <AppFrame>
+        <PageActiveContext.Provider value={false}>
+          <Sky />
+        </PageActiveContext.Provider>
+      </AppFrame>,
+    );
+    expect(ui.queryByTestId('frame-backdrop')).toBeNull();
+  });
+
+  it('가로 인셋이 없거나 폰 컬럼 프레임이면 그리지 않는다', async () => {
+    for (const frame of [NARROW, { ...WIDE, insetLeft: 0, insetRight: 84 }]) {
+      mockFrame = frame;
+      const ui = await render(
+        <AppFrame>
+          <Sky />
+        </AppFrame>,
+      );
+      expect(ui.queryByTestId('frame-backdrop')).toBeNull();
+      ui.unmount();
+    }
   });
 });
