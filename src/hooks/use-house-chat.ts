@@ -658,7 +658,14 @@ export function useHouseChat({
     const sent: ChatMessageView[] = confirmed.map((m) => ({
       key: `s${m.sequence}`,
       messageId: m.messageId,
-      images: chatImagesOf(m),
+      images: chatImagesOf(m).map((image) => ({
+        ...image,
+        expiresAt:
+          image.expiresAt ??
+          (m.createdAt
+            ? new Date(Date.parse(m.createdAt) + 30 * 86400000).toISOString()
+            : undefined),
+      })),
       messageType: m.messageType,
       emoticonKey: m.emoticonKey ?? undefined,
       caption: m.caption ?? undefined,

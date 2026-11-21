@@ -88,3 +88,27 @@ it('넘겨받지 않으면 [피드에 올리기]를 그리지 않는다', async 
   expect(ui.getByTestId('chat-photo-viewer')).toBeTruthy();
   expect(ui.queryByLabelText('피드에 올리기')).toBeNull();
 });
+
+it('만료된 사진은 로딩하거나 확대하지 않고 만료 안내를 표시한다', async () => {
+  const ui = await render(<ChatPhoto imageId={1} expiresAt={new Date(0).toISOString()} />);
+  expect(ui.getByText('보관 기간이 만료된 사진')).toBeTruthy();
+  expect(fetchChatImage).not.toHaveBeenCalled();
+  expect(ui.queryByLabelText('사진 크게 보기')).toBeNull();
+});
+
+it('화면을 열어둔 채 만료되면 확대 창에서도 더 이상 표시하지 않는다', async () => {
+  jest.useFakeTimers();
+  try {
+    const until = new Date(Date.now() + 1000).toISOString();
+    const ui = await render(<ChatPhoto imageId={1} expiresAt={until} />);
+    await act(async () => {});
+    await fireEvent.press(ui.getByLabelText('사진 크게 보기'));
+    await act(async () => {
+      jest.advanceTimersByTime(1001);
+    });
+    expect(ui.getByText('보관 기간이 만료된 사진')).toBeTruthy();
+    expect(ui.queryByTestId('chat-photo-viewer')).toBeNull();
+  } finally {
+    jest.useRealTimers();
+  }
+});

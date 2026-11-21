@@ -33,7 +33,13 @@ export function singlePhotoSize(aspect: number): { width: number; height: number
     : { width: Math.round(CHAT_PHOTO_SIZE * clamped), height: CHAT_PHOTO_SIZE };
 }
 
-type Tile = { key: string; imageId?: number; local?: ChatPhotoDraft; aspect: number };
+type Tile = {
+  key: string;
+  imageId?: number;
+  local?: ChatPhotoDraft;
+  aspect: number;
+  expiresAt?: string;
+};
 
 /**
  * 메시지 하나에 담긴 사진들 — 한 장이면 비율을 살려 크게, 여러 장이면 묶음 격자로 그린다.
@@ -60,6 +66,7 @@ export function ChatPhotoGrid({
     ? images.map((image) => ({
         key: `i${image.imageId}`,
         imageId: image.imageId,
+        expiresAt: image.expiresAt,
         aspect: croppedAspect(image.width, image.height),
       }))
     : (localImages ?? []).map((local, index) => ({
@@ -72,6 +79,7 @@ export function ChatPhotoGrid({
     <ChatPhoto
       key={tile.key}
       imageId={tile.imageId}
+      expiresAt={tile.expiresAt}
       local={tile.local}
       senderName={senderName}
       sentLabel={sentLabel}
