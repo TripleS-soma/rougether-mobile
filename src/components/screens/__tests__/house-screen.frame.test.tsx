@@ -1,4 +1,4 @@
-import { act, fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render, within } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import { getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 import { type PanGesture, PointerType, State } from 'react-native-gesture-handler';
@@ -292,5 +292,41 @@ describe('HouseScreen — 짧은 화면의 디오라마 집', () => {
     const ui = await render(<HouseScreen houses={[DIORAMA_HOUSE]} />);
     const style = await layoutHouse(ui, 393, 852);
     expect(style.maxWidth).toBeUndefined();
+  });
+
+  // 맞춘 집은 방 한 칸이 87pt쯤이라(폰 145pt) 왕관·접속 점·'(나)'·'· 오래 전'까지 넣으면 이름이
+  // 'Kinse…'·'R…'로 사라진다(실기기 확인). 이름표에는 이름만 남기고 나머지는 읽기 라벨로 넘긴다.
+  const LABEL_HOUSE = {
+    ...DIORAMA_HOUSE,
+    floors: [
+      {
+        level: '1층',
+        rooms: [
+          { name: '친구', color: '#F5E1D8', membershipId: 42, lastSeenLabel: '오래 전' },
+          { name: '나', color: '#E8E0D0', isMine: true, isOwner: true, membershipId: 43 },
+        ],
+      },
+    ],
+  };
+  const meta = (ui: Awaited<ReturnType<typeof render>>, seat: number) =>
+    within(ui.getByTestId(`seat-meta-${seat}`));
+  const seatLabel = (ui: Awaited<ReturnType<typeof render>>, name: RegExp) =>
+    ui.getByRole('button', { name }).props.accessibilityLabel as string;
+
+  it('짧은 화면의 맞춘 집은 좌석 이름표에 이름만 — (나)·접속 시각은 읽기 라벨에만', async () => {
+    const ui = await render(<HouseScreen houses={[LABEL_HOUSE]} userName="Kinsey" />);
+    await layoutHouse(ui, 382, 678);
+    expect(meta(ui, 0).getByText('친구')).toBeTruthy();
+    expect(meta(ui, 0).queryByText(/오래 전/)).toBeNull();
+    expect(meta(ui, 1).getByText('Kinsey')).toBeTruthy();
+    expect(seatLabel(ui, /^친구/)).toBe('친구, 오래 전 접속');
+    expect(seatLabel(ui, /^Kinsey/)).toContain('Kinsey (나)');
+  });
+
+  it('일반 폰은 이름표에 (나)·접속 시각을 그대로 둔다', async () => {
+    const ui = await render(<HouseScreen houses={[LABEL_HOUSE]} userName="Kinsey" />);
+    await layoutHouse(ui, 393, 852);
+    expect(meta(ui, 0).getByText('· 오래 전')).toBeTruthy();
+    expect(meta(ui, 1).getByText('Kinsey (나)')).toBeTruthy();
   });
 });

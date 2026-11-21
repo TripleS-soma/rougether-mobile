@@ -416,6 +416,8 @@ export const HouseScreen = memo(function HouseScreen({
     availableFrameHeight > 0
       ? Math.min(houseViewport.width, availableFrameHeight * frame.aspectRatio)
       : undefined;
+  // 맞춘 디오라마는 방 한 칸이 좁아(접힌 Duo 87pt, 폰 145pt) 좌석 이름표에 이름만 남긴다.
+  const compactSeatMeta = fitShortDiorama && fittedFrameWidth != null;
   // 서버가 가진 coverImageKey의 테마 경로에서 전면 배경을 파생한다. 집 전환과
   // 같은 렌더에 키가 바뀌므로 별도 저장 상태 없이 항상 프레임과 맞는다.
   const backgroundKey = diorama ? undefined : houseBackgroundKey(frame.canonicalKey, scheme);
@@ -581,6 +583,7 @@ export const HouseScreen = memo(function HouseScreen({
         fill={fill}
         squareFrame={frame.kind === 'stacked'}
         dioramaSide={dioramaSide}
+        compactMeta={compactSeatMeta}
         dragging={dragSeat === seatIdx}
         zoomed={zoomed}
         preview={preview}
