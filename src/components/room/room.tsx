@@ -398,7 +398,10 @@ export const Room = memo(function Room({
           style={[styles.character, characterFrameStyle(characterScale)]}>
           {/* 대기 동작(숨쉬기·탭 반응)은 내가 만지는 방에서만 — 집 좌석처럼 여럿이 함께 보이는
               곳은 정지 그대로 둔다(2026-11-09). */}
-          <CharacterIdle pulseKey={pose} style={styles.characterFill}>
+          <CharacterIdle
+            active={characterId !== 'fox'}
+            pulseKey={pose}
+            style={styles.characterFill}>
             <CharacterAvatar
               characterId={characterId}
               frames={characterFrames}
@@ -406,6 +409,7 @@ export const Room = memo(function Room({
               pose={pose}
               // 여기서만 포즈가 넘어간다 — 다음 장을 미리 받아둘 값어치가 있다 (#970).
               prefetchFrames
+              animate
               style={styles.characterFill}
               sharp={sharp}
             />
