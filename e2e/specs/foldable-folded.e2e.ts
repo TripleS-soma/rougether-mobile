@@ -6,6 +6,8 @@
  * 시스템 영역은 기기의 안전 영역 인셋으로 주입한다(`e2e/devices.ts`의 `insets`) — 규칙 1은
  * 조작 요소가 안전 영역 밖의 띠와 겹치지 않는지를 좌표로 본다.
  */
+import { HOUSE_FIXTURES } from '../fixtures/house';
+import { MEMBER_FIXTURES } from '../fixtures/member';
 import { expect, test } from '../support/app';
 import { expectClearOf, expectInFirstScreen, stableRect } from '../support/layout';
 
@@ -86,6 +88,43 @@ test('집 그림 전체가 첫 화면에 보인다', async ({ app, page }) => {
   const rect = await stableRect(houseFrame);
   const inset = await tabBarInset(page, app.device.viewport.height);
   await expectInFirstScreen(page, rect, inset);
+});
+
+// 실기기에서 'Kinse…'·'R… · 오래 전'으로 잘렸던 이름들 — 방장·나·접속 중인 6글자 이름과
+// 마지막 접속 시각이 붙는 이름.
+const SEAT_NAMES = ['Kinsey', '준서짱짱', 'Evan', '구성원 넷'];
+
+test('집 좌석 이름표의 이름이 잘리지 않는다', async ({ app, page }) => {
+  const members = HOUSE_FIXTURES['GET /houses/:id/members'].items.map((m, i) => ({
+    ...m,
+    nickname: SEAT_NAMES[i],
+    // 두 번째 구성원은 며칠 전 접속 — 이름 뒤에 '· N일 전'이 붙는 경우.
+    lastAccessedAt: i === 1 ? '2026-11-17T03:00:00Z' : m.lastAccessedAt,
+  }));
+  await app.open({
+    tab: 'house',
+    overrides: {
+      'GET /me': { ...MEMBER_FIXTURES['GET /me'], nickname: SEAT_NAMES[0] },
+      'GET /houses/:id/members': { items: members },
+    },
+  });
+  await app.dismissModals();
+  await expect
+    .poll(() =>
+      page.getByTestId('house-frame-viewport').evaluate((el) => getComputedStyle(el).maxWidth),
+    )
+    .not.toBe('none');
+  const metas = page.locator('[data-testid^="seat-meta-"]');
+  await expect(metas).toHaveCount(SEAT_NAMES.length);
+  for (const [i, name] of SEAT_NAMES.entries()) {
+    await expect(metas.nth(i)).toContainText(name);
+    // 말줄임이 걸리면 글자의 전체 폭(scrollWidth)이 보이는 폭보다 크다.
+    const { full, shown } = await metas
+      .nth(i)
+      .getByText(name, { exact: false })
+      .evaluate((el) => ({ full: el.scrollWidth, shown: el.clientWidth }));
+    expect(full, `'${name}' 이름표 글자 폭 ${full}, 보이는 폭 ${shown}`).toBeLessThanOrEqual(shown);
+  }
 });
 
 test('방 꾸미기에서 가구 목록 첫 줄이 적용하기 버튼 위로 보인다', async ({ app, page }) => {
