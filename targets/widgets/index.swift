@@ -296,7 +296,7 @@ extension Color {
   }
 }
 
-private struct CozyPalette {
+struct CozyPalette {
   let scheme: ColorScheme
   var surface: Color { .cozy(0xFFFFFF, 0x2A2E27, scheme) }
   var text: Color { .cozy(0x4A403A, 0xF0EDE6, scheme) }
@@ -430,53 +430,189 @@ struct TodayWidget: Widget {
   }
 }
 
-// MARK: - 내 방 위젯 (small·large)
+// MARK: - 내 방 위젯 (small·medium·large) — 시안 C "방 창문" (#1633)
+
+/// 진행 바 — 오늘의 할 일 위젯과 같은 캡슐 두 겹.
+struct ProgressBar: View {
+  let done: Int
+  let total: Int
+  let track: Color
+  let fill: Color
+  var height: CGFloat = 4
+
+  var body: some View {
+    GeometryReader { geo in
+      ZStack(alignment: .leading) {
+        Capsule().fill(track)
+        Capsule()
+          .fill(fill)
+          .frame(width: total > 0 ? geo.size.width * CGFloat(done) / CGFloat(total) : 0)
+          .widgetAccentable()
+      }
+    }
+    .frame(height: height)
+  }
+}
+
+/// 연속 일수 — 🔥 이모지 대신 SF Symbol(색조 모드에서도 모양으로 읽힌다).
+struct StreakLabel: View {
+  let streak: Int
+  let color: Color
+  var size: CGFloat = 11
+
+  var body: some View {
+    HStack(spacing: 2) {
+      Image(systemName: "flame.fill").font(.system(size: size - 1, weight: .semibold))
+      Text("\(streak)").font(.system(size: size, weight: .bold)).monospacedDigit()
+    }
+    .foregroundColor(color)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel("연속 \(streak)일")
+  }
+}
+
+/// 방 캡처 — 위젯 껍데기와 같은 곡률(ContainerRelativeShape, #746). 색조 모드(iOS 18)에서는
+/// 그림을 탈색해 단색 홈 화면에 녹인다. 캡처가 없으면 빈 방 안내.
+struct RoomPicture: View {
+  let image: UIImage?
+  let t: CozyPalette
+
+  var body: some View {
+    if let image {
+      let picture = Image(uiImage: image).resizable()
+      Group {
+        if #available(iOS 18.0, *) {
+          picture.widgetAccentedRenderingMode(.desaturated)
+        } else {
+          picture
+        }
+      }
+      .scaledToFill()
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .clipped()
+      .clipShape(ContainerRelativeShape())
+      .accessibilityLabel("내 방")
+    } else {
+      VStack(spacing: 4) {
+        Image(systemName: "house.fill")
+          .font(.system(size: 26))
+          .foregroundColor(t.primary)
+          .widgetAccentable()
+        Text("루틴을 완료하고\n방을 키워보세요")
+          .font(.system(size: 11))
+          .multilineTextAlignment(.center)
+          .foregroundColor(t.textMuted)
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .background(t.track)
+    }
+  }
+}
+
+/// 다음 할 일 한 줄 — 표정 문구(걱정·미접속·다 함)가 있으면 그게 우선이다.
+private func nextLine(_ s: WidgetSummary, _ mood: WidgetMood) -> String {
+  if s.total == 0 { return "오늘 예정이 없어요" }
+  if s.remaining.isEmpty { return mood.message ?? "모두 완료했어요!" }
+  if let message = mood.message, mood.face != .worried { return message }
+  return "다음 · \(s.remaining[0])"
+}
+
+/// 방 위에 얹는 반투명 판 — 진행·연속·다음 할 일·진행 바.
+struct RoomGlass: View {
+  let s: WidgetSummary
+  let mood: WidgetMood
+  let t: CozyPalette
+  var large = false
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: large ? 4 : 2) {
+      HStack(spacing: 6) {
+        FaceView(face: mood.face, size: large ? 20 : 16)
+        Text("\(s.done)/\(s.total)")
+          .font(.system(size: large ? 15 : 13, weight: .bold))
+          .monospacedDigit()
+          .foregroundColor(t.primaryText)
+          .widgetAccentable()
+        Spacer(minLength: 0)
+        if s.streak > 0 { StreakLabel(streak: s.streak, color: t.warningText, size: large ? 13 : 11) }
+      }
+      Text(nextLine(s, mood))
+        .font(.system(size: large ? 13 : 11.5, weight: .medium))
+        .foregroundColor(mood.face.isConcerned || s.remaining.isEmpty ? t.moodText(mood.face) : t.text)
+        .lineLimit(1)
+        .truncationMode(.tail)
+      ProgressBar(done: s.done, total: s.total, track: t.track, fill: t.primary)
+        .padding(.top, 2)
+    }
+    .padding(.horizontal, 10)
+    .padding(.vertical, 7)
+    .background(
+      RoundedRectangle(cornerRadius: 14, style: .continuous).fill(t.surface.opacity(0.9))
+    )
+  }
+}
 
 struct RoomWidgetView: View {
   var entry: SummaryEntry
   @Environment(\.colorScheme) private var systemScheme
+  @Environment(\.widgetFamily) private var family
   /// 앱이 기록한 실효 스킴 우선, 없으면 시스템 (#746).
   private var scheme: ColorScheme { entry.theme ?? systemScheme }
 
   var body: some View {
     let t = CozyPalette(scheme: scheme)
     let s = entry.summary
-    ZStack(alignment: .bottom) {
-      if let image = entry.roomImage {
-        // 위젯 껍데기와 같은 곡률로 깎는다 (#746) — ContainerRelativeShape은
-        // 시스템이 정한 위젯 모서리 반경을 그대로 따라가므로, 기기·OS마다
-        // 다른 반경에서도 이미지와 껍데기의 둥근 느낌이 어긋나지 않는다.
-        // (고정 cornerRadius로는 기기마다 미묘하게 달라진다.)
-        Image(uiImage: image)
-          .resizable()
-          .scaledToFill()
-          .clipped()
-          .clipShape(ContainerRelativeShape())
+    Group {
+      if family == .systemMedium {
+        HStack(spacing: 14) {
+          RoomPicture(image: entry.roomImage, t: t)
+            .aspectRatio(1, contentMode: .fit)
+          VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+              Text("\(s.done)")
+                .font(.system(size: 28, weight: .heavy))
+                .monospacedDigit()
+                .foregroundColor(t.text)
+                .widgetAccentable()
+              Text("/\(s.total)")
+                .font(.system(size: 15, weight: .semibold))
+                .monospacedDigit()
+                .foregroundColor(t.textMuted)
+              Spacer(minLength: 0)
+              if s.streak > 0 { StreakLabel(streak: s.streak, color: t.warningText, size: 12) }
+            }
+            ProgressBar(done: s.done, total: s.total, track: t.track, fill: t.primary, height: 6)
+            if s.total == 0 || s.remaining.isEmpty || (entry.mood.message != nil && entry.mood.face != .worried) {
+              Text(nextLine(s, entry.mood))
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(t.moodText(entry.mood.face))
+                .lineLimit(2)
+                .padding(.top, 2)
+            } else {
+              ForEach(s.remaining.prefix(3), id: \.self) { title in
+                HStack(spacing: 6) {
+                  Image(systemName: "circle")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(t.textMuted)
+                  Text(title)
+                    .font(.system(size: 12.5))
+                    .foregroundColor(t.text)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                }
+              }
+            }
+            Spacer(minLength: 0)
+          }
+          .padding(.vertical, 4)
+        }
       } else {
-        VStack(spacing: 4) {
-          Text("🏡").font(.system(size: 34))
-          Text("루틴을 완료하고\n방을 키워보세요")
-            .font(.system(size: 11))
-            .multilineTextAlignment(.center)
-            .foregroundColor(t.textMuted)
+        ZStack(alignment: .bottom) {
+          RoomPicture(image: entry.roomImage, t: t)
+          RoomGlass(s: s, mood: entry.mood, t: t, large: family == .systemLarge)
+            .padding(family == .systemLarge ? 12 : 8)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
-      HStack(spacing: 6) {
-        FaceView(face: entry.mood.face, size: 16)
-        Text("\(s.done)/\(s.total)")
-          .font(.system(size: 12, weight: .bold))
-          .foregroundColor(.white)
-        if s.streak > 0 {
-          Text("🔥\(s.streak)")
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundColor(.white)
-        }
-        Spacer()
-      }
-      .padding(.horizontal, 10)
-      .padding(.vertical, 6)
-      .background(Color.black.opacity(0.35))
     }
     .containerBackground(t.surface, for: .widget)
   }
@@ -489,8 +625,60 @@ struct RoomWidget: Widget {
         .widgetURL(widgetOpenURL)
     }
     .configurationDisplayName("내 방")
-    .description("루틴으로 키운 내 방을 홈 화면에서 봐요.")
-    .supportedFamilies([.systemSmall, .systemLarge])
+    .description("루틴으로 키운 내 방과 오늘 할 일을 홈 화면에서 봐요.")
+    .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+    // 방 캡처가 껍데기 끝까지 닿게 — 판은 안쪽 패딩으로 띄운다.
+    .contentMarginsDisabled()
+  }
+}
+
+// MARK: - 잠금 화면 위젯 (#1633) — 원형 진행 링·직사각형 다음 할 일·인라인
+
+struct ProgressAccessoryView: View {
+  var entry: SummaryEntry
+  @Environment(\.widgetFamily) private var family
+
+  var body: some View {
+    let s = entry.summary
+    Group {
+      switch family {
+      case .accessoryCircular:
+        Gauge(value: Double(s.done), in: 0...Double(max(s.total, 1))) {
+          Image(systemName: "checkmark")
+        } currentValueLabel: {
+          Text("\(s.done)/\(s.total)").monospacedDigit()
+        }
+        .gaugeStyle(.accessoryCircularCapacity)
+        .accessibilityLabel("오늘 루틴 \(s.total)개 중 \(s.done)개 완료")
+      case .accessoryInline:
+        Text("루게더 \(s.done)/\(s.total)\(s.streak > 0 ? " · 연속 \(s.streak)일" : "")")
+      default:
+        VStack(alignment: .leading, spacing: 1) {
+          HStack(spacing: 4) {
+            Image(systemName: "checkmark.circle.fill")
+            Text("루게더 \(s.done)/\(s.total)").font(.headline).monospacedDigit()
+          }
+          Text(nextLine(s, entry.mood)).lineLimit(1)
+          if s.streak > 0 {
+            Text("연속 \(s.streak)일").font(.caption).foregroundStyle(.secondary)
+          }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+    }
+    .containerBackground(.clear, for: .widget)
+  }
+}
+
+struct ProgressAccessoryWidget: Widget {
+  var body: some WidgetConfiguration {
+    StaticConfiguration(kind: "RougetherProgress", provider: SummaryProvider()) { entry in
+      ProgressAccessoryView(entry: entry)
+        .widgetURL(widgetOpenURL)
+    }
+    .configurationDisplayName("오늘 진행")
+    .description("잠금 화면에서 오늘 루틴 진행과 다음 할 일을 봐요.")
+    .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline])
   }
 }
 
@@ -501,5 +689,6 @@ struct RougetherWidgets: WidgetBundle {
   var body: some Widget {
     TodayWidget()
     RoomWidget()
+    ProgressAccessoryWidget()
   }
 }
