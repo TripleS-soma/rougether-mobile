@@ -1,10 +1,16 @@
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
-import { getAccessToken, getSessionUserId, refreshSession } from '@/api/auth';
+import { getAccessToken, getSessionUserId, onSessionCleared, refreshSession } from '@/api/auth';
 import { apiDelete, apiUpload } from '@/api/client';
 import { inChatSession } from '@/api/chat-session';
 import { API_BASE } from '@/api/config';
 import type { ChatCrop, ChatImageResponse } from '@/api/chat-types';
+import {
+  clearChatImageFiles,
+  loadChatImageFile,
+  removeChatImageFile,
+  sweepChatImageFiles,
+} from '@/lib/chat-image-files';
 import type { PickedLibraryImageWithSize } from '@/lib/pick-image';
 
 /**
@@ -47,23 +53,89 @@ export function cancelChatImage(imageId: number) {
   );
 }
 
-/** 비공개 사진은 매 열람 시 권한을 확인한다. URL에 토큰을 넣거나 디스크/전역 캐시에 저장하지 않는다. */
-export async function fetchChatImage(imageId: number): Promise<string | null> {
+// Logout invalidates in-flight reads even if the next login is the same account.
+let cacheSession = 0;
+onSessionCleared(() => {
+  cacheSession += 1;
+  void clearChatImageFiles().catch(() => {});
+});
+AppState.addEventListener('change', (state) => {
   const userId = getSessionUserId();
-  const token = getAccessToken();
-  if (!token || userId == null) return null;
-  const get = (accessToken: string) =>
-    fetch(`${API_BASE}/chat/images/${imageId}`, {
+  if (state === 'active' && userId != null) void sweepChatImageFiles(userId).catch(() => {});
+});
+const pending = new Map<string, Promise<string | null>>();
+
+/** Reauthorize cached photos without transferring their bytes again. */
+export function fetchChatImage(imageId: number): Promise<string | null> {
+  const userId = getSessionUserId();
+  if (!getAccessToken() || userId == null) return Promise.resolve(null);
+  const epoch = cacheSession;
+  const key = `${userId}:${epoch}:${imageId}`;
+  const existing = pending.get(key);
+  if (existing) return existing;
+  const request = readChatImage(userId, imageId, epoch).finally(() => pending.delete(key));
+  pending.set(key, request);
+  return request;
+}
+
+async function readChatImage(
+  userId: number,
+  imageId: number,
+  epoch: number,
+): Promise<string | null> {
+  const assertCurrent = () => {
+    if (cacheSession !== epoch || getSessionUserId() !== userId || !getAccessToken())
+      throw new Error('Chat session changed');
+  };
+  const get = (accessToken: string, metadata: boolean) =>
+    fetch(`${API_BASE}/chat/images/${imageId}${metadata ? '/metadata' : ''}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: 'no-store',
     });
-  let response = await get(token);
-  if (response.status === 401 && getSessionUserId() === userId && (await refreshSession())) {
-    const next = getAccessToken();
-    if (!next || getSessionUserId() !== userId) return null;
-    response = await get(next);
+  let token = getAccessToken();
+  if (!token) return null;
+  let response = await get(token, true);
+  assertCurrent();
+  if (response.status === 401 && (await refreshSession())) {
+    assertCurrent();
+    token = getAccessToken();
+    if (!token) return null;
+    response = await get(token, true);
   }
-  if (!response.ok || getSessionUserId() !== userId) return null;
+  assertCurrent();
+  if (!response.ok) {
+    if ([401, 403, 404].includes(response.status)) await removeChatImageFile(userId, imageId);
+    return null;
+  }
+  const metadata = (await response.json()) as ChatImageResponse;
+  assertCurrent();
+  if (
+    !metadata.expiresAt ||
+    !Number.isFinite(Date.parse(metadata.expiresAt)) ||
+    Date.parse(metadata.expiresAt) <= Date.now()
+  ) {
+    await removeChatImageFile(userId, imageId);
+    return null;
+  }
+  const url = `${API_BASE}/chat/images/${imageId}`;
+  token = getAccessToken();
+  if (!token) return null;
+  if (Platform.OS !== 'web') {
+    const file = await loadChatImageFile(
+      userId,
+      imageId,
+      metadata.expiresAt,
+      url,
+      token,
+      assertCurrent,
+    );
+    assertCurrent();
+    return file;
+  }
+  // Browsers keep private bytes in memory only; native uses a file URI without base64 conversion.
+  response = await get(token, false);
+  assertCurrent();
+  if (!response.ok) return null;
   const blob = await response.blob();
   const uri = await new Promise<string | null>((resolve) => {
     const reader = new FileReader();
@@ -71,5 +143,6 @@ export async function fetchChatImage(imageId: number): Promise<string | null> {
     reader.onloadend = () => resolve(typeof reader.result === 'string' ? reader.result : null);
     reader.readAsDataURL(blob);
   });
-  return getSessionUserId() === userId ? uri : null;
+  assertCurrent();
+  return Date.now() < Date.parse(metadata.expiresAt) ? uri : null;
 }

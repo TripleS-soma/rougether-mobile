@@ -6,6 +6,8 @@ export type ChatImageResponse = {
   width: number;
   height: number;
   contentType?: string;
+  /** Sent photos expire 30 days after the message was sent. */
+  expiresAt?: string;
 };
 
 /** 메시지 공감 유형 — 서버 `ChatReactionType`과 같은 순서. */
