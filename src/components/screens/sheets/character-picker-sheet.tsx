@@ -1,29 +1,14 @@
-import { Image } from 'expo-image';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { CharacterAvatar } from '@/components/room/character-avatar';
+import { OwnedCharacterGrid, type OwnedCharacter } from '@/components/member/owned-character-grid';
 import { BottomSheet, SheetDragExclude } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
-import { CHARACTER_OPTIONS, type CharacterId } from '@/constants/characters';
 import { Radius, Spacing } from '@/constants/theme';
-import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
-import { assetSource, isCdnKey } from '@/resources/asset';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
 import { pressedStyle } from '@/components/ui/press-feedback';
 
-/** One owned character (server GET /me/characters). */
-export type OwnedCharacter = {
-  /** Server character id — the PUT /me/characters/select payload. */
-  serverId: number;
-  id: CharacterId;
-  name: string;
-  /** CDN art key (baseAssetKey); local sprite fallback when absent/invalid. */
-  assetKey?: string;
-  /** 탭 순환 프레임 (#735) — 서버 poses[] 순서, 없으면 레거시 animations에서. */
-  frames?: string[];
-  /** Currently worn (exactly one per account). */
-  selected: boolean;
-};
+export type { OwnedCharacter } from '@/components/member/owned-character-grid';
 
 export type CharacterPickerSheetProps = {
   visible: boolean;
@@ -36,8 +21,8 @@ export type CharacterPickerSheetProps = {
 
 /**
  * "캐릭터 교체" bottom sheet: the owned-character grid from GET /me/characters.
- * Tapping an unworn character calls onSelect (PUT …/select) and closes; new
- * Characters include server-awarded room growth rewards.
+ * Tapping an unworn character calls onSelect (PUT …/select) and closes.
+ * The app opens the full-screen chooser from profile edit; this sheet remains for existing previews.
  */
 export function CharacterPickerSheet({
   visible,
@@ -48,7 +33,6 @@ export function CharacterPickerSheet({
   const t = useTokens();
   const tr = useT();
   const Typography = useTypography();
-  const emph = useFontEmphasis();
   return (
     <BottomSheet
       visible={visible}
@@ -69,73 +53,20 @@ export function CharacterPickerSheet({
         </Pressable>
       </View>
 
-      {/* 세로 스크롤 본문 — 시트 끌어내리기에서 제외 (#1132). 닫기는 손잡이·헤더에서. */}
       <SheetDragExclude>
         <ScrollView contentContainerStyle={styles.body}>
-          {characters.length === 0 ? (
-            <Text style={[Typography.supporting, styles.empty, { color: t.textMuted }]}>
-              {tr('app.characterPicker.empty')}
-            </Text>
-          ) : (
-            <View style={styles.grid}>
-              {characters.map((c) => {
-                const meta = CHARACTER_OPTIONS.find((o) => o.id === c.id);
-                return (
-                  <Pressable
-                    key={c.serverId}
-                    onPress={() => {
-                      if (!c.selected) onSelect(c.serverId);
-                      onClose();
-                    }}
-                    accessibilityRole="button"
-                    // The avatar art inside already carries the bare name label.
-                    accessibilityLabel={tr('app.characterPicker.wearA11y', { name: c.name })}
-                    accessibilityState={{ selected: c.selected }}
-                    style={({ pressed }) => [
-                      styles.cell,
-                      {
-                        backgroundColor: t.surface,
-                        borderColor: c.selected ? t.primary : 'transparent',
-                      },
-                      pressed && pressedStyle('card', t),
-                    ]}>
-                    <View style={[styles.avatar, { backgroundColor: meta?.bg ?? t.surfaceMuted }]}>
-                      {/* Server CDN art first; the bundled sprite is the fallback. */}
-                      {isCdnKey(c.assetKey) ? (
-                        <Image
-                          source={assetSource(c.assetKey)}
-                          style={styles.cdnArt}
-                          contentFit="contain"
-                          cachePolicy="memory-disk"
-                          accessibilityLabel={c.name}
-                          testID="cdn-art"
-                        />
-                      ) : (
-                        <CharacterAvatar characterId={c.id} size={56} />
-                      )}
-                    </View>
-                    <Text style={[Typography.label, { color: t.text }]}>{c.name}</Text>
-                    {/* 이름과 착용 표시만 — 종마다 붙던 한 줄 소개는 뺐다(11/9). */}
-                    {c.selected ? (
-                      <View style={[styles.badge, { backgroundColor: t.primary }]}>
-                        <Icon name="check" size={10} color={t.onPrimary} />
-                        <Text
-                          style={[Typography.caption, emph('semibold'), { color: t.onPrimary }]}>
-                          {tr('app.characterPicker.wearing')}
-                        </Text>
-                      </View>
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
+          <OwnedCharacterGrid
+            characters={characters}
+            onSelect={(id) => {
+              if (!characters.find((c) => c.serverId === id)?.selected) onSelect(id);
+              onClose();
+            }}
+          />
         </ScrollView>
       </SheetDragExclude>
     </BottomSheet>
   );
 }
-
 const styles = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: Radius.lg,
@@ -159,46 +90,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  body: {
-    padding: Spacing.four,
-  },
-  empty: {
-    textAlign: 'center',
-    paddingVertical: Spacing.four,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
-  },
-  cell: {
-    width: '48%',
-    flexGrow: 1,
-    alignItems: 'center',
-    gap: Spacing.one,
-    borderRadius: Radius.lg,
-    borderCurve: 'continuous',
-    borderWidth: 2,
-    padding: Spacing.three,
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: Radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  cdnArt: {
-    width: 56,
-    height: 56,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.half,
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.half,
-  },
+  body: { padding: Spacing.four },
 });
