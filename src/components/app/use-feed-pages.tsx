@@ -32,6 +32,7 @@ import { useFeed } from '@/hooks/use-feed';
 import { useFeedAuthorHouses } from '@/hooks/use-feed-author-houses';
 import { useFeedCompose } from '@/hooks/use-feed-compose';
 import { useFeedPost, useFeedReplies } from '@/hooks/use-feed-post';
+import { useAppFrame } from '@/hooks/use-app-frame';
 import { useModeration } from '@/hooks/use-moderation';
 import { useRecentRoutineCompletions } from '@/hooks/use-recent-routine-completions';
 import { useLatestRef } from '@/hooks/use-stable-value';
@@ -99,18 +100,36 @@ export function useFeedPages({
 
   // 상세는 연 글 id를 기억한다 — 떠나는 전환(#1094) 동안에도 같은 글을 그리게 비우지 않는다.
   const [postId, setPostId] = useState<number | null>(null);
+  // 2단(펼친 폴더블·태블릿·데스크톱 웹)에서는 상세가 서브화면이 아니라 피드 탭의 오른쪽 칸이다 —
+  // 글을 고르면 화면을 넘기지 않고 그 칸에 연다. 알림에서 연 글도 피드 탭의 오른쪽 칸으로 간다.
+  const { split } = useAppFrame();
+  const splitRef = useLatestRef(split);
   const openPost = useCallback(
     (id: number) => {
       setPostId(id);
-      setScreen('feedPost');
+      setScreen(splitRef.current ? 'feed' : 'feedPost');
     },
-    [setScreen],
+    [setScreen, splitRef],
   );
+  const inPane = FEED_ENABLED && split && screen === 'feed';
+  /** 상세가 보이는 중 — 서브화면이거나, 2단의 오른쪽 칸에 글이 열려 있다. */
+  const detailActive = screen === 'feedPost' || (inPane && postId != null);
+  const detailActiveRef = useLatestRef(detailActive);
+  // 보던 글에서 나온다(삭제·차단·사라진 글) — 한 칸은 피드로 돌아가고, 2단은 칸을 비워
+  // 아래 효과가 목록의 다른 글을 고르게 한다. 방금 나온 글은 다시 고르지 않는다.
+  const leftPostRef = useRef<number | null>(null);
+  const leaveDetail = useCallback(() => {
+    if (!splitRef.current) return setScreen('feed');
+    setPostId((cur) => {
+      leftPostRef.current = cur;
+      return null;
+    });
+  }, [setScreen, splitRef]);
   const detail = useFeedPost(FEED_ENABLED ? postId : null, { onError: showError });
   const [housePickerOpen, setHousePickerOpen] = useState(false);
   const authorHouses = useFeedAuthorHouses(
     postId,
-    FEED_ENABLED && screen === 'feedPost' && housePickerOpen,
+    FEED_ENABLED && detailActive && housePickerOpen,
     showError,
   );
   useEffect(() => {
@@ -118,7 +137,7 @@ export function useFeedPages({
   }, [screen, postId]);
   const openAuthorHouses = useCallback(() => setHousePickerOpen(true), []);
   const closeAuthorHouses = useCallback(() => setHousePickerOpen(false), []);
-  const houseContextRef = useLatestRef({ screen, postId, onOpenHouse });
+  const houseContextRef = useLatestRef({ postId, onOpenHouse });
   const openSelectedHouse = useCallback(
     (houseId: number) => {
       setHousePickerOpen(false);
@@ -131,12 +150,7 @@ export function useFeedPages({
     async (houseId: number) => {
       const origin = postId;
       const result = await joinAuthorHouse(houseId);
-      if (
-        !result ||
-        houseContextRef.current.screen !== 'feedPost' ||
-        houseContextRef.current.postId !== origin
-      )
-        return;
+      if (!result || !detailActiveRef.current || houseContextRef.current.postId !== origin) return;
       setHousePickerOpen(false);
       if (result === 'PENDING') toast(i18n.t('feed.house.requested'), 'success');
       else {
@@ -144,15 +158,15 @@ export function useFeedPages({
         houseContextRef.current.onOpenHouse?.(houseId);
       }
     },
-    [houseContextRef, joinAuthorHouse, postId, toast],
+    [houseContextRef, detailActiveRef, joinAuthorHouse, postId, toast],
   );
 
   // 알림에서 연 글이 이미 지워졌으면 안내 후 피드로 (spec: 삭제 안내 후 피드로 돌아간다).
   useEffect(() => {
-    if (screen !== 'feedPost' || !detail.notFound) return;
+    if (!detailActive || !detail.notFound) return;
     toast(i18n.t('feed.toast.postGone'));
-    setScreen('feed');
-  }, [screen, detail.notFound, toast, setScreen]);
+    leaveDetail();
+  }, [detailActive, detail.notFound, toast, leaveDetail]);
 
   const compose = useFeedCompose({ onError: showError });
   // 올릴 곳 (집 피드) — 기본 전체 공개, 내 집 중 하나를 고르면 그 집 구성원만 보는 집 글.
@@ -211,13 +225,13 @@ export function useFeedPages({
   // 최근 7일 /calendar를 받는다. 다른 화면으로 가면 수정 창 상태도 접는다.
   const [editOpen, setEditOpen] = useState(false);
   useEffect(() => {
-    if (screen !== 'feedPost') setEditOpen(false);
-  }, [screen]);
+    if (!detailActive) setEditOpen(false);
+  }, [detailActive]);
   const routinePicker = useRecentRoutineCompletions({
     enabled:
       FEED_ENABLED &&
       ((screen === 'feedCompose' && compose.board === 'VERIFICATION') ||
-        (screen === 'feedPost' && editOpen)),
+        (detailActive && editOpen)),
   });
 
   const imageCountRef = useLatestRef(compose.images.length);
@@ -252,9 +266,9 @@ export function useFeedPages({
     async (id: number) => {
       if (!(await deletePost(id))) return;
       toast(i18n.t('feed.toast.deleted'));
-      setScreen('feed');
+      leaveDetail();
     },
-    [deletePost, toast, setScreen],
+    [deletePost, toast, leaveDetail],
   );
 
   const toggleLike = feed.toggleLike;
@@ -289,10 +303,17 @@ export function useFeedPages({
     async (userId: number, via: 'post' | 'comment') => {
       if (!(await block(userId, via))) return;
       toast(i18n.t('member.moderation.toast.blocked'), 'success');
-      if (detailAuthorRef.current === userId) setScreen('feed');
+      if (detailAuthorRef.current === userId) leaveDetail();
     },
-    [block, toast, detailAuthorRef, setScreen],
+    [block, toast, detailAuthorRef, leaveDetail],
   );
+
+  // 2단의 오른쪽 칸이 비어 있으면 목록의 첫 글을 고른다(방금 나온 글은 건너뛴다).
+  const firstPostId = feed.posts.find((p) => p.postId !== leftPostRef.current)?.postId;
+  useEffect(() => {
+    if (inPane && postId == null && firstPostId != null) setPostId(firstPostId);
+  }, [inPane, postId, firstPostId]);
+  const selectedPostId = inPane ? (postId ?? undefined) : undefined;
 
   /** 탭 페이저의 피드 페이지 prop — 참조 고정(#539). */
   const tabProps: FeedScreenProps = useMemo(
@@ -310,8 +331,9 @@ export function useFeedPages({
       onOpenPost: openPost,
       onCompose: openCompose,
       loadImage: fetchFeedImage,
+      selectedPostId,
     }),
-    [board, feed, openPost, openCompose],
+    [board, feed, openPost, openCompose, selectedPostId],
   );
 
   const renderReplies = useCallback<FeedRepliesRenderer>(
@@ -325,51 +347,55 @@ export function useFeedPages({
 
   // 알림함 카드·푸시 탭·인앱 배너의 FEED_COMMENT(refId·FCM postId = 게시물 id)는 셸이
   // notification-destination 표를 거쳐 openPost로 잇는다 (#1409).
+  /** 글 상세 한 벌 — 한 칸에서는 서브화면(뒤로 있음), 2단에서는 오른쪽 칸(뒤로 없음). */
+  const renderDetail = (onBack?: () => void) => (
+    <>
+      <FeedPostScreen
+        key={postId}
+        // 집 글에는 입주 신청 경로가 없다(서버 404) — 댓글 알림으로 집 글을 열어도 숨긴다.
+        onOpenAuthorHouses={detail.post?.houseId != null ? undefined : openAuthorHouses}
+        renderReplies={renderReplies}
+        commentsRefreshing={detail.commentsRefreshing}
+        post={detail.post}
+        loading={detail.loading}
+        loadError={detail.error}
+        notFound={detail.notFound}
+        onRetry={detail.retry}
+        comments={detail.comments}
+        commentsLoading={detail.commentsLoading}
+        commentsError={detail.commentsError}
+        hasMoreComments={detail.hasMoreComments}
+        onLoadMoreComments={detail.loadMoreComments}
+        onAddComment={detail.addComment}
+        onDeleteComment={handleDeleteComment}
+        onToggleLike={handleToggleLike}
+        onDeletePost={(id) => void handleDeletePost(id)}
+        onEditPost={detail.editPost}
+        onEditOpenChange={setEditOpen}
+        routinePicker={routinePicker}
+        onReportPost={handleReportPost}
+        onReportComment={handleReportComment}
+        onBlockUser={(userId, via) => void handleBlockUser(userId, via)}
+        onChallenge={openGame}
+        onBack={onBack}
+        loadImage={fetchFeedImage}
+      />
+      <FeedAuthorHouseSheet
+        visible={housePickerOpen}
+        houses={authorHouses.houses}
+        loading={authorHouses.loading}
+        error={authorHouses.error}
+        joiningId={authorHouses.joiningId}
+        onRetry={authorHouses.refresh}
+        onClose={closeAuthorHouses}
+        onJoin={(houseId) => void handleJoinAuthorHouse(houseId)}
+        onOpenHouse={openSelectedHouse}
+      />
+    </>
+  );
   const subScreen =
     screen === 'feedPost' ? (
-      <>
-        <FeedPostScreen
-          key={postId}
-          // 집 글에는 입주 신청 경로가 없다(서버 404) — 댓글 알림으로 집 글을 열어도 숨긴다.
-          onOpenAuthorHouses={detail.post?.houseId != null ? undefined : openAuthorHouses}
-          renderReplies={renderReplies}
-          commentsRefreshing={detail.commentsRefreshing}
-          post={detail.post}
-          loading={detail.loading}
-          loadError={detail.error}
-          notFound={detail.notFound}
-          onRetry={detail.retry}
-          comments={detail.comments}
-          commentsLoading={detail.commentsLoading}
-          commentsError={detail.commentsError}
-          hasMoreComments={detail.hasMoreComments}
-          onLoadMoreComments={detail.loadMoreComments}
-          onAddComment={detail.addComment}
-          onDeleteComment={handleDeleteComment}
-          onToggleLike={handleToggleLike}
-          onDeletePost={(id) => void handleDeletePost(id)}
-          onEditPost={detail.editPost}
-          onEditOpenChange={setEditOpen}
-          routinePicker={routinePicker}
-          onReportPost={handleReportPost}
-          onReportComment={handleReportComment}
-          onBlockUser={(userId, via) => void handleBlockUser(userId, via)}
-          onChallenge={openGame}
-          onBack={goBack}
-          loadImage={fetchFeedImage}
-        />
-        <FeedAuthorHouseSheet
-          visible={housePickerOpen}
-          houses={authorHouses.houses}
-          loading={authorHouses.loading}
-          error={authorHouses.error}
-          joiningId={authorHouses.joiningId}
-          onRetry={authorHouses.refresh}
-          onClose={closeAuthorHouses}
-          onJoin={(houseId) => void handleJoinAuthorHouse(houseId)}
-          onOpenHouse={openSelectedHouse}
-        />
-      </>
+      renderDetail(goBack)
     ) : screen === 'feedCompose' ? (
       <FeedComposeScreen
         board={compose.board}
@@ -392,5 +418,8 @@ export function useFeedPages({
       />
     ) : null;
 
-  return { tabProps, subScreen, openPost, shareRecord, sharePhoto };
+  /** 2단 피드 탭의 오른쪽 칸 — 고른 글이 없으면 null(셸의 `FeedSplit`이 안내를 그린다). */
+  const detailPane = inPane && postId != null ? renderDetail() : null;
+
+  return { tabProps, subScreen, detailPane, openPost, shareRecord, sharePhoto };
 }
