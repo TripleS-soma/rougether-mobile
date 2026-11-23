@@ -239,3 +239,37 @@ test('규칙 4: 내 정보 탭은 [프로필·지표·바로가기 | 메뉴·설
   expect(header.y, `제목 시작 y ${header.y.toFixed(1)}`).toBeLessThan(insets.top / 2);
   await expectNoHorizontalScroll(page);
 });
+
+test('내 정보의 설정은 화면을 넘기지 않고 오른쪽 칸에 열린다 — 뒤로 가면 메뉴로 돌아온다', async ({
+  app,
+  page,
+}) => {
+  await app.open({ tab: 'myPage' });
+  await app.dismissModals();
+  const left = page.getByTestId('my-page-main-pane');
+  const pane = page.getByTestId('split-detail-pane');
+  await page.getByTestId('my-page-menu-pane').getByRole('button', { name: '설정' }).click();
+  // 왼쪽 칸(프로필)과 세로 탭 줄은 그대로, 오른쪽 칸에 설정 화면.
+  await expect(pane.getByText('다크 모드')).toBeVisible();
+  await expect(left.getByTestId('my-page-profile-card')).toBeVisible();
+  await expect(page.getByTestId('nav-rail')).toBeVisible();
+  const { viewport, insets } = app.device;
+  await expectFillsWidth(
+    page,
+    [page.getByTestId('nav-rail'), left, pane],
+    viewport.width - insets.left - insets.right,
+  );
+  // 칸 안의 조작 요소(뒤로 버튼 포함)는 모서리의 시스템 표시와 겹치지 않는다.
+  const back = pane.getByRole('button', { name: '뒤로 가기', exact: true });
+  await expectClearOf(back, app.device.obstructions);
+  // 설정 안의 하위 화면도 같은 칸에서 열리고, 뒤로 가면 한 단계씩 돌아온다.
+  await pane.getByText('테마 색상').click();
+  await expect(pane.getByText('테마 색상').first()).toBeVisible();
+  await expect(left.getByTestId('my-page-profile-card')).toBeVisible();
+  await pane.getByRole('button', { name: '뒤로 가기', exact: true }).click();
+  await expect(pane.getByText('다크 모드')).toBeVisible();
+  await pane.getByRole('button', { name: '뒤로 가기', exact: true }).click();
+  await expect(pane).toHaveCount(0);
+  await expect(page.getByTestId('my-page-menu-pane').getByText('도움말')).toBeVisible();
+  await expectNoHorizontalScroll(page);
+});
