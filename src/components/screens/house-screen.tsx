@@ -63,6 +63,7 @@ import { houseBackgroundKey } from '@/resources/house-background';
 import { useFrameBackdrop } from '@/components/app/frame-backdrop';
 import { HouseSidePanel } from '@/components/screens/house/house-side-panel';
 import { APP_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
+import { useSplitLeftTopInset } from '@/hooks/use-split-pane-insets';
 import { DEFAULT_HOUSES } from '@/mocks/fixtures';
 import { VACANT_FLOOR } from '@/resources/furniture';
 import { useAnimatedValue, useConstant, useStableCallback } from '@/hooks/use-stable-value';
@@ -253,9 +254,10 @@ export const HouseScreen = memo(function HouseScreen({
   const splitFill = split && !!appFrame.splitFill;
   // 창을 다 쓰는 2단의 왼쪽 칸은 위 안전 영역을 비우지 않는다 — 펼친 아이폰 Duo의 시스템 표시는
   // 오른쪽 위 모서리에만 있는데 인셋은 위쪽 전체 폭으로 온다. 오른쪽 칸은 인셋을 지킨다.
+  const leftTopInset = useSplitLeftTopInset(0);
   const skyInset = useMemo(
-    () => (splitFill ? { paddingTop: Spacing.three } : headerInset),
-    [splitFill, headerInset],
+    () => (splitFill ? { paddingTop: leftTopInset + Spacing.three } : headerInset),
+    [splitFill, leftTopInset, headerInset],
   );
   const sidePanelInset = useHeaderInsetStyle(Spacing.four);
   // 글래스 알약 바텀바가 떠 있으면 잔디·집 프레임이 그 밑에 안 깔리게 (#1049).

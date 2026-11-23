@@ -7,6 +7,7 @@
  * 그 띠를 비우지 않고 쓰고, 오른쪽 칸은 모서리를 피한다(`e2e/devices.ts`의 obstructions).
  */
 import { ROOM_RENDER_CONTRACT } from '../../src/components/room/room-render-contract';
+import { hasNavRail } from '../devices';
 import { expect, test } from '../support/app';
 import {
   expectAspectRatio,
@@ -18,6 +19,24 @@ import {
 } from '../support/layout';
 
 type Page = Parameters<typeof expectNoHorizontalScroll>[0];
+
+type Device = Parameters<typeof hasNavRail>[0];
+
+/** 세로 탭 줄이 있는 기기면 그 줄(창 폭을 나눠 쓰는 첫 칸), 아니면 없음. */
+const railPane = (page: Page, device: Device) =>
+  hasNavRail(device) ? [page.getByTestId('nav-rail')] : [];
+
+/** 탭 바가 그 기기의 자리에 있다 — 세로 줄 또는 아래 알약. */
+async function expectTabBar(page: Page, device: Device) {
+  await expect(page.getByTestId(hasNavRail(device) ? 'nav-rail' : 'bottom-nav-pill')).toBeVisible();
+}
+
+/** 화면 아래에서 내용이 피해야 하는 높이 — 세로 줄이면 홈 인디케이터 자리, 아니면 아래 탭 바까지. */
+async function tabBarInset(page: Page, device: Device) {
+  if (hasNavRail(device)) return device.insets.bottom;
+  const pill = await stableRect(page.getByTestId('bottom-nav-pill'));
+  return device.viewport.height - pill.y;
+}
 
 /**
  * 위 안전 영역이 화면 위쪽을 넓게 차지하는 기기인가(펼친 아이폰 Duo의 82). 그런 기기에서만 "왼쪽
@@ -54,7 +73,7 @@ for (const tab of ['myRoom', 'calendar'] as const) {
     const { viewport, insets } = app.device;
     await expectFillsWidth(
       page,
-      [page.getByTestId('nav-rail'), left, right],
+      [...railPane(page, app.device), left, right],
       viewport.width - insets.left - insets.right,
     );
     for (const pane of [left, right]) {
@@ -84,8 +103,7 @@ test('규칙 3·5: 방 그림은 계약 비율로 왼쪽 칸에 다 보이고, �
   expect(room.x + room.width, '방 그림이 왼쪽 칸 안에서 끝').toBeLessThanOrEqual(
     left.x + left.width + 1,
   );
-  // 세로 탭 줄이라 아래에 떠 있는 탭 바가 없다 — 홈 인디케이터 자리만 뺀다.
-  const bottomInset = app.device.insets.bottom;
+  const bottomInset = await tabBarInset(page, app.device);
   await expectInFirstScreen(page, room, bottomInset);
   const firstItem = screen.locator('[data-testid^="routine-row-"]').first();
   await expect(firstItem).toBeVisible();
@@ -100,6 +118,15 @@ test('규칙 3·5: 방 그림은 계약 비율로 왼쪽 칸에 다 보이고, �
   // 방 아래 버튼 줄도 탭 바 위에 다 보인다.
   const actions = await stableRect(screen.getByTestId('room-actions'));
   await expectInFirstScreen(page, actions, bottomInset);
+  // 버튼들은 왼쪽 칸 밖으로 나가지 않는다 — 좁은 칸(세로로 펼친 폴드)에서 한 줄이 넘쳐 양끝이 잘렸다.
+  for (const button of await screen.getByTestId('room-actions').getByRole('button').all()) {
+    const rect = await button.boundingBox();
+    if (!rect) continue;
+    expect(rect.x, '버튼이 왼쪽 칸 안에서 시작').toBeGreaterThanOrEqual(left.x);
+    expect(rect.x + rect.width, '버튼이 왼쪽 칸 안에서 끝').toBeLessThanOrEqual(
+      left.x + left.width + 1,
+    );
+  }
   // 오른쪽 칸 머리의 추가 버튼은 모서리의 시스템 표시와 겹치지 않는다.
   const add = right.x; // 오른쪽 칸 안의 조작 요소만 본다
   for (const button of await screen.getByRole('button').all()) {
@@ -156,7 +183,7 @@ test('규칙 3·4: 집 탭은 [집 그림 | 집 정보] 두 칸이 창을 다 �
   const { viewport, insets } = app.device;
   await expectFillsWidth(
     page,
-    [page.getByTestId('nav-rail'), left, right],
+    [...railPane(page, app.device), left, right],
     viewport.width - insets.left - insets.right,
   );
   // 집 그림(2:3)은 왼쪽 칸 안에서 탭 바 위까지 전체가 보인다.
@@ -172,8 +199,7 @@ test('규칙 3·4: 집 탭은 [집 그림 | 집 정보] 두 칸이 창을 다 �
   expect(frame.x + frame.width, '집 그림이 왼쪽 칸 안에서 끝난다').toBeLessThanOrEqual(
     pane.x + pane.width + 1,
   );
-  // 세로 탭 줄이라 아래에 떠 있는 탭 바가 없다 — 홈 인디케이터 자리만 뺀다.
-  const bottomInset = app.device.insets.bottom;
+  const bottomInset = await tabBarInset(page, app.device);
   await expectInFirstScreen(page, frame, bottomInset);
   // 그림 위에 떠 있던 알약·레일은 없고, 같은 진입점이 오른쪽 칸에 하나씩 있다 — 모서리의 시스템 표시와 안 겹친다.
   await expect(page.getByTestId('house-level-pill')).toHaveCount(0);
@@ -197,7 +223,7 @@ test('규칙 4: 피드 탭은 [글 목록 | 고른 글] 두 칸 — 첫 글이 �
   const { viewport, insets } = app.device;
   await expectFillsWidth(
     page,
-    [page.getByTestId('nav-rail'), left, right],
+    [...railPane(page, app.device), left, right],
     viewport.width - insets.left - insets.right,
   );
   // 목록의 첫 글이 고른 상태이고, 그 글의 본문이 오른쪽 칸에 보인다.
@@ -231,7 +257,7 @@ test('규칙 4: 내 정보 탭은 [프로필·지표·바로가기 | 메뉴·설
   const { viewport, insets } = app.device;
   await expectFillsWidth(
     page,
-    [page.getByTestId('nav-rail'), left, right],
+    [...railPane(page, app.device), left, right],
     viewport.width - insets.left - insets.right,
   );
   await expect(left.getByTestId('my-page-profile-card')).toBeVisible();
@@ -264,11 +290,11 @@ test('내 정보의 설정은 화면을 넘기지 않고 오른쪽 칸에 열린
   // 왼쪽 칸(프로필)과 세로 탭 줄은 그대로, 오른쪽 칸에 설정 화면.
   await expect(pane.getByText('다크 모드')).toBeVisible();
   await expect(left.getByTestId('my-page-profile-card')).toBeVisible();
-  await expect(page.getByTestId('nav-rail')).toBeVisible();
+  await expectTabBar(page, app.device);
   const { viewport, insets } = app.device;
   await expectFillsWidth(
     page,
-    [page.getByTestId('nav-rail'), left, pane],
+    [...railPane(page, app.device), left, pane],
     viewport.width - insets.left - insets.right,
   );
   // 칸 안의 조작 요소(뒤로 버튼 포함)는 모서리의 시스템 표시와 겹치지 않는다.
@@ -299,11 +325,11 @@ for (const { name, title } of [
     await expect(pane.getByText(title).first()).toBeVisible();
     // 집 그림과 세로 탭 줄은 그대로다.
     await expect(left.getByTestId('house-frame')).toBeVisible();
-    await expect(page.getByTestId('nav-rail')).toBeVisible();
+    await expectTabBar(page, app.device);
     const { viewport, insets } = app.device;
     await expectFillsWidth(
       page,
-      [page.getByTestId('nav-rail'), left, pane],
+      [...railPane(page, app.device), left, pane],
       viewport.width - insets.left - insets.right,
     );
     const back = pane.getByRole('button', { name: '뒤로 가기', exact: true });
@@ -325,11 +351,11 @@ test('방의 알림함은 방 그림을 그대로 두고 오른쪽 칸에 열린
   const pane = page.getByTestId('split-detail-pane');
   await expect(pane).toBeVisible();
   await expect(screen.getByTestId('room-canvas')).toBeVisible();
-  await expect(page.getByTestId('nav-rail')).toBeVisible();
+  await expectTabBar(page, app.device);
   const { viewport, insets } = app.device;
   await expectFillsWidth(
     page,
-    [page.getByTestId('nav-rail'), screen.getByTestId('my-room-split-hero'), pane],
+    [...railPane(page, app.device), screen.getByTestId('my-room-split-hero'), pane],
     viewport.width - insets.left - insets.right,
   );
   await pane.getByRole('button', { name: '뒤로 가기', exact: true }).click();
@@ -348,7 +374,7 @@ test('피드의 글쓰기는 글 목록을 그대로 두고 오른쪽 칸에 열
   const { viewport, insets } = app.device;
   await expectFillsWidth(
     page,
-    [page.getByTestId('nav-rail'), list, pane],
+    [...railPane(page, app.device), list, pane],
     viewport.width - insets.left - insets.right,
   );
   await expectNoHorizontalScroll(page);
@@ -371,7 +397,7 @@ test("집의 '집 추가'(집 탐색)는 내 집 그림을 그대로 두고 오�
   const { viewport, insets } = app.device;
   await expectFillsWidth(
     page,
-    [page.getByTestId('nav-rail'), left, pane],
+    [...railPane(page, app.device), left, pane],
     viewport.width - insets.left - insets.right,
   );
   await pane.getByRole('button', { name: '뒤로 가기', exact: true }).click();

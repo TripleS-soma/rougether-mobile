@@ -3,6 +3,7 @@
  * 모든 화면 크기에서 돈다. 인셋이 없는 기기(기준 폰·데스크톱)에서는 띠가 없어 늘 통과한다.
  * Duo의 값은 실측(`e2e/devices.ts`): 접힘은 오른쪽 84·아래 34, 펼침은 위 82·아래 34.
  */
+import { hasNavRail } from '../devices';
 import { expect, test } from '../support/app';
 import { expectClearOf } from '../support/layout';
 
@@ -12,7 +13,7 @@ test('탭 바(아래 알약 또는 왼쪽 세로 줄)의 탭들이 안전 영역
   // 넓은 창(펼친 Duo·데스크톱)은 왼쪽 세로 줄, 그 밖은 아래 알약 — 둘 중 하나만 있다.
   const rail = page.getByTestId('nav-rail');
   const pill = page.getByTestId('bottom-nav-pill');
-  const wide = ['open', 'desktop'].includes(app.device.posture);
+  const wide = hasNavRail(app.device);
   await expect(wide ? rail : pill).toBeVisible();
   await expect(wide ? pill : rail).toHaveCount(0);
   if (!wide) return expectClearOf(pill, app.device.obstructions);

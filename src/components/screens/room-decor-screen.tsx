@@ -1,3 +1,4 @@
+import { useSplitLeftTopInset } from '@/hooks/use-split-pane-insets';
 import { Button } from '@/components/ui/button';
 import { CharacterScaleSheet } from '@/components/screens/decor/character-scale-sheet';
 import { characterFrameStyle, normalizeCharacterScale } from '@/components/room/character-scale';
@@ -237,6 +238,9 @@ export function RoomDecorScreen({
   const tr = useT();
   const { show: toast } = useToast();
   const headerInset = useHeaderInsetStyle();
+  // 창을 다 쓰는 2단의 왼쪽 칸이 비울 위 인셋 — 모서리 묶음(펼친 아이폰 Duo)이면 0, 전체 폭의 상태
+  // 표시줄(안드로이드·아이패드)이면 그 높이.
+  const leftTopInset = useSplitLeftTopInset(0);
   // 떠 있는 적용하기 바(#1069) 밑으로 카탈로그가 지나가도록 하단 패딩.
   const actionBarInset = useActionBarInset();
   // 웹 데스크톱 2단 (#1230 후속) — 창 ≥ 960px에서만 true.
@@ -1234,7 +1238,11 @@ export function RoomDecorScreen({
           {/* 창을 다 쓰는 2단의 왼쪽 칸은 위 안전 영역을 비우지 않는다 — 펼친 아이폰 Duo의 시스템
               표시는 오른쪽 위 모서리에만 있는데 인셋은 위쪽 전체 폭으로 온다. */}
           <View
-            style={splitFill ? styles.splitPaneFill : [styles.splitHero, headerInset]}
+            style={
+              splitFill
+                ? [styles.splitPaneFill, leftTopInset > 0 ? { paddingTop: leftTopInset } : null]
+                : [styles.splitHero, headerInset]
+            }
             testID="decor-split-hero">
             {canvasView}
           </View>

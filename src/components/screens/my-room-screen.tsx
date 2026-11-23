@@ -32,6 +32,8 @@ import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { useFrameBackdrop } from '@/components/app/frame-backdrop';
 import { NavMenuPopover } from '@/components/app/nav-menu-popover';
+import { NAV_RAIL_WIDTH } from '@/components/ui/nav-rail';
+import { splitLeftTopInset } from '@/hooks/use-split-pane-insets';
 import {
   canQuickAddCategory,
   groupCalendarClientRoutines,
@@ -427,6 +429,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const {
     split,
     splitFill = false,
+    navRail = false,
     width: frameWidth,
     height: frameHeight,
     insetLeft = 0,
@@ -1139,14 +1142,22 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // 목록을 다 만들면 등록이 겹쳐 드래그 드롭 판정이 어긋난다.
   // 창을 다 쓰는 2단(펼친 폴더블·태블릿)의 왼쪽 칸. 펼친 아이폰 Duo는 시스템 표시가 오른쪽 위
   // 모서리에만 있는데 안전 영역은 위쪽 전체 폭(82)으로 온다 — 왼쪽 칸은 그 밑이 아니라 비우지 않는다.
-  const splitHeroTop = (splitFill ? 0 : insets.top) + Spacing.four;
+  // 상태 표시줄이 전체 폭인 기기(안드로이드·아이패드)는 왼쪽 칸도 그 줄을 비운다.
+  const splitHeroTop = splitLeftTopInset(insets.top, splitFill, 0) + Spacing.four;
   // 방은 폭을 따라 높이가 정해지므로(5:6), 칸이 넓고 낮으면 버튼 줄이 탭 바 밑으로 밀린다 —
   // 방 + 버튼 줄이 칸 높이(위 여백 ~ 탭 바 위)에 들어가는 폭으로 묶는다.
+  // 버튼 한 줄(6개)이 왼쪽 칸에 들어가는가. 좁은 2단(세로로 펼친 폴드 — 칸 폭 352)에서는 안 들어가
+  // 양끝 버튼이 잘렸다. 그때는 폰처럼 방 위에 세로 열로 얹는다.
+  const splitPaneInner = (frameWidth - (navRail ? NAV_RAIL_WIDTH : 0)) / 2 - Spacing.four * 2;
+  const actionsInRow = split && (!splitFill || splitPaneInner >= SPLIT_ACTIONS_ROW_WIDTH);
   const splitHeroMaxWidth =
     splitFill && tab === 'room'
       ? Math.max(
           0,
-          frameHeight - splitHeroTop - (Spacing.four + navInset) - SPLIT_ACTIONS_ROW_HEIGHT,
+          frameHeight -
+            splitHeroTop -
+            (Spacing.four + navInset) -
+            (actionsInRow ? SPLIT_ACTIONS_ROW_HEIGHT : 0),
         ) * ROOM_RENDER_CONTRACT.room.aspectRatio
       : undefined;
   const hero =
@@ -1218,7 +1229,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         {capturing ? null : (
           // 웹 데스크톱 2단(#1230 후속)에선 방 위 오버레이 대신 방 아래 한 줄 —
           // 왼쪽 칸이 비어 보이던 것을 채우고 방도 가리지 않는다. 폰은 종전 세로 열.
-          <View style={split ? styles.btnRow : styles.btnColumn} testID="room-actions">
+          <View style={actionsInRow ? styles.btnRow : styles.btnColumn} testID="room-actions">
             <CoachTarget id="room-menu">
               <Pressable
                 ref={menuBtnRef}
@@ -1247,7 +1258,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             ) : null}
             {/* 두 묶음 (2026-11-04, GA 28일): 위는 시스템(메뉴·알림), 틈 뒤로 방에서 하는 일을
                 반복 사용 순으로 — 미니게임(1인 31회)·꾸미기·AI 스튜디오·뽑기(대부분 온보딩 1회). */}
-            <View style={split ? styles.btnGroupGapRow : styles.btnGroupGap} />
+            <View style={actionsInRow ? styles.btnGroupGapRow : styles.btnGroupGap} />
             {onOpenMinigames ? (
               <Pressable
                 onPress={() => tapAction('minigames', onOpenMinigames)}
@@ -1802,6 +1813,8 @@ const QUICK_ADD_SIZE = 32;
 
 /** 2단에서 방 아래 버튼 한 줄의 높이 — 버튼(44) + 위 여백(`btnRow.paddingTop`). */
 const SPLIT_ACTIONS_ROW_HEIGHT = 44 + Spacing.three;
+/** 그 한 줄의 폭 — 버튼 6개(44) + 사이 틈 6개(`btnRow.gap`) + 묶음 사이 틈(`btnGroupGapRow`). */
+const SPLIT_ACTIONS_ROW_WIDTH = 44 * 6 + Spacing.three * 6 + Spacing.three;
 
 const styles = StyleSheet.create({
   /**
