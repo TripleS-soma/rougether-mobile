@@ -240,6 +240,31 @@ export const FULL_SWIPE_BACK_EXCLUDED: ReadonlySet<Screen> = new Set<Screen>([
 export function livesInPager(screen: Screen): boolean {
   return TAB_FOR_SCREEN[screen] != null || screen === 'calendarWeek';
 }
+/**
+ * 2단(펼친 폴더블·태블릿·데스크톱 웹)에서 화면을 통째로 넘기지 않고 **탭 화면의 오른쪽 칸에**
+ * 여는 서브화면 → 그 탭. 왼쪽 칸(내 정보의 프로필 등)은 그대로 남는다. 뒤로가기 맵은 그대로라
+ * 뒤로 가면 칸이 걷히고 탭 화면의 오른쪽 칸(메뉴)이 다시 보인다. 한 칸(폰)에서는 쓰이지 않는다.
+ */
+const SPLIT_PANE_HOST: Partial<Record<Screen, NavTab>> = {
+  settings: 'myPage',
+  theme: 'myPage',
+  font: 'myPage',
+  language: 'myPage',
+  notifications: 'myPage',
+  sound: 'myPage',
+  blockedUsers: 'myPage',
+  profileEdit: 'myPage',
+  updates: 'myPage',
+  bugReport: 'myPage',
+  help: 'myPage',
+  inviteFriends: 'myPage',
+};
+
+/** `screen`을 오른쪽 칸에 여는 탭 — 2단이 아니거나 칸에 열지 않는 화면이면 null. */
+export function splitPaneHost(screen: Screen, split: boolean): NavTab | null {
+  return split ? (SPLIT_PANE_HOST[screen] ?? null) : null;
+}
+
 /** Screens that own input all the way to the screen edge. */
 export const EDGE_BACK_DISABLED_SCREENS: ReadonlySet<Screen> = new Set<Screen>(['minigameRunner']);
 // 이만큼 끌었거나(거리) 이 속도를 넘긴 릴리즈면 뒤로 간다.

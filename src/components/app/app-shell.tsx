@@ -8,7 +8,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 
-import { livesInPager, NAV_ORDER, SCREEN_FOR_TAB, type Screen } from '@/components/app/navigation';
+import {
+  livesInPager,
+  NAV_ORDER,
+  SCREEN_FOR_TAB,
+  type Screen,
+  splitPaneHost,
+} from '@/components/app/navigation';
+import { SplitDetailOverlay } from '@/components/app/split-detail-overlay';
 import { TabPager } from '@/components/app/tab-pager';
 import { useAppNavigation } from '@/components/app/use-app-navigation';
 import { requestReviewAtGoodMoment, useStoreReview } from '@/hooks/use-store-review';
@@ -700,7 +707,13 @@ export function AppShell({
   // 두었다가 그대로 다시 민다. 예전엔 서브화면에 들어갈 때마다 다섯 탭을 통째로 내렸다 올려, 방으로
   // 돌아오는 슬라이드가 약 240ms 멈췄다. 주간 보기(#1327)를 페이저의 달력 페이지가 제자리에서
   // 접히게 한 것(2026-11-04)과 같은 이유다. 서브화면 동안 페이저는 마지막 탭에 서서 쉰다.
-  const pagerTab = usePagerTab(screen);
+  // 2단에서는 설정·도움말 같은 서브화면을 탭 화면의 오른쪽 칸에 연다(`splitPaneHost`). 그동안 층과
+  // 페이저에는 그 탭 화면으로 보인다 — 탭 층이 그대로 서 있고 왼쪽 세로 탭 줄도 남는다.
+  const { split, navRail = false } = useAppFrame();
+  const paneHost = splitPaneHost(screen, split);
+  const shellScreen: Screen = paneHost ? SCREEN_FOR_TAB[paneHost] : screen;
+  const navTab = paneHost ?? activeTab;
+  const pagerTab = usePagerTab(shellScreen);
   // 셸 자식에 넘기는 콜백은 참조를 고정한다 — 인라인이면 셸이 렌더될 때마다
   // 하단 바·미션 시트가 같이 다시 그려진다(성능 장부 R9).
   const changeTab = useStableCallback((tab: NavTab) =>
@@ -710,13 +723,12 @@ export function AppShell({
 
   // 넓은 창(펼친 폴더블·태블릿·데스크톱 웹)은 탭 바가 왼쪽 세로 줄이다. 줄은 탭 층 안에 둔다 —
   // 서브화면은 그 위로 밀려 들어와 줄까지 덮고, 돌아올 때 탭 층의 폭이 바뀌지 않는다.
-  const { navRail = false } = useAppFrame();
   const tabsNode = (
     // 줄이 없을 때도 같은 래퍼 — 접었다 펼 때 페이저가 리마운트되지 않게.
     <View style={styles.tabsRow} testID="tabs-layer">
-      {navRail && activeTab ? (
+      {navRail && navTab ? (
         <NavRail
-          active={activeTab}
+          active={navTab}
           badges={attendancePending ? MY_PAGE_BADGE : undefined}
           onChange={changeTab}
         />
@@ -726,7 +738,7 @@ export function AppShell({
           index={NAV_ORDER.indexOf(pagerTab)}
           onIndexChange={handlePageChange}
           lock={pagerLock}
-          suspended={!livesInPager(screen)}>
+          suspended={!livesInPager(shellScreen)}>
           {/* 달력은 나의 방과 같은 데이터·콜백을 쓰는 두 번째 인스턴스 (#1138) — 방
           캔버스는 view='room'일 때만 그려지므로 비용은 목록 하나 분이다. */}
           <MyRoomScreen
@@ -763,7 +775,9 @@ export function AppShell({
               <FeedScreen {...feedPages.tabProps} {...tabScroll.feed} />
             </FeedSplit>
           ) : null}
-          <MyPageScreen {...settingsSurface.myPageProps} {...tabScroll.myPage} />
+          <SplitDetailOverlay detail={paneHost === 'myPage' ? settingsSurface.subScreen : null}>
+            <MyPageScreen {...settingsSurface.myPageProps} {...tabScroll.myPage} />
+          </SplitDetailOverlay>
         </TabPager>
       </View>
     </View>
@@ -861,10 +875,15 @@ export function AppShell({
       {marketPages.subScreen}
 
       {/* 내 정보 서브화면 9종(설정 포함, #692 → #1088) — use-settings-surface가 그린다. */}
-      {settingsSurface.subScreen}
+      {paneHost ? null : settingsSurface.subScreen}
     </>
   );
-  const layers = useScreenTransition({ screen, addReturnScreen, tabsNode, node: screenNode });
+  const layers = useScreenTransition({
+    screen: shellScreen,
+    addReturnScreen,
+    tabsNode,
+    node: screenNode,
+  });
 
   return (
     <View
@@ -909,9 +928,9 @@ export function AppShell({
         </GestureDetector>
       </MinigameActiveContext.Provider>
 
-      {activeTab && !navRail ? (
+      {navTab && !navRail ? (
         <BottomNav
-          active={activeTab}
+          active={navTab}
           // 미출석 점은 방 메뉴 버튼에서 내 정보 탭으로 (#1089).
           badges={attendancePending ? MY_PAGE_BADGE : undefined}
           onChange={changeTab}

@@ -47,8 +47,11 @@ for (const { title, tab, name } of HEADER_BUTTONS) {
     await app.open({ tab });
     const button = page.getByRole('button', { name, exact: true });
     await expect(button).toBeVisible();
-    const rect = await stableRect(button);
-    await expectClearOf(rect, app.device.obstructions);
+    // 전체를 병렬로 돌릴 때 드물게 인셋이 실리기 전 좌표(오른쪽 끝)가 잡혔다(2026-11-23, 99건 중 1건,
+    // 단독 8회 반복은 전부 통과) — 자리 잡을 때까지 다시 잰다.
+    await expect(async () => {
+      await expectClearOf(await stableRect(button), app.device.obstructions);
+    }).toPass({ timeout: 5000 });
   });
 }
 
