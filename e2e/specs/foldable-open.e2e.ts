@@ -341,3 +341,23 @@ test('피드의 글쓰기는 글 목록을 그대로 두고 오른쪽 칸에 열
   );
   await expectNoHorizontalScroll(page);
 });
+
+// 로그인은 앱 셸 밖이라 탭 화면의 칸에 열 수 없다 — 왼쪽 칸에 앱 소개를 채우고 오른쪽 칸에 화면을 둔다.
+test('로그인은 [앱 소개 | 로그인] 두 칸이 창을 다 쓴다', async ({ app, page }) => {
+  await app.open({ session: false });
+  const left = page.getByTestId('brand-split-brand');
+  const right = page.getByTestId('brand-split-content');
+  await expect(left).toBeVisible();
+  await expect(left.getByText('루게더')).toBeVisible();
+  const { viewport, insets } = app.device;
+  await expectFillsWidth(page, [left, right], viewport.width - insets.left - insets.right);
+  // 두 칸은 1:1이다.
+  const [l, r] = [await stableRect(left), await stableRect(right)];
+  expect(Math.abs(l.width - r.width), `칸 폭 ${l.width} / ${r.width}`).toBeLessThanOrEqual(1);
+  // 앱 이름은 왼쪽 칸에 한 번만 — 오른쪽 칸의 로그인 화면은 로고를 다시 그리지 않는다.
+  await expect(page.getByText('루게더', { exact: true })).toHaveCount(1);
+  const kakao = right.getByRole('button', { name: /Kakao/ });
+  await expect(kakao).toBeVisible();
+  await expectClearOf(kakao, app.device.obstructions);
+  await expectNoHorizontalScroll(page);
+});

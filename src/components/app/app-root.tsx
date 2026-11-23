@@ -25,6 +25,7 @@ import { SplashBackground, SplashBackgroundDark } from '@/constants/theme';
 import { AppShell } from '@/components/app/app-shell';
 import { OnboardingHouseGate } from '@/components/app/onboarding-house-gate';
 import { StarterRoutineGate } from '@/components/app/starter-routine-gate';
+import { BrandSplit } from '@/components/app/brand-split';
 import { OnboardingScreen, type OnboardingGoal } from '@/components/screens/onboarding-screen';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { useAuth } from '@/hooks/use-auth';
@@ -231,55 +232,57 @@ export function AppRoot() {
 
   if (!onboarded) {
     return (
-      <OnboardingScreen
-        goals={serverGoals.length > 0 ? serverGoals : undefined}
-        initialGoals={selectedGoalIds}
-        initialCharacterId={characterId}
-        characterFrames={characterFrames}
-        replay={replaying}
-        onSkip={skipReplay}
-        onDone={(goals, chosen, nickname) => {
-          setCharacterId(chosen);
-          setSelectedGoalIds(goals);
-          setOnboarded(true);
-          // New users start with one routine; the legacy mission tour is replay-only.
-          // 미션 체인은 첫 온보딩·다시 보기 모두 시작한다(2026-09-08). 첫 온보딩은 추천 루틴
-          // 게이트(#1149)를 먼저 거치고, 게이트가 닫히면 셸이 마운트되며 배너가 뜬다.
-          setJustOnboarded(true);
-          if (!replaying) {
-            const progress: StarterRoutineProgress = {
-              status: 'pending',
-              goals: goals.map(
-                (id) => serverGoals.find((goal) => goal.id === id) ?? { id, label: id },
-              ),
-            };
-            setStarterProgress(progress);
-            void saveStarterRoutineProgress(userId, progress);
-            // 집 선택 (#1407)은 첫 루틴 뒤, 앱 진입 직전 — 첫 온보딩에서만.
-            setHouseStep('pending');
-            void saveOnboardingHouseStep(userId, 'pending');
-          }
-          // 퍼널 (#799) — 목표·캐릭터·닉네임까지 마친 지점. 닉네임은 값이
-          // 아니라 입력 여부만 남긴다(개인정보를 분석 도구로 흘리지 않는다).
-          track('onboarding_complete', {
-            character: chosen,
-            goals: goals.length,
-            nickname: nickname ? 'set' : 'skipped',
-          });
-          void saveOnboarding({ characterId: chosen, goals }, userId);
-          // Push the selections to the server, best-effort: goal ids are
-          // numeric only when the server master supplied them, and the
-          // character save can 409 (CHARACTER_NOT_OWNED) for legacy users.
-          const goalIds = goals.map(Number).filter((n) => Number.isFinite(n));
-          if (goalIds.length > 0) void saveOnboardingGoals(goalIds).catch(() => {});
-          const serverCharacterId = toServerCharacterId(chosen, characters);
-          if (serverCharacterId != null)
-            void saveOnboardingCharacter(serverCharacterId).catch(() => {});
-          // 닉네임 저장 (#635) — 신규 계정의 빈 닉네임이 데모 기본값으로
-          // 노출되던 문제. best-effort — 실패해도 온보딩은 계속.
-          if (nickname) void updateMe({ nickname }).catch(() => {});
-        }}
-      />
+      <BrandSplit>
+        <OnboardingScreen
+          goals={serverGoals.length > 0 ? serverGoals : undefined}
+          initialGoals={selectedGoalIds}
+          initialCharacterId={characterId}
+          characterFrames={characterFrames}
+          replay={replaying}
+          onSkip={skipReplay}
+          onDone={(goals, chosen, nickname) => {
+            setCharacterId(chosen);
+            setSelectedGoalIds(goals);
+            setOnboarded(true);
+            // New users start with one routine; the legacy mission tour is replay-only.
+            // 미션 체인은 첫 온보딩·다시 보기 모두 시작한다(2026-09-08). 첫 온보딩은 추천 루틴
+            // 게이트(#1149)를 먼저 거치고, 게이트가 닫히면 셸이 마운트되며 배너가 뜬다.
+            setJustOnboarded(true);
+            if (!replaying) {
+              const progress: StarterRoutineProgress = {
+                status: 'pending',
+                goals: goals.map(
+                  (id) => serverGoals.find((goal) => goal.id === id) ?? { id, label: id },
+                ),
+              };
+              setStarterProgress(progress);
+              void saveStarterRoutineProgress(userId, progress);
+              // 집 선택 (#1407)은 첫 루틴 뒤, 앱 진입 직전 — 첫 온보딩에서만.
+              setHouseStep('pending');
+              void saveOnboardingHouseStep(userId, 'pending');
+            }
+            // 퍼널 (#799) — 목표·캐릭터·닉네임까지 마친 지점. 닉네임은 값이
+            // 아니라 입력 여부만 남긴다(개인정보를 분석 도구로 흘리지 않는다).
+            track('onboarding_complete', {
+              character: chosen,
+              goals: goals.length,
+              nickname: nickname ? 'set' : 'skipped',
+            });
+            void saveOnboarding({ characterId: chosen, goals }, userId);
+            // Push the selections to the server, best-effort: goal ids are
+            // numeric only when the server master supplied them, and the
+            // character save can 409 (CHARACTER_NOT_OWNED) for legacy users.
+            const goalIds = goals.map(Number).filter((n) => Number.isFinite(n));
+            if (goalIds.length > 0) void saveOnboardingGoals(goalIds).catch(() => {});
+            const serverCharacterId = toServerCharacterId(chosen, characters);
+            if (serverCharacterId != null)
+              void saveOnboardingCharacter(serverCharacterId).catch(() => {});
+            // 닉네임 저장 (#635) — 신규 계정의 빈 닉네임이 데모 기본값으로
+            // 노출되던 문제. best-effort — 실패해도 온보딩은 계속.
+            if (nickname) void updateMe({ nickname }).catch(() => {});
+          }}
+        />
+      </BrandSplit>
     );
   }
 
