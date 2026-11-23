@@ -19,6 +19,12 @@ import {
 
 type Page = Parameters<typeof expectNoHorizontalScroll>[0];
 
+/**
+ * 위 안전 영역이 화면 위쪽을 넓게 차지하는 기기인가(펼친 아이폰 Duo의 82). 그런 기기에서만 "왼쪽
+ * 칸은 그 띠를 통째로 비우지 않는다"를 본다 — 상태 표시줄 높이쯤(안드로이드 32)이면 볼 게 없다.
+ */
+const TALL_TOP_INSET = 48;
+
 /** 칸 하나의 최소 폭 — 이보다 좁으면 2단을 켜지 않는다(`TOUCH_SPLIT_MIN_WIDTH`의 절반). */
 const MIN_PANE_WIDTH = 320;
 
@@ -33,7 +39,7 @@ const SCREENS = {
 } as const;
 
 test.beforeEach(({ app }) => {
-  test.skip(app.device.name !== 'duo-open', '펼친 Duo 전용');
+  test.skip(app.device.posture !== 'open', '펼친 폴더블 전용');
 });
 
 for (const tab of ['myRoom', 'calendar'] as const) {
@@ -88,7 +94,9 @@ test('규칙 3·5: 방 그림은 계약 비율로 왼쪽 칸에 다 보이고, �
   expect(item.x, '할 일이 오른쪽 칸에 있다').toBeGreaterThanOrEqual(right.x);
   await expectInFirstScreen(page, item, bottomInset);
   // 왼쪽 칸은 위 안전 영역 띠를 비워 두지 않는다 — 방이 그 높이 안에서 시작한다.
-  expect(room.y, `방 그림 시작 y ${room.y.toFixed(1)}`).toBeLessThan(app.device.insets.top);
+  if (app.device.insets.top > TALL_TOP_INSET) {
+    expect(room.y, `방 그림 시작 y ${room.y.toFixed(1)}`).toBeLessThan(app.device.insets.top);
+  }
   // 방 아래 버튼 줄도 탭 바 위에 다 보인다.
   const actions = await stableRect(screen.getByTestId('room-actions'));
   await expectInFirstScreen(page, actions, bottomInset);
@@ -126,7 +134,9 @@ test('규칙 4: 방 꾸미기의 두 칸(방 | 가구 목록)이 나란히 배�
   // 방 그림은 위 안전 영역 띠 안에서 시작해 적용하기 버튼 위에서 끝난다.
   const canvas = await stableRect(page.getByTestId('decor-canvas'));
   const apply = await stableRect(page.getByRole('button', { name: '적용하기', exact: true }));
-  expect(canvas.y, `방 그림 시작 y ${canvas.y.toFixed(1)}`).toBeLessThan(app.device.insets.top);
+  if (app.device.insets.top > TALL_TOP_INSET) {
+    expect(canvas.y, `방 그림 시작 y ${canvas.y.toFixed(1)}`).toBeLessThan(app.device.insets.top);
+  }
   expect(canvas.y + canvas.height, '방 그림이 적용하기 위에서 끝난다').toBeLessThanOrEqual(apply.y);
   for (const name of ['실행 취소', '다시 실행']) {
     await expectClearOf(page.getByRole('button', { name }), app.device.obstructions);
@@ -236,7 +246,9 @@ test('규칙 4: 내 정보 탭은 [프로필·지표·바로가기 | 메뉴·설
   }
   // 왼쪽 칸은 위 안전 영역 띠를 통째로 비우지 않는다 — 제목이 그 띠 안에서 시작한다.
   const header = await stableRect(left.getByTestId('screen-header'));
-  expect(header.y, `제목 시작 y ${header.y.toFixed(1)}`).toBeLessThan(insets.top / 2);
+  if (insets.top > TALL_TOP_INSET) {
+    expect(header.y, `제목 시작 y ${header.y.toFixed(1)}`).toBeLessThan(insets.top / 2);
+  }
   await expectNoHorizontalScroll(page);
 });
 

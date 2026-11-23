@@ -22,7 +22,7 @@ async function tabBarInset(page: Parameters<typeof expectInFirstScreen>[0], heig
 }
 
 test.beforeEach(({ app }) => {
-  test.skip(app.device.name !== 'duo-folded', '접힌 Duo 전용');
+  test.skip(app.device.posture !== 'folded', '접힌 폴더블 전용');
 });
 
 test('출석 모달 닫기 버튼이 시스템 영역과 겹치지 않는다', async ({ app, page }) => {
@@ -132,6 +132,7 @@ test('집 좌석 이름표의 이름이 잘리지 않는다', async ({ app, page
 
 // 오른쪽 시스템 표시 띠(84pt)는 화면 배경이 이어져야 한다 — 앱 기본색 띠가 서면 여백으로 보인다.
 test('집의 하늘과 땅이 시스템 표시 띠까지 이어진다', async ({ app, page }) => {
+  test.skip(app.device.insets.right === 0, '가로 시스템 띠가 있는 기기 전용(접힌 아이폰 Duo)');
   await app.open({ tab: 'house' });
   await app.dismissModals();
   await expect(page.getByTestId('house-frame')).toBeVisible();
@@ -154,6 +155,7 @@ test('집의 하늘과 땅이 시스템 표시 띠까지 이어진다', async ({
 });
 
 test('방 양옆 채움이 시스템 표시 띠까지 방과 같은 높이로 이어진다', async ({ app, page }) => {
+  test.skip(app.device.insets.right === 0, '가로 시스템 띠가 있는 기기 전용(접힌 아이폰 Duo)');
   await app.open({ tab: 'myRoom' });
   await app.dismissModals();
   const hero = await stableRect(roomScreen(page).getByTestId('my-room-hero-room'));

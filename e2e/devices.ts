@@ -2,7 +2,12 @@ export type Rect = { x: number; y: number; width: number; height: number };
 export type Insets = { top: number; right: number; bottom: number; left: number };
 
 export type E2eDevice = {
-  name: 'phone' | 'duo-folded' | 'duo-open' | 'desktop';
+  name: 'phone' | 'duo-folded' | 'duo-open' | 'fold8-cover' | 'fold8-open' | 'desktop';
+  /**
+   * 화면의 꼴 — 테스트는 기기 이름이 아니라 이것으로 대상을 고른다. `folded`는 접힌 폴더블의
+   * 넓고 짧은 화면, `open`은 펼친 폴더블의 2단 화면.
+   */
+  posture: 'phone' | 'folded' | 'open' | 'desktop';
   viewport: { width: number; height: number };
   touch: boolean;
   /**
@@ -41,21 +46,46 @@ function unsafeZones({ width, height }: E2eDevice['viewport'], insets: Insets): 
 
 function device(
   name: E2eDevice['name'],
+  posture: E2eDevice['posture'],
   viewport: E2eDevice['viewport'],
   touch: boolean,
   insets: Insets,
   obstructions: Rect[] = unsafeZones(viewport, insets),
 ): E2eDevice {
-  return { name, viewport, touch, insets, obstructions };
+  return { name, posture, viewport, touch, insets, obstructions };
 }
+
+/**
+ * 갤럭시 Z 폴드8 — **추정값이다. 실기기·에뮬레이터로 재지 않았다.**
+ *
+ * 알려진 것은 픽셀 크기뿐이다(커버 1248×1972, 펼침 2448×1848 — 제조사 공개 사양). dp는 화면
+ * 밀도에 달렸는데 밀도를 모른다. 삼성 폴드 계열의 기본 밀도 배율 2.625(420dpi 묶음)를 가정해
+ * 나눴다: 커버 475×751, 펼침 932×704. 사용자가 화면 확대/축소 설정을 바꾸면 이 값도 달라진다.
+ * 안전 영역도 추정이다(가장자리까지 그리는 안드로이드의 상태 표시줄 32, 제스처 줄 24).
+ *
+ * 실측하면 이 값과 주석을 바꾼다. 그때까지 이 두 프로젝트는 "이 크기 언저리에서 배치 규칙이
+ * 깨지지 않는다"만 말해 준다.
+ */
+const FOLD8_DENSITY = 2.625;
+const FOLD8_INSETS: Insets = { top: 32, right: 0, bottom: 24, left: 0 };
+const fold8 = (px: { width: number; height: number }) => ({
+  width: Math.round(px.width / FOLD8_DENSITY),
+  height: Math.round(px.height / FOLD8_DENSITY),
+});
 
 const DUO_OPEN_VIEWPORT = { width: 951, height: 669 };
 
 export const DEVICES: Record<E2eDevice['name'], E2eDevice> = {
-  phone: device('phone', { width: 402, height: 874 }, true, NO_INSETS),
-  'duo-folded': device('duo-folded', { width: 466, height: 678 }, true, DUO_FOLDED_INSETS),
+  phone: device('phone', 'phone', { width: 402, height: 874 }, true, NO_INSETS),
+  'duo-folded': device(
+    'duo-folded',
+    'folded',
+    { width: 466, height: 678 },
+    true,
+    DUO_FOLDED_INSETS,
+  ),
   // 가려지는 곳은 인셋의 위쪽 띠 전체가 아니라 오른쪽 위 모서리 칸 + 아래 띠.
-  'duo-open': device('duo-open', DUO_OPEN_VIEWPORT, true, DUO_OPEN_INSETS, [
+  'duo-open': device('duo-open', 'open', DUO_OPEN_VIEWPORT, true, DUO_OPEN_INSETS, [
     {
       x: DUO_OPEN_VIEWPORT.width - DUO_OPEN_CORNER.width,
       y: 0,
@@ -63,5 +93,19 @@ export const DEVICES: Record<E2eDevice['name'], E2eDevice> = {
     },
     ...unsafeZones(DUO_OPEN_VIEWPORT, { ...DUO_OPEN_INSETS, top: 0 }),
   ]),
-  desktop: device('desktop', { width: 1280, height: 800 }, false, NO_INSETS),
+  'fold8-cover': device(
+    'fold8-cover',
+    'folded',
+    fold8({ width: 1248, height: 1972 }),
+    true,
+    FOLD8_INSETS,
+  ),
+  'fold8-open': device(
+    'fold8-open',
+    'open',
+    fold8({ width: 2448, height: 1848 }),
+    true,
+    FOLD8_INSETS,
+  ),
+  desktop: device('desktop', 'desktop', { width: 1280, height: 800 }, false, NO_INSETS),
 };
