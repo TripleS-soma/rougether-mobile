@@ -1,6 +1,6 @@
 /**
  * 펼친 Duo(951×669, 안전 영역 위 82·아래 34)의 배치 — 터치 기기의 넓은 창은 좌우 2단으로 창을
- * 다 쓴다(규칙 4). 방·달력 탭부터. 집·피드·내 정보의 2단은 다음 단계다.
+ * 다 쓴다(규칙 4). 방·달력·집 탭. 피드·내 정보의 2단은 다음 단계다.
  *
  * 시스템 표시(시계·와이파이)는 오른쪽 위 모서리에만 있는데 인셋은 위쪽 전체 폭으로 온다. 왼쪽 칸은
  * 그 띠를 비우지 않고 쓰고, 오른쪽 칸은 모서리를 피한다(`e2e/devices.ts`의 obstructions).
@@ -119,6 +119,42 @@ test('규칙 4: 방 꾸미기의 두 칸(방 | 가구 목록)이 나란히 배�
   expect(canvas.y + canvas.height, '방 그림이 적용하기 위에서 끝난다').toBeLessThanOrEqual(apply.y);
   for (const name of ['실행 취소', '다시 실행']) {
     await expectClearOf(page.getByRole('button', { name }), app.device.obstructions);
+  }
+  await expectNoHorizontalScroll(page);
+});
+
+test('규칙 3·4: 집 탭은 [집 그림 | 집 정보] 두 칸이 창을 다 쓰고, 집 그림 전체가 한 화면에 보인다', async ({
+  app,
+  page,
+}) => {
+  await app.open({ tab: 'house' });
+  await app.dismissModals();
+  const left = page.getByTestId('house-screen');
+  const right = page.getByTestId('house-side-panel');
+  await expect(right).toBeVisible();
+  const { viewport, insets } = app.device;
+  await expectFillsWidth(page, [left, right], viewport.width - insets.left - insets.right);
+  // 집 그림(2:3)은 왼쪽 칸 안에서 탭 바 위까지 전체가 보인다.
+  const houseFrame = page.getByTestId('house-frame');
+  await expect
+    .poll(() =>
+      page.getByTestId('house-frame-viewport').evaluate((el) => getComputedStyle(el).maxWidth),
+    )
+    .not.toBe('none');
+  await expectAspectRatio(houseFrame, 2 / 3);
+  const frame = await stableRect(houseFrame);
+  const pane = await stableRect(left);
+  expect(frame.x + frame.width, '집 그림이 왼쪽 칸 안에서 끝난다').toBeLessThanOrEqual(
+    pane.x + pane.width + 1,
+  );
+  const tabBar = await stableRect(page.getByTestId('bottom-nav-pill'));
+  await expectInFirstScreen(page, frame, viewport.height - tabBar.y);
+  // 그림 위에 떠 있던 알약·레일은 없고, 같은 진입점이 오른쪽 칸에 하나씩 있다 — 모서리의 시스템 표시와 안 겹친다.
+  await expect(page.getByTestId('house-level-pill')).toHaveCount(0);
+  for (const name of ['집 채팅', '집 피드', '집 추가', '우리 집의 목표 전체 보기', '구성원 관리']) {
+    const button = page.getByRole('button', { name, exact: true });
+    await expect(button).toHaveCount(1);
+    await expectClearOf(button, app.device.obstructions);
   }
   await expectNoHorizontalScroll(page);
 });

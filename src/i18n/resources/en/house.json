@@ -597,6 +597,19 @@
       "footer": "Applies to this house only. Change all push notifications in Settings > Push notifications.",
       "feedPending": "Post notification settings aren't ready on the server yet. You can change them here once they are.",
       "saveFailed": "Couldn't change the notification setting. Please try again shortly."
+    },
+    "sidePanel": {
+      "missions": "House goals",
+      "missionsAll": "See all",
+      "missionsAllA11y": "See all house goals",
+      "missionsEmpty": "No goals in progress",
+      "missionProgressA11y": "{{title}}, {{current}}/{{target}}{{unit}}",
+      "members": "Members {{n}}",
+      "manage": "Manage",
+      "manageA11y": "Manage members",
+      "owner": "Owner",
+      "levelA11y": "Level {{level}}, {{points}}/100 to the next level",
+      "regionA11y": "{{name}} house info"
     }
   }
 }

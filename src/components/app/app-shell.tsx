@@ -9,7 +9,6 @@ import { Animated, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 
 import { livesInPager, NAV_ORDER, SCREEN_FOR_TAB, type Screen } from '@/components/app/navigation';
-import { PhoneColumn } from '@/components/app/app-frame';
 import { TabPager } from '@/components/app/tab-pager';
 import { useAppNavigation } from '@/components/app/use-app-navigation';
 import { requestReviewAtGoodMoment, useStoreReview } from '@/hooks/use-store-review';
@@ -728,12 +727,9 @@ export function AppShell({
       ) : (
         <MyRoomScreen {...myRoomPages.calendarTabProps} view="calendar" {...tabScroll.calendar} />
       )}
-      {/* 집은 2단(#1230) 프레임 안에서도 폰 컬럼 — 캔버스가 1200px로 늘지 않게.
-          내 정보는 스스로 콘텐츠 폭을 제한하므로(useResponsiveColumn) 감싸지 않는다 —
-          감싸면 배경(블롭)까지 480px에 갇혀 설정 화면과 달리 양옆이 회색으로 남았다. */}
-      <PhoneColumn>
-        <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
-      </PhoneColumn>
+      {/* 집은 2단에서 스스로 [집 그림 | 집 정보] 두 칸으로 나눈다 — 캔버스는 왼쪽 칸 폭 안에 머문다.
+          내 정보는 스스로 콘텐츠 폭을 제한한다(useResponsiveColumn). */}
+      <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
       {/* 피드 (#1409) — 집과 내 정보 사이. 꺼져 있으면 페이지 자체가 없다(NAV_ORDER와 같이). */}
       {FEED_ENABLED ? <FeedScreen {...feedPages.tabProps} {...tabScroll.feed} /> : null}
       <MyPageScreen {...settingsSurface.myPageProps} {...tabScroll.myPage} />

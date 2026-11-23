@@ -63,6 +63,8 @@ function Comparison({ members, furnished, themeId }: Props) {
               houses={[makeHouse(members, cover, mode)]}
               roomPreviews={rooms}
               furniture={furniture}
+              // 두 모드를 좁은 칸에 나란히 견주는 스토리 — 창이 넓어도 한 칸 배치로 고정한다.
+              sidePanel={false}
             />
           </View>
         </View>
