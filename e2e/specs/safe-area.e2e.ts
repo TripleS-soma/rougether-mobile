@@ -12,7 +12,7 @@ test('탭 바(아래 알약 또는 왼쪽 세로 줄)의 탭들이 안전 영역
   // 넓은 창(펼친 Duo·데스크톱)은 왼쪽 세로 줄, 그 밖은 아래 알약 — 둘 중 하나만 있다.
   const rail = page.getByTestId('nav-rail');
   const pill = page.getByTestId('bottom-nav-pill');
-  const wide = ['duo-open', 'desktop'].includes(app.device.name);
+  const wide = ['open', 'desktop'].includes(app.device.posture);
   await expect(wide ? rail : pill).toBeVisible();
   await expect(wide ? pill : rail).toHaveCount(0);
   if (!wide) return expectClearOf(pill, app.device.obstructions);
