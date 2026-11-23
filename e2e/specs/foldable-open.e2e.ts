@@ -1,6 +1,6 @@
 /**
  * 펼친 Duo(951×669, 안전 영역 위 82·아래 34)의 배치 — 터치 기기의 넓은 창은 좌우 2단으로 창을
- * 다 쓴다(규칙 4). 방·달력·집 탭. 피드·내 정보의 2단은 다음 단계다. 탭 바는 왼쪽 세로 줄이라
+ * 다 쓴다(규칙 4). 방·달력·집·피드 탭. 내 정보의 2단은 다음 단계다. 탭 바는 왼쪽 세로 줄이라
  * 창 폭은 [세로 줄 | 왼쪽 칸 | 오른쪽 칸]이 나눠 쓰고, 아래에는 홈 인디케이터 자리만 비운다.
  *
  * 시스템 표시(시계·와이파이)는 오른쪽 위 모서리에만 있는데 인셋은 위쪽 전체 폭으로 온다. 왼쪽 칸은
@@ -171,6 +171,40 @@ test('규칙 3·4: 집 탭은 [집 그림 | 집 정보] 두 칸이 창을 다 �
     const button = page.getByRole('button', { name, exact: true });
     await expect(button).toHaveCount(1);
     await expectClearOf(button, app.device.obstructions);
+  }
+  await expectNoHorizontalScroll(page);
+});
+
+test('규칙 4: 피드 탭은 [글 목록 | 고른 글] 두 칸 — 첫 글이 오른쪽 칸에 열려 있다', async ({
+  app,
+  page,
+}) => {
+  await app.open({ tab: 'feed' });
+  await app.dismissModals();
+  const left = page.getByTestId('feed-split-list');
+  const right = page.getByTestId('feed-split-detail');
+  await expect(right).toBeVisible();
+  const { viewport, insets } = app.device;
+  await expectFillsWidth(
+    page,
+    [page.getByTestId('nav-rail'), left, right],
+    viewport.width - insets.left - insets.right,
+  );
+  // 목록의 첫 글이 고른 상태이고, 그 글의 본문이 오른쪽 칸에 보인다.
+  const bg = (id: number) =>
+    left.getByTestId(`feed-post-${id}`).evaluate((el) => getComputedStyle(el).backgroundColor);
+  await expect(right.getByText('오늘도 스트레칭 완료')).toBeVisible();
+  await expect.poll(async () => (await bg(904)) !== (await bg(903))).toBe(true);
+  const selectedColor = await bg(904);
+  // 다른 글을 눌러도 화면이 넘어가지 않고 두 칸이 그대로다 — 고른 표시만 옮겨 간다.
+  await left.getByTestId('feed-post-903').click();
+  await expect.poll(() => bg(903)).toBe(selectedColor);
+  expect(await bg(904)).not.toBe(selectedColor);
+  await expect(left).toBeVisible();
+  // 오른쪽 칸의 조작 요소는 모서리의 시스템 표시와 겹치지 않는다.
+  for (const button of await right.getByRole('button').all()) {
+    const rect = await button.boundingBox();
+    if (rect && rect.width > 0) await expectClearOf(rect, app.device.obstructions);
   }
   await expectNoHorizontalScroll(page);
 });

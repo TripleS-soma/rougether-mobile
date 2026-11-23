@@ -62,6 +62,8 @@ export type FeedScreenProps = {
   /** 목록 끝 근처 — 다음 페이지. 중복 호출 가드는 훅이 한다. */
   onLoadMore?: () => void;
   onOpenPost?: (postId: number) => void;
+  /** 2단에서 오른쪽 칸에 열려 있는 글 — 그 줄을 고른 상태로 표시한다. */
+  selectedPostId?: number;
   onCompose?: () => void;
   /** 인증 사진 로더 — 셸이 `fetchFeedImage`를 넘긴다. */
   loadImage?: FeedImageLoader;
@@ -102,6 +104,8 @@ type RowProps = {
   /** 목록의 첫·마지막 줄 — 묶음의 위·아래 모서리만 둥글게. */
   first: boolean;
   last: boolean;
+  /** 2단의 오른쪽 칸에 열려 있는 글. */
+  selected: boolean;
   now?: Date;
 };
 
@@ -118,6 +122,7 @@ const FeedPostRow = memo(function FeedPostRow({
   owner,
   first,
   last,
+  selected,
   now,
 }: RowProps) {
   const t = useTokens();
@@ -138,10 +143,14 @@ const FeedPostRow = memo(function FeedPostRow({
       unstable_pressDelay={SCROLL_ROW_PRESS_DELAY_MS}
       accessibilityRole="button"
       accessibilityLabel={tr('feed.openPostA11y', { name })}
+      accessibilityState={selected ? { selected: true } : undefined}
       testID={`feed-post-${post.postId}`}
       style={({ pressed }) => [
         styles.row,
-        { backgroundColor: pressed ? t.surfaceMuted : t.surface, borderColor: t.border },
+        {
+          backgroundColor: pressed ? t.surfaceMuted : selected ? t.primarySoft : t.surface,
+          borderColor: t.border,
+        },
         first && styles.rowFirst,
         last && styles.rowLast,
         !last && styles.rowDivider,
@@ -264,6 +273,7 @@ export function FeedScreen({
   loadingMore = false,
   onLoadMore,
   onOpenPost,
+  selectedPostId,
   onCompose,
   loadImage,
   now,
@@ -336,10 +346,11 @@ export function FeedScreen({
         owner={ownerUserId != null && item.author.userId === ownerUserId}
         first={index === 0}
         last={index === lastIndex}
+        selected={selectedPostId != null && item.postId === selectedPostId}
         now={now}
       />
     ),
-    [loadImage, onOpenPost, authorFirst, ownerUserId, lastIndex, now],
+    [loadImage, onOpenPost, authorFirst, ownerUserId, lastIndex, selectedPostId, now],
   );
 
   return (

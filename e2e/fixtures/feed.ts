@@ -29,11 +29,18 @@ const post = (postId: number, content: string, imageIds: number[], mine = false)
     deletable: mine,
   }) satisfies FeedPostWire;
 
-/** 피드 — 글 4개(사진 있는 글 2개). */
+const FIRST_POST = post(904, '오늘도 스트레칭 완료', [951], true);
+
+/**
+ * 피드 — 글 4개(사진 있는 글 2개). 상세는 어느 글을 열어도 첫 글을 돌려준다(고정 응답은 경로의
+ * id를 보지 않는다) — 2단의 오른쪽 칸은 목록의 첫 글로 시작하므로 그 글이 맞게 나온다.
+ */
 export const FEED_FIXTURES = {
+  'GET /feed/posts/:id': FIRST_POST,
+  'GET /feed/posts/:id/comments': { items: [], hasNext: false },
   'GET /feed/posts': {
     items: [
-      post(904, '오늘도 스트레칭 완료', [951], true),
+      FIRST_POST,
       post(903, '산책하기 좋은 날씨', []),
       post(902, '책상 정리했어요', [952]),
       post(901, '물 마시기 일주일째', []),

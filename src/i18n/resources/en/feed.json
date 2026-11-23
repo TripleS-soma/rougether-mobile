@@ -200,6 +200,9 @@
       "emptyVerification": "No proof posts yet.\nShare a routine you finished today!",
       "closed": "You can't view this house's feed anymore.",
       "postGone": "This post was deleted or isn't available. Back to the house feed."
+    },
+    "split": {
+      "pick": "Pick a post to read it here"
     }
   }
 }

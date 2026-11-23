@@ -23,6 +23,7 @@ import { useMissionLinks } from '@/components/app/use-mission-links';
 import { useMyRoomPages } from '@/components/app/use-my-room-pages';
 import { useSettingsSurface } from '@/components/app/use-settings-surface';
 import { HouseScreen } from '@/components/screens/house-screen';
+import { FeedSplit } from '@/components/feed/feed-split';
 import { FeedScreen } from '@/components/screens/feed-screen';
 import type { FeedMinigameRecordDraft } from '@/components/screens/feed/types';
 import { FEED_ENABLED } from '@/constants/feed';
@@ -757,7 +758,11 @@ export function AppShell({
           내 정보는 스스로 콘텐츠 폭을 제한한다(useResponsiveColumn). */}
           <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
           {/* 피드 (#1409) — 집과 내 정보 사이. 꺼져 있으면 페이지 자체가 없다(NAV_ORDER와 같이). */}
-          {FEED_ENABLED ? <FeedScreen {...feedPages.tabProps} {...tabScroll.feed} /> : null}
+          {FEED_ENABLED ? (
+            <FeedSplit detail={feedPages.detailPane}>
+              <FeedScreen {...feedPages.tabProps} {...tabScroll.feed} />
+            </FeedSplit>
+          ) : null}
           <MyPageScreen {...settingsSurface.myPageProps} {...tabScroll.myPage} />
         </TabPager>
       </View>
