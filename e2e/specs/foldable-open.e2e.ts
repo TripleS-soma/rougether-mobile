@@ -273,3 +273,33 @@ test('내 정보의 설정은 화면을 넘기지 않고 오른쪽 칸에 열린
   await expect(page.getByTestId('my-page-menu-pane').getByText('도움말')).toBeVisible();
   await expectNoHorizontalScroll(page);
 });
+
+for (const { name, title } of [
+  { name: '구성원 관리', title: '구성원 관리' },
+  { name: '우리 집의 목표 전체 보기', title: '우리 집의 목표' },
+]) {
+  test(`집의 '${name}'는 집 그림을 그대로 두고 오른쪽 칸에 열린다`, async ({ app, page }) => {
+    await app.open({ tab: 'house' });
+    await app.dismissModals();
+    const left = page.getByTestId('house-screen');
+    await page.getByTestId('house-side-panel').getByRole('button', { name, exact: true }).click();
+    const pane = page.getByTestId('split-detail-pane');
+    await expect(pane.getByText(title).first()).toBeVisible();
+    // 집 그림과 세로 탭 줄은 그대로다.
+    await expect(left.getByTestId('house-frame')).toBeVisible();
+    await expect(page.getByTestId('nav-rail')).toBeVisible();
+    const { viewport, insets } = app.device;
+    await expectFillsWidth(
+      page,
+      [page.getByTestId('nav-rail'), left, pane],
+      viewport.width - insets.left - insets.right,
+    );
+    const back = pane.getByRole('button', { name: '뒤로 가기', exact: true });
+    await expectClearOf(back, app.device.obstructions);
+    // 뒤로 가면 칸이 걷히고 집 정보가 다시 보인다.
+    await back.click();
+    await expect(pane).toHaveCount(0);
+    await expect(page.getByTestId('house-side-panel')).toBeVisible();
+    await expectNoHorizontalScroll(page);
+  });
+}

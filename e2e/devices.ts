@@ -21,11 +21,12 @@ const NO_INSETS: Insets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DUO_FOLDED_INSETS: Insets = { top: 0, right: 84, bottom: 34, left: 0 };
 const DUO_OPEN_INSETS: Insets = { top: 82, right: 0, bottom: 34, left: 0 };
 /**
- * 펼친 Duo에서 실제로 가려지는 곳 — 오른쪽 위 모서리의 시계·와이파이 묶음. 인셋은 위쪽 전체
- * 폭(82)으로 오지만 묶음은 오른쪽 끝에만 있다(캡처 실측: x 880~925pt, y 27~98pt). 접힌 화면의
- * 띠 폭(84)과 같은 폭의 모서리 칸으로 잡는다.
+ * 펼친 Duo에서 가려지는 곳 — 오른쪽 위 모서리의 시계·와이파이 묶음. 인셋은 위쪽 전체 폭(82)으로
+ * 오지만 묶음은 오른쪽 끝에만 있다(캡처 실측: x 880~925pt). 폭은 접힌 화면의 띠 폭(84)과 같게,
+ * 높이는 **시스템이 알려 주는 안전 영역(82)** 그대로 잡는다. 와이파이 그림의 아래 끝은 캡처에서
+ * 98pt쯤까지 내려오지만, 그보다 엄격하게 잡으면 인셋대로 놓은 머리 버튼(위 90pt부터)이 전부 걸린다.
  */
-const DUO_OPEN_CORNER = { width: 84, height: 98 };
+const DUO_OPEN_CORNER = { width: 84, height: DUO_OPEN_INSETS.top };
 
 /** 인셋이 0이 아닌 변마다 화면 가장자리 띠 하나. */
 function unsafeZones({ width, height }: E2eDevice['viewport'], insets: Insets): Rect[] {

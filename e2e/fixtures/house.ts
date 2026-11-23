@@ -1,5 +1,6 @@
 import type {
   ChatRoomResponse,
+  HouseAutoJoinResponse,
   HouseCoverImage,
   HouseDetailResponse,
   HouseJoinRequestResponse,
@@ -84,6 +85,11 @@ export const HOUSE_FIXTURES = {
   } satisfies List<HouseCoverImage>,
   'GET /houses/:id': detail,
   'GET /houses/:id/members': { items: members } satisfies List<MemberSummary>,
+  // 구성원 관리 화면이 방장에게만 묻는다 (#1407).
+  'GET /houses/:id/auto-join': {
+    houseId: HOUSE_ID,
+    enabled: false,
+  } satisfies HouseAutoJoinResponse,
   'GET /houses/:id/missions': { items: missions } satisfies List<MissionSummary>,
   'GET /houses/:id/join-requests': { items: [] } satisfies List<HouseJoinRequestResponse>,
   'GET /houses/:id/members/:id/room': MEMBER_ROOM,
