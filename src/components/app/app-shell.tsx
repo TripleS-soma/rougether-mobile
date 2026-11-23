@@ -768,7 +768,9 @@ export function AppShell({
           )}
           {/* 집은 2단에서 스스로 [집 그림 | 집 정보] 두 칸으로 나눈다 — 캔버스는 왼쪽 칸 폭 안에 머문다.
           내 정보는 스스로 콘텐츠 폭을 제한한다(useResponsiveColumn). */}
-          <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
+          <SplitDetailOverlay detail={paneHost === 'house' ? housePages.subScreen : null}>
+            <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
+          </SplitDetailOverlay>
           {/* 피드 (#1409) — 집과 내 정보 사이. 꺼져 있으면 페이지 자체가 없다(NAV_ORDER와 같이). */}
           {FEED_ENABLED ? (
             <FeedSplit detail={feedPages.detailPane}>
@@ -866,7 +868,7 @@ export function AppShell({
       {friendRoomSubScreen}
 
       {/* 집 서브화면 2종 (#692 6단계) — use-house-pages가 그린다. */}
-      {housePages.subScreen}
+      {paneHost === 'house' ? null : housePages.subScreen}
 
       {/* 피드 서브화면 2종 (#1409) — use-feed-pages가 그린다. */}
       {feedPages.subScreen}
@@ -875,7 +877,7 @@ export function AppShell({
       {marketPages.subScreen}
 
       {/* 내 정보 서브화면 9종(설정 포함, #692 → #1088) — use-settings-surface가 그린다. */}
-      {paneHost ? null : settingsSurface.subScreen}
+      {paneHost === 'myPage' ? null : settingsSurface.subScreen}
     </>
   );
   const layers = useScreenTransition({

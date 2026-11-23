@@ -258,6 +258,13 @@ const SPLIT_PANE_HOST: Partial<Record<Screen, NavTab>> = {
   bugReport: 'myPage',
   help: 'myPage',
   inviteFriends: 'myPage',
+  // 집 — 왼쪽 칸의 집 그림은 그대로 두고 집 정보 칸 자리에 연다.
+  houseMembers: 'house',
+  houseMissions: 'house',
+  houseChat: 'house',
+  houseFeed: 'house',
+  houseFeedPost: 'house',
+  houseFeedCompose: 'house',
 };
 
 /** `screen`을 오른쪽 칸에 여는 탭 — 2단이 아니거나 칸에 열지 않는 화면이면 null. */

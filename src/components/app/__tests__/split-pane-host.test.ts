@@ -17,13 +17,31 @@ describe('splitPaneHost', () => {
     }
   });
 
+  it('2단이면 집의 구성원 관리·미션·채팅·집 피드를 집 탭의 오른쪽 칸에 연다', () => {
+    for (const screen of [
+      'houseMembers',
+      'houseMissions',
+      'houseChat',
+      'houseFeed',
+      'houseFeedPost',
+      'houseFeedCompose',
+    ] as const) {
+      expect(splitPaneHost(screen, true)).toBe('house');
+      expect(splitPaneHost(screen, false)).toBeNull();
+    }
+    // 집 탐색·새 집 만들기·친구 방은 집 그림 옆에 둘 내용이 아니라 칸에 열지 않는다.
+    for (const screen of ['houseSearch', 'createHouse', 'friendRoom'] as const) {
+      expect(splitPaneHost(screen, true)).toBeNull();
+    }
+  });
+
   it('한 칸(폰)에서는 어느 화면도 칸에 열지 않는다', () => {
     expect(splitPaneHost('settings', false)).toBeNull();
     expect(splitPaneHost('help', false)).toBeNull();
   });
 
   it('탭 화면과 칸에 열지 않는 서브화면은 2단에서도 null', () => {
-    for (const screen of ['myPage', 'myRoom', 'decor', 'houseChat', 'feedPost'] as const) {
+    for (const screen of ['myPage', 'myRoom', 'decor', 'gacha', 'feedPost'] as const) {
       expect(splitPaneHost(screen, true)).toBeNull();
     }
   });
