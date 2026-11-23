@@ -80,6 +80,8 @@ const missions = [
 export const HOUSE_FIXTURES = {
   'GET /me/houses': { items: [myHouse] } satisfies List<MyHouseSummary>,
   'GET /me/join-requests': { items: [] } satisfies List<MyJoinRequestSummary>,
+  // 집 탐색 — 둘러볼 다른 집이 없는 빈 목록(페이지 응답).
+  'GET /houses': { items: [], hasNext: false },
   'GET /houses/cover-images': {
     items: [{ code: 'coral-aquarium', name: '산호 수족관', coverImageKey: COVER }],
   } satisfies List<HouseCoverImage>,
