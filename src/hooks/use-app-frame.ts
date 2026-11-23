@@ -48,8 +48,8 @@ export type AppFrame = ReturnType<typeof useWindowDimensions> & {
    */
   splitFill?: boolean;
   /**
-   * 가로 안전 영역 인셋 — 0이 아닐 때만 실린다. 아이폰 Duo는 접힘·펼침 모두 오른쪽 84pt가
-   * 시스템 표시 영역이다(iOS 27.2 실측). `width`는 이미 이만큼 빠진 값이고, 프레임
+   * 가로 안전 영역 인셋 — 0이 아닐 때만 실린다. 접힌 아이폰 Duo는 오른쪽 84pt가 시스템 표시
+   * 영역이다(iOS 27.2 실측 — 펼치면 가로 인셋은 0이고 위 82로 바뀐다). `width`는 이미 이만큼 빠진 값이고, 프레임
    * (`AppFrame`·`ModalFrame`)이 같은 값으로 양옆을 비운다.
    */
   insetLeft?: number;
