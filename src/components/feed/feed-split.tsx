@@ -1,10 +1,11 @@
-import { type ReactNode, useContext, useMemo } from 'react';
+import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { ContentMaxWidth, Spacing } from '@/constants/theme';
 import { APP_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
 import { useBottomNavInset } from '@/hooks/use-screen-style';
+import { useSplitLeftPaneInsets } from '@/hooks/use-split-pane-insets';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
 
@@ -20,16 +21,8 @@ export function FeedSplit({ children, detail }: { children: ReactNode; detail: R
   const tr = useT();
   const Typography = useTypography();
   const { split, splitFill = false, navRail = false } = useAppFrame();
-  const insets = useContext(SafeAreaInsetsContext);
-  // 창을 다 쓰는 2단의 왼쪽 칸은 위 안전 영역(펼친 아이폰 Duo 82)을 통째로 비우지 않는다 — 시스템
-  // 표시는 오른쪽 위 모서리에만 있는데 인셋은 위쪽 전체 폭으로 온다. 칸 안의 화면에는 작은 위 여백만
-  // 보인다. 0으로 두면 떠 있는 제목 알약이 화면 끝에서 8pt에 붙는데, iOS 27의 글래스 면이 그 자리에서
-  // 제목 글자를 찌그러뜨렸다(Duo 시뮬레이터 실측: 0 → 깨짐, 24 → 정상).
-  const listInsets = useMemo(
-    () =>
-      splitFill && insets ? { ...insets, top: Math.min(insets.top, SPLIT_LIST_TOP_INSET) } : insets,
-    [splitFill, insets],
-  );
+  // 왼쪽 칸은 위 안전 영역을 통째로 비우지 않는다(`useSplitLeftPaneInsets` 참고).
+  const listInsets = useSplitLeftPaneInsets();
   // 아래 탭 바가 떠 있는 좁은 2단에서는 상세의 댓글 입력이 그 밑에 깔리지 않게 비운다.
   const navInset = useBottomNavInset();
   return (
@@ -63,9 +56,6 @@ export function FeedSplit({ children, detail }: { children: ReactNode; detail: R
     </View>
   );
 }
-
-/** 창을 다 쓰는 2단에서 목록 칸이 보는 위 인셋의 상한 — 위 주석 참고. */
-const SPLIT_LIST_TOP_INSET = Spacing.three;
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },

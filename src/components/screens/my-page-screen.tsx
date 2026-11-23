@@ -1,5 +1,6 @@
-import { memo, useRef } from 'react';
+import { memo, useContext, useRef } from 'react';
 import { Pressable, type ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { PagerScrollView } from '@/components/ui/pager-scroll-view';
 import { pressedStyle } from '@/components/ui/press-feedback';
 import { formatAmount } from '@/constants/currency';
@@ -9,9 +10,11 @@ import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { ListRow } from '@/components/ui/list-row';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { HEADER_ROW_HEIGHT } from '@/components/ui/screen-header-geometry';
+import { HEADER_ROW_HEIGHT, headerUnderlapInset } from '@/components/ui/screen-header-geometry';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
-import { Radius, Spacing } from '@/constants/theme';
+import { ContentMaxWidth, Radius, Spacing } from '@/constants/theme';
+import { APP_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
+import { useSplitLeftPaneInsets } from '@/hooks/use-split-pane-insets';
 import { useBottomNavInset, useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
@@ -93,8 +96,14 @@ export const MyPageScreen = memo(function MyPageScreen({
   const Typography = useTypography();
   const emph = useFontEmphasis();
   // 떠 있는 헤더·바텀바 밑으로 콘텐츠가 지나가도록 위아래 패딩 (#1069, #1049).
-  const headerInset = useHeaderContentInset();
   const navInset = useBottomNavInset();
+  // 2단(펼친 폴더블·태블릿·데스크톱 웹) — 왼쪽 칸에 프로필·지표·바로가기, 오른쪽 칸에 메뉴와 설정.
+  const { split, splitFill = false } = useAppFrame();
+  const insets = useContext(SafeAreaInsetsContext);
+  // 왼쪽 칸은 위 안전 영역을 통째로 비우지 않는다(펼친 아이폰 Duo — `useSplitLeftPaneInsets`).
+  const leftInsets = useSplitLeftPaneInsets();
+  const wholeHeaderInset = useHeaderContentInset();
+  const headerInset = split && leftInsets ? headerUnderlapInset(leftInsets.top) : wholeHeaderInset;
   // 서브화면(도움말·버그 제보 …)에 다녀와도 보던 자리로 (#763).
   const scrollRef = useRef<ScrollView>(null);
   const scrollRestore = useScrollRestore(scrollRef, { getInitialScrollY, onScrollY });
@@ -117,6 +126,17 @@ export const MyPageScreen = memo(function MyPageScreen({
     { icon: 'gift', label: tr('member.myPage.inviteFriends'), onPress: onInviteFriends },
     { icon: 'help', label: tr('member.myPage.help'), onPress: onOpenHelp },
     { icon: 'bug', label: tr('member.myPage.bugReport'), onPress: onReportBug },
+    // 2단에서는 설정이 머리의 톱니 대신 메뉴의 한 행이다 — 오른쪽 위는 펼친 아이폰 Duo의
+    // 시스템 표시 자리라 톱니가 그 밑에 붙었다.
+    ...(split
+      ? [
+          {
+            icon: 'settings' as const,
+            label: tr('member.myPage.settingsA11y'),
+            onPress: onOpenSettings,
+          },
+        ]
+      : []),
   ];
 
   // 바로가기 타일 — 배선된 것만. 캐릭터 교체는 기능 제외 상태(#637)라 없다.
@@ -166,6 +186,26 @@ export const MyPageScreen = memo(function MyPageScreen({
     },
   ];
 
+  const rowsCard = (
+    <GlassSurface
+      fallbackColor={t.surface}
+      interactive={false}
+      style={styles.card}
+      testID="my-page-rows">
+      <View style={styles.cardContent}>
+        {rows.map((row, idx) => (
+          <ListRow
+            key={row.label}
+            icon={row.icon}
+            label={row.label}
+            onPress={row.onPress}
+            last={idx === rows.length - 1}
+          />
+        ))}
+      </View>
+    </GlassSurface>
+  );
+
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
       <View
@@ -176,147 +216,166 @@ export const MyPageScreen = memo(function MyPageScreen({
         <View style={[styles.ambientPrimary, { backgroundColor: t.primarySoft }]} />
         <View style={[styles.ambientWarm, { backgroundColor: t.warningSoft }]} />
       </View>
-      <ScreenHeader
-        title={tr('member.myPage.title')}
-        right={
-          // 설정은 "바꾸는 곳"이라 목록 행이 아니라 헤더 톱니 뒤로 — 보통 앱의 자리.
-          <Pressable
-            onPress={onOpenSettings}
-            accessibilityRole="button"
-            accessibilityLabel={tr('member.myPage.settingsA11y')}
-            testID="my-page-settings"
-            style={({ pressed }) => [styles.headerBtn, pressed && pressedStyle('dim', t)]}>
-            <GlassSurface style={styles.headerFace} fallbackColor={t.surface}>
-              <Icon name="settings" size={20} color={t.text} />
-            </GlassSurface>
-          </Pressable>
-        }
-      />
-
-      <PagerScrollView
-        ref={scrollRef}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.body,
-          column,
-          headerInset ? { paddingTop: headerInset } : null,
-          navInset ? { paddingBottom: Spacing.four + navInset } : null,
-        ]}
-        {...scrollRestore}>
-        <GlassSurface
-          fallbackColor={t.surface}
-          interactive={false}
-          style={styles.card}
-          testID="my-page-profile-card">
-          <View style={styles.profile}>
-            <View style={[styles.avatar, { backgroundColor: t.primarySoft }]}>
-              <CharacterAvatar characterId={characterId} frames={characterFrames} size={64} />
-            </View>
-            <View style={styles.profileText}>
-              <Text style={[Typography.h3, { color: t.text }]} numberOfLines={1}>
-                {nickname}
-              </Text>
-              <Text
-                style={[Typography.body, { color: bio ? t.textMuted : t.textDisabled }]}
-                numberOfLines={2}>
-                {bio || tr('member.myPage.bioPlaceholder')}
-              </Text>
-            </View>
-          </View>
-          <Pressable
-            onPress={onEditProfile}
-            accessibilityRole="button"
-            accessibilityLabel={tr('member.myPage.editProfile')}
-            style={({ pressed }) => [
-              styles.editBtn,
-              { backgroundColor: pressed ? t.primarySoft : t.surfaceMuted },
-            ]}>
-            <Icon name="edit" size={16} color={t.text} />
-            <Text style={[Typography.label, { color: t.text }]}>
-              {tr('member.myPage.editProfile')}
-            </Text>
-          </Pressable>
-        </GlassSurface>
-
-        <GlassSurface
-          fallbackColor={t.surface}
-          interactive={false}
-          style={styles.card}
-          testID="my-page-stats">
-          <View style={styles.stats}>
-            {stats.map((s, idx) => (
-              <View
-                key={s.label}
-                accessible
-                accessibilityLabel={`${s.label} ${s.value}`}
-                style={[
-                  styles.stat,
-                  idx > 0 && {
-                    borderLeftColor: t.border,
-                    borderLeftWidth: StyleSheet.hairlineWidth,
-                  },
-                ]}>
-                <View style={styles.statValue}>
-                  <Icon name={s.icon} size={16} color={s.color} />
-                  <Text style={[Typography.label, emph('semibold'), { color: t.text }]}>
-                    {s.value}
+      {/* 한 칸일 때도 같은 래퍼·같은 칸 — 접었다 펼 때 스크롤이 리마운트되지 않게. */}
+      <View
+        style={[styles.screen, split && (splitFill ? styles.splitRowFill : styles.splitRow)]}
+        testID="my-page-split">
+        <View
+          style={split ? (splitFill ? styles.paneFill : styles.mainPane) : styles.screen}
+          testID="my-page-main-pane">
+          <SafeAreaInsetsContext.Provider value={split ? leftInsets : insets}>
+            <ScreenHeader
+              title={tr('member.myPage.title')}
+              right={
+                split ? undefined : (
+                  // 설정은 "바꾸는 곳"이라 목록 행이 아니라 헤더 톱니 뒤로 — 보통 앱의 자리.
+                  <Pressable
+                    onPress={onOpenSettings}
+                    accessibilityRole="button"
+                    accessibilityLabel={tr('member.myPage.settingsA11y')}
+                    testID="my-page-settings"
+                    style={({ pressed }) => [styles.headerBtn, pressed && pressedStyle('dim', t)]}>
+                    <GlassSurface style={styles.headerFace} fallbackColor={t.surface}>
+                      <Icon name="settings" size={20} color={t.text} />
+                    </GlassSurface>
+                  </Pressable>
+                )
+              }
+            />
+          </SafeAreaInsetsContext.Provider>
+          <PagerScrollView
+            ref={scrollRef}
+            testID="my-page-scroll"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
+              styles.body,
+              column,
+              headerInset ? { paddingTop: headerInset } : null,
+              navInset ? { paddingBottom: Spacing.four + navInset } : null,
+            ]}
+            {...scrollRestore}>
+            <GlassSurface
+              fallbackColor={t.surface}
+              interactive={false}
+              style={styles.card}
+              testID="my-page-profile-card">
+              <View style={styles.profile}>
+                <View style={[styles.avatar, { backgroundColor: t.primarySoft }]}>
+                  <CharacterAvatar characterId={characterId} frames={characterFrames} size={64} />
+                </View>
+                <View style={styles.profileText}>
+                  <Text style={[Typography.h3, { color: t.text }]} numberOfLines={1}>
+                    {nickname}
+                  </Text>
+                  <Text
+                    style={[Typography.body, { color: bio ? t.textMuted : t.textDisabled }]}
+                    numberOfLines={2}>
+                    {bio || tr('member.myPage.bioPlaceholder')}
                   </Text>
                 </View>
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>{s.label}</Text>
               </View>
-            ))}
-          </View>
-        </GlassSurface>
-
-        {tiles.length > 0 ? (
-          <View style={styles.tiles} testID="my-page-tiles">
-            {tiles.map((tile) => (
               <Pressable
-                key={tile.label}
-                onPress={tile.onPress}
+                onPress={onEditProfile}
                 accessibilityRole="button"
-                accessibilityLabel={
-                  tile.dot ? `${tile.label}, ${tr('nav.badgeAbsent')}` : tile.label
-                }
-                style={({ pressed }) => [styles.tile, pressed && pressedStyle('dim', t)]}>
-                <GlassSurface fallbackColor={t.surface} style={styles.tileFace}>
-                  <View style={[styles.iconCircle, { backgroundColor: t.primarySoft }]}>
-                    <Icon name={tile.icon} size={20} color={t.primaryText} />
-                    {tile.dot ? (
-                      <View style={[styles.tileDot, { backgroundColor: t.danger }]} />
-                    ) : null}
-                  </View>
-                  <Text style={[Typography.label, { color: t.text }]}>{tile.label}</Text>
-                </GlassSurface>
+                accessibilityLabel={tr('member.myPage.editProfile')}
+                style={({ pressed }) => [
+                  styles.editBtn,
+                  { backgroundColor: pressed ? t.primarySoft : t.surfaceMuted },
+                ]}>
+                <Icon name="edit" size={16} color={t.text} />
+                <Text style={[Typography.label, { color: t.text }]}>
+                  {tr('member.myPage.editProfile')}
+                </Text>
               </Pressable>
-            ))}
+            </GlassSurface>
+
+            <GlassSurface
+              fallbackColor={t.surface}
+              interactive={false}
+              style={styles.card}
+              testID="my-page-stats">
+              <View style={styles.stats}>
+                {stats.map((s, idx) => (
+                  <View
+                    key={s.label}
+                    accessible
+                    accessibilityLabel={`${s.label} ${s.value}`}
+                    style={[
+                      styles.stat,
+                      idx > 0 && {
+                        borderLeftColor: t.border,
+                        borderLeftWidth: StyleSheet.hairlineWidth,
+                      },
+                    ]}>
+                    <View style={styles.statValue}>
+                      <Icon name={s.icon} size={16} color={s.color} />
+                      <Text style={[Typography.label, emph('semibold'), { color: t.text }]}>
+                        {s.value}
+                      </Text>
+                    </View>
+                    <Text style={[Typography.supporting, { color: t.textMuted }]}>{s.label}</Text>
+                  </View>
+                ))}
+              </View>
+            </GlassSurface>
+
+            {tiles.length > 0 ? (
+              <View style={styles.tiles} testID="my-page-tiles">
+                {tiles.map((tile) => (
+                  <Pressable
+                    key={tile.label}
+                    onPress={tile.onPress}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      tile.dot ? `${tile.label}, ${tr('nav.badgeAbsent')}` : tile.label
+                    }
+                    style={({ pressed }) => [styles.tile, pressed && pressedStyle('dim', t)]}>
+                    <GlassSurface fallbackColor={t.surface} style={styles.tileFace}>
+                      <View style={[styles.iconCircle, { backgroundColor: t.primarySoft }]}>
+                        <Icon name={tile.icon} size={20} color={t.primaryText} />
+                        {tile.dot ? (
+                          <View style={[styles.tileDot, { backgroundColor: t.danger }]} />
+                        ) : null}
+                      </View>
+                      <Text style={[Typography.label, { color: t.text }]}>{tile.label}</Text>
+                    </GlassSurface>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+
+            {split ? null : rowsCard}
+          </PagerScrollView>
+        </View>
+        {split ? (
+          <View style={splitFill ? styles.paneFill : styles.menuPane} testID="my-page-menu-pane">
+            <PagerScrollView
+              showsVerticalScrollIndicator={false}
+              testID="my-page-menu-scroll"
+              contentContainerStyle={[
+                styles.body,
+                // 오른쪽 칸은 모서리의 시스템 표시 밑이라 위 안전 영역을 지킨다.
+                { paddingTop: (insets?.top ?? 0) + Spacing.four },
+                { paddingBottom: Spacing.four + navInset },
+              ]}>
+              {rowsCard}
+            </PagerScrollView>
           </View>
         ) : null}
-
-        <GlassSurface
-          fallbackColor={t.surface}
-          interactive={false}
-          style={styles.card}
-          testID="my-page-rows">
-          <View style={styles.cardContent}>
-            {rows.map((row, idx) => (
-              <ListRow
-                key={row.label}
-                icon={row.icon}
-                label={row.label}
-                onPress={row.onPress}
-                last={idx === rows.length - 1}
-              />
-            ))}
-          </View>
-        </GlassSurface>
-      </PagerScrollView>
+      </View>
     </View>
   );
 });
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  // 마우스 웹의 2단 — 폰 폭 칸 + 메뉴 칸을 한 블록으로 가운데에.
+  splitRow: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.six },
+  mainPane: { width: APP_FRAME_MAX_WIDTH, flexGrow: 0 },
+  menuPane: { width: ContentMaxWidth, flexGrow: 0, flexShrink: 1 },
+  // 터치 기기의 2단(펼친 폴더블·태블릿) — 두 칸이 1:1로 창을 다 쓴다.
+  splitRowFill: { flexDirection: 'row' },
+  paneFill: { flex: 1, flexBasis: 0, minWidth: 0 },
   ambient: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
   ambientPrimary: {
     position: 'absolute',
