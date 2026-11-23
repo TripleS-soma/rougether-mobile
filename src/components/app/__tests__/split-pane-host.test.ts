@@ -29,8 +29,9 @@ describe('splitPaneHost', () => {
       expect(splitPaneHost(screen, true)).toBe('house');
       expect(splitPaneHost(screen, false)).toBeNull();
     }
-    // 집 탐색·새 집 만들기·친구 방은 집 그림 옆에 둘 내용이 아니라 칸에 열지 않는다.
-    for (const screen of ['houseSearch', 'createHouse', 'friendRoom'] as const) {
+    expect(splitPaneHost('friendRoom', true)).toBe('house');
+    // 집 탐색·새 집 만들기는 집이 없을 때도 열려야 해서 칸에 열지 않는다.
+    for (const screen of ['houseSearch', 'createHouse'] as const) {
       expect(splitPaneHost(screen, true)).toBeNull();
     }
   });
@@ -41,8 +42,37 @@ describe('splitPaneHost', () => {
   });
 
   it('탭 화면과 칸에 열지 않는 서브화면은 2단에서도 null', () => {
-    for (const screen of ['myPage', 'myRoom', 'decor', 'gacha', 'feedPost'] as const) {
+    for (const screen of ['myPage', 'myRoom', 'decor', 'minigameRunner', 'market'] as const) {
       expect(splitPaneHost(screen, true)).toBeNull();
     }
+  });
+
+  it('방의 하위 화면은 방 탭, 글쓰기는 피드 탭, 나머지 메뉴는 내 정보 탭의 칸에 연다', () => {
+    for (const screen of [
+      'routineManage',
+      'categoryManage',
+      'notificationList',
+      'minigames',
+      'gacha',
+      'furnitureStudio',
+    ] as const) {
+      // prettier-ignore
+      expect(splitPaneHost(screen, true)).toBe('myRoom');
+    }
+    expect(splitPaneHost('feedCompose', true)).toBe('feed');
+    expect(splitPaneHost('suggestions', true)).toBe('myPage');
+  });
+
+  // 루틴 추가·주간회고는 연 곳으로 돌아간다 — 그 연 곳의 탭이 칸을 내준다.
+  it('루틴 추가·주간회고는 연 곳의 탭 옆에 연다', () => {
+    expect(splitPaneHost('addRoutine', true, 'myRoom')).toBe('myRoom');
+    expect(splitPaneHost('addRoutine', true, 'calendar')).toBe('calendar');
+    // 루틴 관리(방의 칸에 열린 화면)에서 열었으면 같은 방 탭의 칸에.
+    expect(splitPaneHost('addRoutine', true, 'routineManage')).toBe('myRoom');
+    expect(splitPaneHost('weeklyReport', true, 'myPage')).toBe('myPage');
+    expect(splitPaneHost('weeklyReport', true, 'myRoom')).toBe('myRoom');
+    // 연 곳을 모르면 종전대로 화면 전체.
+    expect(splitPaneHost('addRoutine', true)).toBeNull();
+    expect(splitPaneHost('addRoutine', false, 'myRoom')).toBeNull();
   });
 });

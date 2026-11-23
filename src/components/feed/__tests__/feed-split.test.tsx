@@ -52,7 +52,8 @@ describe('FeedSplit — 2단 피드 탭', () => {
     // 펼친 아이폰 Duo: 시스템 표시는 오른쪽 위 모서리뿐 — 왼쪽 칸은 작은 여백(16)만, 오른쪽 칸은
     // 인셋 그대로. 0이 아닌 이유: 제목 알약이 화면 끝에 붙으면 iOS 27 글래스가 글자를 찌그러뜨린다.
     expect(ui.getByTestId('list-top').props.children).toBe('16');
-    expect(ui.getByTestId('detail-top').props.children).toBe('82');
+    // 오른쪽 칸은 인셋보다 16 더 내린다 — 와이파이 그림이 인셋(82)보다 낮은 98pt까지 내려온다.
+    expect(ui.getByTestId('detail-top').props.children).toBe('98');
   });
 
   it('고른 글이 없으면 상세 칸에 안내를 둔다', async () => {

@@ -31,3 +31,27 @@ export function useSplitLeftPaneInsets(): EdgeInsets | null {
     [splitFill, insets],
   );
 }
+
+/**
+ * 창을 다 쓰는 2단에서 오른쪽 칸의 머리를 시스템 안전 영역보다 이만큼 더 내린다.
+ *
+ * 펼친 아이폰 Duo의 안전 영역은 위 82인데, 오른쪽 위 모서리의 와이파이 그림은 98pt쯤까지 내려온다
+ * (시뮬레이터 캡처 실측). 인셋대로만 두면 오른쪽 칸 머리의 버튼(위 90pt부터)이 그 그림에 겹쳐 보인다.
+ */
+export const SPLIT_RIGHT_TOP_EXTRA = Spacing.three;
+
+/**
+ * 2단의 **오른쪽 칸**에 내려 줄 안전 영역 인셋 — 위쪽에 시스템 표시가 있는 기기(위 인셋이 0이
+ * 아님)의 창을 다 쓰는 2단에서만 위를 조금 더 비운다. 그 밖에는 인셋 그대로다.
+ */
+export function useSplitRightPaneInsets(): EdgeInsets | null {
+  const { splitFill = false } = useAppFrame();
+  const insets = useContext(SafeAreaInsetsContext);
+  return useMemo(
+    () =>
+      splitFill && insets && insets.top > 0
+        ? { ...insets, top: insets.top + SPLIT_RIGHT_TOP_EXTRA }
+        : insets,
+    [splitFill, insets],
+  );
+}

@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { ContentMaxWidth, Spacing } from '@/constants/theme';
 import { APP_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
 import { useBottomNavInset } from '@/hooks/use-screen-style';
+import { useSplitRightPaneInsets } from '@/hooks/use-split-pane-insets';
 import { useTokens } from '@/hooks/use-tokens';
 
 /**
@@ -32,6 +34,8 @@ export function SplitDetailOverlay({
   const { split, splitFill = false, navRail = false } = useAppFrame();
   // 아래 탭 바가 떠 있는 좁은 2단에서는 서브화면의 바닥(입력줄·버튼)이 그 밑에 깔리지 않게 비운다.
   const navInset = useBottomNavInset();
+  // 오른쪽 칸의 머리는 모서리의 시스템 표시(와이파이 그림)와 겹치지 않게 조금 더 내린다.
+  const rightInsets = useSplitRightPaneInsets();
   const shown = split && detail != null && detail !== false;
   return (
     <View style={styles.fill} testID="split-detail-host">
@@ -50,7 +54,9 @@ export function SplitDetailOverlay({
               navRail ? null : { paddingBottom: navInset },
             ]}
             testID="split-detail-pane">
-            {detail}
+            <SafeAreaInsetsContext.Provider value={rightInsets}>
+              {detail}
+            </SafeAreaInsetsContext.Provider>
           </View>
         </View>
       ) : null}

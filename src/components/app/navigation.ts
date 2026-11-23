@@ -265,11 +265,44 @@ const SPLIT_PANE_HOST: Partial<Record<Screen, NavTab>> = {
   houseFeed: 'house',
   houseFeedPost: 'house',
   houseFeedCompose: 'house',
+  // 친구 방 — 집의 좌석을 눌러 연다. 집 그림 옆에서 그 방을 본다.
+  friendRoom: 'house',
+  // 방 — 왼쪽 칸의 방 그림은 그대로 두고 할 일 칸 자리에 연다.
+  routineManage: 'myRoom',
+  categoryManage: 'myRoom',
+  notificationList: 'myRoom',
+  minigames: 'myRoom',
+  minigameLeaderboard: 'myRoom',
+  furnitureStudio: 'myRoom',
+  gacha: 'myRoom',
+  // 피드 — 글 목록 옆에서 쓴다.
+  feedCompose: 'feed',
+  // 내 정보의 나머지 메뉴.
+  suggestions: 'myPage',
+  calendarImport: 'myPage',
 };
 
-/** `screen`을 오른쪽 칸에 여는 탭 — 2단이 아니거나 칸에 열지 않는 화면이면 null. */
-export function splitPaneHost(screen: Screen, split: boolean): NavTab | null {
-  return split ? (SPLIT_PANE_HOST[screen] ?? null) : null;
+/** 연 곳으로 돌아가는 화면(#1056) — 2단에서는 그 "연 곳"의 탭이 칸을 내준다. */
+const RETURNING_SCREENS: ReadonlySet<Screen> = new Set<Screen>(['addRoutine', 'weeklyReport']);
+
+/**
+ * `screen`을 오른쪽 칸에 여는 탭 — 2단이 아니거나 칸에 열지 않는 화면이면 null.
+ *
+ * 루틴 추가·주간회고는 연 곳으로 돌아가는 화면이라(`addReturnScreen`), 그 연 곳이 탭이면 그 탭,
+ * 칸에 열린 화면이면 그 화면을 품은 탭이 칸을 내준다 — 방에서 연 루틴 추가는 방 옆에, 달력에서
+ * 연 것은 달력 옆에 열린다.
+ */
+export function splitPaneHost(
+  screen: Screen,
+  split: boolean,
+  addReturnScreen?: Screen,
+): NavTab | null {
+  if (!split) return null;
+  if (RETURNING_SCREENS.has(screen)) {
+    if (!addReturnScreen || RETURNING_SCREENS.has(addReturnScreen)) return null;
+    return TAB_FOR_SCREEN[addReturnScreen] ?? SPLIT_PANE_HOST[addReturnScreen] ?? null;
+  }
+  return SPLIT_PANE_HOST[screen] ?? null;
 }
 
 /** Screens that own input all the way to the screen edge. */

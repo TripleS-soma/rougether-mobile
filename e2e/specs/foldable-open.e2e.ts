@@ -303,3 +303,41 @@ for (const { name, title } of [
     await expectNoHorizontalScroll(page);
   });
 }
+
+// 방·피드의 하위 화면도 탭 화면의 오른쪽 칸에 열린다 — 왼쪽 칸(방 그림·글 목록)은 그대로다.
+test('방의 알림함은 방 그림을 그대로 두고 오른쪽 칸에 열린다', async ({ app, page }) => {
+  await app.open({ tab: 'myRoom' });
+  await app.dismissModals();
+  const screen = SCREENS.myRoom(page);
+  await screen.getByRole('button', { name: '알림', exact: true }).click();
+  const pane = page.getByTestId('split-detail-pane');
+  await expect(pane).toBeVisible();
+  await expect(screen.getByTestId('room-canvas')).toBeVisible();
+  await expect(page.getByTestId('nav-rail')).toBeVisible();
+  const { viewport, insets } = app.device;
+  await expectFillsWidth(
+    page,
+    [page.getByTestId('nav-rail'), screen.getByTestId('my-room-split-hero'), pane],
+    viewport.width - insets.left - insets.right,
+  );
+  await pane.getByRole('button', { name: '뒤로 가기', exact: true }).click();
+  await expect(pane).toHaveCount(0);
+  await expect(screen.locator('[data-testid^="routine-row-"]').first()).toBeVisible();
+});
+
+test('피드의 글쓰기는 글 목록을 그대로 두고 오른쪽 칸에 열린다', async ({ app, page }) => {
+  await app.open({ tab: 'feed' });
+  await app.dismissModals();
+  const list = page.getByTestId('feed-split-list');
+  await list.getByRole('button', { name: '게시물 쓰기', exact: true }).click();
+  const pane = page.getByTestId('split-detail-pane');
+  await expect(pane).toBeVisible();
+  await expect(list.getByTestId('feed-post-904')).toBeVisible();
+  const { viewport, insets } = app.device;
+  await expectFillsWidth(
+    page,
+    [page.getByTestId('nav-rail'), list, pane],
+    viewport.width - insets.left - insets.right,
+  );
+  await expectNoHorizontalScroll(page);
+});
