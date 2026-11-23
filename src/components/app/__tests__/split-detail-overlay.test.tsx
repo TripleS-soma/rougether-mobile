@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react-native';
-import { useEffect } from 'react';
+import { useContext, useEffect } from 'react';
 import { StyleSheet, Text } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { SplitDetailOverlay } from '@/components/app/split-detail-overlay';
 import { APP_FRAME_MAX_WIDTH, type AppFrame } from '@/hooks/use-app-frame';
@@ -88,5 +89,38 @@ describe('SplitDetailOverlay — 2단의 오른쪽 칸에 서브화면 덮기', 
     await ui.rerender(tree(<Text>설정 화면</Text>));
     await ui.rerender(tree(null));
     expect(onMount).toHaveBeenCalledTimes(1);
+  });
+
+  // 펼친 아이폰 Duo(위 안전 영역 82): 오른쪽 위 모서리의 와이파이 그림은 98pt까지 내려온다.
+  it('창을 다 쓰는 2단에서 칸 안의 화면은 위 인셋을 16 더 본다 — 머리 버튼이 시스템 표시와 안 겹치게', async () => {
+    mockFrame = DUO_OPEN;
+    function Top() {
+      const insets = useContext(SafeAreaInsetsContext);
+      return <Text testID="top">{String(insets?.top)}</Text>;
+    }
+    const ui = await render(
+      <SafeAreaInsetsContext.Provider value={{ top: 82, right: 0, bottom: 34, left: 0 }}>
+        <SplitDetailOverlay detail={<Top />}>
+          <Text>탭 화면</Text>
+        </SplitDetailOverlay>
+      </SafeAreaInsetsContext.Provider>,
+    );
+    expect(ui.getByTestId('top').props.children).toBe('98');
+  });
+
+  it('위 인셋이 없는 기기(태블릿·데스크톱)는 그대로다', async () => {
+    mockFrame = DUO_OPEN;
+    function Top() {
+      const insets = useContext(SafeAreaInsetsContext);
+      return <Text testID="top">{String(insets?.top)}</Text>;
+    }
+    const ui = await render(
+      <SafeAreaInsetsContext.Provider value={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+        <SplitDetailOverlay detail={<Top />}>
+          <Text>탭 화면</Text>
+        </SplitDetailOverlay>
+      </SafeAreaInsetsContext.Provider>,
+    );
+    expect(ui.getByTestId('top').props.children).toBe('0');
   });
 });

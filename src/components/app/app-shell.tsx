@@ -710,7 +710,7 @@ export function AppShell({
   // 2단에서는 설정·도움말 같은 서브화면을 탭 화면의 오른쪽 칸에 연다(`splitPaneHost`). 그동안 층과
   // 페이저에는 그 탭 화면으로 보인다 — 탭 층이 그대로 서 있고 왼쪽 세로 탭 줄도 남는다.
   const { split, navRail = false } = useAppFrame();
-  const paneHost = splitPaneHost(screen, split);
+  const paneHost = splitPaneHost(screen, split, addReturnScreen);
   const shellScreen: Screen = paneHost ? SCREEN_FOR_TAB[paneHost] : screen;
   const navTab = paneHost ?? activeTab;
   const pagerTab = usePagerTab(shellScreen);
@@ -719,70 +719,6 @@ export function AppShell({
   const changeTab = useStableCallback((tab: NavTab) =>
     // 집이 없으면 집 탭은 빈 상태 대신 집 탐색으로 직행 (#571).
     setScreen(tab === 'house' && noHouses ? 'houseSearch' : SCREEN_FOR_TAB[tab]),
-  );
-
-  // 넓은 창(펼친 폴더블·태블릿·데스크톱 웹)은 탭 바가 왼쪽 세로 줄이다. 줄은 탭 층 안에 둔다 —
-  // 서브화면은 그 위로 밀려 들어와 줄까지 덮고, 돌아올 때 탭 층의 폭이 바뀌지 않는다.
-  const tabsNode = (
-    // 줄이 없을 때도 같은 래퍼 — 접었다 펼 때 페이저가 리마운트되지 않게.
-    <View style={styles.tabsRow} testID="tabs-layer">
-      {navRail && navTab ? (
-        <NavRail
-          active={navTab}
-          badges={attendancePending ? MY_PAGE_BADGE : undefined}
-          onChange={changeTab}
-        />
-      ) : null}
-      <View style={styles.tabsPager}>
-        <TabPager
-          index={NAV_ORDER.indexOf(pagerTab)}
-          onIndexChange={handlePageChange}
-          lock={pagerLock}
-          suspended={!livesInPager(shellScreen)}>
-          {/* 달력은 나의 방과 같은 데이터·콜백을 쓰는 두 번째 인스턴스 (#1138) — 방
-          캔버스는 view='room'일 때만 그려지므로 비용은 목록 하나 분이다. */}
-          <MyRoomScreen
-            {...myRoomPages.tabProps}
-            view="room"
-            onOpenMarket={marketPages.openMarket}
-            onSpeakerPress={toggleSpeaker}
-            onSpeakerLongPress={openSpeaker}
-            speakerPlaying={speaker.playing}
-            {...tabScroll.myRoom}
-            onOpenFurnitureStudio={openFurnitureStudio}
-            onOpenMinigames={minigames.openMinigames}
-          />
-          {screen === 'calendarWeek' ? (
-            <MyRoomScreen
-              {...myRoomPages.calendarWeekProps}
-              view="calendar"
-              backInterceptorRef={weekBackRef}
-              {...tabScroll.calendar}
-            />
-          ) : (
-            <MyRoomScreen
-              {...myRoomPages.calendarTabProps}
-              view="calendar"
-              {...tabScroll.calendar}
-            />
-          )}
-          {/* 집은 2단에서 스스로 [집 그림 | 집 정보] 두 칸으로 나눈다 — 캔버스는 왼쪽 칸 폭 안에 머문다.
-          내 정보는 스스로 콘텐츠 폭을 제한한다(useResponsiveColumn). */}
-          <SplitDetailOverlay detail={paneHost === 'house' ? housePages.subScreen : null}>
-            <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
-          </SplitDetailOverlay>
-          {/* 피드 (#1409) — 집과 내 정보 사이. 꺼져 있으면 페이지 자체가 없다(NAV_ORDER와 같이). */}
-          {FEED_ENABLED ? (
-            <FeedSplit detail={feedPages.detailPane}>
-              <FeedScreen {...feedPages.tabProps} {...tabScroll.feed} />
-            </FeedSplit>
-          ) : null}
-          <SplitDetailOverlay detail={paneHost === 'myPage' ? settingsSurface.subScreen : null}>
-            <MyPageScreen {...settingsSurface.myPageProps} {...tabScroll.myPage} />
-          </SplitDetailOverlay>
-        </TabPager>
-      </View>
-    </View>
   );
 
   // 현재 서브화면 트리 — 슬라이드 전환(#1094)이 직전 렌더의 노드를 떠나는 층으로 들고 있는다.
@@ -868,7 +804,7 @@ export function AppShell({
       {friendRoomSubScreen}
 
       {/* 집 서브화면 2종 (#692 6단계) — use-house-pages가 그린다. */}
-      {paneHost === 'house' ? null : housePages.subScreen}
+      {housePages.subScreen}
 
       {/* 피드 서브화면 2종 (#1409) — use-feed-pages가 그린다. */}
       {feedPages.subScreen}
@@ -877,14 +813,88 @@ export function AppShell({
       {marketPages.subScreen}
 
       {/* 내 정보 서브화면 9종(설정 포함, #692 → #1088) — use-settings-surface가 그린다. */}
-      {paneHost === 'myPage' ? null : settingsSurface.subScreen}
+      {settingsSurface.subScreen}
     </>
   );
+  // 2단에서 탭 화면의 오른쪽 칸에 여는 서브화면 — 그 탭의 덮개에만 넘긴다.
+  const paneDetail = (tab: NavTab) => (paneHost === tab ? screenNode : null);
+
+  // 넓은 창(펼친 폴더블·태블릿·데스크톱 웹)은 탭 바가 왼쪽 세로 줄이다. 줄은 탭 층 안에 둔다 —
+  // 서브화면은 그 위로 밀려 들어와 줄까지 덮고, 돌아올 때 탭 층의 폭이 바뀌지 않는다.
+  const tabsNode = (
+    // 줄이 없을 때도 같은 래퍼 — 접었다 펼 때 페이저가 리마운트되지 않게.
+    <View style={styles.tabsRow} testID="tabs-layer">
+      {navRail && navTab ? (
+        <NavRail
+          active={navTab}
+          badges={attendancePending ? MY_PAGE_BADGE : undefined}
+          onChange={changeTab}
+        />
+      ) : null}
+      <View style={styles.tabsPager}>
+        <TabPager
+          index={NAV_ORDER.indexOf(pagerTab)}
+          onIndexChange={handlePageChange}
+          lock={pagerLock}
+          suspended={!livesInPager(shellScreen)}>
+          {/* 달력은 나의 방과 같은 데이터·콜백을 쓰는 두 번째 인스턴스 (#1138) — 방
+          캔버스는 view='room'일 때만 그려지므로 비용은 목록 하나 분이다. */}
+          <SplitDetailOverlay detail={paneDetail('myRoom')}>
+            <MyRoomScreen
+              {...myRoomPages.tabProps}
+              view="room"
+              onOpenMarket={marketPages.openMarket}
+              onSpeakerPress={toggleSpeaker}
+              onSpeakerLongPress={openSpeaker}
+              speakerPlaying={speaker.playing}
+              {...tabScroll.myRoom}
+              onOpenFurnitureStudio={openFurnitureStudio}
+              onOpenMinigames={minigames.openMinigames}
+            />
+          </SplitDetailOverlay>
+          <SplitDetailOverlay detail={paneDetail('calendar')}>
+            {screen === 'calendarWeek' ? (
+              <MyRoomScreen
+                {...myRoomPages.calendarWeekProps}
+                view="calendar"
+                backInterceptorRef={weekBackRef}
+                {...tabScroll.calendar}
+              />
+            ) : (
+              <MyRoomScreen
+                {...myRoomPages.calendarTabProps}
+                view="calendar"
+                {...tabScroll.calendar}
+              />
+            )}
+          </SplitDetailOverlay>
+          {/* 집은 2단에서 스스로 [집 그림 | 집 정보] 두 칸으로 나눈다 — 캔버스는 왼쪽 칸 폭 안에 머문다.
+          내 정보는 스스로 콘텐츠 폭을 제한한다(useResponsiveColumn). */}
+          <SplitDetailOverlay detail={paneDetail('house')}>
+            <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
+          </SplitDetailOverlay>
+          {/* 피드 (#1409) — 집과 내 정보 사이. 꺼져 있으면 페이지 자체가 없다(NAV_ORDER와 같이). */}
+          {FEED_ENABLED ? (
+            <SplitDetailOverlay detail={paneDetail('feed')}>
+              <FeedSplit detail={feedPages.detailPane}>
+                <FeedScreen {...feedPages.tabProps} {...tabScroll.feed} />
+              </FeedSplit>
+            </SplitDetailOverlay>
+          ) : null}
+          <SplitDetailOverlay detail={paneDetail('myPage')}>
+            <MyPageScreen {...settingsSurface.myPageProps} {...tabScroll.myPage} />
+          </SplitDetailOverlay>
+        </TabPager>
+      </View>
+    </View>
+  );
+
   const layers = useScreenTransition({
     screen: shellScreen,
     addReturnScreen,
     tabsNode,
-    node: screenNode,
+    // 칸에 여는 화면은 층으로 올리지 않는다 — 위 덮개가 그린다.
+    node: paneHost ? null : screenNode,
   });
 
   return (
