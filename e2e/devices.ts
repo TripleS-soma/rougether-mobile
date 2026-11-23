@@ -60,7 +60,11 @@ function device(
  *
  * 알려진 것은 픽셀 크기뿐이다(커버 1248×1972, 펼침 2448×1848 — 제조사 공개 사양). dp는 화면
  * 밀도에 달렸는데 밀도를 모른다. 삼성 폴드 계열의 기본 밀도 배율 2.625(420dpi 묶음)를 가정해
- * 나눴다: 커버 475×751, 펼침 932×704. 사용자가 화면 확대/축소 설정을 바꾸면 이 값도 달라진다.
+ * 나눴다: 커버 475×751, 펼침 **704×932**. 사용자가 화면 확대/축소 설정을 바꾸면 이 값도 달라진다.
+ *
+ * 펼친 화면은 세로로 잡는다 — 앱이 세로 고정이라, 같은 픽셀 크기와 밀도를 준 안드로이드
+ * 에뮬레이터가 2448×1848 화면을 1848×2448(704×932dp)로 돌려 앱에 줬다(2026-11-23 확인).
+ * 그래서 폭이 세로 탭 줄 기준(840)에 못 미쳐 "좁은 두 칸 + 아래 탭 바"가 된다.
  * 안전 영역도 추정이다(가장자리까지 그리는 안드로이드의 상태 표시줄 32, 제스처 줄 24).
  *
  * 실측하면 이 값과 주석을 바꾼다. 그때까지 이 두 프로젝트는 "이 크기 언저리에서 배치 규칙이
@@ -103,9 +107,23 @@ export const DEVICES: Record<E2eDevice['name'], E2eDevice> = {
   'fold8-open': device(
     'fold8-open',
     'open',
-    fold8({ width: 2448, height: 1848 }),
+    fold8({ width: 1848, height: 2448 }),
     true,
     FOLD8_INSETS,
   ),
   desktop: device('desktop', 'desktop', { width: 1280, height: 800 }, false, NO_INSETS),
 };
+
+/** 세로 탭 줄 기준 — 앱의 `NAV_RAIL_MIN_WIDTH`와 같은 값. */
+const NAV_RAIL_MIN_WIDTH = 840;
+
+/**
+ * 이 기기에서 탭 바가 왼쪽 세로 줄인가(아니면 아래에 떠 있는 알약). 2단이면서 배치 폭이 840
+ * 이상일 때다 — 펼친 아이폰 Duo·데스크톱은 세로 줄, 세로로 펼친 폴드8(704)은 아래 알약.
+ */
+export function hasNavRail(device: E2eDevice): boolean {
+  const usable = device.viewport.width - device.insets.left - device.insets.right;
+  return (
+    (device.posture === 'open' || device.posture === 'desktop') && usable >= NAV_RAIL_MIN_WIDTH
+  );
+}

@@ -130,6 +130,29 @@ describe('MyRoomScreen 2단 레이아웃 (#1230)', () => {
     expect(list.paddingTop).toBe(82 + Spacing.four);
   });
 
+  // 좁은 2단(세로로 펼친 폴드 704×932 — 칸 폭 352): 버튼 6개가 한 줄(376)에 안 들어가 양끝이
+  // 잘렸다(안드로이드 에뮬레이터 실측). 칸이 좁으면 폰처럼 방 위에 세로 열로 얹는다.
+  it('칸이 좁아 버튼 한 줄이 안 들어가면 폰처럼 방 위 세로 열로 둔다', async () => {
+    mockFrame = { ...SPLIT, width: 704, height: 932, splitFill: true };
+    const ui = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} view="room" />);
+    const actions = flattenStyle(ui.getByTestId('room-actions').props.style);
+    expect(actions.position).toBe('absolute');
+    expect(actions.flexDirection).toBeUndefined();
+    // 버튼 줄 자리를 따로 떼지 않는다 — 방이 칸 높이를 그만큼 더 쓴다.
+    const hero = flattenStyle(ui.getByTestId('my-room-split-hero').props.contentContainerStyle);
+    const wrap = flattenStyle(ui.getByTestId('my-room-hero-wrap').props.style);
+    expect(wrap.maxWidth).toBeCloseTo(
+      (932 - Spacing.four - Number(hero.paddingBottom)) * (5 / 6),
+      3,
+    );
+  });
+
+  it('칸이 넉넉하면(펼친 아이폰 Duo, 세로 탭 줄 포함) 버튼은 방 아래 한 줄', async () => {
+    mockFrame = { ...SPLIT, width: 951, height: 669, splitFill: true, navRail: true };
+    const ui = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} view="room" />);
+    expect(flattenStyle(ui.getByTestId('room-actions').props.style).flexDirection).toBe('row');
+  });
+
   it('마우스 웹의 2단은 방 폭을 높이에 맞추지 않는다(종전)', async () => {
     mockFrame = SPLIT;
     const ui = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} view="room" />);
