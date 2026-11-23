@@ -53,6 +53,19 @@ describe('RoomDecorScreen 2단 레이아웃', () => {
     expect(ui.getByText('가구')).toBeTruthy();
     expect(ui.getByLabelText('적용하기')).toBeTruthy();
   });
+  // 터치 기기의 2단(펼친 폴더블·태블릿)은 두 칸이 1:1로 창을 다 쓴다.
+  it('창을 다 쓰는 2단은 두 칸이 같은 비율이고, 카탈로그는 떠 있는 줄 아래에서 시작한다', async () => {
+    mockFrame = { ...SPLIT, width: 867, height: 669, splitFill: true };
+    const ui = await render(<RoomDecorScreen />);
+    expect(flattenStyle(ui.getByTestId('decor-split').props.style).gap).toBe(0);
+    for (const id of ['decor-split-hero', 'decor-split-panel']) {
+      const pane = flattenStyle(ui.getByTestId(id).props.style);
+      expect(pane.flex).toBe(1);
+      expect(pane.width).toBeUndefined();
+    }
+    const content = flattenStyle(ui.getByTestId('decor-split-panel').props.contentContainerStyle);
+    expect(content.paddingTop).toBeGreaterThanOrEqual(44);
+  });
 });
 
 /**

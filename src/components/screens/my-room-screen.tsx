@@ -426,6 +426,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // 웹 데스크톱 2단 (#1230) — 창 ≥ 960px에서만 true.
   const {
     split,
+    splitFill = false,
     width: frameWidth,
     height: frameHeight,
     insetLeft = 0,
@@ -1526,11 +1527,11 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {split ? (
-          <View style={styles.splitRow} testID="my-room-split">
+          <View style={[styles.splitRow, splitFill && styles.splitRowFill]} testID="my-room-split">
             {/* 왼쪽 칸은 화면 세로 가운데에 고정(sticky) — 목록이 길어도 방·달력은 제자리.
                 내용이 칸보다 크면(낮은 창) 그때만 자체 스크롤. 당김 새로고침은 목록 쪽에만. */}
             <ScrollView
-              style={styles.splitHero}
+              style={splitFill ? styles.splitPaneFill : styles.splitHero}
               contentContainerStyle={[
                 styles.splitHeroContent,
                 {
@@ -1542,7 +1543,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               testID="my-room-split-hero">
               {hero}
             </ScrollView>
-            <View style={styles.splitList}>
+            <View
+              style={splitFill ? styles.splitPaneFill : styles.splitList}
+              testID="my-room-split-list">
               {renderScroll(
                 tab === 'room' ? list : <View style={[styles.calendarPanel, column]}>{list}</View>,
               )}
@@ -1881,6 +1884,9 @@ const styles = StyleSheet.create({
     width: ContentMaxWidth,
     flexShrink: 1,
   },
+  // 터치 기기의 2단(펼친 폴더블·태블릿) — 두 칸이 1:1로 창을 다 쓴다. 가운데 블록·틈 없음.
+  splitRowFill: { justifyContent: 'flex-start', gap: 0 },
+  splitPaneFill: { flex: 1, flexBasis: 0, minWidth: 0 },
 
   // 전체화면 방 (#1055) — 위 모서리는 화면 가장자리에 붙으니 각지게.
   // 나의 방 전체화면(#1058)에서만 네 모서리 전부 각지게 — 아래 둥근 모서리가

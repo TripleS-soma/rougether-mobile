@@ -190,6 +190,19 @@ describe('AppFrame / ModalFrame (#1227)', () => {
       os.restore();
     }
   });
+  it('터치 기기의 2단(splitFill)은 최대 폭·테두리 없이 창을 다 쓴다 — 펼친 폴더블', async () => {
+    mockFrame = { ...SPLIT, width: 867, splitFill: true };
+    const { getByTestId } = await render(
+      <AppFrame>
+        <Text>page</Text>
+      </AppFrame>,
+    );
+    const inner = flattenStyle(getByTestId('app-frame-inner').props.style);
+    expect(inner.width).toBe('100%');
+    expect(inner.maxWidth).toBeUndefined();
+    expect(inner.borderLeftWidth).toBeUndefined();
+  });
+
   it('2단 프레임은 훅이 정한 폭(최대 1200)으로 넓어지고, PhoneColumn은 그 안에서 480 컬럼 (#1230)', async () => {
     const os = jest.replaceProperty(Platform, 'OS', 'web');
     try {

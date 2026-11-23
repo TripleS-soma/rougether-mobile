@@ -24,7 +24,7 @@ import { useTokens } from '@/hooks/use-tokens';
 export function AppFrame({ children }: { children: ReactNode }) {
   const t = useTokens();
   // 2단(#1230)이면 프레임이 1200까지 넓어진다 — 폭은 훅이 정한다.
-  const { framed, split, insetLeft, insetRight } = useAppFrame();
+  const { framed, split, splitFill, insetLeft, insetRight } = useAppFrame();
   // 2단은 투두메이트처럼 창 전체가 한 면이고 내용 블록만 가운데 — 폰 컬럼일 때만
   // 테두리와 앱셸 색 여백으로 폰 프레임을 드러낸다.
   const phoneFrame = framed && !split;
@@ -55,7 +55,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
           // 폭 100%가 남아 프레임이 창 전체로 퍼졌다(app.rougether.com 실측, 2026-09-09).
           framed
             ? [
-                split ? styles.innerSplit : styles.innerPhone,
+                // 터치 기기의 2단은 창을 다 쓴다(최대 폭 없음) — 펼친 폴더블·태블릿.
+                splitFill ? styles.innerFull : split ? styles.innerSplit : styles.innerPhone,
                 { backgroundColor: t.screen },
                 phoneFrame ? [styles.innerFramed, { borderColor: t.border }] : null,
               ]
