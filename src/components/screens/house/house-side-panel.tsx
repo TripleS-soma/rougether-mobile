@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } fr
 
 import { OnlineDot } from '@/components/screens/house/online-dot';
 import type { HouseMission, RoomCell } from '@/components/screens/house/types';
+import { CoachTarget } from '@/components/ui/coach-mark';
 import { Icon } from '@/components/ui/icon';
 import { CrownPictogram, HousePictogram } from '@/components/ui/pictograms';
 import { ScalePressable } from '@/components/ui/scale-pressable';
@@ -38,6 +39,7 @@ export type HouseSidePanelProps = {
  * 2단 집 탭의 오른쪽 칸 — 펼친 폴더블·태블릿·데스크톱 웹. 한 칸일 때 집 그림 위에 떠 있던
  * 것들(레벨·목표 알약, 구성원 수 알약, 채팅·집 피드·집 추가 레일)을 여기로 옮겨 그림을 가리지
  * 않고, 숫자만 보이던 목표·구성원을 목록으로 펼친다. 데이터와 콜백은 전부 prop이다.
+ * 튜토리얼 코치마크 대상(`house-missions`·`house-manage`·`house-search`)도 같은 id로 이어받는다.
  */
 export function HouseSidePanel({
   name,
@@ -122,12 +124,14 @@ export function HouseSidePanel({
           />
         ) : null}
         {onOpenSearch ? (
-          <ActionButton
-            icon={<Icon name="add" size={20} color={t.text} />}
-            label={tr('house.screen.railAdd')}
-            accessibilityLabel={tr('house.screen.railAdd')}
-            onPress={onOpenSearch}
-          />
+          <CoachTarget id="house-search">
+            <ActionButton
+              icon={<Icon name="add" size={20} color={t.text} />}
+              label={tr('house.screen.railAdd')}
+              accessibilityLabel={tr('house.screen.railAdd')}
+              onPress={onOpenSearch}
+            />
+          </CoachTarget>
         ) : null}
       </View>
 
@@ -135,6 +139,7 @@ export function HouseSidePanel({
         title={tr('house.sidePanel.missions')}
         action={tr('house.sidePanel.missionsAll')}
         actionA11y={tr('house.sidePanel.missionsAllA11y')}
+        coachId="house-missions"
         onAction={onOpenMissions}>
         {activeMissions.length === 0 ? (
           <Text style={[Typography.label, { color: t.textMuted }]}>
@@ -177,6 +182,7 @@ export function HouseSidePanel({
         title={tr('house.sidePanel.members', { n: membersText })}
         action={tr('house.sidePanel.manage')}
         actionA11y={tr('house.sidePanel.manageA11y')}
+        coachId="house-manage"
         onAction={onOpenMembers}>
         {orderedMembers.map((m, i) => {
           const displayName = m.isMine && userName ? userName : m.name;
@@ -224,12 +230,15 @@ function Section({
   title,
   action,
   actionA11y,
+  coachId,
   onAction,
   children,
 }: {
   title: string;
   action: string;
   actionA11y: string;
+  /** 튜토리얼 코치마크가 짚는 대상 id — 한 칸 화면의 알약과 같은 id를 잇는다. */
+  coachId: string;
   onAction?: () => void;
   children: ReactNode;
 }) {
@@ -240,15 +249,17 @@ function Section({
       <View style={styles.sectionHead}>
         <Text style={[Typography.h3, styles.flexText, { color: t.text }]}>{title}</Text>
         {onAction ? (
-          <ScalePressable
-            onPress={onAction}
-            accessibilityRole="button"
-            accessibilityLabel={actionA11y}
-            hitSlop={Spacing.two}
-            style={styles.sectionAction}>
-            <Text style={[Typography.label, { color: t.primaryText }]}>{action}</Text>
-            <Icon name="forward" size={14} color={t.primaryText} />
-          </ScalePressable>
+          <CoachTarget id={coachId}>
+            <ScalePressable
+              onPress={onAction}
+              accessibilityRole="button"
+              accessibilityLabel={actionA11y}
+              hitSlop={Spacing.two}
+              style={styles.sectionAction}>
+              <Text style={[Typography.label, { color: t.primaryText }]}>{action}</Text>
+              <Icon name="forward" size={14} color={t.primaryText} />
+            </ScalePressable>
+          </CoachTarget>
         ) : null}
       </View>
       {children}
