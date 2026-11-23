@@ -42,7 +42,7 @@ const flat = (style: unknown): Record<string, unknown> =>
  */
 describe('GachaScreen — 연출 레이어 폰 폭 프레임', () => {
   afterEach(() => {
-    mockFrame = { ...mockFrame, split: false, width: 390 };
+    mockFrame = { ...mockFrame, split: false, splitFill: false, width: 390 };
   });
 
   async function drawToResult() {
@@ -70,5 +70,26 @@ describe('GachaScreen — 연출 레이어 폰 폭 프레임', () => {
     const style = flat(ui.getByTestId('gacha-stage-frame').props.style);
     expect(style.maxWidth).toBe(APP_FRAME_MAX_WIDTH);
     expect(style.alignSelf).toBe('center');
+  });
+
+  // 터치 기기의 넓은 화면(펼친 폴더블·태블릿)에서는 바깥을 무대와 같은 화면색으로 — 검은 띠가
+  // 양옆 여백으로 보였다. 마우스 웹은 종전대로 어둡게 둔다.
+  it('창을 다 쓰는 2단(splitFill)은 바깥을 무대와 같은 색으로, 마우스 웹은 어둡게', async () => {
+    mockFrame = { ...mockFrame, split: true, splitFill: true, width: 951 };
+    const fill = await drawToResult();
+    const frameColor = flat(fill.getByTestId('gacha-stage-frame').props.style).backgroundColor;
+    expect(flat(fill.getByTestId('gacha-stage-overlay').props.style).backgroundColor).toBe(
+      frameColor,
+    );
+    expect(flat(fill.getByTestId('gacha-stage-frame').props.style).maxWidth).toBe(
+      APP_FRAME_MAX_WIDTH,
+    );
+    fill.unmount();
+
+    mockFrame = { ...mockFrame, split: true, splitFill: false, width: 1200 };
+    const desktop = await drawToResult();
+    expect(flat(desktop.getByTestId('gacha-stage-overlay').props.style).backgroundColor).not.toBe(
+      flat(desktop.getByTestId('gacha-stage-frame').props.style).backgroundColor,
+    );
   });
 });
