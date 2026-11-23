@@ -40,7 +40,14 @@ const SPLIT: AppFrame = {
 
 describe('MyRoomScreen 2단 레이아웃 (#1230)', () => {
   afterEach(() => {
-    mockFrame = { ...mockFrame, split: false, framed: false, width: 390 };
+    mockFrame = {
+      ...mockFrame,
+      split: false,
+      splitFill: false,
+      framed: false,
+      width: 390,
+      height: 844,
+    };
   });
 
   it('폰·좁은 창은 한 스크롤에 방과 목록이 위아래로 — 2단 래퍼 없음', async () => {
@@ -80,6 +87,30 @@ describe('MyRoomScreen 2단 레이아웃 (#1230)', () => {
     expect(ui.getByTestId('my-room-split')).toBeTruthy();
     expect(ui.getByTestId('calendar-grid')).toBeTruthy();
     expect(ui.getByRole('header', { name: calendarHeading(TODAY) })).toBeTruthy();
+  });
+
+  // 터치 기기의 2단(펼친 폴더블·태블릿)은 두 칸이 1:1로 창을 다 쓴다 — 가운데 블록·틈 없음.
+  it.each(['room', 'calendar'] as const)(
+    '창을 다 쓰는 2단(%s)은 두 칸이 같은 비율로 나란히, 틈·고정 폭 없이',
+    async (view) => {
+      mockFrame = { ...SPLIT, width: 867, height: 669, splitFill: true };
+      const ui = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} view={view} />);
+      const row = flattenStyle(ui.getByTestId('my-room-split').props.style);
+      expect(row.flexDirection).toBe('row');
+      expect(row.gap).toBe(0);
+      for (const id of ['my-room-split-hero', 'my-room-split-list']) {
+        const pane = flattenStyle(ui.getByTestId(id).props.style);
+        expect(pane.flex).toBe(1);
+        expect(pane.width).toBeUndefined();
+      }
+    },
+  );
+
+  it('마우스 웹의 2단은 종전대로 폰 폭 칸 + 목록 칸을 가운데에', async () => {
+    mockFrame = SPLIT;
+    const ui = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} view="room" />);
+    expect(flattenStyle(ui.getByTestId('my-room-split').props.style).justifyContent).toBe('center');
+    expect(flattenStyle(ui.getByTestId('my-room-split-hero').props.style).width).toBe(480);
   });
 
   it('2단 방에서도 같은 미니게임 버튼으로 허브를 연다', async () => {

@@ -101,10 +101,14 @@ export async function expectAspectRatio(
   ).toBe(true);
 }
 
-/** 규칙 4: panes가 왼쪽부터 나란히 있고, 합친 폭이 뷰포트 폭과 2px 안에서 같다. */
-export async function expectFillsWidth(page: Page, panes: Target[]): Promise<void> {
-  const viewport = page.viewportSize();
-  if (!viewport) throw new Error(`뷰포트 크기를 알 수 없다 (${deviceName()})`);
+/**
+ * 규칙 4: panes가 왼쪽부터 나란히 있고, 합친 폭이 배치 폭과 2px 안에서 같다.
+ * `width`는 배치에 쓸 수 있는 폭 — 가로 안전 영역이 있는 기기는 그만큼 뺀 값을 넘긴다(기본 뷰포트 폭).
+ */
+export async function expectFillsWidth(page: Page, panes: Target[], width?: number): Promise<void> {
+  const size = page.viewportSize();
+  if (!size) throw new Error(`뷰포트 크기를 알 수 없다 (${deviceName()})`);
+  const viewport = { width: width ?? size.width };
   const rects: Rect[] = [];
   for (const pane of panes) rects.push(await measure(pane));
   // 앞 칸의 오른쪽 끝(첫 칸은 화면 왼쪽 끝)에서 다음 칸이 시작해야 한다.
