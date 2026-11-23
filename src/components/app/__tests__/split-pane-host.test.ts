@@ -33,8 +33,11 @@ describe('splitPaneHost', () => {
     // 집 탐색·새 집 만들기도 내 집 그림 옆에 연다 — 집이 없으면(집 탭이 빈 상태) 화면 전체에.
     for (const screen of ['houseSearch', 'createHouse'] as const) {
       expect(splitPaneHost(screen, true)).toBe('house');
-      expect(splitPaneHost(screen, true, undefined, true)).toBeNull();
+      // 집이 없으면 집 탭은 빈 상태 — 방 탭에서 열고 방으로 돌아가므로 방 그림 옆에 연다.
+      expect(splitPaneHost(screen, true, undefined, true)).toBe('myRoom');
     }
+    // 그 밖의 집 화면은 집이 없으면 칸에 열지 않는다.
+    expect(splitPaneHost('houseMembers', true, undefined, true)).toBeNull();
     // 집이 없어도 다른 탭이 품는 화면은 그대로 칸에 연다.
     expect(splitPaneHost('settings', true, undefined, true)).toBe('myPage');
   });
@@ -45,7 +48,8 @@ describe('splitPaneHost', () => {
   });
 
   it('탭 화면과 칸에 열지 않는 서브화면은 2단에서도 null', () => {
-    for (const screen of ['myPage', 'myRoom', 'decor', 'minigameRunner', 'market'] as const) {
+    // 방 꾸미기는 스스로 두 칸이고, 달력 주간 보기는 2단에서 열리지 않는다.
+    for (const screen of ['myPage', 'myRoom', 'decor', 'calendarWeek'] as const) {
       expect(splitPaneHost(screen, true)).toBeNull();
     }
   });
@@ -60,6 +64,9 @@ describe('splitPaneHost', () => {
       'furnitureStudio',
     ] as const) {
       // prettier-ignore
+      expect(splitPaneHost(screen, true)).toBe('myRoom');
+    }
+    for (const screen of ['market', 'marketAsset', 'marketOrders', 'minigameRunner'] as const) {
       expect(splitPaneHost(screen, true)).toBe('myRoom');
     }
     expect(splitPaneHost('feedCompose', true)).toBe('feed');

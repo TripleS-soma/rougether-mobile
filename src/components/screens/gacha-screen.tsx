@@ -156,7 +156,7 @@ export function GachaScreen({
   seasonalGacha,
 }: GachaScreenProps) {
   const t = useTokens();
-  const { split } = useAppFrame();
+  const { split, splitFill = false } = useAppFrame();
   const insets = useSafeAreaInsets();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -525,7 +525,14 @@ export function GachaScreen({
         {/* 연출·결과는 세로 폰 화면(1080×2340 포스터) 좌표를 전제한다 — 넓은 창(웹 데스크톱·
             2단 프레임)에서는 폰 폭 컬럼으로 가두고 바깥은 어둡게 레터박스. 안 그러면 포스터가
             가로 폭 기준으로 커져 보상 그림 위쪽이 잘리고 버튼이 왼쪽에 붙는다 (2026-09-14). */}
-        <View style={[styles.overlay, { backgroundColor: split ? Overlay.strong : t.screen }]}>
+        {/* 마우스 웹은 바깥을 어둡게(레터박스), 터치 기기의 넓은 화면(펼친 폴더블·태블릿)은 무대와 같은
+            화면색으로 잇는다 — 검은 띠가 양옆 여백으로 보였다. */}
+        <View
+          testID="gacha-stage-overlay"
+          style={[
+            styles.overlay,
+            { backgroundColor: split && !splitFill ? Overlay.strong : t.screen },
+          ]}>
           <View
             style={[
               styles.stageFrame,

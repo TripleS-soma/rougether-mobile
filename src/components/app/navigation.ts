@@ -276,8 +276,14 @@ const SPLIT_PANE_HOST: Partial<Record<Screen, NavTab>> = {
   notificationList: 'myRoom',
   minigames: 'myRoom',
   minigameLeaderboard: 'myRoom',
+  // 게임판은 세로 폰 폭을 전제로 그려져 있다 — 칸 폭(폰 폭쯤)이 그 전제에 맞는다.
+  minigameRunner: 'myRoom',
   furnitureStudio: 'myRoom',
   gacha: 'myRoom',
+  // 거래소 — 방 탭에서 열고 방으로 돌아간다.
+  market: 'myRoom',
+  marketAsset: 'myRoom',
+  marketOrders: 'myRoom',
   // 피드 — 글 목록 옆에서 쓴다.
   feedCompose: 'feed',
   // 내 정보의 나머지 메뉴.
@@ -295,7 +301,8 @@ const RETURNING_SCREENS: ReadonlySet<Screen> = new Set<Screen>(['addRoutine', 'w
  * 칸에 열린 화면이면 그 화면을 품은 탭이 칸을 내준다 — 방에서 연 루틴 추가는 방 옆에, 달력에서
  * 연 것은 달력 옆에 열린다.
  *
- * @param noHouses 집이 하나도 없는가 — 그러면 집 탭이 품는 화면은 칸에 열지 않는다.
+ * @param noHouses 집이 하나도 없는가 — 그러면 집 탐색·새 집 만들기는 방 탭의 칸에 열고, 그 밖에
+ *   집 탭이 품는 화면은 칸에 열지 않는다.
  */
 export function splitPaneHost(
   screen: Screen,
@@ -304,8 +311,11 @@ export function splitPaneHost(
   noHouses = false,
 ): NavTab | null {
   if (!split) return null;
-  // 집이 없으면 집 탭은 빈 상태라 두 칸이 아니다 — 집 탐색 등은 종전대로 화면 전체에 연다.
-  if (noHouses && SPLIT_PANE_HOST[screen] === 'house') return null;
+  // 집이 없으면 집 탭은 빈 상태라 두 칸이 아니다. 집 탐색·새 집 만들기는 그때 방 탭에서 열고 방으로
+  // 돌아가므로(`backTargetFor`) 방 그림 옆에 연다. 그 밖의 집 화면은 집이 있어야 열린다.
+  if (noHouses && SPLIT_PANE_HOST[screen] === 'house') {
+    return screen === 'houseSearch' || screen === 'createHouse' ? 'myRoom' : null;
+  }
   if (RETURNING_SCREENS.has(screen)) {
     if (!addReturnScreen || RETURNING_SCREENS.has(addReturnScreen)) return null;
     return TAB_FOR_SCREEN[addReturnScreen] ?? SPLIT_PANE_HOST[addReturnScreen] ?? null;
