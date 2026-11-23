@@ -28,6 +28,12 @@ export const SPLIT_FRAME_MAX_WIDTH = 1200;
  */
 export const TOUCH_SPLIT_MIN_WIDTH = 640;
 /**
+ * 왼쪽 세로 탭 줄 기준 — 2단이면서 배치 폭이 이 값 이상이면 아래 탭 바 대신 왼쪽 줄을 둔다.
+ * 그보다 좁은 2단(칸 하나 320~419)은 줄이 칸을 더 좁히므로 아래 탭 바를 유지한다.
+ * 마우스 웹의 2단은 960부터라 항상 켜진다.
+ */
+export const NAV_RAIL_MIN_WIDTH = 840;
+/**
  * 2단 창에서 바텀시트(Modal) 카드의 최대 폭 (#1367) — 폰 컬럼(480)에 갇히면 넓은
  * 창에서 작성 시트가 좁고 왜소하다. 창 전체를 채우진 않되 폰보다 한 단계 넓힌다.
  * 폰 컬럼(480~959)에서는 앱 컬럼과 같은 480.
@@ -47,6 +53,8 @@ export type AppFrame = ReturnType<typeof useWindowDimensions> & {
    * 마우스 웹의 2단은 폰 컬럼 + 목록 블록을 가운데 모으는 배치라 해당 없다.
    */
   splitFill?: boolean;
+  /** 탭 바를 왼쪽 세로 줄로 두는가 — true일 때만 실린다(2단 + `NAV_RAIL_MIN_WIDTH` 이상). */
+  navRail?: boolean;
   /**
    * 가로 안전 영역 인셋 — 0이 아닐 때만 실린다. 접힌 아이폰 Duo는 오른쪽 84pt가 시스템 표시
    * 영역이다(iOS 27.2 실측 — 펼치면 가로 인셋은 0이고 위 82로 바뀐다). `width`는 이미 이만큼 빠진 값이고, 프레임
@@ -86,14 +94,15 @@ export function resolveAppFrame(
   if (!framed) return { ...window, width: usable, framed, split: false, ...inset };
   // 터치 기기(펼친 폴더블·태블릿)는 창을 다 쓰는 2단 — 네이티브는 항상 터치로 본다.
   if (touch || os !== 'web') {
+    const rail = usable >= NAV_RAIL_MIN_WIDTH ? { navRail: true } : null;
     return usable >= TOUCH_SPLIT_MIN_WIDTH
-      ? { ...window, width: usable, framed, split: true, splitFill: true, ...inset }
+      ? { ...window, width: usable, framed, split: true, splitFill: true, ...rail, ...inset }
       : { ...window, width: APP_FRAME_MAX_WIDTH, framed, split: false, ...inset };
   }
   // 마우스 웹의 2단은 넓은 모니터를 전제로 한 가운데 블록 배치다.
   const split = usable >= SPLIT_MIN_WINDOW_WIDTH;
   const width = split ? Math.min(usable, SPLIT_FRAME_MAX_WIDTH) : APP_FRAME_MAX_WIDTH;
-  return { ...window, width, framed, split, ...inset };
+  return { ...window, width, framed, split, ...(split ? { navRail: true } : null), ...inset };
 }
 
 /**

@@ -6,6 +6,7 @@ import {
   APP_FRAME_MAX_WIDTH,
   resolveAppFrame,
   SPLIT_FRAME_MAX_WIDTH,
+  NAV_RAIL_MIN_WIDTH,
   SPLIT_MIN_WINDOW_WIDTH,
   TOUCH_SPLIT_MIN_WIDTH,
 } from '@/hooks/use-app-frame';
@@ -110,12 +111,14 @@ test('웹 창 ≥ 960px은 2단 — 프레임 폭은 창 폭, 최대 1200 (#1230
     ...win(SPLIT_MIN_WINDOW_WIDTH),
     framed: true,
     split: true,
+    navRail: true,
   });
   expect(resolveAppFrame('web', win(1440))).toEqual({
     ...win(1440),
     width: SPLIT_FRAME_MAX_WIDTH,
     framed: true,
     split: true,
+    navRail: true,
   });
   // 경계 바로 아래는 폰 컬럼.
   expect(resolveAppFrame('web', win(SPLIT_MIN_WINDOW_WIDTH - 1)).split).toBe(false);
@@ -162,5 +165,28 @@ describe('가로 안전 영역 인셋', () => {
   test('웹 2단 판정도 인셋을 뺀 폭으로 한다', () => {
     expect(resolveAppFrame('web', win(SPLIT_MIN_WINDOW_WIDTH + 50), true, DUO).split).toBe(false);
     expect(resolveAppFrame('web', win(SPLIT_MIN_WINDOW_WIDTH + 84), true, DUO).split).toBe(true);
+  });
+});
+
+// 왼쪽 세로 탭 줄 — 2단이면서 폭이 840 이상이면 아래 탭 바 대신 왼쪽 줄. 그보다 좁은 2단
+// (칸 하나 320~419)은 줄이 칸을 더 좁히므로 아래 탭 바를 유지한다.
+describe('왼쪽 세로 탭 줄(navRail)', () => {
+  test('터치 2단: 840 이상이면 켜지고 그 아래는 꺼진다', () => {
+    expect(resolveAppFrame('ios', win(951))).toMatchObject({ split: true, navRail: true });
+    expect(resolveAppFrame('android', win(NAV_RAIL_MIN_WIDTH))).toMatchObject({ navRail: true });
+    expect(resolveAppFrame('android', win(NAV_RAIL_MIN_WIDTH - 1))).not.toHaveProperty('navRail');
+    expect(resolveAppFrame('android', win(700))).toMatchObject({ split: true });
+  });
+
+  test('마우스 웹의 2단(960 이상)은 항상 켜진다', () => {
+    expect(resolveAppFrame('web', win(1280), true, undefined, false)).toMatchObject({
+      split: true,
+      navRail: true,
+    });
+  });
+
+  test('2단이 아니면 없다 — 폰, 폰 컬럼', () => {
+    expect(resolveAppFrame('ios', win(430))).not.toHaveProperty('navRail');
+    expect(resolveAppFrame('web', win(900), true, undefined, false)).not.toHaveProperty('navRail');
   });
 });

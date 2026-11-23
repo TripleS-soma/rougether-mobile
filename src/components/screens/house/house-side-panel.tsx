@@ -127,7 +127,7 @@ export function HouseSidePanel({
           />
         ) : null}
         {onOpenSearch ? (
-          <CoachTarget id="house-search">
+          <CoachTarget id="house-search" style={styles.actionSlot}>
             <ActionButton
               icon={<Icon name="add" size={20} color={t.text} />}
               label={tr('house.screen.railAdd')}
@@ -319,6 +319,8 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   title: { flexShrink: 1 },
   actions: { flexDirection: 'row', gap: Spacing.two },
+  // 코치마크 래퍼로 감싼 버튼도 같은 폭을 갖게 — flex를 래퍼로 옮긴다.
+  actionSlot: { flex: 1, flexDirection: 'row' },
   action: {
     flex: 1,
     minHeight: MIN_TOUCH + Spacing.three,
