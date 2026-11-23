@@ -1,11 +1,15 @@
 /**
- * 펼친 Duo(951×669, 안전 영역 오른쪽 84·아래 34 → 배치 폭 867)의 배치 — 터치 기기의 넓은 창은
- * 좌우 2단으로 창을 다 쓴다(규칙 4). 방·달력 탭부터. 집·피드·내 정보의 2단은 다음 단계다.
+ * 펼친 Duo(951×669, 안전 영역 위 82·아래 34)의 배치 — 터치 기기의 넓은 창은 좌우 2단으로 창을
+ * 다 쓴다(규칙 4). 방·달력 탭부터. 집·피드·내 정보의 2단은 다음 단계다.
+ *
+ * 시스템 표시(시계·와이파이)는 오른쪽 위 모서리에만 있는데 인셋은 위쪽 전체 폭으로 온다. 왼쪽 칸은
+ * 그 띠를 비우지 않고 쓰고, 오른쪽 칸은 모서리를 피한다(`e2e/devices.ts`의 obstructions).
  */
 import { ROOM_RENDER_CONTRACT } from '../../src/components/room/room-render-contract';
 import { expect, test } from '../support/app';
 import {
   expectAspectRatio,
+  expectClearOf,
   expectFillsWidth,
   expectInFirstScreen,
   expectNoHorizontalScroll,
@@ -77,6 +81,17 @@ test('규칙 3·5: 방 그림은 계약 비율로 왼쪽 칸에 다 보이고, �
   const right = await stableRect(screen.getByTestId('my-room-split-list'));
   expect(item.x, '할 일이 오른쪽 칸에 있다').toBeGreaterThanOrEqual(right.x);
   await expectInFirstScreen(page, item, app.device.viewport.height - tabBar.y);
+  // 왼쪽 칸은 위 안전 영역 띠를 비워 두지 않는다 — 방이 그 높이 안에서 시작한다.
+  expect(room.y, `방 그림 시작 y ${room.y.toFixed(1)}`).toBeLessThan(app.device.insets.top);
+  // 방 아래 버튼 줄도 탭 바 위에 다 보인다.
+  const actions = await stableRect(screen.getByTestId('room-actions'));
+  await expectInFirstScreen(page, actions, app.device.viewport.height - tabBar.y);
+  // 오른쪽 칸 머리의 추가 버튼은 모서리의 시스템 표시와 겹치지 않는다.
+  const add = right.x; // 오른쪽 칸 안의 조작 요소만 본다
+  for (const button of await screen.getByRole('button').all()) {
+    const rect = await button.boundingBox();
+    if (rect && rect.x >= add && rect.width > 0) await expectClearOf(rect, app.device.obstructions);
+  }
 });
 
 test('규칙 4: 방 꾸미기의 두 칸(방 | 가구 목록)이 나란히 배치 폭을 다 쓴다', async ({
@@ -97,5 +112,13 @@ test('규칙 4: 방 꾸미기의 두 칸(방 | 가구 목록)이 나란히 배�
   expect(firstTile.y, '가구 목록이 떠 있는 줄 아래에서 시작').toBeGreaterThanOrEqual(
     undo.y + undo.height,
   );
+  // 방 그림은 위 안전 영역 띠 안에서 시작해 적용하기 버튼 위에서 끝난다.
+  const canvas = await stableRect(page.getByTestId('decor-canvas'));
+  const apply = await stableRect(page.getByRole('button', { name: '적용하기', exact: true }));
+  expect(canvas.y, `방 그림 시작 y ${canvas.y.toFixed(1)}`).toBeLessThan(app.device.insets.top);
+  expect(canvas.y + canvas.height, '방 그림이 적용하기 위에서 끝난다').toBeLessThanOrEqual(apply.y);
+  for (const name of ['실행 취소', '다시 실행']) {
+    await expectClearOf(page.getByRole('button', { name }), app.device.obstructions);
+  }
   await expectNoHorizontalScroll(page);
 });

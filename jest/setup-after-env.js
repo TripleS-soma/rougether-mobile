@@ -31,3 +31,15 @@ jest.mock('react-native-webview', () => {
   WebView.displayName = 'MockWebView';
   return { WebView, default: WebView };
 });
+
+// 기본 창은 폰 크기(390×844)로 — RN 목의 기본은 750×1334라, 넓은 터치 화면을 2단으로 그리게 된
+// 뒤로(640 이상) 창 크기를 정하지 않은 화면 테스트가 전부 2단 배치로 돌았다. 넓은 창은 테스트가
+// `useAppFrame`·`useWindowDimensions`를 직접 바꿔서 본다.
+{
+  const { Dimensions } = require('react-native');
+  const phone = { ...Dimensions.get('window'), width: 390, height: 844 };
+  Dimensions.set({
+    window: phone,
+    screen: { ...Dimensions.get('screen'), width: 390, height: 844 },
+  });
+}

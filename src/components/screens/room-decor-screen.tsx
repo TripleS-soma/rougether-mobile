@@ -251,6 +251,17 @@ export function RoomDecorScreen({
         ROOM_RENDER_CONTRACT.room.aspectRatio,
       );
 
+  // 창을 다 쓰는 2단(펼친 폴더블·태블릿) — 방은 폭을 따라 높이가 정해지므로(5:6) 칸이 넓고 낮으면
+  // 적용하기 바 밑으로 내려간다. 미리보기 위 여백 아래 ~ 적용하기 바 위에 들어가는 폭으로 묶는다.
+  const splitCanvasWidth = splitFill
+    ? Math.min(
+        frameWidth / 2 - Spacing.three * 2,
+        Math.max(0, frameHeight - Spacing.four - Spacing.two - actionBarInset) *
+          ROOM_RENDER_CONTRACT.room.aspectRatio,
+      )
+    : undefined;
+  const fittedCanvasWidth = shortCanvasWidth ?? splitCanvasWidth;
+
   // Owned items are placeable; everything else in the catalog is buyable.
   // (The demo default owns the whole catalogue, surfaces included.)
   const owned = useMemo(
@@ -832,8 +843,8 @@ export function RoomDecorScreen({
           testID="decor-canvas"
           style={[
             styles.canvas,
-            shortCanvasWidth !== undefined
-              ? { width: shortCanvasWidth, alignSelf: 'center' }
+            fittedCanvasWidth !== undefined
+              ? { width: fittedCanvasWidth, alignSelf: 'center' }
               : null,
           ]}
           onLayout={(e) =>
@@ -1220,8 +1231,10 @@ export function RoomDecorScreen({
           폰·좁은 창은 종전대로 한 스크롤에 위아래로. */}
       {split ? (
         <View style={[styles.splitRow, splitFill && styles.splitRowFill]} testID="decor-split">
+          {/* 창을 다 쓰는 2단의 왼쪽 칸은 위 안전 영역을 비우지 않는다 — 펼친 아이폰 Duo의 시스템
+              표시는 오른쪽 위 모서리에만 있는데 인셋은 위쪽 전체 폭으로 온다. */}
           <View
-            style={[splitFill ? styles.splitPaneFill : styles.splitHero, headerInset]}
+            style={splitFill ? styles.splitPaneFill : [styles.splitHero, headerInset]}
             testID="decor-split-hero">
             {canvasView}
           </View>
@@ -1229,7 +1242,9 @@ export function RoomDecorScreen({
             style={splitFill ? styles.splitPaneFill : styles.splitPanel}
             // 창을 다 쓰는 2단은 카탈로그가 오른쪽 끝까지 가서, 떠 있는 되돌리기·재화 줄 아래에서 시작한다.
             contentContainerStyle={
-              splitFill ? [bodyStyle, styles.splitPanelFillContent] : bodyStyle
+              splitFill
+                ? [bodyStyle, { paddingTop: Number(headerInset.paddingTop) + Spacing.six }]
+                : bodyStyle
             }
             testID="decor-split-panel">
             {catalogBody}
@@ -1404,7 +1419,6 @@ const styles = StyleSheet.create({
   // 터치 기기의 2단(펼친 폴더블·태블릿) — 두 칸이 1:1로 창을 다 쓴다. 가운데 블록·틈 없음.
   splitRowFill: { justifyContent: 'flex-start', gap: 0 },
   splitPaneFill: { flex: 1, flexBasis: 0, minWidth: 0 },
-  splitPanelFillContent: { paddingTop: Spacing.six },
   // 적용하기도 블록 폭에 맞춘다 — 창 끝까지 늘어나지 않게.
   splitApply: {
     width: '100%',

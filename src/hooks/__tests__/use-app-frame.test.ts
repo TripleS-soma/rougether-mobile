@@ -70,10 +70,16 @@ describe('터치 기기의 2단', () => {
     );
   });
 
-  test('펼친 Duo(951, 오른쪽 84)는 인셋을 뺀 867 전부를 2단으로 쓴다', () => {
+  // 펼친 Duo는 가로 인셋이 없다(2026-11-23 실측: top 82 · right 0 · bottom 34, 창 951×669).
+  test('펼친 Duo(951)는 창 폭 전부를 2단으로 쓴다', () => {
+    const frame = resolveAppFrame('ios', win(951));
+    expect(frame).toMatchObject({ width: 951, framed: true, split: true, splitFill: true });
+    expect(frame).not.toHaveProperty('insetRight');
+  });
+
+  test('가로 인셋이 있는 넓은 창은 인셋을 뺀 폭 전부를 쓴다', () => {
     expect(resolveAppFrame('ios', win(951), true, { left: 0, right: 84 })).toMatchObject({
       width: 867,
-      framed: true,
       split: true,
       splitFill: true,
       insetRight: 84,
@@ -123,8 +129,8 @@ test('hydrated=false(서버 렌더·클라이언트 첫 렌더)면 웹 넓은 �
   });
 });
 
-// 가로 안전 영역 인셋 — 아이폰 Duo는 접힘·펼침 모두 오른쪽 84pt가 시스템 표시 영역이다
-// (iOS 27.2 시뮬레이터 실측: window.safeAreaInsets right 84). 배치에 쓸 폭은 그만큼 좁다.
+// 가로 안전 영역 인셋 — 접힌 아이폰 Duo는 오른쪽 84pt가 시스템 표시 영역이다(iOS 27.2
+// 시뮬레이터 실측). 배치에 쓸 폭은 그만큼 좁다. 펼친 Duo는 가로 인셋이 없고 위 82다.
 describe('가로 안전 영역 인셋', () => {
   const DUO = { left: 0, right: 84 };
 

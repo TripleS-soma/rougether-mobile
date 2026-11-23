@@ -1,11 +1,13 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import type { ReactElement, ReactNode } from 'react';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { flattenStyle } from '@/test-utils/style';
 
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
-import { calendarHeading, TODAY } from '@/test-utils/my-room-screen-fixtures';
+import { Spacing } from '@/constants/theme';
+import { calendarHeading, NEIGHBOR_DAY, TODAY } from '@/test-utils/my-room-screen-fixtures';
 import type { AppFrame } from '@/hooks/use-app-frame';
 
 // 웹 데스크톱 2단 (#1230) — 프레임 판정만 바꿔 가며 배치를 본다.
@@ -105,6 +107,55 @@ describe('MyRoomScreen 2단 레이아웃 (#1230)', () => {
       }
     },
   );
+
+  // 펼친 아이폰 Duo(951×669, 안전 영역 위 82): 시스템 표시는 오른쪽 위 모서리에만 있다. 왼쪽 칸은
+  // 그 밑이 아니라 위 인셋을 비우지 않고, 방은 칸 높이(탭 바 위)에 버튼 줄까지 들어가게 맞춘다.
+  it('창을 다 쓰는 2단의 왼쪽 칸은 위 안전 영역을 비우지 않고, 방을 칸 높이에 맞춘다', async () => {
+    mockFrame = { ...SPLIT, width: 951, height: 669, splitFill: true };
+    const insets = { top: 82, right: 0, bottom: 34, left: 0 };
+    const ui = await render(
+      <SafeAreaInsetsContext.Provider value={insets}>
+        <MyRoomScreen routines={SAMPLE_ROUTINES} view="room" />
+      </SafeAreaInsetsContext.Provider>,
+    );
+    const hero = flattenStyle(ui.getByTestId('my-room-split-hero').props.contentContainerStyle);
+    expect(hero.paddingTop).toBe(Spacing.four);
+    // 방 높이 + 버튼 줄(44 + 16)이 위 여백과 아래(여백 + 탭 바) 사이에 들어가는 폭.
+    const wrap = flattenStyle(ui.getByTestId('my-room-hero-wrap').props.style);
+    const available = 669 - Spacing.four - Number(hero.paddingBottom) - (44 + Spacing.three);
+    expect(wrap.maxWidth).toBeCloseTo(available * (5 / 6), 3);
+    expect(wrap.alignSelf).toBe('center');
+    // 오른쪽 칸(목록)은 모서리의 시스템 표시 밑이라 위 인셋을 지킨다.
+    const list = flattenStyle(ui.getByTestId('my-room-scroll').props.contentContainerStyle);
+    expect(list.paddingTop).toBe(82 + Spacing.four);
+  });
+
+  it('마우스 웹의 2단은 방 폭을 높이에 맞추지 않는다(종전)', async () => {
+    mockFrame = SPLIT;
+    const ui = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} view="room" />);
+    expect(flattenStyle(ui.getByTestId('my-room-hero-wrap').props.style).maxWidth).toBeUndefined();
+  });
+
+  // 앱의 달력 탭은 월 달력만 보이고 날짜를 누르면 주간 보기로 넘어간다(onOpenDay, #1327).
+  // 2단에서는 오른쪽 칸이 그날 할 일 자리라, 넘어가지 않고 그 칸에 보여 준다 — 안 그러면 칸이 빈다.
+  it('2단 달력은 onOpenDay가 있어도 오른쪽 칸에 그날 할 일을 보이고, 날짜 탭은 선택만 한다', async () => {
+    mockFrame = { ...SPLIT, width: 951, height: 669, splitFill: true };
+    const onOpenDay = jest.fn();
+    const onSelectedDateChange = jest.fn();
+    const ui = await render(
+      <MyRoomScreen
+        routines={SAMPLE_ROUTINES}
+        view="calendar"
+        onOpenDay={onOpenDay}
+        onSelectedDateChange={onSelectedDateChange}
+        selectedDate={TODAY}
+      />,
+    );
+    expect(ui.getByRole('header', { name: calendarHeading(TODAY) })).toBeTruthy();
+    await fireEvent.press(ui.getByLabelText(new RegExp(`^${NEIGHBOR_DAY}(?:,|$)`)));
+    expect(onSelectedDateChange).toHaveBeenLastCalledWith(NEIGHBOR_DAY);
+    expect(onOpenDay).not.toHaveBeenCalled();
+  });
 
   it('마우스 웹의 2단은 종전대로 폰 폭 칸 + 목록 칸을 가운데에', async () => {
     mockFrame = SPLIT;

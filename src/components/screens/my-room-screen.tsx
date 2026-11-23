@@ -593,11 +593,12 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     if (date !== today) onSelectDate?.(date);
     // 월 모드의 날짜 **탭**만 주간 보기를 연다 (#1327) — '오늘로' 칩은 선택만 되돌리고,
     // 주 모드의 탭·플링은 선택만 바꾼다.
-    if (calendarMode === 'month' && source === 'tap') onOpenDay?.(date);
+    // 2단에서는 오른쪽 칸이 그날 할 일 자리 — 주간 보기로 넘어가지 않는다.
+    if (calendarMode === 'month' && source === 'tap' && !split) onOpenDay?.(date);
   });
   // 주간 보기 (#1327) — 뒤로는 달력이 다시 펼쳐진 뒤 닫는다. 헤더는 접힘과 같은 시간으로 자란다.
   const weekMode = tab !== 'room' && calendarMode === 'week';
-  const hideDayList = tab !== 'room' && calendarMode === 'month' && !!onOpenDay;
+  const hideDayList = tab !== 'room' && calendarMode === 'month' && !!onOpenDay && !split;
   const [weekLeaving, setWeekLeaving] = useState(false);
   // 달력 탭 페이지가 제자리에서 주간 ↔ 월을 오간다(2026-11-04) — 화면이 살아 있으니 월로
   // 돌아오면 '떠나는 중'을 풀어 다음 진입이 처음부터 접히게.
@@ -1136,9 +1137,28 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // 종전대로 한 스크롤에 위아래로. hero/list는 두 배치가 같이 쓴다. **활성 탭의 것만**
   // 만든다 — renderCategoryGroup이 렌더마다 rowHandlers·groupOrder를 채우므로 두 탭의
   // 목록을 다 만들면 등록이 겹쳐 드래그 드롭 판정이 어긋난다.
+  // 창을 다 쓰는 2단(펼친 폴더블·태블릿)의 왼쪽 칸. 펼친 아이폰 Duo는 시스템 표시가 오른쪽 위
+  // 모서리에만 있는데 안전 영역은 위쪽 전체 폭(82)으로 온다 — 왼쪽 칸은 그 밑이 아니라 비우지 않는다.
+  const splitHeroTop = (splitFill ? 0 : insets.top) + Spacing.four;
+  // 방은 폭을 따라 높이가 정해지므로(5:6), 칸이 넓고 낮으면 버튼 줄이 탭 바 밑으로 밀린다 —
+  // 방 + 버튼 줄이 칸 높이(위 여백 ~ 탭 바 위)에 들어가는 폭으로 묶는다.
+  const splitHeroMaxWidth =
+    splitFill && tab === 'room'
+      ? Math.max(
+          0,
+          frameHeight - splitHeroTop - (Spacing.four + navInset) - SPLIT_ACTIONS_ROW_HEIGHT,
+        ) * ROOM_RENDER_CONTRACT.room.aspectRatio
+      : undefined;
   const hero =
     tab === 'room' ? (
-      <View style={styles.roomWrap}>
+      <View
+        testID="my-room-hero-wrap"
+        style={[
+          styles.roomWrap,
+          splitHeroMaxWidth !== undefined
+            ? { width: '100%', maxWidth: splitHeroMaxWidth, alignSelf: 'center' }
+            : null,
+        ]}>
         {!capturing ? (
           <View
             pointerEvents="box-none"
@@ -1535,7 +1555,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               contentContainerStyle={[
                 styles.splitHeroContent,
                 {
-                  paddingTop: insets.top + Spacing.four,
+                  paddingTop: splitHeroTop,
                   paddingBottom: Spacing.four + navInset,
                 },
               ]}
@@ -1779,6 +1799,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 
 const CAT_DOT_SIZE = 32;
 const QUICK_ADD_SIZE = 32;
+
+/** 2단에서 방 아래 버튼 한 줄의 높이 — 버튼(44) + 위 여백(`btnRow.paddingTop`). */
+const SPLIT_ACTIONS_ROW_HEIGHT = 44 + Spacing.three;
 
 const styles = StyleSheet.create({
   /**
