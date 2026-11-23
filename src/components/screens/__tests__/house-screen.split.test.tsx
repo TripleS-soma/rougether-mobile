@@ -95,6 +95,25 @@ describe('HouseScreen 2단', () => {
     expect(style.alignSelf).toBe('center');
   });
 
+  it('sidePanel={false}면 2단 프레임에서도 한 칸 — 좁은 칸에 끼워 보여 주는 곳(스토리·데모)용', async () => {
+    mockFrame = DESKTOP;
+    const ui = await render(<HouseScreen houses={[HOUSE]} sidePanel={false} />);
+    expect(ui.queryByTestId('house-side-panel')).toBeNull();
+    expect(ui.getByTestId('house-level-pill')).toBeTruthy();
+    expect(flat(ui.getByTestId('house-screen').props.style).width).toBeUndefined();
+  });
+
+  it('오른쪽 칸의 집 피드·집 추가·구성원 관리도 각 진입점을 연다', async () => {
+    mockFrame = DUO_OPEN;
+    const on = { onOpenFeed: jest.fn(), onOpenSearch: jest.fn(), onOpenMembers: jest.fn() };
+    const ui = await render(<HouseScreen houses={[HOUSE]} {...on} />);
+    const panel = within(ui.getByTestId('house-side-panel'));
+    for (const name of ['집 피드', '집 추가', '구성원 관리']) {
+      await fireEvent.press(panel.getByRole('button', { name }));
+    }
+    for (const fn of Object.values(on)) expect(fn).toHaveBeenCalledTimes(1);
+  });
+
   it('마우스 웹의 2단은 폰 폭 칸 + 정보 칸을 가운데에', async () => {
     mockFrame = DESKTOP;
     const ui = await render(<HouseScreen houses={[HOUSE]} />);

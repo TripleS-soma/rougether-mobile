@@ -105,6 +105,12 @@ export type HouseScreenProps = RoomCatalogProps &
     /** 방 타일의 표시 이름 — 내 자리를 '(나)'로 가리키는 데 쓴다. */
     userName?: string;
     /**
+     * 2단 프레임에서 [집 그림 | 집 정보] 두 칸으로 나눌지. 기본은 앱 프레임을 따른다.
+     * 화면을 좁은 칸에 끼워 보여 주는 곳(스토리·Dev 비교 데모)은 false로 한 칸을 고정한다 —
+     * 창이 넓다고 좁은 칸 안에서 둘로 쪼개지지 않게.
+     */
+    sidePanel?: boolean;
+    /**
      * Controlled house-switcher index. The screen unmounts while visiting a
      * friend's room, so the shell keeps this to restore the house being viewed
      * (#241). Omit for internal state (dev gallery).
@@ -195,6 +201,7 @@ export const HouseScreen = memo(function HouseScreen({
   onRefresh,
   characterId = DEFAULT_CHARACTER_ID,
   userName = '',
+  sidePanel = true,
   houseIndex: houseIndexProp,
   onReorderHouses,
   onHouseIndexChange,
@@ -241,7 +248,9 @@ export const HouseScreen = memo(function HouseScreen({
   const headerInset = useHeaderInsetStyle();
   // 2단(펼친 폴더블·태블릿·데스크톱 웹) — 왼쪽 칸에 집 그림, 오른쪽 칸에 집 정보. 그림 위에 떠 있던
   // 알약·레일은 오른쪽 칸으로 옮긴다.
-  const { split, splitFill = false } = useAppFrame();
+  const appFrame = useAppFrame();
+  const split = sidePanel && appFrame.split;
+  const splitFill = split && !!appFrame.splitFill;
   // 창을 다 쓰는 2단의 왼쪽 칸은 위 안전 영역을 비우지 않는다 — 펼친 아이폰 Duo의 시스템 표시는
   // 오른쪽 위 모서리에만 있는데 인셋은 위쪽 전체 폭으로 온다. 오른쪽 칸은 인셋을 지킨다.
   const skyInset = useMemo(

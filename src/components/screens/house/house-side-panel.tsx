@@ -77,6 +77,9 @@ export function HouseSidePanel({
       contentContainerStyle={[styles.content, contentContainerStyle]}
       showsVerticalScrollIndicator={false}
       accessibilityLabel={tr('house.sidePanel.regionA11y', { name })}
+      // 버튼이 하나도 없는 집(콜백 없음)에서도 키보드로 스크롤할 수 있게 — 웹의 스크롤 영역은
+      // 초점을 받을 수 있어야 한다(axe scrollable-region-focusable).
+      tabIndex={0}
       testID="house-side-panel">
       <View style={styles.head}>
         <View
