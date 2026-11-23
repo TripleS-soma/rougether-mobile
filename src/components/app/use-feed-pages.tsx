@@ -120,7 +120,7 @@ export function useFeedPages({
   // 한 건만 기억하면 사라진 글 둘 사이를 오가며 끝없이 다시 고를 수 있어, 나온 글을 모두 기억한다.
   const leftPostsRef = useRef(new Set<number>());
   // 차단한 작성자 — 목록이 다시 받아지기 전에는 그 사람의 다른 글이 남아 있어, 그 글도 건너뛴다.
-  const blockedAuthorRef = useRef<number | null>(null);
+  const blockedAuthorsRef = useRef(new Set<number>());
   const leaveDetail = useCallback(() => {
     if (!splitRef.current) return setScreen('feed');
     setPostId((cur) => {
@@ -307,7 +307,8 @@ export function useFeedPages({
     async (userId: number, via: 'post' | 'comment') => {
       if (!(await block(userId, via))) return;
       toast(i18n.t('member.moderation.toast.blocked'), 'success');
-      blockedAuthorRef.current = userId;
+      // 댓글 작성자를 차단한 경우도 담는다 — 목록에 그 사람의 글이 있으면 같이 건너뛴다.
+      blockedAuthorsRef.current.add(userId);
       if (detailAuthorRef.current === userId) leaveDetail();
     },
     [block, toast, detailAuthorRef, leaveDetail],
@@ -315,7 +316,7 @@ export function useFeedPages({
 
   // 2단의 오른쪽 칸이 비어 있으면 목록의 첫 글을 고른다(방금 나온 글은 건너뛴다).
   const firstPostId = feed.posts.find(
-    (p) => !leftPostsRef.current.has(p.postId) && p.author.userId !== blockedAuthorRef.current,
+    (p) => !leftPostsRef.current.has(p.postId) && !blockedAuthorsRef.current.has(p.author.userId),
   )?.postId;
   useEffect(() => {
     if (inPane && postId == null && firstPostId != null) setPostId(firstPostId);
