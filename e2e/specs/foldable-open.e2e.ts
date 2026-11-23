@@ -1,6 +1,7 @@
 /**
  * 펼친 Duo(951×669, 안전 영역 위 82·아래 34)의 배치 — 터치 기기의 넓은 창은 좌우 2단으로 창을
- * 다 쓴다(규칙 4). 방·달력·집 탭. 피드·내 정보의 2단은 다음 단계다.
+ * 다 쓴다(규칙 4). 방·달력·집 탭. 피드·내 정보의 2단은 다음 단계다. 탭 바는 왼쪽 세로 줄이라
+ * 창 폭은 [세로 줄 | 왼쪽 칸 | 오른쪽 칸]이 나눠 쓰고, 아래에는 홈 인디케이터 자리만 비운다.
  *
  * 시스템 표시(시계·와이파이)는 오른쪽 위 모서리에만 있는데 인셋은 위쪽 전체 폭으로 온다. 왼쪽 칸은
  * 그 띠를 비우지 않고 쓰고, 오른쪽 칸은 모서리를 피한다(`e2e/devices.ts`의 obstructions).
@@ -45,7 +46,11 @@ for (const tab of ['myRoom', 'calendar'] as const) {
     await expect(left).toBeVisible();
     await expect(right).toBeVisible();
     const { viewport, insets } = app.device;
-    await expectFillsWidth(page, [left, right], viewport.width - insets.left - insets.right);
+    await expectFillsWidth(
+      page,
+      [page.getByTestId('nav-rail'), left, right],
+      viewport.width - insets.left - insets.right,
+    );
     for (const pane of [left, right]) {
       const { width } = await stableRect(pane);
       expect(
@@ -73,19 +78,20 @@ test('규칙 3·5: 방 그림은 계약 비율로 왼쪽 칸에 다 보이고, �
   expect(room.x + room.width, '방 그림이 왼쪽 칸 안에서 끝').toBeLessThanOrEqual(
     left.x + left.width + 1,
   );
-  const tabBar = await stableRect(page.getByTestId('bottom-nav-pill'));
-  await expectInFirstScreen(page, room, app.device.viewport.height - tabBar.y);
+  // 세로 탭 줄이라 아래에 떠 있는 탭 바가 없다 — 홈 인디케이터 자리만 뺀다.
+  const bottomInset = app.device.insets.bottom;
+  await expectInFirstScreen(page, room, bottomInset);
   const firstItem = screen.locator('[data-testid^="routine-row-"]').first();
   await expect(firstItem).toBeVisible();
   const item = await stableRect(firstItem);
   const right = await stableRect(screen.getByTestId('my-room-split-list'));
   expect(item.x, '할 일이 오른쪽 칸에 있다').toBeGreaterThanOrEqual(right.x);
-  await expectInFirstScreen(page, item, app.device.viewport.height - tabBar.y);
+  await expectInFirstScreen(page, item, bottomInset);
   // 왼쪽 칸은 위 안전 영역 띠를 비워 두지 않는다 — 방이 그 높이 안에서 시작한다.
   expect(room.y, `방 그림 시작 y ${room.y.toFixed(1)}`).toBeLessThan(app.device.insets.top);
   // 방 아래 버튼 줄도 탭 바 위에 다 보인다.
   const actions = await stableRect(screen.getByTestId('room-actions'));
-  await expectInFirstScreen(page, actions, app.device.viewport.height - tabBar.y);
+  await expectInFirstScreen(page, actions, bottomInset);
   // 오른쪽 칸 머리의 추가 버튼은 모서리의 시스템 표시와 겹치지 않는다.
   const add = right.x; // 오른쪽 칸 안의 조작 요소만 본다
   for (const button of await screen.getByRole('button').all()) {
@@ -105,7 +111,12 @@ test('규칙 4: 방 꾸미기의 두 칸(방 | 가구 목록)이 나란히 배�
   const right = page.getByTestId('decor-split-panel');
   await expect(left).toBeVisible();
   const { viewport, insets } = app.device;
-  await expectFillsWidth(page, [left, right], viewport.width - insets.left - insets.right);
+  await expectFillsWidth(
+    page,
+    // 방 꾸미기는 탭 화면이 아니라 세로 탭 줄 없이 창 전체를 쓴다.
+    [left, right],
+    viewport.width - insets.left - insets.right,
+  );
   // 가구 목록 첫 줄이 떠 있는 되돌리기·재화 줄에 가리지 않는다.
   const firstTile = await stableRect(page.getByTestId('decor-grid').getByRole('button').first());
   const undo = await stableRect(page.getByRole('button', { name: '실행 취소' }));
@@ -133,7 +144,11 @@ test('규칙 3·4: 집 탭은 [집 그림 | 집 정보] 두 칸이 창을 다 �
   const right = page.getByTestId('house-side-panel');
   await expect(right).toBeVisible();
   const { viewport, insets } = app.device;
-  await expectFillsWidth(page, [left, right], viewport.width - insets.left - insets.right);
+  await expectFillsWidth(
+    page,
+    [page.getByTestId('nav-rail'), left, right],
+    viewport.width - insets.left - insets.right,
+  );
   // 집 그림(2:3)은 왼쪽 칸 안에서 탭 바 위까지 전체가 보인다.
   const houseFrame = page.getByTestId('house-frame');
   await expect
@@ -147,8 +162,9 @@ test('규칙 3·4: 집 탭은 [집 그림 | 집 정보] 두 칸이 창을 다 �
   expect(frame.x + frame.width, '집 그림이 왼쪽 칸 안에서 끝난다').toBeLessThanOrEqual(
     pane.x + pane.width + 1,
   );
-  const tabBar = await stableRect(page.getByTestId('bottom-nav-pill'));
-  await expectInFirstScreen(page, frame, viewport.height - tabBar.y);
+  // 세로 탭 줄이라 아래에 떠 있는 탭 바가 없다 — 홈 인디케이터 자리만 뺀다.
+  const bottomInset = app.device.insets.bottom;
+  await expectInFirstScreen(page, frame, bottomInset);
   // 그림 위에 떠 있던 알약·레일은 없고, 같은 진입점이 오른쪽 칸에 하나씩 있다 — 모서리의 시스템 표시와 안 겹친다.
   await expect(page.getByTestId('house-level-pill')).toHaveCount(0);
   for (const name of ['집 채팅', '집 피드', '집 추가', '우리 집의 목표 전체 보기', '구성원 관리']) {

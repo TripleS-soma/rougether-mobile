@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Text, TextInput as ComparisonTextInput, View } from 'react-native';
+import type { NavTab } from '@/components/ui/bottom-nav';
+import { NavRail } from '@/components/ui/nav-rail';
 import { LinkifiedText } from '@/components/ui/linkified-text';
 import { ListRow } from '@/components/ui/list-row';
 import { Badge } from '@/components/ui/badge';
@@ -196,6 +198,15 @@ function ToastDemo() {
   );
 }
 
+function NavRailDemo() {
+  const [active, setActive] = useState<NavTab>('myRoom');
+  return (
+    <View style={{ height: 420, flexDirection: 'row' }}>
+      <NavRail active={active} onChange={setActive} badges={{ myPage: true }} />
+    </View>
+  );
+}
+
 export const designEntries: GalleryEntry[] = [
   {
     name: 'AppTextInput · 한글 글리프',
@@ -229,6 +240,12 @@ export const designEntries: GalleryEntry[] = [
         <Text style={{ color: '#FFFFFF' }}>눌러보기</Text>
       </ScalePressable>
     ),
+  },
+  {
+    name: 'NavRail · 왼쪽 세로 탭 줄',
+    description:
+      '넓은 창(펼친 폴더블·태블릿·데스크톱 웹)에서 아래 탭 바를 대신한다. 탭을 눌러 고른 탭 표시가 옮겨가는지 확인.',
+    render: () => <NavRailDemo />,
   },
   {
     name: 'BottomNav · PagerScrollView · 리퀴드 바 드래그와 본문 스와이프',
