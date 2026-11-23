@@ -1,6 +1,6 @@
-import { BrandSplit } from '@/components/app/brand-split';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { BrandSplit } from '@/components/app/brand-split';
 import { fetchHouse } from '@/api/houses';
 import { ApiError } from '@/api/http';
 import { ErrorCode } from '@/api/error-codes';

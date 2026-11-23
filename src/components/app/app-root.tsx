@@ -1,3 +1,4 @@
+import { BrandSplit } from '@/components/app/brand-split';
 import { Button } from '@/components/ui/button';
 import { useT } from '@/i18n';
 import { Redirect } from 'expo-router';
@@ -25,7 +26,6 @@ import { SplashBackground, SplashBackgroundDark } from '@/constants/theme';
 import { AppShell } from '@/components/app/app-shell';
 import { OnboardingHouseGate } from '@/components/app/onboarding-house-gate';
 import { StarterRoutineGate } from '@/components/app/starter-routine-gate';
-import { BrandSplit } from '@/components/app/brand-split';
 import { OnboardingScreen, type OnboardingGoal } from '@/components/screens/onboarding-screen';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { useAuth } from '@/hooks/use-auth';

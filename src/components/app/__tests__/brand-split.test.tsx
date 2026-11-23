@@ -1,7 +1,8 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { StyleSheet, Text } from 'react-native';
 
-import { BrandSplit, useBrandSplit, usePaneWidth } from '@/components/app/brand-split';
+import { BrandSplit } from '@/components/app/brand-split';
+import { useBrandSplit, usePaneWidth } from '@/hooks/use-brand-split';
 import type { AppFrame } from '@/hooks/use-app-frame';
 
 // 로그인·회원가입·온보딩의 넓은 화면 배치 — 왼쪽 칸에 앱 소개, 오른쪽 칸에 화면.

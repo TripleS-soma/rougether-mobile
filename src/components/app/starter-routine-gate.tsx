@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { OnboardingGoal } from '@/components/screens/onboarding-screen';
 import { BrandSplit } from '@/components/app/brand-split';
+import type { OnboardingGoal } from '@/components/screens/onboarding-screen';
 import { StarterRoutineScreen } from '@/components/screens/starter-routine-screen';
 import { recommendStarterRoutines, type StarterRoutine } from '@/constants/starter-routines';
 import { useStarterRoutine } from '@/hooks/use-starter-routine';

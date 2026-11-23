@@ -1,29 +1,17 @@
 import { Image } from 'expo-image';
-import { createContext, type ReactNode, useContext, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import appIcon from '@/assets/images/login-app-icon.webp';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAppFrame } from '@/hooks/use-app-frame';
+import {
+  BrandSplitContext,
+  type BrandSplitValue,
+  NOT_IN_BRAND_SPLIT,
+} from '@/hooks/use-brand-split';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
-
-type BrandSplitValue = { inSplit: boolean; paneWidth: number | null };
-const BrandSplitContext = createContext<BrandSplitValue>({ inSplit: false, paneWidth: null });
-
-/** 화면이 `BrandSplit`의 오른쪽 칸 안에 그려지는 중인가 — 그러면 자기 로고·소개를 숨긴다. */
-export function useBrandSplit(): boolean {
-  return useContext(BrandSplitContext).inSplit;
-}
-
-/**
- * 화면이 쓸 수 있는 폭 — `BrandSplit`의 오른쪽 칸 안이면 그 칸의 폭, 아니면 앱 프레임 폭.
- * 폭으로 카드 크기를 계산하는 화면(온보딩)이 칸 안에서도 맞는 크기를 얻는다.
- */
-export function usePaneWidth(): number {
-  const { width } = useAppFrame();
-  return useContext(BrandSplitContext).paneWidth ?? width;
-}
 
 /**
  * 로그인·회원가입·온보딩의 넓은 화면 배치 — 펼친 폴더블·태블릿·데스크톱 웹.
@@ -41,8 +29,12 @@ export function BrandSplit({ children }: { children: ReactNode }) {
   const Typography = useTypography();
   const { split, width } = useAppFrame();
   const [measured, setMeasured] = useState<number | null>(null);
+  // 2단을 벗어나면 잰 폭을 버린다 — 다른 폭으로 다시 펼쳤을 때 첫 프레임에 옛 폭이 쓰이지 않게.
+  useEffect(() => {
+    if (!split) setMeasured(null);
+  }, [split]);
   const value = useMemo<BrandSplitValue>(
-    () => (split ? { inSplit: true, paneWidth: measured ?? width / 2 } : NOT_SPLIT),
+    () => (split ? { inSplit: true, paneWidth: measured ?? width / 2 } : NOT_IN_BRAND_SPLIT),
     [split, measured, width],
   );
   return (
@@ -76,7 +68,6 @@ export function BrandSplit({ children }: { children: ReactNode }) {
   );
 }
 
-const NOT_SPLIT: BrandSplitValue = { inSplit: false, paneWidth: null };
 const ICON_SIZE = 144;
 
 const styles = StyleSheet.create({

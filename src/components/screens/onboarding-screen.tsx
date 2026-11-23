@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Platform, type ScrollView } from 'react-native';
 
 import { useAndroidKeyboardHeight } from '@/hooks/use-android-keyboard-height';
-import { usePaneWidth } from '@/components/app/brand-split';
+import { usePaneWidth } from '@/hooks/use-brand-split';
 import { CharacterStep } from '@/components/screens/onboarding/character-step';
 
 import { GoalStep } from '@/components/screens/onboarding/goal-step';
