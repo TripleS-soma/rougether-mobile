@@ -117,11 +117,14 @@ export function useFeedPages({
   const detailActiveRef = useLatestRef(detailActive);
   // 보던 글에서 나온다(삭제·차단·사라진 글) — 한 칸은 피드로 돌아가고, 2단은 칸을 비워
   // 아래 효과가 목록의 다른 글을 고르게 한다. 방금 나온 글은 다시 고르지 않는다.
-  const leftPostRef = useRef<number | null>(null);
+  // 한 건만 기억하면 사라진 글 둘 사이를 오가며 끝없이 다시 고를 수 있어, 나온 글을 모두 기억한다.
+  const leftPostsRef = useRef(new Set<number>());
+  // 차단한 작성자 — 목록이 다시 받아지기 전에는 그 사람의 다른 글이 남아 있어, 그 글도 건너뛴다.
+  const blockedAuthorsRef = useRef(new Set<number>());
   const leaveDetail = useCallback(() => {
     if (!splitRef.current) return setScreen('feed');
     setPostId((cur) => {
-      leftPostRef.current = cur;
+      if (cur != null) leftPostsRef.current.add(cur);
       return null;
     });
   }, [setScreen, splitRef]);
@@ -224,9 +227,10 @@ export function useFeedPages({
   // 인증글 루틴 고르기 (#1456) — 작성에서 인증게시판을 골랐거나 내 글 수정 창이 열린 동안만
   // 최근 7일 /calendar를 받는다. 다른 화면으로 가면 수정 창 상태도 접는다.
   const [editOpen, setEditOpen] = useState(false);
+  // 2단에서는 글을 바꿔도 상세가 계속 보이는 중이라, 글이 바뀔 때도 접는다.
   useEffect(() => {
-    if (!detailActive) setEditOpen(false);
-  }, [detailActive]);
+    setEditOpen(false);
+  }, [detailActive, postId]);
   const routinePicker = useRecentRoutineCompletions({
     enabled:
       FEED_ENABLED &&
@@ -303,13 +307,17 @@ export function useFeedPages({
     async (userId: number, via: 'post' | 'comment') => {
       if (!(await block(userId, via))) return;
       toast(i18n.t('member.moderation.toast.blocked'), 'success');
+      // 댓글 작성자를 차단한 경우도 담는다 — 목록에 그 사람의 글이 있으면 같이 건너뛴다.
+      blockedAuthorsRef.current.add(userId);
       if (detailAuthorRef.current === userId) leaveDetail();
     },
     [block, toast, detailAuthorRef, leaveDetail],
   );
 
   // 2단의 오른쪽 칸이 비어 있으면 목록의 첫 글을 고른다(방금 나온 글은 건너뛴다).
-  const firstPostId = feed.posts.find((p) => p.postId !== leftPostRef.current)?.postId;
+  const firstPostId = feed.posts.find(
+    (p) => !leftPostsRef.current.has(p.postId) && !blockedAuthorsRef.current.has(p.author.userId),
+  )?.postId;
   useEffect(() => {
     if (inPane && postId == null && firstPostId != null) setPostId(firstPostId);
   }, [inPane, postId, firstPostId]);
