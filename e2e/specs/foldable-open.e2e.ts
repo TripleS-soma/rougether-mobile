@@ -342,6 +342,31 @@ test('피드의 글쓰기는 글 목록을 그대로 두고 오른쪽 칸에 열
   await expectNoHorizontalScroll(page);
 });
 
+test("집의 '집 추가'(집 탐색)는 내 집 그림을 그대로 두고 오른쪽 칸에 열린다", async ({
+  app,
+  page,
+}) => {
+  await app.open({ tab: 'house' });
+  await app.dismissModals();
+  const left = page.getByTestId('house-screen');
+  await page
+    .getByTestId('house-side-panel')
+    .getByRole('button', { name: '집 추가', exact: true })
+    .click();
+  const pane = page.getByTestId('split-detail-pane');
+  await expect(pane).toBeVisible();
+  await expect(left.getByTestId('house-frame')).toBeVisible();
+  const { viewport, insets } = app.device;
+  await expectFillsWidth(
+    page,
+    [page.getByTestId('nav-rail'), left, pane],
+    viewport.width - insets.left - insets.right,
+  );
+  await pane.getByRole('button', { name: '뒤로 가기', exact: true }).click();
+  await expect(pane).toHaveCount(0);
+  await expect(page.getByTestId('house-side-panel')).toBeVisible();
+});
+
 // 로그인은 앱 셸 밖이라 탭 화면의 칸에 열 수 없다 — 왼쪽 칸에 앱 소개를 채우고 오른쪽 칸에 화면을 둔다.
 test('로그인은 [앱 소개 | 로그인] 두 칸이 창을 다 쓴다', async ({ app, page }) => {
   await app.open({ session: false });

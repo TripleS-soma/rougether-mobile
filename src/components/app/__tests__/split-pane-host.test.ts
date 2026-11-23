@@ -30,10 +30,13 @@ describe('splitPaneHost', () => {
       expect(splitPaneHost(screen, false)).toBeNull();
     }
     expect(splitPaneHost('friendRoom', true)).toBe('house');
-    // 집 탐색·새 집 만들기는 집이 없을 때도 열려야 해서 칸에 열지 않는다.
+    // 집 탐색·새 집 만들기도 내 집 그림 옆에 연다 — 집이 없으면(집 탭이 빈 상태) 화면 전체에.
     for (const screen of ['houseSearch', 'createHouse'] as const) {
-      expect(splitPaneHost(screen, true)).toBeNull();
+      expect(splitPaneHost(screen, true)).toBe('house');
+      expect(splitPaneHost(screen, true, undefined, true)).toBeNull();
     }
+    // 집이 없어도 다른 탭이 품는 화면은 그대로 칸에 연다.
+    expect(splitPaneHost('settings', true, undefined, true)).toBe('myPage');
   });
 
   it('한 칸(폰)에서는 어느 화면도 칸에 열지 않는다', () => {

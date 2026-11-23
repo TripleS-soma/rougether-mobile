@@ -710,7 +710,7 @@ export function AppShell({
   // 2단에서는 설정·도움말 같은 서브화면을 탭 화면의 오른쪽 칸에 연다(`splitPaneHost`). 그동안 층과
   // 페이저에는 그 탭 화면으로 보인다 — 탭 층이 그대로 서 있고 왼쪽 세로 탭 줄도 남는다.
   const { split, navRail = false } = useAppFrame();
-  const paneHost = splitPaneHost(screen, split, addReturnScreen);
+  const paneHost = splitPaneHost(screen, split, addReturnScreen, noHouses);
   const shellScreen: Screen = paneHost ? SCREEN_FOR_TAB[paneHost] : screen;
   const navTab = paneHost ?? activeTab;
   const pagerTab = usePagerTab(shellScreen);

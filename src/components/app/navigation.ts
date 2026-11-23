@@ -267,6 +267,9 @@ const SPLIT_PANE_HOST: Partial<Record<Screen, NavTab>> = {
   houseFeedCompose: 'house',
   // 친구 방 — 집의 좌석을 눌러 연다. 집 그림 옆에서 그 방을 본다.
   friendRoom: 'house',
+  // 집 탐색·새 집 만들기 — 내 집 그림 옆에서 다른 집을 찾는다. 집이 없으면 칸에 열지 않는다(아래).
+  houseSearch: 'house',
+  createHouse: 'house',
   // 방 — 왼쪽 칸의 방 그림은 그대로 두고 할 일 칸 자리에 연다.
   routineManage: 'myRoom',
   categoryManage: 'myRoom',
@@ -291,13 +294,18 @@ const RETURNING_SCREENS: ReadonlySet<Screen> = new Set<Screen>(['addRoutine', 'w
  * 루틴 추가·주간회고는 연 곳으로 돌아가는 화면이라(`addReturnScreen`), 그 연 곳이 탭이면 그 탭,
  * 칸에 열린 화면이면 그 화면을 품은 탭이 칸을 내준다 — 방에서 연 루틴 추가는 방 옆에, 달력에서
  * 연 것은 달력 옆에 열린다.
+ *
+ * @param noHouses 집이 하나도 없는가 — 그러면 집 탭이 품는 화면은 칸에 열지 않는다.
  */
 export function splitPaneHost(
   screen: Screen,
   split: boolean,
   addReturnScreen?: Screen,
+  noHouses = false,
 ): NavTab | null {
   if (!split) return null;
+  // 집이 없으면 집 탭은 빈 상태라 두 칸이 아니다 — 집 탐색 등은 종전대로 화면 전체에 연다.
+  if (noHouses && SPLIT_PANE_HOST[screen] === 'house') return null;
   if (RETURNING_SCREENS.has(screen)) {
     if (!addReturnScreen || RETURNING_SCREENS.has(addReturnScreen)) return null;
     return TAB_FOR_SCREEN[addReturnScreen] ?? SPLIT_PANE_HOST[addReturnScreen] ?? null;
