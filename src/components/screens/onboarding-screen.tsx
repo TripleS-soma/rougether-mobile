@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Platform, type ScrollView } from 'react-native';
 
 import { useAndroidKeyboardHeight } from '@/hooks/use-android-keyboard-height';
-import { useAppFrame } from '@/hooks/use-app-frame';
+import { usePaneWidth } from '@/hooks/use-brand-split';
 import { CharacterStep } from '@/components/screens/onboarding/character-step';
 
 import { GoalStep } from '@/components/screens/onboarding/goal-step';
@@ -89,8 +89,8 @@ export function OnboardingScreen({
   onSkip,
 }: OnboardingScreenProps) {
   const tr = useT();
-  // 카드 폭은 앱 프레임 기준(웹 데스크톱 중앙 컬럼).
-  const { width: windowW } = useAppFrame();
+  // 카드 폭은 화면이 쓸 수 있는 폭 기준 — 앱 프레임, 넓은 화면의 2단에서는 오른쪽 칸(`BrandSplit`).
+  const windowW = usePaneWidth();
   const characterScrollRef = useRef<ScrollView>(null);
   // RN-web은 momentum-end를 쏘지 않는다 — 스크롤 유휴로 정착시킨다
   // (wheel-picker와 같은 패턴).
