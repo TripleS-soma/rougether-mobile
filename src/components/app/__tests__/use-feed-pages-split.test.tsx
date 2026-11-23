@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { fetchFeedPost, fetchFeedPosts } from '@/api/feed';
+import { ApiError } from '@/api/http';
 import type { Screen } from '@/components/app/navigation';
 import { useFeedPages } from '@/components/app/use-feed-pages';
 import type { AppFrame } from '@/hooks/use-app-frame';
@@ -98,4 +99,21 @@ it('2단에서 다른 화면(알림 등)에서 글을 열면 피드 탭의 오�
   await waitFor(() =>
     expect(ui.getByTestId('selected').props.children).toBe(String(SECOND.postId)),
   );
+});
+
+// 보던 글이 사라졌으면(404) 칸을 비우고 목록의 다른 글을 고른다 — 방금 나온 글은 다시 고르지 않는다.
+// 삭제·차단도 같은 경로(`leaveDetail`)를 탄다.
+it('2단에서 고른 글이 사라졌으면 그 글을 건너뛰고 다음 글을 고른다', async () => {
+  mockFrame = SPLIT;
+  jest.mocked(fetchFeedPost).mockImplementation(async (id) => {
+    if (id === FIRST.postId) {
+      throw new ApiError(404, 'GET', `/feed/posts/${id}`, '{"code":"FEED_POST_NOT_FOUND"}');
+    }
+    return SECOND;
+  });
+  const ui = await mount();
+  await waitFor(() =>
+    expect(ui.getByTestId('selected').props.children).toBe(String(SECOND.postId)),
+  );
+  expect(ui.getByTestId('screen').props.children).toBe('feed');
 });
