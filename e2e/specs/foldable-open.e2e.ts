@@ -1,6 +1,6 @@
 /**
  * 펼친 Duo(951×669, 안전 영역 위 82·아래 34)의 배치 — 터치 기기의 넓은 창은 좌우 2단으로 창을
- * 다 쓴다(규칙 4). 방·달력·집·피드 탭. 내 정보의 2단은 다음 단계다. 탭 바는 왼쪽 세로 줄이라
+ * 다 쓴다(규칙 4). 다섯 탭 모두(방·달력·집·피드·내 정보). 탭 바는 왼쪽 세로 줄이라
  * 창 폭은 [세로 줄 | 왼쪽 칸 | 오른쪽 칸]이 나눠 쓰고, 아래에는 홈 인디케이터 자리만 비운다.
  *
  * 시스템 표시(시계·와이파이)는 오른쪽 위 모서리에만 있는데 인셋은 위쪽 전체 폭으로 온다. 왼쪽 칸은
@@ -206,5 +206,36 @@ test('규칙 4: 피드 탭은 [글 목록 | 고른 글] 두 칸 — 첫 글이 �
     const rect = await button.boundingBox();
     if (rect && rect.width > 0) await expectClearOf(rect, app.device.obstructions);
   }
+  await expectNoHorizontalScroll(page);
+});
+
+test('규칙 4: 내 정보 탭은 [프로필·지표·바로가기 | 메뉴·설정] 두 칸이 창을 다 쓴다', async ({
+  app,
+  page,
+}) => {
+  await app.open({ tab: 'myPage' });
+  await app.dismissModals();
+  const left = page.getByTestId('my-page-main-pane');
+  const right = page.getByTestId('my-page-menu-pane');
+  await expect(right).toBeVisible();
+  const { viewport, insets } = app.device;
+  await expectFillsWidth(
+    page,
+    [page.getByTestId('nav-rail'), left, right],
+    viewport.width - insets.left - insets.right,
+  );
+  await expect(left.getByTestId('my-page-profile-card')).toBeVisible();
+  await expect(right.getByText('도움말')).toBeVisible();
+  // 설정은 머리의 톱니가 아니라 오른쪽 칸의 행이다 — 톱니 자리는 모서리의 시스템 표시와 겹쳤다.
+  await expect(page.getByTestId('my-page-settings')).toHaveCount(0);
+  const settings = right.getByRole('button', { name: '설정' });
+  await expect(settings).toBeVisible();
+  for (const button of await right.getByRole('button').all()) {
+    const rect = await button.boundingBox();
+    if (rect && rect.width > 0) await expectClearOf(rect, app.device.obstructions);
+  }
+  // 왼쪽 칸은 위 안전 영역 띠를 통째로 비우지 않는다 — 제목이 그 띠 안에서 시작한다.
+  const header = await stableRect(left.getByTestId('screen-header'));
+  expect(header.y, `제목 시작 y ${header.y.toFixed(1)}`).toBeLessThan(insets.top / 2);
   await expectNoHorizontalScroll(page);
 });
