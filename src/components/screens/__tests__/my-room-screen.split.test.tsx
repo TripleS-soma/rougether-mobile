@@ -1,4 +1,5 @@
 import { fireEvent, render } from '@testing-library/react-native';
+import type { ReactElement, ReactNode } from 'react';
 
 import { flattenStyle } from '@/test-utils/style';
 
@@ -16,6 +17,13 @@ let mockFrame: AppFrame = {
   framed: false,
   split: false,
 };
+// 화면이 앱 프레임에 등록하는 띠 배경을 붙잡아 따로 그려 본다.
+let mockBackdrop: ReactNode = null;
+jest.mock('@/components/app/frame-backdrop', () => ({
+  useFrameBackdrop: (node: ReactNode) => {
+    mockBackdrop = node;
+  },
+}));
 jest.mock('@/hooks/use-app-frame', () => ({
   ...jest.requireActual('@/hooks/use-app-frame'),
   useAppFrame: () => mockFrame,
@@ -104,5 +112,30 @@ describe('MyRoomScreen 짧은 화면', () => {
     const ui = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} view="room" />);
     expect(ui.queryByTestId('room-backdrop')).toBeNull();
     expect(flattenStyle(ui.getByTestId('my-room-hero-room').props.style).width).toBeUndefined();
+  });
+
+  // 시스템 표시 띠(오른쪽 84pt)의 방 채움은 스크롤 위치만큼 올라가 있어야 방과 높이가 맞는다.
+  const stripOffset = () => {
+    const { style } = (mockBackdrop as ReactElement<{ style: { transform: unknown[] } }>).props;
+    const [{ translateY }] = style.transform as { translateY: { __getValue(): number } }[];
+    return translateY.__getValue();
+  };
+
+  it('띠의 방 채움은 복원된 스크롤 위치에서 시작하고, 띠가 없던 동안의 스크롤도 따라간다', async () => {
+    mockFrame = { ...mockFrame, width: 382, height: 678, insetRight: 84 };
+    const ui = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} view="room" getInitialScrollY={() => 120} />,
+    );
+    expect(stripOffset()).toBe(-120);
+    await fireEvent.scroll(ui.getByTestId('my-room-scroll'), {
+      nativeEvent: { contentOffset: { x: 0, y: 40 } },
+    });
+    expect(stripOffset()).toBe(-40);
+  });
+
+  it('가로 인셋이 없으면 띠 배경을 등록하지 않는다', async () => {
+    mockFrame = { ...mockFrame, width: 382, height: 678, insetRight: 0 };
+    await render(<MyRoomScreen routines={SAMPLE_ROUTINES} view="room" />);
+    expect(mockBackdrop).toBeNull();
   });
 });

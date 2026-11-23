@@ -1072,7 +1072,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 
   // 가로 안전 영역 띠(접힌 아이폰 Duo)까지 방 양옆 채움을 잇는다 — 방과 같은 높이로 깔고
   // 스크롤을 따라 올라간다. 띠가 없는 기기에서는 만들지 않는다.
-  const [heroScrollY] = useState(() => new Animated.Value(0));
+  // 처음 값은 복원될 스크롤 위치 — 0에서 시작하면 첫 스크롤 이벤트 전까지 띠가 방과 어긋난다.
+  const [heroScrollY] = useState(() => new Animated.Value(Math.max(0, getInitialScrollY?.() ?? 0)));
   const stripBackdropOn =
     tab === 'room' && shortHeroWidth !== undefined && (insetLeft > 0 || insetRight > 0);
   const stripBackdrop = useMemo(
@@ -1101,6 +1102,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       scrollRef={scrollRef}
       onRefresh={onRefresh}
       refreshTestID="my-room-refresh"
+      testID="my-room-scroll"
       // 재정렬 드래그 중엔 세로 스크롤을 잠근다 (#716) — 카테고리 드래그도 같다.
       scrollEnabled={dragId === null && catDragId === null}
       contentContainerStyle={[
@@ -1121,7 +1123,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       onScroll={(e) => {
         // 빠른 추가 입력행 스크롤인용 로컬 추적 + 셸의 탭별 기억(#763).
         scrollYRef.current = e.nativeEvent.contentOffset.y;
-        if (stripBackdropOn) heroScrollY.setValue(e.nativeEvent.contentOffset.y);
+        // 띠가 꺼져 있는 동안(달력 탭 등)에도 따라가 둔다 — 다시 켜질 때 위치가 맞게.
+        heroScrollY.setValue(e.nativeEvent.contentOffset.y);
         scrollRestore.onScroll?.(e);
       }}
       keyboardShouldPersistTaps="handled">
