@@ -16,7 +16,8 @@
         "EXPO_USE_PRECOMPILED_MODULES": "0"
       },
       "ios": {
-        "cocoapods": "1.17.0"
+        "cocoapods": "1.17.0",
+        "image": "macos-tahoe-26.6-xcode-27.2"
       }
     },
     "preview": {
@@ -30,7 +31,8 @@
         "EXPO_USE_PRECOMPILED_MODULES": "0"
       },
       "ios": {
-        "cocoapods": "1.17.0"
+        "cocoapods": "1.17.0",
+        "image": "macos-tahoe-26.6-xcode-27.2"
       }
     },
     "production": {
@@ -44,7 +46,8 @@
         "EXPO_USE_PRECOMPILED_MODULES": "0"
       },
       "ios": {
-        "cocoapods": "1.17.0"
+        "cocoapods": "1.17.0",
+        "image": "macos-tahoe-26.6-xcode-27.2"
       }
     },
     "testflight": {
@@ -52,7 +55,8 @@
       "channel": "internal",
       "ios": {
         "distribution": "store",
-        "cocoapods": "1.17.0"
+        "cocoapods": "1.17.0",
+        "image": "macos-tahoe-26.6-xcode-27.2"
       },
       "environment": "preview",
       "env": {
