@@ -33,7 +33,8 @@ jobs:
       - run: npm ci
       # A moving PR merge ref is not the source uploaded by a branch build.
       - name: Verify and test candidate source
-        timeout-minutes: 5
+        # 11/10에 4분 10초였고 그 뒤 테스트가 늘어 5분 제한에 두 번 연속 걸렸다(2026-11-24).
+        timeout-minutes: 15
         run: |
           mkdir -p release-smoke
           git rev-parse HEAD | tee release-smoke/source-sha.txt
