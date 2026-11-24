@@ -1,3 +1,4 @@
+import { useSplitLeftTopInset } from '@/hooks/use-split-pane-insets';
 import { Button } from '@/components/ui/button';
 import { CharacterScaleSheet } from '@/components/screens/decor/character-scale-sheet';
 import { characterFrameStyle, normalizeCharacterScale } from '@/components/room/character-scale';
@@ -58,6 +59,7 @@ import { useActionBarInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/
 import { useStableCallback } from '@/hooks/use-stable-value';
 import { track } from '@/lib/analytics';
 import { APP_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
+import { shortScreenHeroWidth } from '@/utils/short-screen';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
@@ -236,10 +238,33 @@ export function RoomDecorScreen({
   const tr = useT();
   const { show: toast } = useToast();
   const headerInset = useHeaderInsetStyle();
+  // 창을 다 쓰는 2단의 왼쪽 칸이 비울 위 인셋 — 모서리 묶음(펼친 아이폰 Duo)이면 0, 전체 폭의 상태
+  // 표시줄(안드로이드·아이패드)이면 그 높이.
+  const leftTopInset = useSplitLeftTopInset(0);
   // 떠 있는 적용하기 바(#1069) 밑으로 카탈로그가 지나가도록 하단 패딩.
   const actionBarInset = useActionBarInset();
   // 웹 데스크톱 2단 (#1230 후속) — 창 ≥ 960px에서만 true.
-  const { split } = useAppFrame();
+  const { split, splitFill = false, width: frameWidth, height: frameHeight } = useAppFrame();
+  // 넓고 짧은 화면(접힌 아이폰 Duo·iPhone SE) — 캔버스가 폭을 다 쓰면 가구 목록이 적용하기
+  // 밑으로 숨는다. 캔버스 높이를 화면 절반에 맞춰 가운데 둔다(미리보기 좌우 여백을 뺀 폭 기준).
+  const shortCanvasWidth = split
+    ? undefined
+    : shortScreenHeroWidth(
+        frameWidth - Spacing.three * 2,
+        frameHeight,
+        ROOM_RENDER_CONTRACT.room.aspectRatio,
+      );
+
+  // 창을 다 쓰는 2단(펼친 폴더블·태블릿) — 방은 폭을 따라 높이가 정해지므로(5:6) 칸이 넓고 낮으면
+  // 적용하기 바 밑으로 내려간다. 미리보기 위 여백 아래 ~ 적용하기 바 위에 들어가는 폭으로 묶는다.
+  const splitCanvasWidth = splitFill
+    ? Math.min(
+        frameWidth / 2 - Spacing.three * 2,
+        Math.max(0, frameHeight - Spacing.four - Spacing.two - actionBarInset) *
+          ROOM_RENDER_CONTRACT.room.aspectRatio,
+      )
+    : undefined;
+  const fittedCanvasWidth = shortCanvasWidth ?? splitCanvasWidth;
 
   // Owned items are placeable; everything else in the catalog is buyable.
   // (The demo default owns the whole catalogue, surfaces included.)
@@ -808,13 +833,24 @@ export function RoomDecorScreen({
   // 밖으로 밀린다. 카탈로그는 반대로 폭을 다 써서 열을 늘린다(DecorGrid) — 한 번에 보이는
   // 가구가 많을수록 좋다 (#725).
   const canvasView = (
-    <View style={[styles.preview, column]}>
+    <View
+      testID="decor-preview"
+      style={[
+        styles.preview,
+        column,
+        shortCanvasWidth !== undefined ? { paddingTop: Spacing.three } : null,
+      ]}>
       {/* 캔버스 = 방과 정확히 같은 박스 — 오버레이 좌표·정규화의 기준.
         (preview의 padding 박스 기준으로 재면 저장 좌표가 어긋난다.) */}
       <GestureDetector gesture={canvasPinch}>
         <View
           testID="decor-canvas"
-          style={styles.canvas}
+          style={[
+            styles.canvas,
+            fittedCanvasWidth !== undefined
+              ? { width: fittedCanvasWidth, alignSelf: 'center' }
+              : null,
+          ]}
           onLayout={(e) =>
             setRoomSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
           }>
@@ -1198,9 +1234,27 @@ export function RoomDecorScreen({
       {/* 웹 데스크톱 2단 (#1230 후속): 왼쪽에 방 캔버스 고정, 오른쪽에 카탈로그 스크롤.
           폰·좁은 창은 종전대로 한 스크롤에 위아래로. */}
       {split ? (
-        <View style={styles.splitRow} testID="decor-split">
-          <View style={[styles.splitHero, headerInset]}>{canvasView}</View>
-          <ScrollView style={styles.splitPanel} contentContainerStyle={bodyStyle}>
+        <View style={[styles.splitRow, splitFill && styles.splitRowFill]} testID="decor-split">
+          {/* 창을 다 쓰는 2단의 왼쪽 칸은 위 안전 영역을 비우지 않는다 — 펼친 아이폰 Duo의 시스템
+              표시는 오른쪽 위 모서리에만 있는데 인셋은 위쪽 전체 폭으로 온다. */}
+          <View
+            style={
+              splitFill
+                ? [styles.splitPaneFill, leftTopInset > 0 ? { paddingTop: leftTopInset } : null]
+                : [styles.splitHero, headerInset]
+            }
+            testID="decor-split-hero">
+            {canvasView}
+          </View>
+          <ScrollView
+            style={splitFill ? styles.splitPaneFill : styles.splitPanel}
+            // 창을 다 쓰는 2단은 카탈로그가 오른쪽 끝까지 가서, 떠 있는 되돌리기·재화 줄 아래에서 시작한다.
+            contentContainerStyle={
+              splitFill
+                ? [bodyStyle, { paddingTop: Number(headerInset.paddingTop) + Spacing.six }]
+                : bodyStyle
+            }
+            testID="decor-split-panel">
             {catalogBody}
           </ScrollView>
         </View>
@@ -1370,6 +1424,9 @@ const styles = StyleSheet.create({
     flexGrow: 0,
     flexShrink: 1,
   },
+  // 터치 기기의 2단(펼친 폴더블·태블릿) — 두 칸이 1:1로 창을 다 쓴다. 가운데 블록·틈 없음.
+  splitRowFill: { justifyContent: 'flex-start', gap: 0 },
+  splitPaneFill: { flex: 1, flexBasis: 0, minWidth: 0 },
   // 적용하기도 블록 폭에 맞춘다 — 창 끝까지 늘어나지 않게.
   splitApply: {
     width: '100%',

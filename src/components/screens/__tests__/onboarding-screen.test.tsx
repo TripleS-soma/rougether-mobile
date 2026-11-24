@@ -3,6 +3,7 @@ import { DeviceEventEmitter, Keyboard, Platform, StyleSheet } from 'react-native
 
 import { OnboardingScreen, withRang } from '@/components/screens/onboarding-screen';
 import { ToastProvider } from '@/components/ui/toast';
+import { BrandSplitContext } from '@/hooks/use-brand-split';
 
 describe('OnboardingScreen', () => {
   // #1700 — 소개 슬라이드는 없앴다. 첫 실행은 로그인 뒤 곧장 목표 설문.
@@ -276,6 +277,24 @@ describe('OnboardingScreen 캐릭터 캐러셀', () => {
     const cdn = getAllByTestId('cdn-animation');
     expect(cdn).toHaveLength(1);
     expect(cdn[0].props.source[0].uri).toContain('characters/cat/animations/wave.webp');
+  });
+
+  // 넓은 화면의 2단(`BrandSplit`)에서는 온보딩이 오른쪽 칸 안에 그려진다 — 카드 폭은 창이 아니라
+  // 그 칸의 폭으로 잡아야 카드가 칸 밖으로 나가지 않는다.
+  it('카드 폭과 양옆 여백을 화면이 쓸 수 있는 폭(칸 폭)으로 계산한다', async () => {
+    const pane = 475;
+    const utils = await render(
+      <BrandSplitContext.Provider value={{ inSplit: true, paneWidth: pane }}>
+        <OnboardingScreen initialGoals={['exercise']} characterSelectEnabled onDone={jest.fn()} />
+      </BrandSplitContext.Provider>,
+    );
+    await fireEvent.press(utils.getByText('시작하기'));
+    const rail = StyleSheet.flatten(
+      utils.getByTestId('character-carousel').props.contentContainerStyle,
+    );
+    const cardW = Math.round(pane * 0.78);
+    expect(rail.paddingHorizontal).toBe((pane - cardW) / 2);
+    expect(utils.getByTestId('character-carousel').props.snapToInterval).toBe(cardW + rail.gap);
   });
 
   it('스와이프 정착이 활성 캐릭터·CTA 라벨·프레임 재생 카드를 바꾼다', async () => {

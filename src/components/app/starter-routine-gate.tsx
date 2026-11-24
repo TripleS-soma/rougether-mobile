@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { BrandSplit } from '@/components/app/brand-split';
 import type { OnboardingGoal } from '@/components/screens/onboarding-screen';
 import { StarterRoutineScreen } from '@/components/screens/starter-routine-screen';
 import { recommendStarterRoutines, type StarterRoutine } from '@/constants/starter-routines';
@@ -55,21 +56,23 @@ export function StarterRoutineGate({
   );
 
   return (
-    <StarterRoutineScreen
-      recommendations={recommendations}
-      loading={loading}
-      saving={saving || finishing}
-      error={error}
-      needsReload={needsReload}
-      onStart={(template) => {
-        void handleStart(template);
-      }}
-      onSkip={() => {
-        if (!starting.current) void finish('skipped');
-      }}
-      onReload={() => {
-        void reload();
-      }}
-    />
+    <BrandSplit>
+      <StarterRoutineScreen
+        recommendations={recommendations}
+        loading={loading}
+        saving={saving || finishing}
+        error={error}
+        needsReload={needsReload}
+        onStart={(template) => {
+          void handleStart(template);
+        }}
+        onSkip={() => {
+          if (!starting.current) void finish('skipped');
+        }}
+        onReload={() => {
+          void reload();
+        }}
+      />
+    </BrandSplit>
   );
 }

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { FrameBackdropProvider, useFrameBackdropHost } from '@/components/app/frame-backdrop';
 import {
   APP_FRAME_MAX_WIDTH,
   SHEET_FRAME_MAX_WIDTH,
@@ -23,17 +24,29 @@ import { useTokens } from '@/hooks/use-tokens';
 export function AppFrame({ children }: { children: ReactNode }) {
   const t = useTokens();
   // 2단(#1230)이면 프레임이 1200까지 넓어진다 — 폭은 훅이 정한다.
-  const { framed, split } = useAppFrame();
+  const { framed, split, splitFill, insetLeft, insetRight } = useAppFrame();
   // 2단은 투두메이트처럼 창 전체가 한 면이고 내용 블록만 가운데 — 폰 컬럼일 때만
   // 테두리와 앱셸 색 여백으로 폰 프레임을 드러낸다.
   const phoneFrame = framed && !split;
+  // 가로 안전 영역(아이폰 Duo의 오른쪽 시스템 표시 영역 등)은 프레임이 비운다 — 화면마다
+  // 따로 피하지 않게. 비운 자리는 화면색으로 이어 칠해 잘린 것처럼 보이지 않게 한다.
+  const safeX = insetX(insetLeft, insetRight);
+  // 띠는 기본이 화면색이고, 지금 보이는 화면이 배경을 등록했으면(집의 하늘·방의 벽지) 그걸로 잇는다.
+  // 창 전체 크기로 깔고 내용 칸이 위를 덮는다 — 폰 컬럼 프레임에서는 양옆 여백을 덮으므로 안 그린다.
+  const backdrop = useFrameBackdropHost();
   return (
     <View
       testID="app-frame"
       style={[
         styles.outer,
+        safeX ? { ...safeX, backgroundColor: t.screen } : null,
         framed ? { backgroundColor: phoneFrame ? t.appShell : t.screen } : null,
       ]}>
+      {safeX && !framed && backdrop.node != null ? (
+        <View style={StyleSheet.absoluteFill} pointerEvents="none" testID="frame-backdrop">
+          {backdrop.node}
+        </View>
+      ) : null}
       <View
         testID="app-frame-inner"
         style={[
@@ -42,13 +55,14 @@ export function AppFrame({ children }: { children: ReactNode }) {
           // 폭 100%가 남아 프레임이 창 전체로 퍼졌다(app.rougether.com 실측, 2026-09-09).
           framed
             ? [
-                split ? styles.innerSplit : styles.innerPhone,
+                // 터치 기기의 2단은 창을 다 쓴다(최대 폭 없음) — 펼친 폴더블·태블릿.
+                splitFill ? styles.innerFull : split ? styles.innerSplit : styles.innerPhone,
                 { backgroundColor: t.screen },
                 phoneFrame ? [styles.innerFramed, { borderColor: t.border }] : null,
               ]
             : styles.innerFull,
         ]}>
-        {children}
+        <FrameBackdropProvider value={backdrop.set}>{children}</FrameBackdropProvider>
       </View>
     </View>
   );
@@ -64,9 +78,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
  * 양옆에 그려졌다. 폭은 폰 컬럼이면 480, 2단이면 `SHEET_FRAME_MAX_WIDTH`.
  */
 export function ModalFrame({ children }: { children: ReactNode }) {
-  const { framed, split } = useAppFrame();
+  const { framed, split, insetLeft, insetRight } = useAppFrame();
   return (
-    <View style={styles.modalOuter} pointerEvents="box-none" testID="modal-frame">
+    <View
+      style={[styles.modalOuter, insetX(insetLeft, insetRight)]}
+      pointerEvents="box-none"
+      testID="modal-frame">
       <View
         style={[
           styles.modalInner,
@@ -92,6 +109,11 @@ export function PhoneColumn({ children }: { children: ReactNode }) {
       {children}
     </View>
   );
+}
+
+/** 가로 안전 영역 인셋을 여백 스타일로 — 인셋이 없으면 null(스타일 불변). */
+function insetX(left = 0, right = 0) {
+  return left > 0 || right > 0 ? { paddingLeft: left, paddingRight: right } : null;
 }
 
 const styles = StyleSheet.create({

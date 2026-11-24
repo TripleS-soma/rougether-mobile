@@ -1,0 +1,74 @@
+name: E2E (web)
+
+# 룰셋의 필수 체크가 아니다(설계서: 2주간 흔들림이 없으면 올린다). 필수로 올리기 전까지는
+# 실패해도 머지를 막지 않는 참고용 신호다.
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - 'src/**'
+      - 'e2e/**'
+      - 'assets/**'
+      - 'public/**'
+      - 'app.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.env'
+      - 'metro.config.js'
+      - 'eslint.config.js'
+      - 'playwright.e2e.config.ts'
+      - '.github/workflows/e2e-web.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-web-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright Chromium
+        run: npx --no-install playwright install --with-deps chromium
+
+      # npm run lint(expo lint)는 e2e/를 안 본다 — 여기서 따로 린트한다(docs/e2e.md).
+      - name: Lint E2E
+        run: npx --no-install eslint e2e playwright.e2e.config.ts
+
+      # 저장소의 .env(EXPO_PUBLIC_API_URL·ASSET_URL)가 번들에 인라인된다. 테스트가 api/v1과
+      # 바깥 호스트를 전부 가로채므로 주소 값은 결과에 영향이 없다(docs/e2e.md).
+      - name: Export web app
+        run: npx --no-install expo export --platform web --output-dir web-build/app
+
+      - name: E2E tests
+        run: npx --no-install playwright test -c playwright.e2e.config.ts
+
+      - name: Upload E2E report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-web
+          path: |
+            web-build/e2e-report
+            web-build/e2e-results
+          retention-days: 7
+          if-no-files-found: ignore

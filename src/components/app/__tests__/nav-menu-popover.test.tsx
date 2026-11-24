@@ -94,3 +94,25 @@ describe('NavMenuPopover', () => {
     expect(ui.getByLabelText('루틴 관리')).toBeTruthy();
   });
 });
+
+describe('navMenuFrameInset — 팝오버를 프레임 오른쪽 끝에 붙이는 거리', () => {
+  const { navMenuFrameInset } = jest.requireActual<
+    typeof import('@/components/app/nav-menu-popover')
+  >('@/components/app/nav-menu-popover');
+
+  it('폰(프레임 = 창)은 0', () => {
+    expect(navMenuFrameInset(402, 402)).toBe(0);
+  });
+
+  it('데스크톱 웹의 가운데 480 기둥은 남는 폭의 절반', () => {
+    expect(navMenuFrameInset(1000, 480)).toBe(260);
+  });
+
+  it('접힌 Duo(창 466, 오른쪽 인셋 84)는 인셋만큼 — 시스템 표시 영역 밑에 깔리지 않는다', () => {
+    expect(navMenuFrameInset(466, 382, 0, 84)).toBe(84);
+  });
+
+  it('펼친 Duo(창 951, 인셋 84, 기둥 480)는 인셋 + 안전 영역 안 남는 폭의 절반', () => {
+    expect(navMenuFrameInset(951, 480, 0, 84)).toBe(84 + (867 - 480) / 2);
+  });
+});

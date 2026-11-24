@@ -1,9 +1,12 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { State } from 'react-native-gesture-handler';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import type { AppFrame } from '@/hooks/use-app-frame';
+import { flattenStyle } from '@/test-utils/style';
+import { Spacing } from '@/constants/theme';
 
 // 웹 데스크톱 2단 (#1230 후속) — 프레임 판정만 바꿔 가며 배치를 본다.
 const PHONE: AppFrame = { width: 390, height: 844, scale: 2, fontScale: 1, framed: false, split: false }; // prettier-ignore
@@ -50,6 +53,34 @@ describe('RoomDecorScreen 2단 레이아웃', () => {
     expect(ui.getByTestId('decor-canvas')).toBeTruthy();
     expect(ui.getByText('가구')).toBeTruthy();
     expect(ui.getByLabelText('적용하기')).toBeTruthy();
+  });
+  // 터치 기기의 2단(펼친 폴더블·태블릿)은 두 칸이 1:1로 창을 다 쓴다.
+  // 펼친 아이폰 Duo(951×669, 안전 영역 위 82): 시스템 표시는 오른쪽 위 모서리에만 있다.
+  it('창을 다 쓰는 2단은 두 칸이 같은 비율이고, 방은 위 인셋 없이 적용하기 위 높이에 맞춘다', async () => {
+    mockFrame = { ...SPLIT, width: 951, height: 669, splitFill: true };
+    const insets = { top: 82, right: 0, bottom: 34, left: 0 };
+    const ui = await render(
+      <SafeAreaInsetsContext.Provider value={insets}>
+        <RoomDecorScreen />
+      </SafeAreaInsetsContext.Provider>,
+    );
+    expect(flattenStyle(ui.getByTestId('decor-split').props.style).gap).toBe(0);
+    for (const id of ['decor-split-hero', 'decor-split-panel']) {
+      const pane = flattenStyle(ui.getByTestId(id).props.style);
+      expect(pane.flex).toBe(1);
+      expect(pane.width).toBeUndefined();
+    }
+    // 왼쪽 칸은 모서리의 시스템 표시 밑이 아니라 위 안전 영역을 비우지 않는다.
+    expect(flattenStyle(ui.getByTestId('decor-split-hero').props.style).paddingTop).toBeUndefined();
+    // 방(5:6)이 미리보기 위 여백 아래 ~ 적용하기 바 위에 들어가는 폭 — 칸 폭(475.5 − 좌우 32)보다 좁다.
+    const canvas = flattenStyle(ui.getByTestId('decor-canvas').props.style);
+    const content = flattenStyle(ui.getByTestId('decor-split-panel').props.contentContainerStyle);
+    const actionBar = Number(content.paddingBottom);
+    expect(canvas.width).toBeCloseTo((669 - Spacing.four - Spacing.two - actionBar) * (5 / 6), 3);
+    expect(canvas.width).toBeLessThan(951 / 2 - Spacing.three * 2);
+    expect(canvas.alignSelf).toBe('center');
+    // 오른쪽 가구 목록은 떠 있는 되돌리기·재화 줄(위 인셋 아래에 선다) 밑에서 시작한다.
+    expect(content.paddingTop).toBe(82 + Spacing.three + Spacing.six);
   });
 });
 
@@ -132,5 +163,26 @@ describe('RoomDecorScreen 2단 레이아웃 — 동작', () => {
     const ui = await render(<RoomDecorScreen loadError onRetry={jest.fn()} />);
     expect(ui.getByTestId('decor-canvas')).toBeTruthy();
     expect(ui.getByText('카탈로그를 불러오지 못했어요.')).toBeTruthy();
+  });
+});
+
+// 넓고 짧은 화면(접힌 아이폰 Duo 382×678): 캔버스가 폭을 다 쓰면 높이 420으로 가구 목록이
+// 적용하기 버튼 밑으로 숨는다. 캔버스 높이를 화면 절반(339)에 맞춰 가운데 둔다.
+describe('RoomDecorScreen 짧은 화면', () => {
+  it('짧은 화면이면 캔버스를 화면 높이 절반에 맞춰 가운데 둔다', async () => {
+    mockFrame = { ...PHONE, width: 382, height: 678 };
+    const ui = await render(<RoomDecorScreen />);
+    const canvas = flattenStyle(ui.getByTestId('decor-canvas').props.style);
+    expect(canvas.width).toBeCloseTo(339 * (5 / 6), 3);
+    expect(canvas.alignSelf).toBe('center');
+    // 미리보기 위 여백도 줄여 가구 목록 첫 줄이 적용하기 위로 올라오게.
+    const preview = flattenStyle(ui.getByTestId('decor-preview').props.style);
+    expect(preview.paddingTop).toBe(Spacing.three);
+  });
+
+  it('일반 폰은 캔버스가 폭을 다 쓴다', async () => {
+    const ui = await render(<RoomDecorScreen />);
+    expect(flattenStyle(ui.getByTestId('decor-canvas').props.style).width).toBe('100%');
+    expect(flattenStyle(ui.getByTestId('decor-preview').props.style).paddingTop).toBe(Spacing.four);
   });
 });

@@ -2,6 +2,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { LoginScreen } from '@/components/screens/login-screen';
 import { ToastProvider } from '@/components/ui/toast';
+import { BrandSplitContext } from '@/hooks/use-brand-split';
 import { flattenStyle } from '@/test-utils/style';
 
 describe('LoginScreen', () => {
@@ -267,5 +268,29 @@ describe('LoginScreen 최근 로그인 배지', () => {
     await view.rerender(<LoginScreen initialError="두 번째 실패" />);
     expect(view.getByText('두 번째 실패')).toBeTruthy();
     expect(view.queryByText('첫 번째 실패')).toBeNull();
+  });
+});
+
+// 넓은 화면의 2단(`BrandSplit`) — 왼쪽 칸이 앱 소개를 그리므로 로그인 화면은 로고·이름·소개를 다시
+// 그리지 않고, 남은 내용을 세로 가운데에 둔다.
+describe('LoginScreen — BrandSplit의 오른쪽 칸 안', () => {
+  const inSplit = (node: React.ReactNode) => (
+    <BrandSplitContext.Provider value={{ inSplit: true, paneWidth: 475 }}>
+      {node}
+    </BrandSplitContext.Provider>
+  );
+
+  it('자기 로고·앱 이름·소개를 숨기고 로그인 수단은 그대로 둔다', async () => {
+    const ui = await render(inSplit(<LoginScreen />));
+    expect(ui.queryByText('루게더')).toBeNull();
+    expect(ui.queryByText('매일의 루틴으로 나만의 방과 집을 함께 키워요.')).toBeNull();
+    expect(ui.queryByLabelText('루게더 앱 아이콘')).toBeNull();
+    expect(ui.getByText(/Kakao/)).toBeTruthy();
+  });
+
+  it('칸 밖에서는 종전대로 로고와 소개를 그린다', async () => {
+    const ui = await render(<LoginScreen />);
+    expect(ui.getByText('루게더')).toBeTruthy();
+    expect(ui.getByText('매일의 루틴으로 나만의 방과 집을 함께 키워요.')).toBeTruthy();
   });
 });

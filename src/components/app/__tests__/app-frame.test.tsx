@@ -1,13 +1,15 @@
-import { render } from '@testing-library/react-native';
-import { useEffect } from 'react';
+import { render, within } from '@testing-library/react-native';
+import { useEffect, useMemo } from 'react';
 import { Platform, Text, View } from 'react-native';
 
 import { AppFrame, ModalFrame, PhoneColumn } from '@/components/app/app-frame';
+import { useFrameBackdrop } from '@/components/app/frame-backdrop';
 import {
   APP_FRAME_MAX_WIDTH,
   SHEET_FRAME_MAX_WIDTH,
   type AppFrame as AppFrameSize,
 } from '@/hooks/use-app-frame';
+import { PageActiveContext } from '@/hooks/use-page-active';
 import { flattenStyle } from '@/test-utils/style';
 
 // 프레임 판정만 바꿔 가며 컴포넌트의 렌더 동작을 본다 — 순수 계산은 use-app-frame.test.
@@ -188,6 +190,19 @@ describe('AppFrame / ModalFrame (#1227)', () => {
       os.restore();
     }
   });
+  it('터치 기기의 2단(splitFill)은 최대 폭·테두리 없이 창을 다 쓴다 — 펼친 폴더블', async () => {
+    mockFrame = { ...SPLIT, width: 867, splitFill: true };
+    const { getByTestId } = await render(
+      <AppFrame>
+        <Text>page</Text>
+      </AppFrame>,
+    );
+    const inner = flattenStyle(getByTestId('app-frame-inner').props.style);
+    expect(inner.width).toBe('100%');
+    expect(inner.maxWidth).toBeUndefined();
+    expect(inner.borderLeftWidth).toBeUndefined();
+  });
+
   it('2단 프레임은 훅이 정한 폭(최대 1200)으로 넓어지고, PhoneColumn은 그 안에서 480 컬럼 (#1230)', async () => {
     const os = jest.replaceProperty(Platform, 'OS', 'web');
     try {
@@ -213,6 +228,46 @@ describe('AppFrame / ModalFrame (#1227)', () => {
     }
   });
 
+  // 아이폰 Duo: 오른쪽 84pt가 시스템 표시 영역(가로 안전 영역 인셋). 프레임이 그만큼 비워야
+  // 머리 버튼·모달 닫기 버튼이 그 밑에 깔리지 않는다. 바탕색은 화면색으로 이어 칠한다.
+  it('가로 안전 영역 인셋만큼 앱 프레임 양옆을 비우고 화면색으로 칠한다', async () => {
+    mockFrame = { ...NARROW, width: 382, insetLeft: 0, insetRight: 84 };
+    const view = await render(
+      <AppFrame>
+        <Text>내용</Text>
+      </AppFrame>,
+    );
+    const outer = flattenStyle(view.getByTestId('app-frame').props.style);
+    expect(outer.paddingRight).toBe(84);
+    expect(outer.paddingLeft).toBe(0);
+    expect(outer.backgroundColor).toBeDefined();
+  });
+
+  it('인셋이 없으면 앱 프레임에 여백도 바탕색도 넣지 않는다 (폰 화면 불변)', async () => {
+    mockFrame = NARROW;
+    const view = await render(
+      <AppFrame>
+        <Text>내용</Text>
+      </AppFrame>,
+    );
+    const outer = flattenStyle(view.getByTestId('app-frame').props.style);
+    expect(outer.paddingRight).toBeUndefined();
+    expect(outer.paddingLeft).toBeUndefined();
+    expect(outer.backgroundColor).toBeUndefined();
+  });
+
+  it('모달 프레임도 같은 인셋만큼 내용을 안으로 들인다 — 딤은 프레임 밖이라 창 전체를 덮는다', async () => {
+    mockFrame = { ...NARROW, width: 382, insetLeft: 0, insetRight: 84 };
+    const view = await render(
+      <ModalFrame>
+        <Text>시트</Text>
+      </ModalFrame>,
+    );
+    const outer = flattenStyle(view.getByTestId('modal-frame').props.style);
+    expect(outer.paddingRight).toBe(84);
+    expect(outer.paddingLeft).toBe(0);
+  });
+
   it('PhoneColumn은 2단이 아니면 래퍼 없이 자식 그대로', async () => {
     mockFrame = WIDE;
     const { queryByTestId, getByText } = await render(
@@ -222,5 +277,84 @@ describe('AppFrame / ModalFrame (#1227)', () => {
     );
     expect(getByText('page')).toBeTruthy();
     expect(queryByTestId('phone-column')).toBeNull();
+  });
+});
+
+// 가로 안전 영역 띠(접힌 아이폰 Duo의 오른쪽 84pt)는 지금 보이는 화면의 배경으로 잇는다 —
+// 집의 하늘·방의 벽지 옆에 앱 기본색 띠가 서면 여백으로 보인다.
+describe('AppFrame — 안전 영역 띠의 화면 배경', () => {
+  const DUO: AppFrameSize = { ...NARROW, width: 382, height: 678, insetLeft: 0, insetRight: 84 };
+  afterEach(() => {
+    mockFrame = NARROW;
+  });
+  function Sky({ on = true }: { on?: boolean }) {
+    const node = useMemo(() => <View testID="sky" />, []);
+    useFrameBackdrop(on ? node : null);
+    return <Text>house</Text>;
+  }
+
+  it('화면이 등록한 배경을 프레임 뒤(띠 자리)에 그린다', async () => {
+    mockFrame = DUO;
+    const ui = await render(
+      <AppFrame>
+        <Sky />
+      </AppFrame>,
+    );
+    expect(within(ui.getByTestId('frame-backdrop')).getByTestId('sky')).toBeTruthy();
+    // 내용 칸 밖(앞 형제)이라 화면을 가리지 않는다.
+    const outer = ui.getByTestId('app-frame');
+    expect(outer.children[0]).toBe(ui.getByTestId('frame-backdrop'));
+  });
+
+  it('등록을 풀거나 화면이 사라지면 지운다', async () => {
+    mockFrame = DUO;
+    const ui = await render(
+      <AppFrame>
+        <Sky />
+      </AppFrame>,
+    );
+    await ui.rerender(
+      <AppFrame>
+        <Sky on={false} />
+      </AppFrame>,
+    );
+    expect(ui.queryByTestId('frame-backdrop')).toBeNull();
+    await ui.rerender(
+      <AppFrame>
+        <Sky />
+      </AppFrame>,
+    );
+    expect(ui.getByTestId('sky')).toBeTruthy();
+    await ui.rerender(
+      <AppFrame>
+        <Text>other</Text>
+      </AppFrame>,
+    );
+    expect(ui.queryByTestId('frame-backdrop')).toBeNull();
+  });
+
+  it('보이지 않는 탭 페이지의 배경은 그리지 않는다', async () => {
+    mockFrame = DUO;
+    const ui = await render(
+      <AppFrame>
+        <PageActiveContext.Provider value={false}>
+          <Sky />
+        </PageActiveContext.Provider>
+      </AppFrame>,
+    );
+    expect(ui.queryByTestId('frame-backdrop')).toBeNull();
+  });
+
+  it('가로 인셋이 없거나 폰 컬럼 프레임이면 그리지 않는다', async () => {
+    for (const frame of [NARROW, { ...WIDE, insetLeft: 0, insetRight: 84 }]) {
+      mockFrame = frame;
+      const ui = await render(
+        <AppFrame>
+          <Sky />
+        </AppFrame>,
+      );
+      expect(ui.queryByTestId('frame-backdrop')).toBeNull();
+      ui.unmount();
+    }
   });
 });
