@@ -257,8 +257,8 @@
         "unit": "명"
       },
       "weeklyMemberCount": {
-        "label": "주간 구성원 달성 횟수",
-        "shortLabel": "주간 달성 횟수",
+        "label": "미션 기간 구성원 누적 달성 횟수",
+        "shortLabel": "구성원 누적 횟수",
         "unit": "회"
       },
       "streakDays": {

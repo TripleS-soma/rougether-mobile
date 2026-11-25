@@ -515,7 +515,7 @@ describe('HouseMissionsScreen', () => {
       </ToastProvider>,
     );
     await fireEvent.press(getByLabelText('미션 만들기'));
-    // 기본값은 주간 달성 횟수 — 1~1000회.
+    expect(getByText('구성원 누적 횟수')).toBeTruthy();
     expect(getByText('목표 수치 (1~1000회)')).toBeTruthy();
 
     // 일일(인원)은 숫자 입력 대신 인원 칩 — 범위 문구도 인원 질문으로 바뀐다.
