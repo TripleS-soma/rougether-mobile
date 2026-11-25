@@ -18,6 +18,14 @@ describe('ScreenHeader', () => {
     expect(style.top).toBe(40 + Spacing.two);
   });
 
+  it('iOS에서는 제목을 자동 축소하지 않고 중간 말줄임만 한다 — iOS 27 SDK 빌드에서 글자가 5분의 1로 줄었다', async () => {
+    const { getByText } = await render(<ScreenHeader title="아주 긴 친구 이름의 방" />);
+    const title = getByText('아주 긴 친구 이름의 방');
+    expect(title.props.adjustsFontSizeToFit).toBe(false);
+    expect(title.props.numberOfLines).toBe(1);
+    expect(title.props.ellipsizeMode).toBe('middle');
+  });
+
   it('renders the title', async () => {
     const { getByText, queryByLabelText } = await render(<ScreenHeader title="가챠" />);
     expect(getByText('가챠')).toBeTruthy();

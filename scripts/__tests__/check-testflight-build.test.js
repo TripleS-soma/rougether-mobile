@@ -293,7 +293,7 @@ describe('store-build workflow boundaries', () => {
     expect(verificationIndex).toBeGreaterThan(0);
     expect(verificationIndex).toBeLessThan(prepareIndex);
     const verification = smoke.steps[verificationIndex];
-    expect(verification['timeout-minutes']).toBe(5);
+    expect(verification['timeout-minutes']).toBe(15);
     expect(verification.run).toContain('source-sha.txt');
     expect(verification.run).toContain('= "$CANDIDATE_SOURCE_SHA"');
     expect(verification.run).toContain('npm run typecheck');

@@ -119,11 +119,9 @@ const NAV_RAIL_MIN_WIDTH = 840;
 
 /**
  * 이 기기에서 탭 바가 왼쪽 세로 줄인가(아니면 아래에 떠 있는 알약). 2단이면서 배치 폭이 840
- * 이상일 때다 — 펼친 아이폰 Duo·데스크톱은 세로 줄, 세로로 펼친 폴드8(704)은 아래 알약.
+ * 이상인 터치 기기일 때다 — 펼친 아이폰 Duo는 세로 줄, 세로로 펼친 폴드8(704)과 데스크톱 웹(마우스)은 아래 알약.
  */
 export function hasNavRail(device: E2eDevice): boolean {
   const usable = device.viewport.width - device.insets.left - device.insets.right;
-  return (
-    (device.posture === 'open' || device.posture === 'desktop') && usable >= NAV_RAIL_MIN_WIDTH
-  );
+  return device.posture === 'open' && usable >= NAV_RAIL_MIN_WIDTH;
 }

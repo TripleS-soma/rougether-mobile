@@ -1,0 +1,32 @@
+1.5.7 새로운 기능 초안 (2026-11-25) — 콘솔에는 아직 반영하지 않았다.
+접었다 펴는 기기와 넓은 화면 대응(#1790~#1816), 아이폰 Duo 전체 화면(#1787).
+"아이폰 Duo 전체 화면" 줄은 Xcode 27로 만든 1.5.7 빌드에만 해당한다 — 그 빌드를 내지 않는
+플랫폼(Play)과 OTA만 받은 1.5.6에는 쓰지 않는다.
+
+== App Store (ko-KR, 4000자 이하)
+• 접었다 펴는 아이폰을 제대로 지원해요. 펼치면 화면을 가득 채우고, 왼쪽에 방·달력·집, 오른쪽에 할 일과 상세 내용을 나란히 보여드려요
+• 펼친 화면에서는 탭이 왼쪽 세로 줄로 옮겨 가서, 한 손으로도 닿기 쉬워요
+• 설정·집 채팅·미션·거래소·미니게임 같은 화면이 옆 칸에 열려, 보던 방이나 집을 그대로 둔 채 오갈 수 있어요
+• 접은 화면에서 방과 집 그림이 화면을 다 차지하지 않고, 할 일이 바로 보이게 맞췄어요
+• 로그인·회원가입 화면이 넓은 화면에 맞게 두 칸으로 바뀌었어요
+
+== Play (ko-KR, 500자 이하)
+• 갤럭시 Z 폴드 같은 접는 기기를 지원해요. 펼치면 왼쪽에 방·달력·집, 오른쪽에 할 일과 상세 내용을 나란히
+• 설정·집 채팅·미션·거래소·미니게임이 옆 칸에 열려요
+• 접은 화면에서 할 일이 바로 보이게 맞췄어요
+• 태블릿에서도 같은 2단 화면
+• 넓은 화면의 로그인·회원가입을 두 칸으로
+
+== App Store (en-US, 4000자 이하)
+• Built for foldable iPhones. Unfolded, Rougether fills the whole screen with your room, calendar, or house on the left and your to-dos and details on the right
+• On the unfolded screen the tabs move to a vertical bar on the left, easier to reach with one hand
+• Settings, house chat, missions, the market, and minigames now open in the side pane, so the room or house you were looking at stays in place
+• On the folded screen, the room and house art no longer takes over — your to-dos are visible right away
+• Sign in and sign up are now two panes on wide screens
+
+== Play (en-US, 500자 이하)
+• Foldable support: unfolded, your room, calendar, or house sits on the left with to-dos and details on the right
+• Settings, house chat, missions, the market, and minigames open in the side pane
+• To-dos are visible right away on the folded screen
+• The same two-pane layout on tablets
+• Two-pane sign in and sign up on wide screens

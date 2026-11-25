@@ -1,5 +1,5 @@
 import { type ReactNode, useContext } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { pressedStyle } from '@/components/ui/press-feedback';
@@ -9,6 +9,14 @@ import { Icon } from '@/components/ui/icon';
 import { HEADER_ROW_HEIGHT, HEADER_TOP_GAP } from '@/components/ui/screen-header-geometry';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+
+/**
+ * 제목 글자 자동 축소를 쓸 것인가. iOS에서는 끈다 — iOS 27 SDK(Xcode 27.2)로 빌드한 앱에서
+ * 폭이 내용으로 정해지는 이 알약 안의 `adjustsFontSizeToFit`이 `minimumFontScale`을 무시하고
+ * 글자를 5분의 1쯤으로 줄였다(아이폰 Duo 시뮬레이터, 2026-11-25: 옵션만 빼면 정상, 폭이 정해진
+ * 설정 화면의 칩에서는 같은 옵션이 멀쩡). 긴 제목은 중간 말줄임으로만 줄인다.
+ */
+const TITLE_AUTO_SHRINK = Platform.OS !== 'ios';
 
 export type ScreenHeaderProps = {
   title: string;
@@ -54,12 +62,12 @@ export function ScreenHeader({ title, onBack, backLabel, right }: ScreenHeaderPr
         ) : null}
         <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.titlePill}>
           {/* 긴 제목(친구 이름 등): 먼저 축소, 그래도 넘치면 중간 말줄임 — 의 방 같은
-              접미가 살아남는다. */}
+              접미가 살아남는다. iOS는 축소 없이 말줄임만 한다(TITLE_AUTO_SHRINK). */}
           <Text
             style={[Typography.h3, { color: t.text }]}
             numberOfLines={1}
             ellipsizeMode="middle"
-            adjustsFontSizeToFit
+            adjustsFontSizeToFit={TITLE_AUTO_SHRINK}
             minimumFontScale={0.75}>
             {title}
           </Text>

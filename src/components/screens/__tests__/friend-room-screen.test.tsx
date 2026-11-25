@@ -68,11 +68,11 @@ describe('FriendRoomScreen', () => {
     expect(getByText('잘하고 있어!')).toBeTruthy();
   });
 
-  it('keeps the 의 방 suffix visible on narrow screens (shrink + middle ellipsis)', async () => {
+  it('keeps the 의 방 suffix visible on narrow screens (middle ellipsis; iOS는 자동 축소 없음)', async () => {
     const { getByText } = await render(<FriendRoomScreen friendName="아주아주긴친구닉네임" />);
     const title = getByText('아주아주긴친구닉네임의 방');
-    expect(title.props.adjustsFontSizeToFit).toBe(true);
-    expect(title.props.minimumFontScale).toBe(0.75);
+    // iOS(Jest 기본)에서는 축소를 끈다 — iOS 27 SDK 빌드에서 제목이 5분의 1로 줄었다(ScreenHeader).
+    expect(title.props.adjustsFontSizeToFit).toBe(false);
     expect(title.props.ellipsizeMode).toBe('middle');
     expect(title.props.numberOfLines).toBe(1);
   });
