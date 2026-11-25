@@ -111,14 +111,12 @@ test('웹 창 ≥ 960px은 2단 — 프레임 폭은 창 폭, 최대 1200 (#1230
     ...win(SPLIT_MIN_WINDOW_WIDTH),
     framed: true,
     split: true,
-    navRail: true,
   });
   expect(resolveAppFrame('web', win(1440))).toEqual({
     ...win(1440),
     width: SPLIT_FRAME_MAX_WIDTH,
     framed: true,
     split: true,
-    navRail: true,
   });
   // 경계 바로 아래는 폰 컬럼.
   expect(resolveAppFrame('web', win(SPLIT_MIN_WINDOW_WIDTH - 1)).split).toBe(false);
@@ -178,9 +176,12 @@ describe('왼쪽 세로 탭 줄(navRail)', () => {
     expect(resolveAppFrame('android', win(700))).toMatchObject({ split: true });
   });
 
-  test('마우스 웹의 2단(960 이상)은 항상 켜진다', () => {
-    expect(resolveAppFrame('web', win(1280), true, undefined, false)).toMatchObject({
-      split: true,
+  test('마우스 웹은 2단이어도 탭 바를 아래에 둔다 — 세로 줄은 터치 기기만', () => {
+    const frame = resolveAppFrame('web', win(1280), true, undefined, false);
+    expect(frame.split).toBe(true);
+    expect(frame).not.toHaveProperty('navRail');
+    // 같은 폭이라도 터치 웹(태블릿 브라우저)은 세로 줄.
+    expect(resolveAppFrame('web', win(1280), true, undefined, true)).toMatchObject({
       navRail: true,
     });
   });
