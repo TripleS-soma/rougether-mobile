@@ -280,6 +280,31 @@ describe('TabPager (#563)', () => {
     expect(onIndexChange).not.toHaveBeenCalled();
   });
 
+  it('탭을 누른 첫 렌더에도 슬라이드가 출발하는 페이지가 보인다', async () => {
+    const onIndexChange = jest.fn();
+    const ui = await renderPager(1, onIndexChange);
+    await ui.rerender(<Harness index={2} onIndexChange={onIndexChange} />);
+    // useAnimatedStyle이 그린 첫 프레임에는 아직 이동 효과가 범위를 넓히지 않았다.
+    expect(ui.getByText('집 페이지')).toBeTruthy();
+    expect(ui.queryByText('나의 방 페이지')).toBeNull();
+  });
+
+  it('슬라이드를 마친 뒤 다음 탭을 누르면 직전 도착 페이지에서 출발한다', async () => {
+    let finish: ((finished?: boolean) => void) | undefined;
+    jest.spyOn(Reanimated, 'withTiming').mockImplementation((target, _config, callback) => {
+      finish = callback;
+      return target;
+    });
+    const onIndexChange = jest.fn();
+    const ui = await renderPager(0, onIndexChange);
+    await ui.rerender(<Harness index={2} onIndexChange={onIndexChange} />);
+    expect(finish).toBeDefined();
+    await act(async () => finish?.(true));
+    await ui.rerender(<Harness index={1} onIndexChange={onIndexChange} />);
+    expect(ui.getByText('설정 페이지')).toBeTruthy();
+    expect(ui.queryByText('나의 방 페이지')).toBeNull();
+  });
+
   it('탭으로 두 칸 이동하면 지나가는 페이지까지만 올린다 (성능 장부 M1)', async () => {
     jest.spyOn(Reanimated, 'withTiming').mockImplementation((target) => target);
     const ui = await renderPager(0);

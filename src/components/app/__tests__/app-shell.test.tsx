@@ -323,7 +323,7 @@ describe('AppShell', () => {
   // onTouchesDown 없이 팬이 끝나는 경우)을 재현해, 탭 루트에서는 커밋
   // 시점 가드가 백을 막는지 본다. 막지 못하면 내 정보 → (집 건너뜀) → 방.
   it('탭 루트에서는 엣지 백이 발화해도 화면이 바뀌지 않는다 (#740)', async () => {
-    const { getByText, getByLabelText, queryByText } = await renderWithProviders(<AppShell />);
+    const { getByText, getByLabelText } = await renderWithProviders(<AppShell />);
     await fireEvent.press(getByLabelText('내 정보'));
     // '내 정보'는 탭 라벨과 헤더 양쪽에 있어 화면 고유 문구로 단언한다.
     expect(getByText('프로필 편집')).toBeTruthy();
@@ -338,7 +338,8 @@ describe('AppShell', () => {
 
     // 내 정보 탭 유지 — 방(나의 방)으로 튀지 않는다.
     expect(getByText('프로필 편집')).toBeTruthy();
-    expect(queryByText('오늘의 할 일')).toBeNull();
+    expect(getByLabelText('내 정보')).toHaveProp('accessibilityState', { selected: true });
+    expect(getByLabelText('나의 방')).toHaveProp('accessibilityState', { selected: false });
   });
 });
 
