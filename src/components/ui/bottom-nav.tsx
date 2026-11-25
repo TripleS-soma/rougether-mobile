@@ -62,7 +62,9 @@ const ALL_TABS: TabDef[] = [
   // 내 정보 (#1088) — 설정 탭을 대체. 설정은 내 정보 헤더의 톱니로 들어간다.
   { key: 'myPage', labelKey: 'nav.myPage', active: ProfileActive, inactive: ProfileInactive },
 ];
-const TABS = FEED_ENABLED ? ALL_TABS : ALL_TABS.filter((tab) => tab.key !== 'feed');
+/** 지금 켜진 탭 목록 — 아래 탭 바와 왼쪽 세로 탭 줄(`nav-rail`)이 같이 쓴다. */
+export const NAV_TABS = FEED_ENABLED ? ALL_TABS : ALL_TABS.filter((tab) => tab.key !== 'feed');
+const TABS = NAV_TABS;
 const MIN_TAB_TOUCH_SIZE = 44;
 /** 좁은 화면에서 라벨을 함께 줄일 때의 하한 배율 (#1098 후속). */
 const MIN_LABEL_SCALE = 0.8;
@@ -75,7 +77,7 @@ export type BottomNavProps = {
 };
 
 /** 활성 전환 시 스프링으로 한 번 통 튀는 탭 아이콘 (#446). */
-function TabIcon({
+export function TabIcon({
   isActive,
   Icon: NavIcon,
   color,

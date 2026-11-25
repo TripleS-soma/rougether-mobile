@@ -14,6 +14,7 @@ import {
 
 // 1024px 원본(icon.png, 885KB)은 네이티브 지문 입력이라 그대로 두고, 화면용 336px 사본을 쓴다.
 import appIcon from '@/assets/images/login-app-icon.webp';
+import { useBrandSplit } from '@/hooks/use-brand-split';
 import { LoginConflictDialog } from '@/components/screens/login/login-conflict-dialog';
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
@@ -195,29 +196,35 @@ export function LoginScreen({
     }
   };
 
+  const inBrandSplit = useBrandSplit();
+
   return (
     <View style={[styles.screen, useScreenStyle(['top', 'bottom'])]}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
-          contentContainerStyle={[styles.body, column]}
+          // 2단에서는 머리(로고·소개)가 왼쪽 칸으로 가서 내용이 짧다 — 왼쪽 소개와 높이를 맞춰 가운데에.
+          contentContainerStyle={[styles.body, column, inBrandSplit && styles.bodyCentered]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          <View style={styles.header}>
-            <View style={[styles.avatar, { backgroundColor: t.surfaceMuted }]}>
-              <Image
-                source={appIcon}
-                style={styles.avatarImg}
-                contentFit="cover"
-                accessibilityLabel={tr('member.login.appIconA11y')}
-              />
+          {/* 넓은 화면의 2단에서는 왼쪽 칸이 앱 소개를 그린다(`BrandSplit`) — 여기서 또 그리지 않는다. */}
+          {inBrandSplit ? null : (
+            <View style={styles.header}>
+              <View style={[styles.avatar, { backgroundColor: t.surfaceMuted }]}>
+                <Image
+                  source={appIcon}
+                  style={styles.avatarImg}
+                  contentFit="cover"
+                  accessibilityLabel={tr('member.login.appIconA11y')}
+                />
+              </View>
+              <Text style={[Typography.h1, { color: t.text }]}>{tr('member.login.appName')}</Text>
+              <Text style={[styles.subtitle, emph('normal'), { color: t.textMuted }]}>
+                {tr('member.login.tagline')}
+              </Text>
             </View>
-            <Text style={[Typography.h1, { color: t.text }]}>{tr('member.login.appName')}</Text>
-            <Text style={[styles.subtitle, emph('normal'), { color: t.textMuted }]}>
-              {tr('member.login.tagline')}
-            </Text>
-          </View>
+          )}
 
           {/* dev-login 폼(#489) — 개발 빌드 전용. 배포 빌드는 소셜 로그인만. */}
           {__DEV__ ? (
@@ -474,6 +481,7 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.four,
     paddingBottom: Spacing.five,
   },
+  bodyCentered: { justifyContent: 'center' },
   header: {
     alignItems: 'center',
     paddingTop: Spacing.five,

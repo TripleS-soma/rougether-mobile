@@ -7,6 +7,12 @@ import { navUnderlapInset } from '@/components/ui/bottom-nav-geometry';
 import { Typography } from '@/constants/theme';
 import { useBottomNavInset, useScreenStyle } from '@/hooks/use-screen-style';
 
+let mockNavRail = false;
+jest.mock('@/hooks/use-app-frame', () => ({
+  ...jest.requireActual('@/hooks/use-app-frame'),
+  useAppFrame: () => ({ width: 390, height: 844, scale: 2, fontScale: 1, framed: false, split: false, navRail: mockNavRail }), // prettier-ignore
+}));
+
 const METRICS = {
   frame: { x: 0, y: 0, width: 390, height: 844 },
   insets: { top: 47, bottom: 34, left: 0, right: 0 },
@@ -65,5 +71,12 @@ describe('useBottomNavInset (#1049)', () => {
     const expected = navUnderlapInset(METRICS.insets.bottom, Typography.supporting.lineHeight); // supporting 줄높이 18
     expect(expected).toBeGreaterThan(METRICS.insets.bottom);
     expect(getByTestId('inset').props.children).toBe(String(expected));
+  });
+
+  it('왼쪽 세로 탭 줄이면 아래 탭 바가 없다 — 홈 인디케이터 자리만 비운다', async () => {
+    mockNavRail = true;
+    const { getByTestId } = await render(wrap(<InsetProbe />));
+    expect(getByTestId('inset').props.children).toBe(String(METRICS.insets.bottom));
+    mockNavRail = false;
   });
 });

@@ -1,5 +1,6 @@
 import type {
   ChatRoomResponse,
+  HouseAutoJoinResponse,
   HouseCoverImage,
   HouseDetailResponse,
   HouseJoinRequestResponse,
@@ -79,11 +80,18 @@ const missions = [
 export const HOUSE_FIXTURES = {
   'GET /me/houses': { items: [myHouse] } satisfies List<MyHouseSummary>,
   'GET /me/join-requests': { items: [] } satisfies List<MyJoinRequestSummary>,
+  // 집 탐색 — 둘러볼 다른 집이 없는 빈 목록(페이지 응답).
+  'GET /houses': { items: [], hasNext: false },
   'GET /houses/cover-images': {
     items: [{ code: 'coral-aquarium', name: '산호 수족관', coverImageKey: COVER }],
   } satisfies List<HouseCoverImage>,
   'GET /houses/:id': detail,
   'GET /houses/:id/members': { items: members } satisfies List<MemberSummary>,
+  // 구성원 관리 화면이 방장에게만 묻는다 (#1407).
+  'GET /houses/:id/auto-join': {
+    houseId: HOUSE_ID,
+    enabled: false,
+  } satisfies HouseAutoJoinResponse,
   'GET /houses/:id/missions': { items: missions } satisfies List<MissionSummary>,
   'GET /houses/:id/join-requests': { items: [] } satisfies List<HouseJoinRequestResponse>,
   'GET /houses/:id/members/:id/room': MEMBER_ROOM,

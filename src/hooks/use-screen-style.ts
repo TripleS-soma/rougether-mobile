@@ -6,6 +6,7 @@ import { actionBarUnderlapInset } from '@/components/ui/action-bar-geometry';
 import { navUnderlapInset } from '@/components/ui/bottom-nav-geometry';
 import { headerUnderlapInset } from '@/components/ui/screen-header-geometry';
 import { Spacing } from '@/constants/theme';
+import { useAppFrame } from '@/hooks/use-app-frame';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 const ZERO_INSETS = { top: 0, bottom: 0, left: 0, right: 0 };
@@ -55,6 +56,9 @@ export function useHeaderInsetStyle(basePadding: number = Spacing.three): ViewSt
 export function useBottomNavInset(): number {
   const insets = useContext(SafeAreaInsetsContext) ?? ZERO_INSETS;
   const Typography = useTypography();
+  // 넓은 창에서는 탭 바가 왼쪽 세로 줄이라(`NavRail`) 아래에 떠 있는 것이 없다 — 홈 인디케이터만 비운다.
+  const { navRail } = useAppFrame();
+  if (navRail) return insets.bottom;
   return navUnderlapInset(insets.bottom, Typography.supporting.lineHeight);
 }
 

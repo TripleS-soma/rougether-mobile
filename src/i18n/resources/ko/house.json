@@ -597,6 +597,19 @@
       "footer": "이 집에만 적용돼요. 전체 푸시 알림은 설정 > 푸시 알림에서 바꿀 수 있어요.",
       "feedPending": "글 알림 설정은 서버 준비 중이에요. 준비되면 여기서 바꿀 수 있어요.",
       "saveFailed": "알림 설정을 바꾸지 못했어요. 잠시 후 다시 시도해 주세요."
+    },
+    "sidePanel": {
+      "missions": "우리 집의 목표",
+      "missionsAll": "전체 보기",
+      "missionsAllA11y": "우리 집의 목표 전체 보기",
+      "missionsEmpty": "진행 중인 목표가 없어요",
+      "missionProgressA11y": "{{title}}, {{current}}/{{target}}{{unit}}",
+      "members": "구성원 {{n}}",
+      "manage": "관리",
+      "manageA11y": "구성원 관리",
+      "owner": "방장",
+      "levelA11y": "레벨 {{level}}, 다음 레벨까지 {{points}}/100",
+      "regionA11y": "{{name}} 집 정보"
     }
   }
 }

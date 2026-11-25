@@ -18,6 +18,7 @@ import { HousePreviewFrame } from '@/components/room/house-preview-frame';
 import { StackedHouseDemo } from '@/dev/stacked-house-demo';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { HouseScreen, type House } from '@/components/screens/house-screen';
+import { HouseSidePanel } from '@/components/screens/house/house-side-panel';
 import { HouseMissionsScreen } from '@/components/screens/house-missions-screen';
 import { HouseChatScreen } from '@/components/screens/house-chat-screen';
 import type { ChatCrop } from '@/api/chat-types';
@@ -215,6 +216,36 @@ function HouseCoverPickerDemo() {
 }
 
 export const houseEntries: GalleryEntry[] = [
+  {
+    name: 'HouseSidePanel',
+    description:
+      '2단 집 탭의 오른쪽 칸(펼친 폴더블·태블릿·데스크톱 웹) — 집 이름·레벨, 채팅·집 피드·집 추가, 진행 중인 목표, 구성원 목록.',
+    render: () => (
+      <HouseSidePanel
+        name="햇살 가득한 집"
+        isOwner
+        level={3}
+        growthPoints={245}
+        maxMembers={4}
+        userName="나"
+        chatUnread={2}
+        members={[
+          { name: '나', color: '#F5E1D8', isMine: true, isOwner: true, online: true },
+          { name: '민지', color: '#E8E0D0', lastSeenLabel: '3시간 전' },
+          { name: '도우미', color: '#E0E8D8', bot: true },
+        ]}
+        missions={[
+          { id: 1, title: '다 같이 루틴 완료', desc: '', unit: '명', icon: 'sun', current: 2, target: 4, status: 'ACTIVE' }, // prettier-ignore
+          { id: 2, title: '주간 루틴 지키기', desc: '', unit: '회', icon: 'calendar', current: 7, target: 10, status: 'ACTIVE' }, // prettier-ignore
+        ]}
+        onOpenChat={() => {}}
+        onOpenFeed={() => {}}
+        onOpenSearch={() => {}}
+        onOpenMissions={() => {}}
+        onOpenMembers={() => {}}
+      />
+    ),
+  },
   {
     name: 'ChatPhotoCrop',
     description:

@@ -240,6 +240,89 @@ export const FULL_SWIPE_BACK_EXCLUDED: ReadonlySet<Screen> = new Set<Screen>([
 export function livesInPager(screen: Screen): boolean {
   return TAB_FOR_SCREEN[screen] != null || screen === 'calendarWeek';
 }
+/**
+ * 2단(펼친 폴더블·태블릿·데스크톱 웹)에서 화면을 통째로 넘기지 않고 **탭 화면의 오른쪽 칸에**
+ * 여는 서브화면 → 그 탭. 왼쪽 칸(내 정보의 프로필 등)은 그대로 남는다. 뒤로가기 맵은 그대로라
+ * 뒤로 가면 칸이 걷히고 탭 화면의 오른쪽 칸(메뉴)이 다시 보인다. 한 칸(폰)에서는 쓰이지 않는다.
+ */
+const SPLIT_PANE_HOST: Partial<Record<Screen, NavTab>> = {
+  settings: 'myPage',
+  theme: 'myPage',
+  font: 'myPage',
+  language: 'myPage',
+  notifications: 'myPage',
+  sound: 'myPage',
+  blockedUsers: 'myPage',
+  profileEdit: 'myPage',
+  updates: 'myPage',
+  bugReport: 'myPage',
+  help: 'myPage',
+  inviteFriends: 'myPage',
+  // 집 — 왼쪽 칸의 집 그림은 그대로 두고 집 정보 칸 자리에 연다.
+  houseMembers: 'house',
+  houseMissions: 'house',
+  houseChat: 'house',
+  houseFeed: 'house',
+  houseFeedPost: 'house',
+  houseFeedCompose: 'house',
+  // 친구 방 — 집의 좌석을 눌러 연다. 집 그림 옆에서 그 방을 본다.
+  friendRoom: 'house',
+  // 집 탐색·새 집 만들기 — 내 집 그림 옆에서 다른 집을 찾는다. 집이 없으면 칸에 열지 않는다(아래).
+  houseSearch: 'house',
+  createHouse: 'house',
+  // 방 — 왼쪽 칸의 방 그림은 그대로 두고 할 일 칸 자리에 연다.
+  routineManage: 'myRoom',
+  categoryManage: 'myRoom',
+  notificationList: 'myRoom',
+  minigames: 'myRoom',
+  minigameLeaderboard: 'myRoom',
+  // 게임판은 세로 폰 폭을 전제로 그려져 있다 — 칸 폭(폰 폭쯤)이 그 전제에 맞는다.
+  minigameRunner: 'myRoom',
+  furnitureStudio: 'myRoom',
+  gacha: 'myRoom',
+  // 거래소 — 방 탭에서 열고 방으로 돌아간다.
+  market: 'myRoom',
+  marketAsset: 'myRoom',
+  marketOrders: 'myRoom',
+  // 피드 — 글 목록 옆에서 쓴다.
+  feedCompose: 'feed',
+  // 내 정보의 나머지 메뉴.
+  suggestions: 'myPage',
+  calendarImport: 'myPage',
+};
+
+/** 연 곳으로 돌아가는 화면(#1056) — 2단에서는 그 "연 곳"의 탭이 칸을 내준다. */
+const RETURNING_SCREENS: ReadonlySet<Screen> = new Set<Screen>(['addRoutine', 'weeklyReport']);
+
+/**
+ * `screen`을 오른쪽 칸에 여는 탭 — 2단이 아니거나 칸에 열지 않는 화면이면 null.
+ *
+ * 루틴 추가·주간회고는 연 곳으로 돌아가는 화면이라(`addReturnScreen`), 그 연 곳이 탭이면 그 탭,
+ * 칸에 열린 화면이면 그 화면을 품은 탭이 칸을 내준다 — 방에서 연 루틴 추가는 방 옆에, 달력에서
+ * 연 것은 달력 옆에 열린다.
+ *
+ * @param noHouses 집이 하나도 없는가 — 그러면 집 탐색·새 집 만들기는 방 탭의 칸에 열고, 그 밖에
+ *   집 탭이 품는 화면은 칸에 열지 않는다.
+ */
+export function splitPaneHost(
+  screen: Screen,
+  split: boolean,
+  addReturnScreen?: Screen,
+  noHouses = false,
+): NavTab | null {
+  if (!split) return null;
+  // 집이 없으면 집 탭은 빈 상태라 두 칸이 아니다. 집 탐색·새 집 만들기는 그때 방 탭에서 열고 방으로
+  // 돌아가므로(`backTargetFor`) 방 그림 옆에 연다. 그 밖의 집 화면은 집이 있어야 열린다.
+  if (noHouses && SPLIT_PANE_HOST[screen] === 'house') {
+    return screen === 'houseSearch' || screen === 'createHouse' ? 'myRoom' : null;
+  }
+  if (RETURNING_SCREENS.has(screen)) {
+    if (!addReturnScreen || RETURNING_SCREENS.has(addReturnScreen)) return null;
+    return TAB_FOR_SCREEN[addReturnScreen] ?? SPLIT_PANE_HOST[addReturnScreen] ?? null;
+  }
+  return SPLIT_PANE_HOST[screen] ?? null;
+}
+
 /** Screens that own input all the way to the screen edge. */
 export const EDGE_BACK_DISABLED_SCREENS: ReadonlySet<Screen> = new Set<Screen>(['minigameRunner']);
 // 이만큼 끌었거나(거리) 이 속도를 넘긴 릴리즈면 뒤로 간다.

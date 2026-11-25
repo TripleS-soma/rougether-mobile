@@ -30,7 +30,10 @@ import {
 } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
+import { useFrameBackdrop } from '@/components/app/frame-backdrop';
 import { NavMenuPopover } from '@/components/app/nav-menu-popover';
+import { NAV_RAIL_WIDTH } from '@/components/ui/nav-rail';
+import { splitLeftTopInset } from '@/hooks/use-split-pane-insets';
 import {
   canQuickAddCategory,
   groupCalendarClientRoutines,
@@ -423,7 +426,15 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const tr = useT();
   const column = useResponsiveColumn();
   // 웹 데스크톱 2단 (#1230) — 창 ≥ 960px에서만 true.
-  const { split, width: frameWidth, height: frameHeight } = useAppFrame();
+  const {
+    split,
+    splitFill = false,
+    navRail = false,
+    width: frameWidth,
+    height: frameHeight,
+    insetLeft = 0,
+    insetRight = 0,
+  } = useAppFrame();
   // 넓고 짧은 화면(접힌 아이폰 Duo·iPhone SE)에서는 방 높이를 화면 절반에 맞춘다 — 폭을 다
   // 쓰면 세로의 2/3를 먹어 할 일이 첫 화면 밖으로 밀린다. 2단은 칸 안 카드라 해당 없음.
   const shortHeroWidth = split
@@ -585,11 +596,12 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     if (date !== today) onSelectDate?.(date);
     // 월 모드의 날짜 **탭**만 주간 보기를 연다 (#1327) — '오늘로' 칩은 선택만 되돌리고,
     // 주 모드의 탭·플링은 선택만 바꾼다.
-    if (calendarMode === 'month' && source === 'tap') onOpenDay?.(date);
+    // 2단에서는 오른쪽 칸이 그날 할 일 자리 — 주간 보기로 넘어가지 않는다.
+    if (calendarMode === 'month' && source === 'tap' && !split) onOpenDay?.(date);
   });
   // 주간 보기 (#1327) — 뒤로는 달력이 다시 펼쳐진 뒤 닫는다. 헤더는 접힘과 같은 시간으로 자란다.
   const weekMode = tab !== 'room' && calendarMode === 'week';
-  const hideDayList = tab !== 'room' && calendarMode === 'month' && !!onOpenDay;
+  const hideDayList = tab !== 'room' && calendarMode === 'month' && !!onOpenDay && !split;
   const [weekLeaving, setWeekLeaving] = useState(false);
   // 달력 탭 페이지가 제자리에서 주간 ↔ 월을 오간다(2026-11-04) — 화면이 살아 있으니 월로
   // 돌아오면 '떠나는 중'을 풀어 다음 진입이 처음부터 접히게.
@@ -1063,11 +1075,39 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     );
   };
 
+  // 가로 안전 영역 띠(접힌 아이폰 Duo)까지 방 양옆 채움을 잇는다 — 방과 같은 높이로 깔고
+  // 스크롤을 따라 올라간다. 띠가 없는 기기에서는 만들지 않는다.
+  // 처음 값은 복원될 스크롤 위치 — 0에서 시작하면 첫 스크롤 이벤트 전까지 띠가 방과 어긋난다.
+  const [heroScrollY] = useState(() => new Animated.Value(Math.max(0, getInitialScrollY?.() ?? 0)));
+  const stripBackdropOn =
+    tab === 'room' && shortHeroWidth !== undefined && (insetLeft > 0 || insetRight > 0);
+  const stripBackdrop = useMemo(
+    () =>
+      stripBackdropOn && shortHeroWidth !== undefined ? (
+        <Animated.View
+          testID="room-frame-backdrop"
+          style={{
+            height: shortHeroWidth / ROOM_RENDER_CONTRACT.room.aspectRatio,
+            transform: [{ translateY: Animated.multiply(heroScrollY, -1) }],
+          }}>
+          <RoomBackdrop
+            wallpaperId={wallpaperId}
+            floorId={floorId}
+            wallpapers={wallpapers}
+            floors={floors}
+          />
+        </Animated.View>
+      ) : null,
+    [stripBackdropOn, shortHeroWidth, heroScrollY, wallpaperId, floorId, wallpapers, floors],
+  );
+  useFrameBackdrop(stripBackdrop);
+
   const renderScroll = (children: ReactNode) => (
     <PawRefreshScroll
       scrollRef={scrollRef}
       onRefresh={onRefresh}
       refreshTestID="my-room-refresh"
+      testID="my-room-scroll"
       // 재정렬 드래그 중엔 세로 스크롤을 잠근다 (#716) — 카테고리 드래그도 같다.
       scrollEnabled={dragId === null && catDragId === null}
       contentContainerStyle={[
@@ -1088,6 +1128,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       onScroll={(e) => {
         // 빠른 추가 입력행 스크롤인용 로컬 추적 + 셸의 탭별 기억(#763).
         scrollYRef.current = e.nativeEvent.contentOffset.y;
+        // 띠가 꺼져 있는 동안(달력 탭 등)에도 따라가 둔다 — 다시 켜질 때 위치가 맞게.
+        heroScrollY.setValue(e.nativeEvent.contentOffset.y);
         scrollRestore.onScroll?.(e);
       }}
       keyboardShouldPersistTaps="handled">
@@ -1098,9 +1140,36 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // 종전대로 한 스크롤에 위아래로. hero/list는 두 배치가 같이 쓴다. **활성 탭의 것만**
   // 만든다 — renderCategoryGroup이 렌더마다 rowHandlers·groupOrder를 채우므로 두 탭의
   // 목록을 다 만들면 등록이 겹쳐 드래그 드롭 판정이 어긋난다.
+  // 창을 다 쓰는 2단(펼친 폴더블·태블릿)의 왼쪽 칸. 펼친 아이폰 Duo는 시스템 표시가 오른쪽 위
+  // 모서리에만 있는데 안전 영역은 위쪽 전체 폭(82)으로 온다 — 왼쪽 칸은 그 밑이 아니라 비우지 않는다.
+  // 상태 표시줄이 전체 폭인 기기(안드로이드·아이패드)는 왼쪽 칸도 그 줄을 비운다.
+  const splitHeroTop = splitLeftTopInset(insets.top, splitFill, 0) + Spacing.four;
+  // 방은 폭을 따라 높이가 정해지므로(5:6), 칸이 넓고 낮으면 버튼 줄이 탭 바 밑으로 밀린다 —
+  // 방 + 버튼 줄이 칸 높이(위 여백 ~ 탭 바 위)에 들어가는 폭으로 묶는다.
+  // 버튼 한 줄(6개)이 왼쪽 칸에 들어가는가. 좁은 2단(세로로 펼친 폴드 — 칸 폭 352)에서는 안 들어가
+  // 양끝 버튼이 잘렸다. 그때는 폰처럼 방 위에 세로 열로 얹는다.
+  const splitPaneInner = (frameWidth - (navRail ? NAV_RAIL_WIDTH : 0)) / 2 - Spacing.four * 2;
+  const actionsInRow = split && (!splitFill || splitPaneInner >= SPLIT_ACTIONS_ROW_WIDTH);
+  const splitHeroMaxWidth =
+    splitFill && tab === 'room'
+      ? Math.max(
+          0,
+          frameHeight -
+            splitHeroTop -
+            (Spacing.four + navInset) -
+            (actionsInRow ? SPLIT_ACTIONS_ROW_HEIGHT : 0),
+        ) * ROOM_RENDER_CONTRACT.room.aspectRatio
+      : undefined;
   const hero =
     tab === 'room' ? (
-      <View style={styles.roomWrap}>
+      <View
+        testID="my-room-hero-wrap"
+        style={[
+          styles.roomWrap,
+          splitHeroMaxWidth !== undefined
+            ? { width: '100%', maxWidth: splitHeroMaxWidth, alignSelf: 'center' }
+            : null,
+        ]}>
         {!capturing ? (
           <View
             pointerEvents="box-none"
@@ -1160,7 +1229,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         {capturing ? null : (
           // 웹 데스크톱 2단(#1230 후속)에선 방 위 오버레이 대신 방 아래 한 줄 —
           // 왼쪽 칸이 비어 보이던 것을 채우고 방도 가리지 않는다. 폰은 종전 세로 열.
-          <View style={split ? styles.btnRow : styles.btnColumn} testID="room-actions">
+          <View style={actionsInRow ? styles.btnRow : styles.btnColumn} testID="room-actions">
             <CoachTarget id="room-menu">
               <Pressable
                 ref={menuBtnRef}
@@ -1189,7 +1258,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             ) : null}
             {/* 두 묶음 (2026-11-04, GA 28일): 위는 시스템(메뉴·알림), 틈 뒤로 방에서 하는 일을
                 반복 사용 순으로 — 미니게임(1인 31회)·꾸미기·AI 스튜디오·뽑기(대부분 온보딩 1회). */}
-            <View style={split ? styles.btnGroupGapRow : styles.btnGroupGap} />
+            <View style={actionsInRow ? styles.btnGroupGapRow : styles.btnGroupGap} />
             {onOpenMinigames ? (
               <Pressable
                 onPress={() => tapAction('minigames', onOpenMinigames)}
@@ -1489,15 +1558,15 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {split ? (
-          <View style={styles.splitRow} testID="my-room-split">
+          <View style={[styles.splitRow, splitFill && styles.splitRowFill]} testID="my-room-split">
             {/* 왼쪽 칸은 화면 세로 가운데에 고정(sticky) — 목록이 길어도 방·달력은 제자리.
                 내용이 칸보다 크면(낮은 창) 그때만 자체 스크롤. 당김 새로고침은 목록 쪽에만. */}
             <ScrollView
-              style={styles.splitHero}
+              style={splitFill ? styles.splitPaneFill : styles.splitHero}
               contentContainerStyle={[
                 styles.splitHeroContent,
                 {
-                  paddingTop: insets.top + Spacing.four,
+                  paddingTop: splitHeroTop,
                   paddingBottom: Spacing.four + navInset,
                 },
               ]}
@@ -1505,7 +1574,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               testID="my-room-split-hero">
               {hero}
             </ScrollView>
-            <View style={styles.splitList}>
+            <View
+              style={splitFill ? styles.splitPaneFill : styles.splitList}
+              testID="my-room-split-list">
               {renderScroll(
                 tab === 'room' ? list : <View style={[styles.calendarPanel, column]}>{list}</View>,
               )}
@@ -1740,6 +1811,11 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 const CAT_DOT_SIZE = 32;
 const QUICK_ADD_SIZE = 32;
 
+/** 2단에서 방 아래 버튼 한 줄의 높이 — 버튼(44) + 위 여백(`btnRow.paddingTop`). */
+const SPLIT_ACTIONS_ROW_HEIGHT = 44 + Spacing.three;
+/** 그 한 줄의 폭 — 버튼 6개(44) + 사이 틈 6개(`btnRow.gap`) + 묶음 사이 틈(`btnGroupGapRow`). */
+const SPLIT_ACTIONS_ROW_WIDTH = 44 * 6 + Spacing.three * 6 + Spacing.three;
+
 const styles = StyleSheet.create({
   /**
    * 오늘·날짜 머리의 추가 버튼 (#1637) — 32pt 브랜드색 원. 종전 54pt 흰 글래스 원은 제목보다
@@ -1844,6 +1920,9 @@ const styles = StyleSheet.create({
     width: ContentMaxWidth,
     flexShrink: 1,
   },
+  // 터치 기기의 2단(펼친 폴더블·태블릿) — 두 칸이 1:1로 창을 다 쓴다. 가운데 블록·틈 없음.
+  splitRowFill: { justifyContent: 'flex-start', gap: 0 },
+  splitPaneFill: { flex: 1, flexBasis: 0, minWidth: 0 },
 
   // 전체화면 방 (#1055) — 위 모서리는 화면 가장자리에 붙으니 각지게.
   // 나의 방 전체화면(#1058)에서만 네 모서리 전부 각지게 — 아래 둥근 모서리가

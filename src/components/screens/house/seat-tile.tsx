@@ -39,6 +39,12 @@ export type SeatTileProps = {
   /** Exact rectangular cutouts have no rounded bleed or visible tile border. */
   squareFrame?: boolean;
   dioramaSide?: 0 | 1;
+  /**
+   * 좁은 좌석(짧은 화면에 맞춘 집 — 방 한 칸이 폰의 0.6배쯤)의 이름표 — 이름만 남긴다.
+   * '(나)'·마지막 접속까지 넣으면 이름이 한두 글자로 잘린다(접힌 아이폰 Duo 실측).
+   * 둘 다 접근성 라벨에는 그대로 남는다.
+   */
+  compactMeta?: boolean;
   /** 지금 들려 있는 좌석인가. */
   dragging: boolean;
   /** 확대 중 — 롱프레스 드래그를 막는다(카메라 팬과 충돌). */
@@ -89,6 +95,7 @@ function SeatTileBase({
   fill,
   squareFrame = false,
   dioramaSide,
+  compactMeta = false,
   dragging,
   zoomed,
   preview,
@@ -124,8 +131,14 @@ function SeatTileBase({
    */
   const presence = bot ? 'bot' : online ? 'online' : lastSeenLabel ? 'lastSeen' : 'none';
   /** 이름 뒤에 붙는 꼬리 문구 — 접속 중일 땐 초록 점이 대신하므로 비운다. */
-  const trailing =
-    presence === 'bot' ? tr('house.seat.bot') : presence === 'lastSeen' ? lastSeenLabel : null;
+  const trailing = compactMeta
+    ? null
+    : presence === 'bot'
+      ? tr('house.seat.bot')
+      : presence === 'lastSeen'
+        ? lastSeenLabel
+        : null;
+  const accessibleName = isMine ? tr('house.seat.mine', { name: displayName }) : displayName;
   const presenceLabel =
     presence === 'bot'
       ? tr('house.seat.bot')
@@ -170,12 +183,7 @@ function SeatTileBase({
         onPressOut={onPressOut}
         disabled={empty}
         accessibilityRole="button"
-        accessibilityLabel={[
-          isMine ? tr('house.seat.mine', { name: displayName }) : displayName,
-          presenceLabel,
-        ]
-          .filter(Boolean)
-          .join(', ')}
+        accessibilityLabel={[accessibleName, presenceLabel].filter(Boolean).join(', ')}
         accessibilityHint={
           empty ? undefined : fill ? tr('house.seat.hintFill') : tr('house.seat.hintMove')
         }
@@ -251,7 +259,7 @@ function SeatTileBase({
                   styles.roomName,
                   { color: preview || dioramaSide != null ? StaticWhite : t.onTint },
                 ]}>
-                {isMine ? tr('house.seat.mine', { name: displayName }) : displayName}
+                {compactMeta ? displayName : accessibleName}
               </Text>
               {/* 마지막 접속은 이름과 같은 줄에 (#999) — 온라인일 때 초록 점이
                   그렇듯 한 줄로 끝나야 뱃지 높이가 좌석마다 흔들리지 않는다.

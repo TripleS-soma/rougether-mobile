@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { BrandSplit } from '@/components/app/brand-split';
 import { fetchHouse } from '@/api/houses';
 import { ApiError } from '@/api/http';
 import { ErrorCode } from '@/api/error-codes';
@@ -88,15 +89,17 @@ export function OnboardingHouseGate({ onFinish }: { onFinish: () => Promise<void
   );
 
   return (
-    <OnboardingHouseScreen
-      outcome={outcome}
-      saving={saving}
-      onChoose={(choice) => {
-        void choose(choice);
-      }}
-      onContinue={() => {
-        void finish();
-      }}
-    />
+    <BrandSplit>
+      <OnboardingHouseScreen
+        outcome={outcome}
+        saving={saving}
+        onChoose={(choice) => {
+          void choose(choice);
+        }}
+        onContinue={() => {
+          void finish();
+        }}
+      />
+    </BrandSplit>
   );
 }

@@ -111,7 +111,12 @@ for (const { tab, name } of HEADER_BUTTONS) {
     page,
   }) => {
     await app.open({ tab });
-    const button = page.getByRole('button', { name, exact: true });
+    // 2단(데스크톱)의 내 정보는 설정이 머리의 톱니가 아니라 메뉴 칸의 행이다 — 행의 접근성 이름에는
+    // 아이콘 글리프가 섞여 정확히 일치하지 않으므로, 메뉴 칸 안에서 이름으로 찾는다.
+    const button = page
+      .getByRole('button', { name, exact: true })
+      .or(page.getByTestId('my-page-menu-pane').getByRole('button', { name }))
+      .first();
     await expect(button).toBeVisible();
     await expectClearOf(button, app.device.obstructions);
   });

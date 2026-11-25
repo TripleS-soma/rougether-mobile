@@ -24,6 +24,19 @@ function touchEvent() {
 }
 
 describe('FeedScreen (#1409)', () => {
+  // 2단의 오른쪽 칸에 열려 있는 글 — 그 줄만 고른 상태로 알리고 바탕색을 바꾼다.
+  it('selectedPostId의 줄만 selected로 알리고 바탕을 달리한다', async () => {
+    const [first, second] = DEMO_FEED_POSTS;
+    const ui = await render(
+      <FeedScreen posts={DEMO_FEED_POSTS} now={NOW} selectedPostId={second.postId} />,
+    );
+    const row = (id: number) => ui.getByTestId(`feed-post-${id}`);
+    expect(row(second.postId).props.accessibilityState).toEqual({ selected: true });
+    expect(row(first.postId).props.accessibilityState?.selected).toBeFalsy();
+    const bg = (id: number) => StyleSheet.flatten(row(id).props.style).backgroundColor;
+    expect(bg(second.postId)).not.toBe(bg(first.postId));
+  });
+
   it('목록 줄 — 본문·시각·작성자·좋아요/댓글 수, 닉네임 없으면 기본 표기', async () => {
     const { getByText, getAllByText, getByLabelText } = await render(
       <FeedScreen posts={DEMO_FEED_POSTS} now={NOW} />,
