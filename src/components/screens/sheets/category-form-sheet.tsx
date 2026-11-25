@@ -100,6 +100,7 @@ export function CategoryFormSheet({
   return (
     <BottomSheet
       visible={visible}
+      avoidKeyboard
       onClose={onClose}
       cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
       <View style={[styles.head, { borderBottomColor: t.border }]}>
@@ -123,7 +124,7 @@ export function CategoryFormSheet({
 
       {/* 세로 스크롤 본문 — 시트 끌어내리기에서 제외 (#1132). 닫기는 손잡이·헤더에서. */}
       <SheetDragExclude>
-        <ScrollView contentContainerStyle={styles.body}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.body}>
           <View style={[styles.nameRow, { backgroundColor: t.surface }]}>
             <CategoryIcon name={icon} color={color} size={20} />
             <TextInput

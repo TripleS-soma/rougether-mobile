@@ -7,9 +7,10 @@ const noop = () => {};
 
 describe('CategoryFormSheet', () => {
   it('renders the create form', async () => {
-    const { getByText, getByLabelText, getByPlaceholderText } = await render(
+    const { getByText, getByLabelText, getByPlaceholderText, getByTestId } = await render(
       <CategoryFormSheet visible onCreate={noop} onClose={noop} />,
     );
+    expect(getByTestId('bottom-sheet-keyboard')).toBeTruthy();
     expect(getByText('새 카테고리')).toBeTruthy();
     expect(getByPlaceholderText('예) 자기계발')).toBeTruthy();
     expect(getByLabelText('카테고리 추가')).toBeTruthy();
