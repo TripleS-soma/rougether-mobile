@@ -98,6 +98,14 @@ flowchart LR
 - **디자인 토큰 단일 출처**: 색·간격·모서리·타입 스케일을 [`src/constants/theme.ts`](src/constants/theme.ts) 한 곳에서 관리합니다. 테마 5종·라이트/다크·글꼴 5종을 런타임에 바꿀 수 있습니다.
 - **계약 우선**: 스웨거는 "지금 서버에 있는 것", spec 저장소는 "팀이 합의한 의도"입니다. 날짜(`YYYY-MM-DD`는 항상 Asia/Seoul 달력 날짜) 같은 계약은 앱과 서버가 같은 fixture로 각자 검증합니다.
 
+### 프론트엔드 아키텍처
+
+![루게더 프론트엔드 아키텍처: 라우트에서 앱 셸, 화면 계층으로 이어지는 렌더 흐름과 데이터 훅, API 클라이언트, 전역 Context의 관계](docs/images/frontend-architecture.png)
+
+- **데이터는 앱 셸에서 화면으로**: [`src/components/app`](src/components/app)의 `use-*-pages` 훅이 데이터 훅과 내비게이션을 묶어 화면에 prop으로 내려줍니다. 화면은 언어(`useT`)와 디자인 토큰(`useTokens`)만 직접 읽습니다.
+- **서버 상태는 TanStack Query, 전역 상태는 Context**: 화면 상태 대부분이 서버 데이터라 캐시와 무효화는 TanStack Query에 맡기고, 세션·언어·테마만 Context로 둡니다. 전역 상태 라이브러리는 쓰지 않습니다. 새 데이터 훅은 `useQuery`/`useMutation`으로 만들고, 그 전에 만든 훅은 해당 파일을 고칠 때 함께 옮깁니다.
+- **API 경계에서 모델 변환**: [`src/api`](src/api)의 클라이언트가 토큰 주입과 401 재발급을 맡고, 어댑터가 서버 DTO를 앱 모델로 바꿉니다. `types.ts`는 서버 OpenAPI 스펙에서 생성합니다.
+
 ### 배포 아키텍처
 
 ```mermaid
