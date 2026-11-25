@@ -18,9 +18,9 @@ const MISSION_HOUSE: House = {
   memberCount: 2,
   floors: [],
   missions: [
-    { id: 11, title: '주간 루틴 지키기', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 3, target: 10, status: 'ACTIVE' }, // prettier-ignore
+    { id: 11, title: '주간 루틴 지키기', desc: '미션 기간 구성원 누적 달성 횟수', icon: 'calendar' as const, current: 3, target: 10, status: 'ACTIVE' }, // prettier-ignore
     { id: 12, title: '기상 인증 모으기', desc: '일일 구성원 달성률', icon: 'sun' as const, current: 8, target: 8, status: 'ACTIVE', achieved: true }, // prettier-ignore
-    { id: 13, title: '지난 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 5, target: 5, status: 'COMPLETED', achieved: true }, // prettier-ignore
+    { id: 13, title: '지난 미션', desc: '미션 기간 구성원 누적 달성 횟수', icon: 'calendar' as const, current: 5, target: 5, status: 'COMPLETED', achieved: true }, // prettier-ignore
   ],
 };
 
@@ -36,7 +36,7 @@ describe('HouseMissionsScreen', () => {
     const mixed: House = {
       ...MISSION_HOUSE,
       missions: [
-        { id: 31, title: '루게더 개발', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 10, target: 10, status: 'COMPLETED', achieved: true, unit: '회' }, // prettier-ignore
+        { id: 31, title: '루게더 개발', desc: '미션 기간 구성원 누적 달성 횟수', icon: 'calendar' as const, current: 10, target: 10, status: 'COMPLETED', achieved: true, unit: '회' }, // prettier-ignore
         { id: 32, title: '8시 기상', desc: '일일 구성원 달성률', icon: 'sun' as const, current: 0, target: 3, status: 'COMPLETED', achieved: false, unit: '%' }, // prettier-ignore
       ],
     };
@@ -168,7 +168,7 @@ describe('HouseMissionsScreen', () => {
       ...MISSION_HOUSE,
       missions: [
         { id: 21, title: '영양제 먹기', desc: '일일 구성원 달성률', icon: 'sun' as const, current: 25, target: 100, status: 'ACTIVE', unit: '%' }, // prettier-ignore
-        { id: 22, title: '루게더 개발', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 10, target: 10, status: 'ACTIVE', unit: '회' }, // prettier-ignore
+        { id: 22, title: '루게더 개발', desc: '미션 기간 구성원 누적 달성 횟수', icon: 'calendar' as const, current: 10, target: 10, status: 'ACTIVE', unit: '회' }, // prettier-ignore
       ],
     };
     const { getByText } = await render(
@@ -216,8 +216,8 @@ describe('HouseMissionsScreen', () => {
       const mixed: House = {
         ...MISSION_HOUSE,
         missions: [
-          { id: 41, title: '달리는 중', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 3, target: 10, status: 'ACTIVE' }, // prettier-ignore
-          { id: 42, title: '받은 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 5, target: 5, status: 'COMPLETED', achieved: true }, // prettier-ignore
+          { id: 41, title: '달리는 중', desc: '미션 기간 구성원 누적 달성 횟수', icon: 'calendar' as const, current: 3, target: 10, status: 'ACTIVE' }, // prettier-ignore
+          { id: 42, title: '받은 미션', desc: '미션 기간 구성원 누적 달성 횟수', icon: 'calendar' as const, current: 5, target: 5, status: 'COMPLETED', achieved: true }, // prettier-ignore
           { id: 43, title: '놓친 미션', desc: '일일 구성원 달성률', icon: 'sun' as const, current: 1, target: 5, status: 'EXPIRED' }, // prettier-ignore
         ],
       };
@@ -292,7 +292,7 @@ describe('HouseMissionsScreen', () => {
         ...MISSION_HOUSE,
         missions: [
           { id: 61, title: '놓친 미션', desc: '일일 구성원 달성률', icon: 'sun' as const, current: 1, target: 5, status: 'EXPIRED', endsOn: '2026-08-14' }, // prettier-ignore
-          { id: 62, title: '받은 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 5, target: 5, status: 'COMPLETED', achieved: true, endsOn: '2026-08-15' }, // prettier-ignore
+          { id: 62, title: '받은 미션', desc: '미션 기간 구성원 누적 달성 횟수', icon: 'calendar' as const, current: 5, target: 5, status: 'COMPLETED', achieved: true, endsOn: '2026-08-15' }, // prettier-ignore
         ],
       };
       const { getByText, queryByText, getByLabelText } = await render(
@@ -308,7 +308,7 @@ describe('HouseMissionsScreen', () => {
       const onlyActive: House = {
         ...MISSION_HOUSE,
         missions: [
-          { id: 51, title: '달리는 중', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 3, target: 10, status: 'ACTIVE' }, // prettier-ignore
+          { id: 51, title: '달리는 중', desc: '미션 기간 구성원 누적 달성 횟수', icon: 'calendar' as const, current: 3, target: 10, status: 'ACTIVE' }, // prettier-ignore
         ],
       };
       const { getByText, getByLabelText } = await render(
@@ -515,7 +515,7 @@ describe('HouseMissionsScreen', () => {
       </ToastProvider>,
     );
     await fireEvent.press(getByLabelText('미션 만들기'));
-    // 기본값은 주간 달성 횟수 — 1~1000회.
+    expect(getByText('구성원 누적 횟수')).toBeTruthy();
     expect(getByText('목표 수치 (1~1000회)')).toBeTruthy();
 
     // 일일(인원)은 숫자 입력 대신 인원 칩 — 범위 문구도 인원 질문으로 바뀐다.
@@ -584,8 +584,8 @@ describe('HouseMissionsScreen', () => {
     const house = {
       ...MISSION_HOUSE,
       missions: [
-        { id: 21, title: '기간 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 0, target: 5, status: 'ACTIVE' as const, endsOn: '2026-07-23' }, // prettier-ignore
-        { id: 22, title: '끝난 기간 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 5, target: 5, status: 'COMPLETED' as const, achieved: true, endsOn: '2026-07-01' }, // prettier-ignore
+        { id: 21, title: '기간 미션', desc: '미션 기간 구성원 누적 달성 횟수', icon: 'calendar' as const, current: 0, target: 5, status: 'ACTIVE' as const, endsOn: '2026-07-23' }, // prettier-ignore
+        { id: 22, title: '끝난 기간 미션', desc: '미션 기간 구성원 누적 달성 횟수', icon: 'calendar' as const, current: 5, target: 5, status: 'COMPLETED' as const, achieved: true, endsOn: '2026-07-01' }, // prettier-ignore
       ],
     };
     const { getByText, queryByText } = await render(

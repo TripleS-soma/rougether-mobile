@@ -257,8 +257,8 @@
         "unit": " people"
       },
       "weeklyMemberCount": {
-        "label": "Weekly member completions",
-        "shortLabel": "Weekly count",
+        "label": "Member completions over the mission period",
+        "shortLabel": "Group total",
         "unit": " times"
       },
       "streakDays": {
