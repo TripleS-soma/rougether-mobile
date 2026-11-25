@@ -53,7 +53,7 @@ export type AppFrame = ReturnType<typeof useWindowDimensions> & {
    * 마우스 웹의 2단은 폰 컬럼 + 목록 블록을 가운데 모으는 배치라 해당 없다.
    */
   splitFill?: boolean;
-  /** 탭 바를 왼쪽 세로 줄로 두는가 — true일 때만 실린다(2단 + `NAV_RAIL_MIN_WIDTH` 이상). */
+  /** 탭 바를 왼쪽 세로 줄로 두는가 — true일 때만 실린다(터치 기기의 2단 + `NAV_RAIL_MIN_WIDTH` 이상). 마우스 웹은 항상 아래. */
   navRail?: boolean;
   /**
    * 가로 안전 영역 인셋 — 0이 아닐 때만 실린다. 접힌 아이폰 Duo는 오른쪽 84pt가 시스템 표시
@@ -102,7 +102,8 @@ export function resolveAppFrame(
   // 마우스 웹의 2단은 넓은 모니터를 전제로 한 가운데 블록 배치다.
   const split = usable >= SPLIT_MIN_WINDOW_WIDTH;
   const width = split ? Math.min(usable, SPLIT_FRAME_MAX_WIDTH) : APP_FRAME_MAX_WIDTH;
-  return { ...window, width, framed, split, ...(split ? { navRail: true } : null), ...inset };
+  // 탭 바는 아래에 둔다 — 세로 줄은 터치 기기(펼친 폴더블)에서만 쓴다(2026-11-25 결정).
+  return { ...window, width, framed, split, ...inset };
 }
 
 /**
