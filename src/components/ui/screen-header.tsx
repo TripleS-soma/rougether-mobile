@@ -10,7 +10,7 @@ import { HEADER_ROW_HEIGHT, HEADER_TOP_GAP } from '@/components/ui/screen-header
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
-export /**
+/**
  * 제목 글자 자동 축소를 쓸 것인가. iOS에서는 끈다 — iOS 27 SDK(Xcode 27.2)로 빌드한 앱에서
  * 폭이 내용으로 정해지는 이 알약 안의 `adjustsFontSizeToFit`이 `minimumFontScale`을 무시하고
  * 글자를 5분의 1쯤으로 줄였다(아이폰 Duo 시뮬레이터, 2026-11-25: 옵션만 빼면 정상, 폭이 정해진
@@ -18,7 +18,7 @@ export /**
  */
 const TITLE_AUTO_SHRINK = Platform.OS !== 'ios';
 
-type ScreenHeaderProps = {
+export type ScreenHeaderProps = {
   title: string;
   /** When provided, shows a back button on the left. */
   onBack?: () => void;
