@@ -7,8 +7,9 @@ import { useAppFrame } from '@/hooks/use-app-frame';
 /**
  * 창을 다 쓰는 2단에서 왼쪽 칸이 보는 위 인셋의 상한.
  *
- * 0이 아닌 이유: 떠 있는 제목 알약(`ScreenHeader`)이 화면 끝에서 8pt에 붙으면 iOS 27의 글래스
- * 면이 제목 글자를 아주 작게 찌그러뜨렸다(아이폰 Duo 시뮬레이터 실측: 0 → 깨짐, 16·24 → 정상).
+ * 0이 아닌 이유: 제목 알약(`ScreenHeader`)이 화면 끝에 붙지 않게 하는 여백이다. 처음에는 "0이면
+ * iOS 27 글래스가 제목 글자를 찌그러뜨린다"고 봤으나(0 → 깨짐, 16·24 → 정상), 16에서도 다시
+ * 나왔다(2026-11-25). 실제 원인은 제목의 `adjustsFontSizeToFit`였고 `ScreenHeader`에서 껐다.
  */
 export const SPLIT_LEFT_TOP_INSET = Spacing.three;
 
