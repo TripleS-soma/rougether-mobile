@@ -118,6 +118,18 @@ export const routineTodoEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'AddRoutineScreen · 투두 수정',
+    description:
+      '투두(캘린더에서 가져온 단발 일정 포함) 수정 — 반복 안 함으로 시작, 반복을 고르면 저장 시 루틴으로 전환.',
+    render: () => (
+      <View style={{ height: 760, alignSelf: 'stretch' }}>
+        <AddRoutineScreen
+          editRoutine={{ id: 't1', title: '치과 정기검진', kind: 'todo', dueDate: '2026-11-25' }}
+        />
+      </View>
+    ),
+  },
+  {
     name: 'CategoryManageScreen',
     description: '카테고리 관리 독립 화면 (#394) — 목록(순서·수정·삭제) + 헤더 +로 생성 시트.',
     render: () => (

@@ -410,3 +410,87 @@ describe('AddRoutineScreen — start date at the KST midnight boundary', () => {
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ startDate: '2026-09-08' }));
   });
 });
+
+// 투두에는 반복이 없다 — 캘린더에서 가져온 단발 일정도 투두다. 수정 화면은 '반복 안 함'으로
+// 시작하고, 반복을 고르면 저장 시 루틴 전환(POST /todos/{id}/convert-to-routine)으로 간다.
+describe('AddRoutineScreen — 투두 수정의 반복', () => {
+  const todo = {
+    id: 't7',
+    title: '치과',
+    kind: 'todo' as const,
+    category: '',
+    dueDate: '2026-01-01',
+  };
+
+  it('투두는 반복 안 함으로 시작하고 그대로 저장하면 반복 없이 수정한다', async () => {
+    const onUpdate = jest.fn();
+    const { getByLabelText, getByText } = await render(
+      <ToastProvider>
+        <AddRoutineScreen editRoutine={todo} onUpdate={onUpdate} />
+      </ToastProvider>,
+    );
+
+    expect(getByLabelText('반복 안 함').props.accessibilityState).toMatchObject({
+      selected: true,
+    });
+    await fireEvent.press(getByText('수정하기'));
+
+    expect(onUpdate).toHaveBeenCalledWith('t7', expect.objectContaining({ title: '치과' }));
+    expect(onUpdate.mock.calls[0][1].repeat).toBeUndefined();
+  });
+
+  it('투두에서 매주와 요일을 고르면 그 반복으로 수정을 요청한다', async () => {
+    const onUpdate = jest.fn();
+    const { getByLabelText, getByText } = await render(
+      <ToastProvider>
+        <AddRoutineScreen editRoutine={todo} onUpdate={onUpdate} />
+      </ToastProvider>,
+    );
+
+    await fireEvent.press(getByLabelText('매주'));
+    await fireEvent.press(getByText('월'));
+    await fireEvent.press(getByText('수정하기'));
+
+    expect(onUpdate).toHaveBeenCalledWith(
+      't7',
+      expect.objectContaining({ repeat: 'weekly', days: [1] }),
+    );
+  });
+
+  it('마감이 미래인 투두에 반복을 붙이면 마감일부터 시작한다', async () => {
+    const onUpdate = jest.fn();
+    const { getByLabelText, getByText } = await render(
+      <ToastProvider>
+        <AddRoutineScreen editRoutine={{ ...todo, dueDate: '2099-03-05' }} onUpdate={onUpdate} />
+      </ToastProvider>,
+    );
+
+    await fireEvent.press(getByLabelText('매일'));
+    await fireEvent.press(getByText('수정하기'));
+
+    expect(onUpdate).toHaveBeenCalledWith(
+      't7',
+      expect.objectContaining({ repeat: 'daily', startDate: '2099-03-05' }),
+    );
+  });
+
+  it('투두 수정 화면은 할 일 문구를 쓴다', async () => {
+    const { getByText, getByLabelText } = await render(
+      <ToastProvider>
+        <AddRoutineScreen editRoutine={todo} onDelete={jest.fn()} />
+      </ToastProvider>,
+    );
+
+    expect(getByText('할 일 수정')).toBeTruthy();
+    expect(getByText('할 일 이름')).toBeTruthy();
+    await fireEvent.press(getByLabelText('할 일 삭제'));
+    expect(getByText('“치과” 할 일을 삭제할까요?')).toBeTruthy();
+  });
+
+  it('루틴 수정에는 반복 안 함이 없다', async () => {
+    const { queryByLabelText } = await render(
+      <AddRoutineScreen editRoutine={SAMPLE_ROUTINES[0]} />,
+    );
+    expect(queryByLabelText('반복 안 함')).toBeNull();
+  });
+});

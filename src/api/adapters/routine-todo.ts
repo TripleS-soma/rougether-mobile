@@ -28,6 +28,7 @@ import type {
   RoutineResponse,
   RoutineUpdateRequest,
   TodayResponse,
+  TodoConvertRequest,
   TodoCreateRequest,
   TodoResponse,
   TodoUpdateRequest,
@@ -187,6 +188,15 @@ export function toRoutineCreate(n: NewRoutine): RoutineCreateRequest {
     endsOn: n.endDate,
     houseMissionId: n.linkedMissionId,
   };
+}
+
+/**
+ * 투두 → 반복 루틴 전환 본문 (POST /todos/{id}/convert-to-routine). 루틴 등록과 같은
+ * 필드지만 단체미션 연동은 받지 않는다(spec routine-todo/api.md "투두 → 반복 루틴 전환").
+ */
+export function toTodoConvert(n: NewRoutine): TodoConvertRequest {
+  const { houseMissionId: _ignored, ...body } = toRoutineCreate(n);
+  return body;
 }
 
 /**
