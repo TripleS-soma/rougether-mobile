@@ -187,42 +187,46 @@ export function HouseSidePanel({
         actionA11y={tr('house.sidePanel.manageA11y')}
         coachId="house-manage"
         onAction={onOpenMembers}>
-        {orderedMembers.map((m, i) => {
-          const displayName = m.isMine && userName ? userName : m.name;
-          const presence = m.bot
-            ? tr('house.seat.bot')
-            : m.online
-              ? tr('house.seat.online')
-              : m.lastSeenLabel
-                ? tr('house.seat.lastSeen', { label: m.lastSeenLabel })
-                : null;
-          return (
-            <View
-              key={`${i}-${m.name}`}
-              style={[styles.member, i > 0 && { borderTopColor: t.border }, i > 0 && styles.rule]}
-              testID={`house-side-member-${i}`}>
-              {m.online && !m.bot ? <OnlineDot color={t.success} /> : null}
-              <Text
-                style={[Typography.label, styles.flexText, { color: t.text }]}
-                numberOfLines={1}>
-                {m.isMine ? tr('house.seat.mine', { name: displayName }) : displayName}
-              </Text>
-              {m.isOwner ? (
-                <View style={[styles.badge, { backgroundColor: t.surfaceMuted }]}>
-                  <CrownPictogram size={12} />
-                  <Text style={[Typography.caption, emph('normal'), { color: t.textMuted }]}>
-                    {tr('house.sidePanel.owner')}
-                  </Text>
-                </View>
-              ) : null}
-              {presence ? (
-                <Text style={[Typography.supporting, emph('normal'), { color: t.textMuted }]}>
-                  {presence}
+        {/* 줄 사이 간격을 카드의 gap에 맡기면 구분선 아래로만 붙어 글자가 위로 치우친다 —
+            줄을 한 묶음으로 두고 위아래 같은 여백을 줄이 갖는다. */}
+        <View>
+          {orderedMembers.map((m, i) => {
+            const displayName = m.isMine && userName ? userName : m.name;
+            const presence = m.bot
+              ? tr('house.seat.bot')
+              : m.online
+                ? tr('house.seat.online')
+                : m.lastSeenLabel
+                  ? tr('house.seat.lastSeen', { label: m.lastSeenLabel })
+                  : null;
+            return (
+              <View
+                key={`${i}-${m.name}`}
+                style={[styles.member, i > 0 && { borderTopColor: t.border }, i > 0 && styles.rule]}
+                testID={`house-side-member-${i}`}>
+                {m.online && !m.bot ? <OnlineDot color={t.success} /> : null}
+                <Text
+                  style={[Typography.label, styles.flexText, { color: t.text }]}
+                  numberOfLines={1}>
+                  {m.isMine ? tr('house.seat.mine', { name: displayName }) : displayName}
                 </Text>
-              ) : null}
-            </View>
-          );
-        })}
+                {m.isOwner ? (
+                  <View style={[styles.badge, { backgroundColor: t.surfaceMuted }]}>
+                    <CrownPictogram size={12} />
+                    <Text style={[Typography.caption, emph('normal'), { color: t.textMuted }]}>
+                      {tr('house.sidePanel.owner')}
+                    </Text>
+                  </View>
+                ) : null}
+                {presence ? (
+                  <Text style={[Typography.supporting, emph('normal'), { color: t.textMuted }]}>
+                    {presence}
+                  </Text>
+                ) : null}
+              </View>
+            );
+          })}
+        </View>
       </Section>
     </ScrollView>
   );
@@ -361,7 +365,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
-    minHeight: MIN_TOUCH - Spacing.two,
+    minHeight: MIN_TOUCH,
+    paddingVertical: Spacing.two,
   },
   rule: { borderTopWidth: StyleSheet.hairlineWidth },
   badge: {
