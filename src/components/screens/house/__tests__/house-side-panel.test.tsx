@@ -1,4 +1,5 @@
 import { fireEvent, render, within } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 
 import { HouseSidePanel } from '@/components/screens/house/house-side-panel';
 import type { HouseMission, RoomCell } from '@/components/screens/house/types';
@@ -42,6 +43,16 @@ describe('HouseSidePanel — 2단 집 탭의 오른쪽 칸', () => {
     expect(mine.getByText('접속 중')).toBeTruthy();
     expect(within(ui.getByTestId('house-side-member-1')).getByText('3시간 전 접속')).toBeTruthy();
     expect(within(ui.getByTestId('house-side-member-2')).getByText('봇')).toBeTruthy();
+  });
+
+  it('구성원 줄은 구분선 사이에서 세로 가운데에 놓인다 — 줄 사이를 카드 gap이 아니라 줄의 위아래 여백이 만든다', async () => {
+    const ui = await render(<HouseSidePanel {...base} />);
+    const row = ui.getByTestId('house-side-member-1');
+    const style = StyleSheet.flatten(row.props.style);
+    expect(style.alignItems).toBe('center');
+    expect(style.paddingVertical).toBeGreaterThan(0);
+    // 줄 묶음에 gap이 있으면 구분선(다음 줄의 위 테두리) 아래로만 간격이 붙는다.
+    expect(StyleSheet.flatten(row.parent?.props.style)?.gap).toBeUndefined();
   });
 
   it('진행 중인 목표가 없으면 안내 문구', async () => {
